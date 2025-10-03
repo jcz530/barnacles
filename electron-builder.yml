@@ -1,0 +1,112 @@
+appId: com.joeczubiak.my-app
+productName: my-app
+copyright: Copyright © 2025 Joe Czubiak
+
+# Build directories
+directories:
+  output: dist
+  buildResources: build
+
+# Only install production dependencies
+npmRebuild: false
+buildDependenciesFromSource: false
+nodeGypRebuild: false
+
+# Only include essential files for production
+files:
+  - 'dist/**/*'
+  - 'package.json'
+  - 'node_modules/@hono/**/*'
+  - 'node_modules/@libsql/**/*'
+  - 'node_modules/@paralleldrive/**/*'
+  - 'node_modules/class-variance-authority/**/*'
+  - 'node_modules/clsx/**/*'
+  - 'node_modules/drizzle-orm/**/*'
+  - 'node_modules/electron-squirrel-startup/**/*'
+  - 'node_modules/hono/**/*'
+  - 'node_modules/lucide-vue-next/**/*'
+  - 'node_modules/reka-ui/**/*'
+  - 'node_modules/shadcn-vue/**/*'
+  - 'node_modules/tailwind-merge/**/*'
+  - 'node_modules/tw-animate-css/**/*'
+  - 'node_modules/vue/**/*'
+  - 'node_modules/vue-router/**/*'
+  - '!node_modules/**/test/**/*'
+  - '!node_modules/**/tests/**/*'
+  - '!node_modules/**/*.test.*'
+  - '!node_modules/**/*.spec.*'
+  - '!node_modules/**/README.*'
+  - '!node_modules/**/CHANGELOG.*'
+  - '!node_modules/**/.github/**/*'
+
+# Include/exclude node modules patterns
+asarUnpack:
+  - "node_modules/@libsql/**/*"
+
+# Include migrations as extra resources
+extraResources:
+  - 'migrations/**/*'
+
+# Icons
+icon: assets/icons/app
+
+# Auto updater
+publish:
+  provider: generic
+  url: https://your-website.com/releases/
+  channel: latest
+
+# macOS configuration
+mac:
+  icon: assets/icons/app.icns
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+
+# DMG configuration with custom background
+dmg:
+  title: '${productName} ${version}'
+  icon: assets/icons/app.icns
+  # backgroundColor: '#C3FFFF'
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 140
+      y: 200
+      type: file
+    - x: 400
+      y: 200
+      type: link
+      path: /Applications
+
+# Windows configuration
+win:
+  icon: assets/icons/app.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - ia32
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+
+# Linux configuration
+linux:
+  icon: assets/icons/app.png
+  category: Utility
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+    - target: rpm
+      arch:
+        - x64
