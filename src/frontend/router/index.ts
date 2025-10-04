@@ -3,6 +3,7 @@ import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router
 import DefaultLayout from '../layouts/DefaultLayout.vue';
 import Api from '../views/Api.vue';
 import Home from '../views/Home.vue';
+import ProjectDetail from '../views/ProjectDetail.vue';
 import Projects from '../views/Projects.vue';
 
 const routes = [
@@ -19,6 +20,11 @@ const routes = [
         path: '/projects',
         name: 'Projects',
         component: Projects,
+      },
+      {
+        path: '/projects/:id',
+        name: 'ProjectDetail',
+        component: ProjectDetail,
       },
       {
         path: '/api',

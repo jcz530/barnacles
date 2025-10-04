@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { RefreshCw, Scan } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import type { ProjectWithDetails } from '../../shared/types/api';
+import ViewToggle from '../components/atoms/ViewToggle.vue';
 import ProjectSearchBar from '../components/molecules/ProjectSearchBar.vue';
 import TechnologyFilter from '../components/molecules/TechnologyFilter.vue';
-import ProjectsGrid from '../components/organisms/ProjectsGrid.vue';
+import ProjectsTable from '../components/organisms/ProjectsTable.vue';
 import { Button } from '../components/ui/button';
 import { useQueries } from '../composables/useQueries';
+
+const router = useRouter();
 
 const {
   useProjectsQuery,
@@ -18,6 +22,7 @@ const {
 // State
 const searchQuery = ref('');
 const selectedTechnologies = ref<string[]>([]);
+const viewMode = ref<'table' | 'card'>('table');
 
 // Queries
 const {
@@ -58,9 +63,7 @@ const handleDeleteProject = async (projectId: string) => {
 };
 
 const handleOpenProject = (project: ProjectWithDetails) => {
-  // TODO: Implement project opening (terminal, editor, etc.)
-  console.log('Open project:', project);
-  alert(`Opening ${project.name}\n\nPath: ${project.path}\n\n(Project actions coming soon!)`);
+  router.push(`/projects/${project.id}`);
 };
 
 const handleRefresh = () => {
@@ -90,7 +93,7 @@ const handleRefresh = () => {
       </div>
 
       <!-- Filters -->
-      <div class="flex gap-3">
+      <div class="flex items-center gap-3">
         <ProjectSearchBar v-model="searchQuery" />
         <TechnologyFilter
           v-if="!technologiesLoading && technologies"
@@ -98,6 +101,7 @@ const handleRefresh = () => {
           :selected-technologies="selectedTechnologies"
           @update:selected-technologies="selectedTechnologies = $event"
         />
+        <ViewToggle :current-view="viewMode" @update:view="viewMode = $event" />
       </div>
 
       <!-- Results count -->
@@ -107,11 +111,12 @@ const handleRefresh = () => {
       </div>
     </div>
 
-    <!-- Projects Grid -->
+    <!-- Projects Table/Grid -->
     <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
-      <ProjectsGrid
+      <ProjectsTable
         :projects="projects || []"
-        :loading="projectsLoading"
+        :is-loading="projectsLoading"
+        :view-mode="viewMode"
         @delete="handleDeleteProject"
         @open="handleOpenProject"
       />
