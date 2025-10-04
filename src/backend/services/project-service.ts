@@ -316,6 +316,7 @@ class ProjectService {
       languageStats: JSON.stringify(projectInfo.stats.languageStats),
       gitBranch: projectInfo.gitInfo?.branch,
       gitStatus: projectInfo.gitInfo?.status,
+      gitRemoteUrl: projectInfo.gitInfo?.remoteUrl,
       lastCommitDate: projectInfo.gitInfo?.lastCommitDate,
       lastCommitMessage: projectInfo.gitInfo?.lastCommitMessage,
       hasUncommittedChanges: projectInfo.gitInfo?.hasUncommittedChanges,

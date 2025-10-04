@@ -81,6 +81,7 @@ export const projectStats = sqliteTable('project_stats', {
   languageStats: text('language_stats'), // JSON string of { techSlug: { fileCount: number, percentage: number } }
   gitBranch: text('git_branch'),
   gitStatus: text('git_status'),
+  gitRemoteUrl: text('git_remote_url'),
   lastCommitDate: integer('last_commit_date', { mode: 'timestamp' }),
   lastCommitMessage: text('last_commit_message'),
   hasUncommittedChanges: integer('has_uncommitted_changes', { mode: 'boolean' }),

@@ -20,6 +20,7 @@ export interface ProjectStats {
   languageStats?: string | null;
   gitBranch?: string | null;
   gitStatus?: string | null;
+  gitRemoteUrl?: string | null;
   lastCommitDate?: Date | null;
   lastCommitMessage?: string | null;
   hasUncommittedChanges?: boolean | null;

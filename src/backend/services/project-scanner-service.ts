@@ -35,6 +35,7 @@ export interface ProjectInfo {
     lastCommitDate?: Date;
     lastCommitMessage?: string;
     hasUncommittedChanges: boolean;
+    remoteUrl?: string;
   };
 }
 
@@ -136,6 +137,17 @@ class ProjectScannerService {
         cwd: projectPath,
       });
 
+      // Get remote URL
+      let remoteUrl: string | undefined;
+      try {
+        const { stdout: remote } = await execAsync('git config --get remote.origin.url', {
+          cwd: projectPath,
+        });
+        remoteUrl = remote.trim();
+      } catch {
+        // No remote configured
+      }
+
       // Get last commit info
       let lastCommitDate: Date | undefined;
       let lastCommitMessage: string | undefined;
@@ -160,6 +172,7 @@ class ProjectScannerService {
         lastCommitDate,
         lastCommitMessage,
         hasUncommittedChanges: status.trim().length > 0,
+        remoteUrl,
       };
     } catch {
       return undefined;

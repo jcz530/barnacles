@@ -14,3 +14,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Get API configuration
   getApiConfig: () => ipcRenderer.invoke('get-api-config'),
 });
+
+// Expose shell methods to renderer process
+contextBridge.exposeInMainWorld('electron', {
+  shell: {
+    openPath: (path: string) => ipcRenderer.invoke('shell:open-path', path),
+    openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url),
+  },
+});

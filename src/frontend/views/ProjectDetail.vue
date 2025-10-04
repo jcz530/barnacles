@@ -9,13 +9,12 @@ import {
   FolderTree,
   GitBranch,
   HardDrive,
-  RefreshCw,
-  Trash2,
 } from 'lucide-vue-next';
 import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import OpenInIDEButton from '../components/molecules/OpenInIDEButton.vue';
 import OpenTerminalButton from '../components/molecules/OpenTerminalButton.vue';
+import ProjectActionsDropdown from '../components/molecules/ProjectActionsDropdown.vue';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Skeleton } from '../components/ui/skeleton';
@@ -27,21 +26,13 @@ const route = useRoute();
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
 const { formatSize, formatDate, formatRelativeDate } = useFormatters();
-const {
-  useProjectQuery,
-  useDeleteProjectMutation,
-  useRescanProjectMutation,
-  useDetectedIDEsQuery,
-  useDetectedTerminalsQuery,
-} = useQueries();
+const { useProjectQuery, useDetectedIDEsQuery, useDetectedTerminalsQuery } = useQueries();
 
 const projectId = computed(() => route.params.id as string);
 
 const { data: project, isLoading } = useProjectQuery(projectId);
 const { data: detectedIDEs } = useDetectedIDEsQuery();
 const { data: detectedTerminals } = useDetectedTerminalsQuery();
-const deleteMutation = useDeleteProjectMutation();
-const rescanMutation = useRescanProjectMutation();
 
 onMounted(() => {
   setBreadcrumbs([
@@ -52,31 +43,6 @@ onMounted(() => {
 
 const handleBack = () => {
   router.push('/projects');
-};
-
-const handleDelete = async () => {
-  if (!project.value) return;
-
-  if (confirm(`Are you sure you want to delete "${project.value.name}"?`)) {
-    try {
-      await deleteMutation.mutateAsync(project.value.id);
-      router.push('/projects');
-    } catch (error) {
-      console.error('Failed to delete project:', error);
-      alert('Failed to delete project. Please try again.');
-    }
-  }
-};
-
-const handleRescan = async () => {
-  if (!project.value) return;
-
-  try {
-    await rescanMutation.mutateAsync(project.value.id);
-  } catch (error) {
-    console.error('Failed to rescan project:', error);
-    alert('Failed to rescan project. Please try again.');
-  }
 };
 
 const languageStats = computed(() => {
@@ -117,22 +83,13 @@ const languageStats = computed(() => {
             :is-loading="isLoading"
           />
 
-          <Button
-            variant="outline"
-            size="sm"
-            @click="handleRescan"
-            :disabled="isLoading || rescanMutation.isPending.value"
-          >
-            <RefreshCw
-              class="mr-2 h-4 w-4"
-              :class="{ 'animate-spin': rescanMutation.isPending.value }"
-            />
-            {{ rescanMutation.isPending.value ? 'Rescanning...' : 'Rescan Project' }}
-          </Button>
-          <Button variant="destructive" size="sm" @click="handleDelete" :disabled="isLoading">
-            <Trash2 class="mr-2 h-4 w-4" />
-            Delete Project
-          </Button>
+          <ProjectActionsDropdown
+            v-if="project"
+            :project-id="project.id"
+            :project-path="project.path"
+            :project-name="project.name"
+            :git-remote-url="project.stats?.gitRemoteUrl"
+          />
         </div>
       </div>
 
