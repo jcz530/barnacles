@@ -22,6 +22,7 @@ export const updateRuntimeConfig = (config: Partial<typeof RUNTIME_CONFIG>) => {
 export const API_ROUTES = {
   HELLO: '/api/hello',
   USERS: '/api/users',
+  USERS_CURRENT: '/api/users/current',
   PROJECTS: '/api/projects',
   PROJECTS_SCAN: '/api/projects/scan',
   PROJECTS_TECHNOLOGIES: '/api/projects/meta/technologies',
