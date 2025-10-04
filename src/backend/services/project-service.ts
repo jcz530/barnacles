@@ -470,6 +470,35 @@ class ProjectService {
 
     await terminalDetectorService.openTerminalAtPath(terminalToUse, project.path);
   }
+
+  /**
+   * Get README.md content for a project
+   */
+  async getProjectReadme(id: string): Promise<string | null> {
+    const project = await this.getProjectById(id);
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const fs = await import('fs/promises');
+    const path = await import('path');
+
+    // Try common README file names
+    const readmeFiles = ['README.md', 'readme.md', 'Readme.md', 'README.MD'];
+
+    for (const filename of readmeFiles) {
+      try {
+        const readmePath = path.join(project.path, filename);
+        const content = await fs.readFile(readmePath, 'utf-8');
+        return content;
+      } catch {
+        // File doesn't exist, try next
+      }
+    }
+
+    return null;
+  }
 }
 
 export const projectService = new ProjectService();

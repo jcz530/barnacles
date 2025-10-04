@@ -371,6 +371,27 @@ export const useQueries = () => {
     });
   };
 
+  // Project README query
+  const useProjectReadmeQuery = (projectId: MaybeRef<string>, options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['project-readme', unref(projectId)],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<string>>(
+          'GET',
+          `${API_ROUTES.PROJECTS}/${unref(projectId)}/readme`
+        );
+
+        // Return null if README not found (404) or any other error
+        if (!response || !response.success) {
+          return null;
+        }
+
+        return response.data || null;
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
   return {
     useHelloQuery,
     useUsersQuery,
@@ -390,5 +411,6 @@ export const useQueries = () => {
     useAvailableTerminalsQuery,
     useUpdatePreferredTerminalMutation,
     useOpenTerminalMutation,
+    useProjectReadmeQuery,
   };
 };

@@ -412,6 +412,41 @@ projects.post('/:id/open-terminal', async c => {
 });
 
 /**
+ * GET /api/projects/:id/readme
+ * Get the README.md file content for a project
+ */
+projects.get('/:id/readme', async c => {
+  try {
+    const id = c.req.param('id');
+    const readme = await projectService.getProjectReadme(id);
+
+    if (!readme) {
+      return c.json(
+        {
+          success: false,
+          error: 'README.md not found',
+        },
+        404
+      );
+    }
+
+    return c.json({
+      success: true,
+      data: readme,
+    });
+  } catch (error) {
+    console.error('Error fetching README:', error);
+    return c.json(
+      {
+        success: false,
+        error: 'Failed to fetch README',
+      },
+      500
+    );
+  }
+});
+
+/**
  * GET /api/projects/:id
  * Get a single project by ID
  */
