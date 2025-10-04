@@ -33,8 +33,23 @@ export interface Project {
   lastModified?: Date | null;
   size?: number | null;
   status: 'active' | 'archived';
+  preferredIde?: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface IDE {
+  id: string;
+  name: string;
+  executable: string;
+  command: string;
+  icon?: string;
+  color?: string;
+}
+
+export interface DetectedIDE extends IDE {
+  installed: boolean;
+  version?: string;
 }
 
 export interface ProjectWithDetails extends Project {

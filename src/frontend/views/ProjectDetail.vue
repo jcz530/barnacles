@@ -14,20 +14,29 @@ import {
 } from 'lucide-vue-next';
 import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import OpenInIDEButton from '../components/molecules/OpenInIDEButton.vue';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Skeleton } from '../components/ui/skeleton';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
+import { useFormatters } from '../composables/useFormatters';
 import { useQueries } from '../composables/useQueries';
 
 const route = useRoute();
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
-const { useProjectQuery, useDeleteProjectMutation, useRescanProjectMutation } = useQueries();
+const { formatSize, formatDate, formatRelativeDate } = useFormatters();
+const {
+  useProjectQuery,
+  useDeleteProjectMutation,
+  useRescanProjectMutation,
+  useDetectedIDEsQuery,
+} = useQueries();
 
 const projectId = computed(() => route.params.id as string);
 
 const { data: project, isLoading } = useProjectQuery(projectId);
+const { data: detectedIDEs } = useDetectedIDEsQuery();
 const deleteMutation = useDeleteProjectMutation();
 const rescanMutation = useRescanProjectMutation();
 
@@ -37,49 +46,6 @@ onMounted(() => {
     { label: project.value?.name || 'Loading...' },
   ]);
 });
-
-const formatSize = (bytes: number | null | undefined): string => {
-  if (!bytes) return '0 B';
-
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
-};
-
-const formatDate = (date: Date | null | undefined): string => {
-  if (!date) return 'Unknown';
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const formatRelativeDate = (date: Date | null | undefined): string => {
-  if (!date) return 'Unknown';
-
-  const d = new Date(date);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-
-  return `${Math.floor(diffDays / 365)} years ago`;
-};
 
 const handleBack = () => {
   router.push('/projects');
@@ -132,6 +98,14 @@ const languageStats = computed(() => {
           </Button>
         </div>
         <div class="flex gap-2">
+          <OpenInIDEButton
+            v-if="project"
+            :project-id="project.id"
+            :detected-i-d-es="detectedIDEs"
+            :preferred-ide-id="project.preferredIde"
+            :is-loading="isLoading"
+          />
+
           <Button
             variant="outline"
             size="sm"

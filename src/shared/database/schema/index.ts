@@ -28,6 +28,7 @@ export const projects = sqliteTable('projects', {
   status: text('status', { enum: ['active', 'archived'] })
     .notNull()
     .default('active'),
+  preferredIde: text('preferred_ide'),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),

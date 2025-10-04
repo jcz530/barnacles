@@ -25,4 +25,6 @@ export const API_ROUTES = {
   PROJECTS: '/api/projects',
   PROJECTS_SCAN: '/api/projects/scan',
   PROJECTS_TECHNOLOGIES: '/api/projects/meta/technologies',
+  PROJECTS_IDES_DETECTED: '/api/projects/ides/detected',
+  PROJECTS_IDES_AVAILABLE: '/api/projects/ides/available',
 } as const;

@@ -204,6 +204,110 @@ projects.get('/meta/technologies', async c => {
 });
 
 /**
+ * GET /api/projects/ides/detected
+ * Get all detected IDEs on the system
+ */
+projects.get('/ides/detected', async c => {
+  try {
+    const ides = await projectService.getDetectedIDEs();
+
+    return c.json({
+      success: true,
+      data: ides,
+    });
+  } catch (error) {
+    console.error('Error detecting IDEs:', error);
+    return c.json(
+      {
+        success: false,
+        error: 'Failed to detect IDEs',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * GET /api/projects/ides/available
+ * Get all available IDE definitions
+ */
+projects.get('/ides/available', async c => {
+  try {
+    const ides = projectService.getAvailableIDEs();
+
+    return c.json({
+      success: true,
+      data: ides,
+    });
+  } catch (error) {
+    console.error('Error fetching available IDEs:', error);
+    return c.json(
+      {
+        success: false,
+        error: 'Failed to fetch available IDEs',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * PATCH /api/projects/:id/ide
+ * Update the preferred IDE for a project
+ */
+projects.patch('/:id/ide', async c => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { ideId } = body;
+
+    await projectService.updatePreferredIDE(id, ideId);
+
+    return c.json({
+      success: true,
+      message: 'Preferred IDE updated successfully',
+    });
+  } catch (error) {
+    console.error('Error updating preferred IDE:', error);
+    return c.json(
+      {
+        success: false,
+        error: 'Failed to update preferred IDE',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * POST /api/projects/:id/open
+ * Open a project in its preferred IDE
+ */
+projects.post('/:id/open', async c => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json().catch(() => ({}));
+    const { ideId } = body;
+
+    await projectService.openProjectInIDE(id, ideId);
+
+    return c.json({
+      success: true,
+      message: 'Project opened in IDE',
+    });
+  } catch (error) {
+    console.error('Error opening project:', error);
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to open project in IDE',
+      },
+      500
+    );
+  }
+});
+
+/**
  * GET /api/projects/:id
  * Get a single project by ID
  */

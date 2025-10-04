@@ -8,6 +8,7 @@ import {
 } from '../../shared/database/schema';
 import type { ProjectInfo } from './project-scanner-service';
 import { projectScannerService } from './project-scanner-service';
+import { ideDetectorService } from './ide-detector-service';
 
 export interface Project {
   id: string;
@@ -17,6 +18,7 @@ export interface Project {
   lastModified?: Date | null;
   size?: number | null;
   status: 'active' | 'archived';
+  preferredIde?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -240,6 +242,9 @@ class ProjectService {
    * Save scanned project to database
    */
   async saveProject(projectInfo: ProjectInfo): Promise<ProjectWithDetails> {
+    // Detect preferred IDE from project files
+    const detectedIde = await ideDetectorService.detectPreferredIDE(projectInfo.path);
+
     // Check if project already exists by path
     const existing = await db
       .select()
@@ -260,6 +265,8 @@ class ProjectService {
           description: projectInfo.description,
           lastModified: projectInfo.stats.lastModified,
           size: projectInfo.stats.size,
+          // Only update preferredIde if it was detected and not already set
+          preferredIde: existing[0].preferredIde || detectedIde,
           updatedAt: new Date(),
         })
         .where(eq(projects.id, projectId));
@@ -274,6 +281,7 @@ class ProjectService {
           lastModified: projectInfo.stats.lastModified,
           size: projectInfo.stats.size,
           status: 'active',
+          preferredIde: detectedIde,
         })
         .returning();
 
@@ -372,6 +380,49 @@ class ProjectService {
 
     const savedProject = await this.saveProject(projectInfo);
     return savedProject;
+  }
+
+  /**
+   * Update the preferred IDE for a project
+   */
+  async updatePreferredIDE(id: string, ideId: string | null): Promise<void> {
+    await db
+      .update(projects)
+      .set({ preferredIde: ideId, updatedAt: new Date() })
+      .where(eq(projects.id, id));
+  }
+
+  /**
+   * Get all detected IDEs on the system
+   */
+  async getDetectedIDEs() {
+    return await ideDetectorService.detectInstalledIDEs();
+  }
+
+  /**
+   * Get all available IDE definitions
+   */
+  getAvailableIDEs() {
+    return ideDetectorService.getAvailableIDEs();
+  }
+
+  /**
+   * Open a project in its preferred IDE
+   */
+  async openProjectInIDE(id: string, ideId?: string): Promise<void> {
+    const project = await this.getProjectById(id);
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const ideToUse = ideId || project.preferredIde;
+
+    if (!ideToUse) {
+      throw new Error('No IDE specified for this project');
+    }
+
+    await ideDetectorService.openProjectInIDE(project.path, ideToUse);
   }
 }
 

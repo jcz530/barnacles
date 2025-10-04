@@ -4,7 +4,9 @@ import { unref } from 'vue';
 import { API_ROUTES } from '../../shared/constants';
 import type {
   ApiResponse,
+  DetectedIDE,
   HelloResponse,
+  IDE,
   ProjectWithDetails,
   Technology,
   User,
@@ -200,6 +202,87 @@ export const useQueries = () => {
     });
   };
 
+  // Get detected IDEs query
+  const useDetectedIDEsQuery = () => {
+    return useQuery({
+      queryKey: ['ides', 'detected'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<DetectedIDE[]>>(
+          'GET',
+          API_ROUTES.PROJECTS_IDES_DETECTED
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch detected IDEs');
+        }
+
+        return response.data || [];
+      },
+    });
+  };
+
+  // Get available IDEs query
+  const useAvailableIDEsQuery = () => {
+    return useQuery({
+      queryKey: ['ides', 'available'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<IDE[]>>(
+          'GET',
+          API_ROUTES.PROJECTS_IDES_AVAILABLE
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch available IDEs');
+        }
+
+        return response.data || [];
+      },
+    });
+  };
+
+  // Update preferred IDE mutation
+  const useUpdatePreferredIDEMutation = () => {
+    return useMutation({
+      mutationFn: async ({ projectId, ideId }: { projectId: string; ideId: string | null }) => {
+        const response = await apiCall<ApiResponse>(
+          'PATCH',
+          `${API_ROUTES.PROJECTS}/${projectId}/ide`,
+          { ideId }
+        );
+
+        if (!response) {
+          throw new Error('Failed to update preferred IDE');
+        }
+
+        return response;
+      },
+      onSuccess: (data, { projectId }) => {
+        // Invalidate both the projects list and the specific project query
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      },
+    });
+  };
+
+  // Open project in IDE mutation
+  const useOpenProjectMutation = () => {
+    return useMutation({
+      mutationFn: async ({ projectId, ideId }: { projectId: string; ideId?: string }) => {
+        const response = await apiCall<ApiResponse>(
+          'POST',
+          `${API_ROUTES.PROJECTS}/${projectId}/open`,
+          ideId ? { ideId } : {}
+        );
+
+        if (!response) {
+          throw new Error('Failed to open project');
+        }
+
+        return response;
+      },
+    });
+  };
+
   return {
     useHelloQuery,
     useUsersQuery,
@@ -211,5 +294,9 @@ export const useQueries = () => {
     useDeleteProjectMutation,
     useUpdateProjectStatusMutation,
     useRescanProjectMutation,
+    useDetectedIDEsQuery,
+    useAvailableIDEsQuery,
+    useUpdatePreferredIDEMutation,
+    useOpenProjectMutation,
   };
 };
