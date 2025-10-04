@@ -30,4 +30,7 @@ export const API_ROUTES = {
   PROJECTS_IDES_AVAILABLE: '/api/projects/ides/available',
   PROJECTS_TERMINALS_DETECTED: '/api/projects/terminals/detected',
   PROJECTS_TERMINALS_AVAILABLE: '/api/projects/terminals/available',
+  TERMINALS: '/api/terminals',
+  TERMINALS_WS: '/api/terminals/ws',
+  PROJECTS_PACKAGE_SCRIPTS: (id: string) => `/api/projects/${id}/package-scripts`,
 } as const;

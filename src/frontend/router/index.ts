@@ -5,6 +5,7 @@ import Api from '../views/Api.vue';
 import Home from '../views/Home.vue';
 import ProjectDetail from '../views/ProjectDetail.vue';
 import Projects from '../views/Projects.vue';
+import Terminals from '../views/Terminals.vue';
 
 const routes = [
   {
@@ -25,6 +26,11 @@ const routes = [
         path: '/projects/:id',
         name: 'ProjectDetail',
         component: ProjectDetail,
+      },
+      {
+        path: '/terminals',
+        name: 'Terminals',
+        component: Terminals,
       },
       {
         path: '/api',

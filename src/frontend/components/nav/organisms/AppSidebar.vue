@@ -52,6 +52,11 @@ const data = computed(() => ({
       url: '/projects',
       icon: FolderGit2,
     },
+    {
+      title: 'Terminals',
+      url: '/terminals',
+      icon: SquareTerminal,
+    },
     // {
     //   title: 'Users',
     //   url: '/users',

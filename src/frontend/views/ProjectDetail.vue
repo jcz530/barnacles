@@ -7,6 +7,7 @@ import OpenTerminalButton from '../components/molecules/OpenTerminalButton.vue';
 import ProjectActionsDropdown from '../components/molecules/ProjectActionsDropdown.vue';
 import ProjectOverviewTab from '../components/organisms/ProjectOverviewTab.vue';
 import ProjectReadmeTab from '../components/organisms/ProjectReadmeTab.vue';
+import ProjectTerminalsTab from '../components/organisms/ProjectTerminalsTab.vue';
 import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
@@ -16,13 +17,19 @@ import { useQueries } from '../composables/useQueries';
 const route = useRoute();
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
-const { useProjectQuery, useDetectedIDEsQuery, useDetectedTerminalsQuery } = useQueries();
+const {
+  useProjectQuery,
+  useDetectedIDEsQuery,
+  useDetectedTerminalsQuery,
+  useProjectPackageScriptsQuery,
+} = useQueries();
 
 const projectId = computed(() => route.params.id as string);
 
 const { data: project, isLoading } = useProjectQuery(projectId);
 const { data: detectedIDEs } = useDetectedIDEsQuery();
 const { data: detectedTerminals } = useDetectedTerminalsQuery();
+const { data: packageScripts } = useProjectPackageScriptsQuery(projectId);
 
 onMounted(() => {
   setBreadcrumbs([
@@ -95,6 +102,7 @@ const handleBack = () => {
           <TabsList class="mb-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="readme">README.md</TabsTrigger>
+            <TabsTrigger value="terminals">Terminals</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -103,6 +111,14 @@ const handleBack = () => {
 
           <TabsContent value="readme">
             <ProjectReadmeTab :project-id="project.id" />
+          </TabsContent>
+
+          <TabsContent value="terminals">
+            <ProjectTerminalsTab
+              :project-id="project.id"
+              :project-path="project.path"
+              :package-json-scripts="packageScripts"
+            />
           </TabsContent>
         </Tabs>
       </div>

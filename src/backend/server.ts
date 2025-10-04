@@ -6,6 +6,7 @@ import { findAvailablePortInRange } from '../shared/utils/port-finder';
 import { corsMiddleware } from './middleware/cors';
 import { cspMiddleware } from './middleware/csp';
 import api from './routes';
+import { terminalWebSocketService } from './services/terminal-websocket-service';
 
 export const createServer = () => {
   const app = new Hono();
@@ -68,7 +69,13 @@ export const startServer = async () => {
     hostname: APP_CONFIG.API_HOST,
   });
 
+  // Initialize WebSocket service for terminals
+  terminalWebSocketService.initialize(server);
+
   console.log(`🔥 Hono API server running on ${apiBaseUrl}`);
+  console.log(
+    `🔌 WebSocket server ready at ws://${APP_CONFIG.API_HOST}:${availablePort}/api/terminals/ws`
+  );
 
   if (availablePort !== APP_CONFIG.API_PORT_PREFERRED) {
     console.log(

@@ -447,6 +447,53 @@ projects.get('/:id/readme', async c => {
 });
 
 /**
+ * GET /api/projects/:id/package-scripts
+ * Get package.json scripts for a project
+ */
+projects.get('/:id/package-scripts', async c => {
+  try {
+    const id = c.req.param('id');
+    const project = await projectService.getProjectById(id);
+
+    if (!project) {
+      return c.json(
+        {
+          success: false,
+          error: 'Project not found',
+        },
+        404
+      );
+    }
+
+    const packageJsonPath = path.join(project.path, 'package.json');
+
+    try {
+      const fs = await import('fs/promises');
+      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
+
+      return c.json({
+        success: true,
+        data: packageJson.scripts || {},
+      });
+    } catch {
+      return c.json({
+        success: true,
+        data: {},
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching package scripts:', error);
+    return c.json(
+      {
+        success: false,
+        error: 'Failed to fetch package scripts',
+      },
+      500
+    );
+  }
+});
+
+/**
  * GET /api/projects/:id
  * Get a single project by ID
  */

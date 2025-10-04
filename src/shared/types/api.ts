@@ -68,6 +68,17 @@ export interface DetectedTerminal extends Terminal {
   version?: string;
 }
 
+export interface TerminalInstance {
+  id: string;
+  title: string;
+  cwd: string;
+  projectId?: string;
+  command?: string;
+  createdAt: Date;
+  status: 'running' | 'exited';
+  exitCode?: number;
+}
+
 export interface ProjectWithDetails extends Project {
   technologies: Technology[];
   stats?: ProjectStats | null;
