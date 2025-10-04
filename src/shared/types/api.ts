@@ -17,6 +17,7 @@ export interface ProjectStats {
   projectId: string;
   fileCount?: number | null;
   directoryCount?: number | null;
+  languageStats?: string | null;
   gitBranch?: string | null;
   gitStatus?: string | null;
   lastCommitDate?: Date | null;

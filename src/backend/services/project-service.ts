@@ -207,16 +207,29 @@ class ProjectService {
         .returning();
 
       return result[0].id;
-    } catch (error) {
+    } catch (error: unknown) {
       // Handle race condition: if another process inserted it, fetch it again
-      const retry = await db
-        .select()
-        .from(technologies)
-        .where(eq(technologies.slug, techSlug))
-        .limit(1);
+      // Check if it's a UNIQUE constraint error (check both direct code and cause.code)
+      const isUniqueConstraintError =
+        error &&
+        typeof error === 'object' &&
+        (('code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE') ||
+          ('cause' in error &&
+            error.cause &&
+            typeof error.cause === 'object' &&
+            'code' in error.cause &&
+            error.cause.code === 'SQLITE_CONSTRAINT_UNIQUE'));
 
-      if (retry.length > 0) {
-        return retry[0].id;
+      if (isUniqueConstraintError) {
+        const retry = await db
+          .select()
+          .from(technologies)
+          .where(eq(technologies.slug, techSlug))
+          .limit(1);
+
+        if (retry.length > 0) {
+          return retry[0].id;
+        }
       }
 
       throw error;
@@ -290,6 +303,7 @@ class ProjectService {
     const statsData = {
       fileCount: projectInfo.stats.fileCount,
       directoryCount: projectInfo.stats.directoryCount,
+      languageStats: JSON.stringify(projectInfo.stats.languageStats),
       gitBranch: projectInfo.gitInfo?.branch,
       gitStatus: projectInfo.gitInfo?.status,
       lastCommitDate: projectInfo.gitInfo?.lastCommitDate,

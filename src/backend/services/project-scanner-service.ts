@@ -10,6 +10,13 @@ const execAsync = promisify(exec);
 // Re-export TechnologyDetector type for external use
 export type { TechnologyDetector };
 
+export interface LanguageStats {
+  [techSlug: string]: {
+    fileCount: number;
+    percentage: number;
+  };
+}
+
 export interface ProjectInfo {
   name: string;
   path: string;
@@ -20,6 +27,7 @@ export interface ProjectInfo {
     directoryCount: number;
     size: number;
     lastModified: Date;
+    languageStats: LanguageStats;
   };
   gitInfo?: {
     branch: string;
@@ -59,7 +67,7 @@ class ProjectScannerService {
   /**
    * Detects technologies used in a project
    */
-  async detectTechnologies(projectPath: string): Promise<string[]> {
+  async detectTechnologies(projectPath: string, fileExtensions: Set<string>): Promise<string[]> {
     const detectedTechs: string[] = [];
 
     for (const detector of TECHNOLOGY_DETECTORS) {
@@ -95,6 +103,11 @@ class ProjectScannerService {
         } catch {
           // package.json doesn't exist or is invalid
         }
+      }
+
+      // Check file extensions
+      if (!detected && detector.fileExtensions && detector.fileExtensions.length > 0) {
+        detected = detector.fileExtensions.some(ext => fileExtensions.has(ext));
       }
 
       if (detected) {
@@ -154,13 +167,17 @@ class ProjectScannerService {
   }
 
   /**
-   * Calculates project statistics
+   * Calculates project statistics including language breakdown
    */
-  async getProjectStats(projectPath: string): Promise<ProjectInfo['stats']> {
+  async getProjectStats(
+    projectPath: string
+  ): Promise<{ stats: ProjectInfo['stats']; fileExtensions: Set<string> }> {
     let fileCount = 0;
     let directoryCount = 0;
     let totalSize = 0;
     let lastModified = new Date(0);
+    const fileExtensions = new Set<string>();
+    const extensionCounts: { [ext: string]: number } = {};
 
     const ignoreDirs = [
       'node_modules',
@@ -191,6 +208,14 @@ class ProjectScannerService {
             await scanDir(fullPath);
           } else if (entry.isFile()) {
             fileCount++;
+
+            // Track file extension
+            const ext = path.extname(entry.name).toLowerCase();
+            if (ext) {
+              fileExtensions.add(ext);
+              extensionCounts[ext] = (extensionCounts[ext] || 0) + 1;
+            }
+
             try {
               const stats = await fs.stat(fullPath);
               totalSize += stats.size;
@@ -209,11 +234,34 @@ class ProjectScannerService {
 
     await scanDir(projectPath);
 
+    // Calculate language stats based on file extensions
+    const languageStats: LanguageStats = {};
+
+    for (const detector of TECHNOLOGY_DETECTORS) {
+      if (detector.fileExtensions && detector.fileExtensions.length > 0) {
+        let count = 0;
+        for (const ext of detector.fileExtensions) {
+          count += extensionCounts[ext] || 0;
+        }
+
+        if (count > 0) {
+          languageStats[detector.slug] = {
+            fileCount: count,
+            percentage: fileCount > 0 ? Math.round((count / fileCount) * 100 * 10) / 10 : 0,
+          };
+        }
+      }
+    }
+
     return {
-      fileCount,
-      directoryCount,
-      size: totalSize,
-      lastModified,
+      stats: {
+        fileCount,
+        directoryCount,
+        size: totalSize,
+        lastModified,
+        languageStats,
+      },
+      fileExtensions,
     };
   }
 
@@ -247,18 +295,19 @@ class ProjectScannerService {
       return null;
     }
 
-    const [metadata, technologies, stats, gitInfo] = await Promise.all([
+    const [metadata, statsResult, gitInfo] = await Promise.all([
       this.getProjectMetadata(projectPath),
-      this.detectTechnologies(projectPath),
       this.getProjectStats(projectPath),
       this.getGitInfo(projectPath),
     ]);
+
+    const technologies = await this.detectTechnologies(projectPath, statsResult.fileExtensions);
 
     return {
       ...metadata,
       path: projectPath,
       technologies,
-      stats,
+      stats: statsResult.stats,
       gitInfo,
     };
   }

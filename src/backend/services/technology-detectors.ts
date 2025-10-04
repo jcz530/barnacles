@@ -5,15 +5,17 @@ export interface TechnologyDetector {
   color?: string;
   files: string[];
   packageJsonKeys?: string[];
+  fileExtensions?: string[];
 }
 
 export const TECHNOLOGY_DETECTORS: TechnologyDetector[] = [
   {
-    name: 'Node.js',
-    slug: 'nodejs',
-    icon: 'nodejs',
-    color: '#339933',
-    files: ['package.json'],
+    name: 'JavaScript',
+    slug: 'javascript',
+    icon: 'javascript',
+    color: '#F7DF1E',
+    files: [],
+    fileExtensions: ['.js', '.mjs', '.cjs'],
   },
   {
     name: 'TypeScript',
@@ -21,6 +23,7 @@ export const TECHNOLOGY_DETECTORS: TechnologyDetector[] = [
     icon: 'typescript',
     color: '#3178C6',
     files: ['tsconfig.json'],
+    fileExtensions: ['.ts', '.tsx'],
   },
   {
     name: 'Vue',
@@ -29,6 +32,7 @@ export const TECHNOLOGY_DETECTORS: TechnologyDetector[] = [
     color: '#42B883',
     files: [],
     packageJsonKeys: ['vue'],
+    fileExtensions: ['.vue'],
   },
   {
     name: 'React',
@@ -37,6 +41,14 @@ export const TECHNOLOGY_DETECTORS: TechnologyDetector[] = [
     color: '#61DAFB',
     files: [],
     packageJsonKeys: ['react'],
+    fileExtensions: ['.jsx', '.tsx'],
+  },
+  {
+    name: 'Node.js',
+    slug: 'nodejs',
+    icon: 'nodejs',
+    color: '#339933',
+    files: ['package.json'],
   },
   {
     name: 'Next.js',
@@ -55,18 +67,20 @@ export const TECHNOLOGY_DETECTORS: TechnologyDetector[] = [
     packageJsonKeys: ['nuxt'],
   },
   {
-    name: 'Laravel',
-    slug: 'laravel',
-    icon: 'laravel',
-    color: '#FF2D20',
-    files: ['artisan', 'composer.json'],
-  },
-  {
     name: 'PHP',
     slug: 'php',
     icon: 'php',
     color: '#777BB4',
     files: ['composer.json'],
+    fileExtensions: ['.php'],
+  },
+  {
+    name: 'Laravel',
+    slug: 'laravel',
+    icon: 'laravel',
+    color: '#FF2D20',
+    files: ['artisan'],
+    packageJsonKeys: ['laravel-mix', 'laravel-vite-plugin'],
   },
   {
     name: 'Python',
@@ -74,6 +88,7 @@ export const TECHNOLOGY_DETECTORS: TechnologyDetector[] = [
     icon: 'python',
     color: '#3776AB',
     files: ['requirements.txt', 'pyproject.toml', 'setup.py'],
+    fileExtensions: ['.py'],
   },
   {
     name: 'Django',
@@ -88,6 +103,7 @@ export const TECHNOLOGY_DETECTORS: TechnologyDetector[] = [
     icon: 'rust',
     color: '#000000',
     files: ['Cargo.toml'],
+    fileExtensions: ['.rs'],
   },
   {
     name: 'Go',
@@ -95,6 +111,31 @@ export const TECHNOLOGY_DETECTORS: TechnologyDetector[] = [
     icon: 'go',
     color: '#00ADD8',
     files: ['go.mod'],
+    fileExtensions: ['.go'],
+  },
+  {
+    name: 'CSS',
+    slug: 'css',
+    icon: 'css',
+    color: '#1572B6',
+    files: [],
+    fileExtensions: ['.css'],
+  },
+  {
+    name: 'SCSS',
+    slug: 'scss',
+    icon: 'sass',
+    color: '#CC6699',
+    files: [],
+    fileExtensions: ['.scss', '.sass'],
+  },
+  {
+    name: 'HTML',
+    slug: 'html',
+    icon: 'html',
+    color: '#E34F26',
+    files: [],
+    fileExtensions: ['.html', '.htm'],
   },
   {
     name: 'Docker',

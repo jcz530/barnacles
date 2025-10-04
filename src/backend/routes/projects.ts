@@ -40,41 +40,6 @@ projects.get('/', async c => {
 });
 
 /**
- * GET /api/projects/:id
- * Get a single project by ID
- */
-projects.get('/:id', async c => {
-  try {
-    const id = c.req.param('id');
-    const project = await projectService.getProjectById(id);
-
-    if (!project) {
-      return c.json(
-        {
-          success: false,
-          error: 'Project not found',
-        },
-        404
-      );
-    }
-
-    return c.json({
-      success: true,
-      data: project,
-    });
-  } catch (error) {
-    console.error('Error fetching project:', error);
-    return c.json(
-      {
-        success: false,
-        error: 'Failed to fetch project',
-      },
-      500
-    );
-  }
-});
-
-/**
  * POST /api/projects/scan
  * Scan directories for projects and save to database
  */
@@ -232,6 +197,41 @@ projects.get('/meta/technologies', async c => {
       {
         success: false,
         error: 'Failed to fetch technologies',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * GET /api/projects/:id
+ * Get a single project by ID
+ */
+projects.get('/:id', async c => {
+  try {
+    const id = c.req.param('id');
+    const project = await projectService.getProjectById(id);
+
+    if (!project) {
+      return c.json(
+        {
+          success: false,
+          error: 'Project not found',
+        },
+        404
+      );
+    }
+
+    return c.json({
+      success: true,
+      data: project,
+    });
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    return c.json(
+      {
+        success: false,
+        error: 'Failed to fetch project',
       },
       500
     );

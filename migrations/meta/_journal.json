@@ -15,6 +15,13 @@
       "when": 1759526936142,
       "tag": "0001_certain_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1759590759367,
+      "tag": "0002_classy_zzzax",
+      "breakpoints": true
     }
   ]
 }

@@ -76,6 +76,7 @@ export const projectStats = sqliteTable('project_stats', {
     .references(() => projects.id, { onDelete: 'cascade' }),
   fileCount: integer('file_count'),
   directoryCount: integer('directory_count'),
+  languageStats: text('language_stats'), // JSON string of { techSlug: { fileCount: number, percentage: number } }
   gitBranch: text('git_branch'),
   gitStatus: text('git_status'),
   lastCommitDate: integer('last_commit_date', { mode: 'timestamp' }),
