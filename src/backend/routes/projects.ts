@@ -1,8 +1,7 @@
 import { Hono } from 'hono';
-import { projectService } from '../services/project-service';
-import { projectScannerService } from '../services/project-scanner-service';
 import os from 'os';
 import path from 'path';
+import { projectService } from '../services/project-service';
 
 const projects = new Hono();
 
@@ -171,6 +170,44 @@ projects.patch('/:id/status', async c => {
       {
         success: false,
         error: 'Failed to update project status',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * POST /api/projects/:id/rescan
+ * Rescan a single project to update its information
+ */
+projects.post('/:id/rescan', async c => {
+  try {
+    const id = c.req.param('id');
+    const project = await projectService.getProjectById(id);
+
+    if (!project) {
+      return c.json(
+        {
+          success: false,
+          error: 'Project not found',
+        },
+        404
+      );
+    }
+
+    const rescannedProject = await projectService.rescanProject(project.path);
+
+    return c.json({
+      success: true,
+      data: rescannedProject,
+      message: 'Project rescanned successfully',
+    });
+  } catch (error) {
+    console.error('Error rescanning project:', error);
+    return c.json(
+      {
+        success: false,
+        error: 'Failed to rescan project',
       },
       500
     );

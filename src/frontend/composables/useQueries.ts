@@ -177,6 +177,29 @@ export const useQueries = () => {
     });
   };
 
+  // Rescan project mutation
+  const useRescanProjectMutation = () => {
+    return useMutation({
+      mutationFn: async (projectId: string) => {
+        const response = await apiCall<ApiResponse<ProjectWithDetails>>(
+          'POST',
+          `${API_ROUTES.PROJECTS}/${projectId}/rescan`
+        );
+
+        if (!response) {
+          throw new Error('Failed to rescan project');
+        }
+
+        return response.data;
+      },
+      onSuccess: (data, projectId) => {
+        // Invalidate both the projects list and the specific project query
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      },
+    });
+  };
+
   return {
     useHelloQuery,
     useUsersQuery,
@@ -187,5 +210,6 @@ export const useQueries = () => {
     useScanProjectsMutation,
     useDeleteProjectMutation,
     useUpdateProjectStatusMutation,
+    useRescanProjectMutation,
   };
 };

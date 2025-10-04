@@ -8,6 +8,7 @@ import {
   FolderTree,
   GitBranch,
   HardDrive,
+  RefreshCw,
   Trash2,
 } from 'lucide-vue-next';
 import { computed, onMounted } from 'vue';
@@ -21,16 +22,17 @@ import { useQueries } from '../composables/useQueries';
 const route = useRoute();
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
-const { useProjectQuery, useDeleteProjectMutation } = useQueries();
+const { useProjectQuery, useDeleteProjectMutation, useRescanProjectMutation } = useQueries();
 
 const projectId = computed(() => route.params.id as string);
 
 const { data: project, isLoading } = useProjectQuery(projectId);
 const deleteMutation = useDeleteProjectMutation();
+const rescanMutation = useRescanProjectMutation();
 
 onMounted(() => {
   setBreadcrumbs([
-    { label: 'Projects', url: '/projects' },
+    { label: 'Projects', href: '/projects' },
     { label: project.value?.name || 'Loading...' },
   ]);
 });
@@ -95,6 +97,17 @@ const handleDelete = async () => {
     }
   }
 };
+
+const handleRescan = async () => {
+  if (!project.value) return;
+
+  try {
+    await rescanMutation.mutateAsync(project.value.id);
+  } catch (error) {
+    console.error('Failed to rescan project:', error);
+    alert('Failed to rescan project. Please try again.');
+  }
+};
 </script>
 
 <template>
@@ -108,10 +121,24 @@ const handleDelete = async () => {
             Back to Projects
           </Button>
         </div>
-        <Button variant="destructive" size="sm" @click="handleDelete" :disabled="isLoading">
-          <Trash2 class="mr-2 h-4 w-4" />
-          Delete Project
-        </Button>
+        <div class="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            @click="handleRescan"
+            :disabled="isLoading || rescanMutation.isPending.value"
+          >
+            <RefreshCw
+              class="mr-2 h-4 w-4"
+              :class="{ 'animate-spin': rescanMutation.isPending.value }"
+            />
+            {{ rescanMutation.isPending.value ? 'Rescanning...' : 'Rescan Project' }}
+          </Button>
+          <Button variant="destructive" size="sm" @click="handleDelete" :disabled="isLoading">
+            <Trash2 class="mr-2 h-4 w-4" />
+            Delete Project
+          </Button>
+        </div>
       </div>
 
       <div v-if="isLoading" class="space-y-2">

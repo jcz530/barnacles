@@ -345,6 +345,20 @@ class ProjectService {
 
     return savedProjects;
   }
+
+  /**
+   * Rescan a single project by its path
+   */
+  async rescanProject(projectPath: string): Promise<ProjectWithDetails> {
+    const projectInfo = await projectScannerService.scanProject(projectPath);
+
+    if (!projectInfo) {
+      throw new Error('Failed to scan project');
+    }
+
+    const savedProject = await this.saveProject(projectInfo);
+    return savedProject;
+  }
 }
 
 export const projectService = new ProjectService();
