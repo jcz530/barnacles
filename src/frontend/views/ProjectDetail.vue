@@ -15,6 +15,7 @@ import {
 import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import OpenInIDEButton from '../components/molecules/OpenInIDEButton.vue';
+import OpenTerminalButton from '../components/molecules/OpenTerminalButton.vue';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Skeleton } from '../components/ui/skeleton';
@@ -31,12 +32,14 @@ const {
   useDeleteProjectMutation,
   useRescanProjectMutation,
   useDetectedIDEsQuery,
+  useDetectedTerminalsQuery,
 } = useQueries();
 
 const projectId = computed(() => route.params.id as string);
 
 const { data: project, isLoading } = useProjectQuery(projectId);
 const { data: detectedIDEs } = useDetectedIDEsQuery();
+const { data: detectedTerminals } = useDetectedTerminalsQuery();
 const deleteMutation = useDeleteProjectMutation();
 const rescanMutation = useRescanProjectMutation();
 
@@ -103,6 +106,14 @@ const languageStats = computed(() => {
             :project-id="project.id"
             :detected-i-d-es="detectedIDEs"
             :preferred-ide-id="project.preferredIde"
+            :is-loading="isLoading"
+          />
+
+          <OpenTerminalButton
+            v-if="project"
+            :project-id="project.id"
+            :detected-terminals="detectedTerminals"
+            :preferred-terminal-id="project.preferredTerminal"
             :is-loading="isLoading"
           />
 

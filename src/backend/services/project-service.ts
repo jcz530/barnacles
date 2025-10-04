@@ -9,6 +9,7 @@ import {
 import type { ProjectInfo } from './project-scanner-service';
 import { projectScannerService } from './project-scanner-service';
 import { ideDetectorService } from './ide-detector-service';
+import { terminalDetectorService } from './terminal-detector-service';
 
 export interface Project {
   id: string;
@@ -19,6 +20,7 @@ export interface Project {
   size?: number | null;
   status: 'active' | 'archived';
   preferredIde?: string | null;
+  preferredTerminal?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -423,6 +425,49 @@ class ProjectService {
     }
 
     await ideDetectorService.openProjectInIDE(project.path, ideToUse);
+  }
+
+  /**
+   * Update the preferred terminal for a project
+   */
+  async updatePreferredTerminal(id: string, terminalId: string | null): Promise<void> {
+    await db
+      .update(projects)
+      .set({ preferredTerminal: terminalId, updatedAt: new Date() })
+      .where(eq(projects.id, id));
+  }
+
+  /**
+   * Get all detected terminals on the system
+   */
+  async getDetectedTerminals() {
+    return await terminalDetectorService.detectInstalledTerminals();
+  }
+
+  /**
+   * Get all available terminal definitions
+   */
+  getAvailableTerminals() {
+    return terminalDetectorService.getAvailableTerminals();
+  }
+
+  /**
+   * Open a terminal at the project path
+   */
+  async openTerminalAtProject(id: string, terminalId?: string): Promise<void> {
+    const project = await this.getProjectById(id);
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const terminalToUse = terminalId || project.preferredTerminal;
+
+    if (!terminalToUse) {
+      throw new Error('No terminal specified for this project');
+    }
+
+    await terminalDetectorService.openTerminalAtPath(terminalToUse, project.path);
   }
 }
 

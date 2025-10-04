@@ -27,4 +27,6 @@ export const API_ROUTES = {
   PROJECTS_TECHNOLOGIES: '/api/projects/meta/technologies',
   PROJECTS_IDES_DETECTED: '/api/projects/ides/detected',
   PROJECTS_IDES_AVAILABLE: '/api/projects/ides/available',
+  PROJECTS_TERMINALS_DETECTED: '/api/projects/terminals/detected',
+  PROJECTS_TERMINALS_AVAILABLE: '/api/projects/terminals/available',
 } as const;

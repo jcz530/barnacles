@@ -34,6 +34,7 @@ export interface Project {
   size?: number | null;
   status: 'active' | 'archived';
   preferredIde?: string | null;
+  preferredTerminal?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,6 +49,20 @@ export interface IDE {
 }
 
 export interface DetectedIDE extends IDE {
+  installed: boolean;
+  version?: string;
+}
+
+export interface Terminal {
+  id: string;
+  name: string;
+  executable: string;
+  command: string;
+  icon?: string;
+  color?: string;
+}
+
+export interface DetectedTerminal extends Terminal {
   installed: boolean;
   version?: string;
 }

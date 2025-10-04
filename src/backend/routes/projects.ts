@@ -308,6 +308,110 @@ projects.post('/:id/open', async c => {
 });
 
 /**
+ * GET /api/projects/terminals/detected
+ * Get all detected terminals on the system
+ */
+projects.get('/terminals/detected', async c => {
+  try {
+    const terminals = await projectService.getDetectedTerminals();
+
+    return c.json({
+      success: true,
+      data: terminals,
+    });
+  } catch (error) {
+    console.error('Error detecting terminals:', error);
+    return c.json(
+      {
+        success: false,
+        error: 'Failed to detect terminals',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * GET /api/projects/terminals/available
+ * Get all available terminal definitions
+ */
+projects.get('/terminals/available', async c => {
+  try {
+    const terminals = projectService.getAvailableTerminals();
+
+    return c.json({
+      success: true,
+      data: terminals,
+    });
+  } catch (error) {
+    console.error('Error fetching available terminals:', error);
+    return c.json(
+      {
+        success: false,
+        error: 'Failed to fetch available terminals',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * PATCH /api/projects/:id/terminal
+ * Update the preferred terminal for a project
+ */
+projects.patch('/:id/terminal', async c => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { terminalId } = body;
+
+    await projectService.updatePreferredTerminal(id, terminalId);
+
+    return c.json({
+      success: true,
+      message: 'Preferred terminal updated successfully',
+    });
+  } catch (error) {
+    console.error('Error updating preferred terminal:', error);
+    return c.json(
+      {
+        success: false,
+        error: 'Failed to update preferred terminal',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * POST /api/projects/:id/open-terminal
+ * Open a terminal at the project path
+ */
+projects.post('/:id/open-terminal', async c => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json().catch(() => ({}));
+    const { terminalId } = body;
+
+    await projectService.openTerminalAtProject(id, terminalId);
+
+    return c.json({
+      success: true,
+      message: 'Terminal opened at project path',
+    });
+  } catch (error) {
+    console.error('Error opening terminal:', error);
+    return c.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to open terminal',
+      },
+      500
+    );
+  }
+});
+
+/**
  * GET /api/projects/:id
  * Get a single project by ID
  */

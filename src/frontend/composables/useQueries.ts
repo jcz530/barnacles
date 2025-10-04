@@ -5,10 +5,12 @@ import { API_ROUTES } from '../../shared/constants';
 import type {
   ApiResponse,
   DetectedIDE,
+  DetectedTerminal,
   HelloResponse,
   IDE,
   ProjectWithDetails,
   Technology,
+  Terminal,
   User,
 } from '../../shared/types/api';
 import { useApi } from './useApi';
@@ -283,6 +285,92 @@ export const useQueries = () => {
     });
   };
 
+  // Get detected terminals query
+  const useDetectedTerminalsQuery = () => {
+    return useQuery({
+      queryKey: ['terminals', 'detected'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<DetectedTerminal[]>>(
+          'GET',
+          API_ROUTES.PROJECTS_TERMINALS_DETECTED
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch detected terminals');
+        }
+
+        return response.data || [];
+      },
+    });
+  };
+
+  // Get available terminals query
+  const useAvailableTerminalsQuery = () => {
+    return useQuery({
+      queryKey: ['terminals', 'available'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<Terminal[]>>(
+          'GET',
+          API_ROUTES.PROJECTS_TERMINALS_AVAILABLE
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch available terminals');
+        }
+
+        return response.data || [];
+      },
+    });
+  };
+
+  // Update preferred terminal mutation
+  const useUpdatePreferredTerminalMutation = () => {
+    return useMutation({
+      mutationFn: async ({
+        projectId,
+        terminalId,
+      }: {
+        projectId: string;
+        terminalId: string | null;
+      }) => {
+        const response = await apiCall<ApiResponse>(
+          'PATCH',
+          `${API_ROUTES.PROJECTS}/${projectId}/terminal`,
+          { terminalId }
+        );
+
+        if (!response) {
+          throw new Error('Failed to update preferred terminal');
+        }
+
+        return response;
+      },
+      onSuccess: (data, { projectId }) => {
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      },
+    });
+  };
+
+  // Open terminal at project mutation
+  const useOpenTerminalMutation = () => {
+    return useMutation({
+      mutationFn: async ({ projectId, terminalId }: { projectId: string; terminalId?: string }) => {
+        const response = await apiCall<ApiResponse>(
+          'POST',
+          `${API_ROUTES.PROJECTS}/${projectId}/open-terminal`,
+          terminalId ? { terminalId } : {}
+        );
+
+        if (!response) {
+          throw new Error('Failed to open terminal');
+        }
+
+        return response;
+      },
+    });
+  };
+
   return {
     useHelloQuery,
     useUsersQuery,
@@ -298,5 +386,9 @@ export const useQueries = () => {
     useAvailableIDEsQuery,
     useUpdatePreferredIDEMutation,
     useOpenProjectMutation,
+    useDetectedTerminalsQuery,
+    useAvailableTerminalsQuery,
+    useUpdatePreferredTerminalMutation,
+    useOpenTerminalMutation,
   };
 };

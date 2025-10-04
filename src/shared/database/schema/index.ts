@@ -29,6 +29,7 @@ export const projects = sqliteTable('projects', {
     .notNull()
     .default('active'),
   preferredIde: text('preferred_ide'),
+  preferredTerminal: text('preferred_terminal'),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),
