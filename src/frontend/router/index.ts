@@ -3,6 +3,7 @@ import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router
 import DefaultLayout from '../layouts/DefaultLayout.vue';
 import Api from '../views/Api.vue';
 import Home from '../views/Home.vue';
+import Projects from '../views/Projects.vue';
 
 const routes = [
   {
@@ -13,6 +14,11 @@ const routes = [
         path: '',
         name: 'Home',
         component: Home,
+      },
+      {
+        path: '/projects',
+        name: 'Projects',
+        component: Projects,
       },
       {
         path: '/api',

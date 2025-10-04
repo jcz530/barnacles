@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import users from './users';
+import projects from './projects';
 
 const api = new Hono();
 
@@ -20,6 +21,7 @@ api
     });
   })
 
-  .route('/users', users);
+  .route('/users', users)
+  .route('/projects', projects);
 
 export default api;

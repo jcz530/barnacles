@@ -1,0 +1,350 @@
+import { and, desc, eq, sql } from 'drizzle-orm';
+import { db } from '../../shared/database';
+import {
+  projects,
+  projectStats,
+  projectTechnologies,
+  technologies,
+} from '../../shared/database/schema';
+import type { ProjectInfo } from './project-scanner-service';
+import { projectScannerService } from './project-scanner-service';
+
+export interface Project {
+  id: string;
+  name: string;
+  path: string;
+  description?: string | null;
+  lastModified?: Date | null;
+  size?: number | null;
+  status: 'active' | 'archived';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ProjectWithDetails extends Project {
+  technologies: Technology[];
+  stats?: ProjectStats | null;
+}
+
+export interface Technology {
+  id: string;
+  name: string;
+  slug: string;
+  icon?: string | null;
+  color?: string | null;
+}
+
+export interface ProjectStats {
+  id: string;
+  projectId: string;
+  fileCount?: number | null;
+  directoryCount?: number | null;
+  gitBranch?: string | null;
+  gitStatus?: string | null;
+  lastCommitDate?: Date | null;
+  lastCommitMessage?: string | null;
+  hasUncommittedChanges?: boolean | null;
+}
+
+export interface ProjectFilters {
+  search?: string;
+  technologies?: string[];
+  status?: 'active' | 'archived';
+}
+
+class ProjectService {
+  /**
+   * Get all projects with optional filters
+   */
+  async getProjects(filters?: ProjectFilters): Promise<ProjectWithDetails[]> {
+    let query = db.select().from(projects);
+
+    // Apply filters
+    const conditions = [];
+
+    if (filters?.status) {
+      conditions.push(eq(projects.status, filters.status));
+    }
+
+    if (filters?.search) {
+      conditions.push(
+        sql`(${projects.name} LIKE ${'%' + filters.search + '%'} OR ${projects.path} LIKE ${'%' + filters.search + '%'})`
+      );
+    }
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as typeof query;
+    }
+
+    // Order by last modified
+    query = query.orderBy(desc(projects.lastModified)) as typeof query;
+
+    const projectResults = await query;
+
+    // Get technologies for each project
+    const projectsWithDetails = await Promise.all(
+      projectResults.map(async project => {
+        const [techs, stats] = await Promise.all([
+          this.getProjectTechnologies(project.id),
+          this.getProjectStats(project.id),
+        ]);
+
+        return {
+          ...project,
+          technologies: techs,
+          stats,
+        };
+      })
+    );
+
+    // Filter by technologies if specified
+    if (filters?.technologies && filters.technologies.length > 0) {
+      return projectsWithDetails.filter(project =>
+        filters.technologies!.some(techSlug =>
+          project.technologies.some(tech => tech.slug === techSlug)
+        )
+      );
+    }
+
+    return projectsWithDetails;
+  }
+
+  /**
+   * Get a single project by ID
+   */
+  async getProjectById(id: string): Promise<ProjectWithDetails | null> {
+    const result = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    const project = result[0];
+    const [techs, stats] = await Promise.all([
+      this.getProjectTechnologies(project.id),
+      this.getProjectStats(project.id),
+    ]);
+
+    return {
+      ...project,
+      technologies: techs,
+      stats,
+    };
+  }
+
+  /**
+   * Get technologies for a project
+   */
+  private async getProjectTechnologies(projectId: string): Promise<Technology[]> {
+    const result = await db
+      .select({
+        id: technologies.id,
+        name: technologies.name,
+        slug: technologies.slug,
+        icon: technologies.icon,
+        color: technologies.color,
+      })
+      .from(projectTechnologies)
+      .innerJoin(technologies, eq(projectTechnologies.technologyId, technologies.id))
+      .where(eq(projectTechnologies.projectId, projectId));
+
+    return result;
+  }
+
+  /**
+   * Get stats for a project
+   */
+  private async getProjectStats(projectId: string): Promise<ProjectStats | null> {
+    const result = await db
+      .select()
+      .from(projectStats)
+      .where(eq(projectStats.projectId, projectId))
+      .limit(1);
+
+    return result[0] || null;
+  }
+
+  /**
+   * Get all technologies
+   */
+  async getTechnologies(): Promise<Technology[]> {
+    return await db.select().from(technologies);
+  }
+
+  /**
+   * Ensure technology exists in database
+   */
+  private async ensureTechnology(techSlug: string): Promise<string> {
+    // Check if technology exists
+    const existing = await db
+      .select()
+      .from(technologies)
+      .where(eq(technologies.slug, techSlug))
+      .limit(1);
+
+    if (existing.length > 0) {
+      return existing[0].id;
+    }
+
+    // Get technology info from scanner service
+    const detectors = projectScannerService.getTechnologyDetectors();
+    const detector = detectors.find(d => d.slug === techSlug);
+
+    if (!detector) {
+      throw new Error(`Unknown technology: ${techSlug}`);
+    }
+
+    try {
+      // Create new technology
+      const result = await db
+        .insert(technologies)
+        .values({
+          name: detector.name,
+          slug: detector.slug,
+          icon: detector.icon,
+          color: detector.color,
+        })
+        .returning();
+
+      return result[0].id;
+    } catch (error) {
+      // Handle race condition: if another process inserted it, fetch it again
+      const retry = await db
+        .select()
+        .from(technologies)
+        .where(eq(technologies.slug, techSlug))
+        .limit(1);
+
+      if (retry.length > 0) {
+        return retry[0].id;
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Save scanned project to database
+   */
+  async saveProject(projectInfo: ProjectInfo): Promise<ProjectWithDetails> {
+    // Check if project already exists by path
+    const existing = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.path, projectInfo.path))
+      .limit(1);
+
+    let projectId: string;
+
+    if (existing.length > 0) {
+      // Update existing project
+      projectId = existing[0].id;
+
+      await db
+        .update(projects)
+        .set({
+          name: projectInfo.name,
+          description: projectInfo.description,
+          lastModified: projectInfo.stats.lastModified,
+          size: projectInfo.stats.size,
+          updatedAt: new Date(),
+        })
+        .where(eq(projects.id, projectId));
+    } else {
+      // Create new project
+      const result = await db
+        .insert(projects)
+        .values({
+          name: projectInfo.name,
+          path: projectInfo.path,
+          description: projectInfo.description,
+          lastModified: projectInfo.stats.lastModified,
+          size: projectInfo.stats.size,
+          status: 'active',
+        })
+        .returning();
+
+      projectId = result[0].id;
+    }
+
+    // Delete existing project technologies
+    await db.delete(projectTechnologies).where(eq(projectTechnologies.projectId, projectId));
+
+    // Add technologies
+    for (const techSlug of projectInfo.technologies) {
+      const techId = await this.ensureTechnology(techSlug);
+
+      await db.insert(projectTechnologies).values({
+        projectId,
+        technologyId: techId,
+      });
+    }
+
+    // Save or update project stats
+    const existingStats = await db
+      .select()
+      .from(projectStats)
+      .where(eq(projectStats.projectId, projectId))
+      .limit(1);
+
+    const statsData = {
+      fileCount: projectInfo.stats.fileCount,
+      directoryCount: projectInfo.stats.directoryCount,
+      gitBranch: projectInfo.gitInfo?.branch,
+      gitStatus: projectInfo.gitInfo?.status,
+      lastCommitDate: projectInfo.gitInfo?.lastCommitDate,
+      lastCommitMessage: projectInfo.gitInfo?.lastCommitMessage,
+      hasUncommittedChanges: projectInfo.gitInfo?.hasUncommittedChanges,
+      updatedAt: new Date(),
+    };
+
+    if (existingStats.length > 0) {
+      await db.update(projectStats).set(statsData).where(eq(projectStats.projectId, projectId));
+    } else {
+      await db.insert(projectStats).values({
+        ...statsData,
+        projectId,
+      });
+    }
+
+    // Return the complete project
+    const project = await this.getProjectById(projectId);
+    if (!project) {
+      throw new Error('Failed to retrieve saved project');
+    }
+
+    return project;
+  }
+
+  /**
+   * Delete a project
+   */
+  async deleteProject(id: string): Promise<void> {
+    await db.delete(projects).where(eq(projects.id, id));
+  }
+
+  /**
+   * Update project status
+   */
+  async updateProjectStatus(id: string, status: 'active' | 'archived'): Promise<void> {
+    await db.update(projects).set({ status, updatedAt: new Date() }).where(eq(projects.id, id));
+  }
+
+  /**
+   * Scan directories and save all found projects
+   */
+  async scanAndSaveProjects(
+    directories: string[],
+    maxDepth: number = 2
+  ): Promise<ProjectWithDetails[]> {
+    const scannedProjects = await projectScannerService.scanDirectories(directories, maxDepth);
+
+    const savedProjects = await Promise.all(
+      scannedProjects.map(projectInfo => this.saveProject(projectInfo))
+    );
+
+    return savedProjects;
+  }
+}
+
+export const projectService = new ProjectService();

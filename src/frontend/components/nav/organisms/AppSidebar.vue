@@ -23,6 +23,7 @@ import {
   Send,
   Settings2,
   SquareTerminal,
+  FolderGit2,
 } from 'lucide-vue-next';
 
 const props = withDefaults(defineProps<SidebarProps>(), {
@@ -41,6 +42,11 @@ const data = {
       url: '/',
       icon: SquareTerminal,
       isActive: true,
+    },
+    {
+      title: 'Projects',
+      url: '/projects',
+      icon: FolderGit2,
     },
     {
       title: 'Users',
