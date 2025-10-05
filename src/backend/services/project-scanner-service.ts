@@ -205,12 +205,18 @@ class ProjectScannerService {
       'target',
     ];
 
+    const ignoreFiles = ['.DS_Store', 'Thumbs.db', 'desktop.ini', '.localized'];
+
     async function scanDir(dirPath: string): Promise<void> {
       try {
         const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
         for (const entry of entries) {
           if (ignoreDirs.includes(entry.name)) {
+            continue;
+          }
+
+          if (ignoreFiles.includes(entry.name)) {
             continue;
           }
 
