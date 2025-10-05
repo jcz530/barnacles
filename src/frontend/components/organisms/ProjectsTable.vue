@@ -2,10 +2,13 @@
 import {
   createColumnHelper,
   getCoreRowModel,
+  getSortedRowModel,
   useVueTable,
   type ColumnDef,
+  type SortingState,
 } from '@tanstack/vue-table';
 import { Calendar, Folder, GitBranch, HardDrive, Trash2 } from 'lucide-vue-next';
+import { ref } from 'vue';
 import type { ProjectWithDetails } from '../../../shared/types/api';
 import ProjectCard from '../molecules/ProjectCard.vue';
 import TableHeader from '../molecules/TableHeader.vue';
@@ -15,12 +18,16 @@ const props = defineProps<{
   projects: ProjectWithDetails[];
   isLoading?: boolean;
   viewMode?: 'table' | 'card';
+  sorting?: SortingState;
 }>();
 
 const emit = defineEmits<{
   delete: [projectId: string];
   open: [project: ProjectWithDetails];
+  'update:sorting': [sorting: SortingState];
 }>();
+
+const internalSorting = ref<SortingState>(props.sorting || []);
 
 const columnHelper = createColumnHelper<ProjectWithDetails>();
 
@@ -70,6 +77,7 @@ const handleOpen = (project: ProjectWithDetails) => {
 const columns: ColumnDef<ProjectWithDetails, any>[] = [
   columnHelper.accessor('name', {
     header: 'Project',
+    enableSorting: true,
     cell: props => {
       const project = props.row.original;
       return {
@@ -81,22 +89,27 @@ const columns: ColumnDef<ProjectWithDetails, any>[] = [
   }),
   columnHelper.accessor('technologies', {
     header: 'Technologies',
+    enableSorting: false,
     cell: props => props.row.original.technologies,
   }),
   columnHelper.accessor('lastModified', {
     header: 'Last Modified',
+    enableSorting: true,
     cell: props => props.row.original.lastModified,
   }),
   columnHelper.accessor('size', {
     header: 'Size',
+    enableSorting: true,
     cell: props => props.row.original.size,
   }),
   columnHelper.accessor('stats', {
     header: 'Git',
+    enableSorting: false,
     cell: props => props.row.original.stats,
   }),
   columnHelper.accessor('id', {
     header: 'Actions',
+    enableSorting: false,
     cell: props => props.row.original,
   }),
 ];
@@ -107,6 +120,18 @@ const table = useVueTable({
   },
   columns,
   getCoreRowModel: getCoreRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  state: {
+    get sorting() {
+      return internalSorting.value;
+    },
+  },
+  onSortingChange: updaterOrValue => {
+    const newValue =
+      typeof updaterOrValue === 'function' ? updaterOrValue(internalSorting.value) : updaterOrValue;
+    internalSorting.value = newValue;
+    emit('update:sorting', newValue);
+  },
 });
 </script>
 

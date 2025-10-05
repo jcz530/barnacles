@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import type { SortingState } from '@tanstack/vue-table';
 import { RefreshCw, Scan } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import type { ProjectWithDetails } from '../../shared/types/api';
+import SortControl from '../components/atoms/SortControl.vue';
 import ViewToggle from '../components/atoms/ViewToggle.vue';
 import ProjectSearchBar from '../components/molecules/ProjectSearchBar.vue';
 import TechnologyFilter from '../components/molecules/TechnologyFilter.vue';
@@ -24,6 +26,9 @@ const {
 const searchQuery = ref('');
 const selectedTechnologies = ref<string[]>([]);
 const viewMode = ref<'table' | 'card'>('table');
+const sortField = ref<'name' | 'lastModified' | 'size'>('name');
+const sortDirection = ref<'asc' | 'desc'>('asc');
+const tableSorting = ref<SortingState>([{ id: 'name', desc: false }]);
 
 // Queries
 const {
@@ -38,13 +43,44 @@ const {
 const { data: technologies, isLoading: technologiesLoading } = useTechnologiesQuery();
 
 // Local fuzzy search
-const { filteredItems: projects } = useFuzzySearch<ProjectWithDetails>({
+const { filteredItems: searchedProjects } = useFuzzySearch<ProjectWithDetails>({
   items: computed(() => allProjects.value || []),
   searchQuery,
   fuseOptions: {
     threshold: 0.3,
     keys: ['name', 'path', 'description'],
   },
+});
+
+// Sorted projects
+const projects = computed(() => {
+  const items = [...(searchedProjects.value || [])];
+
+  items.sort((a, b) => {
+    let aVal: any;
+    let bVal: any;
+
+    switch (sortField.value) {
+      case 'name':
+        aVal = a.name.toLowerCase();
+        bVal = b.name.toLowerCase();
+        break;
+      case 'lastModified':
+        aVal = a.lastModified ? new Date(a.lastModified).getTime() : 0;
+        bVal = b.lastModified ? new Date(b.lastModified).getTime() : 0;
+        break;
+      case 'size':
+        aVal = a.size || 0;
+        bVal = b.size || 0;
+        break;
+    }
+
+    if (aVal < bVal) return sortDirection.value === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection.value === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  return items;
 });
 
 // Mutations
@@ -61,7 +97,7 @@ const hasActiveFilters = computed(
 const totalProjects = computed(() => allProjects.value?.length || 0);
 
 const resultsText = computed(() => {
-  const count = projects.value?.length || 0;
+  const count = projects.value.length;
   const total = totalProjects.value;
 
   if (hasActiveFilters.value) {
@@ -97,6 +133,20 @@ const handleOpenProject = (project: ProjectWithDetails) => {
 const handleRefresh = () => {
   refetchProjects();
 };
+
+// Sync table sorting with card sorting
+watch(tableSorting, newSorting => {
+  if (newSorting.length > 0) {
+    const sort = newSorting[0];
+    sortField.value = sort.id as 'name' | 'lastModified' | 'size';
+    sortDirection.value = sort.desc ? 'desc' : 'asc';
+  }
+});
+
+// Sync card sorting with table sorting
+watch([sortField, sortDirection], () => {
+  tableSorting.value = [{ id: sortField.value, desc: sortDirection.value === 'desc' }];
+});
 </script>
 
 <template>
@@ -129,6 +179,13 @@ const handleRefresh = () => {
           :selected-technologies="selectedTechnologies"
           @update:selected-technologies="selectedTechnologies = $event"
         />
+        <SortControl
+          v-if="viewMode === 'card'"
+          :sort-field="sortField"
+          :sort-direction="sortDirection"
+          @update:sort-field="sortField = $event"
+          @update:sort-direction="sortDirection = $event"
+        />
         <ViewToggle :current-view="viewMode" @update:view="viewMode = $event" />
       </div>
 
@@ -144,6 +201,8 @@ const handleRefresh = () => {
         :projects="projects"
         :is-loading="projectsLoading"
         :view-mode="viewMode"
+        :sorting="tableSorting"
+        @update:sorting="tableSorting = $event"
         @delete="handleDeleteProject"
         @open="handleOpenProject"
       />
