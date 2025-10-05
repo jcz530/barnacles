@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import fs from 'fs/promises';
+import ignore from 'ignore';
 import path from 'path';
 import { promisify } from 'util';
 import type { TechnologyDetector } from './technology-detectors';
@@ -182,6 +183,21 @@ class ProjectScannerService {
   }
 
   /**
+   * Loads and parses .gitignore file
+   */
+  private async loadGitignore(projectPath: string): Promise<ReturnType<typeof ignore> | null> {
+    try {
+      const gitignorePath = path.join(projectPath, '.gitignore');
+      const content = await fs.readFile(gitignorePath, 'utf-8');
+      const ig = ignore();
+      ig.add(content);
+      return ig;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Counts lines in a file
    */
   private async countLines(filePath: string): Promise<number> {
@@ -207,6 +223,9 @@ class ProjectScannerService {
     const fileExtensions = new Set<string>();
     const extensionCounts: { [ext: string]: number } = {};
     const extensionLines: { [ext: string]: number } = {};
+
+    // Load .gitignore if it exists
+    const gitignoreFilter = await this.loadGitignore(projectPath);
 
     const ignoreDirs = [
       'node_modules',
@@ -237,6 +256,14 @@ class ProjectScannerService {
           }
 
           const fullPath = path.join(dirPath, entry.name);
+
+          // Check if file/dir is ignored by .gitignore
+          if (gitignoreFilter) {
+            const relativePath = path.relative(projectPath, fullPath);
+            if (gitignoreFilter.ignores(relativePath)) {
+              continue;
+            }
+          }
 
           if (entry.isDirectory()) {
             directoryCount++;
