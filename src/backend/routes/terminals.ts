@@ -17,14 +17,12 @@ terminals.get('/', async c => {
       : terminalService.getAllTerminals();
 
     return c.json({
-      success: true,
       data: terminalList,
     });
   } catch (error) {
     console.error('Error fetching terminals:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to fetch terminals',
       },
       500
@@ -44,7 +42,6 @@ terminals.get('/:id', async c => {
     if (!terminal) {
       return c.json(
         {
-          success: false,
           error: 'Terminal not found',
         },
         404
@@ -52,14 +49,12 @@ terminals.get('/:id', async c => {
     }
 
     return c.json({
-      success: true,
       data: terminal,
     });
   } catch (error) {
     console.error('Error fetching terminal:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to fetch terminal',
       },
       500
@@ -83,7 +78,6 @@ terminals.post('/', async c => {
       if (!project) {
         return c.json(
           {
-            success: false,
             error: 'Project not found',
           },
           404
@@ -95,7 +89,6 @@ terminals.post('/', async c => {
     if (!workingDir) {
       return c.json(
         {
-          success: false,
           error: 'Working directory (cwd) or projectId is required',
         },
         400
@@ -111,7 +104,6 @@ terminals.post('/', async c => {
 
     return c.json(
       {
-        success: true,
         data: terminal,
         message: 'Terminal created successfully',
       },
@@ -121,7 +113,6 @@ terminals.post('/', async c => {
     console.error('Error creating terminal:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to create terminal',
       },
       500
@@ -141,7 +132,6 @@ terminals.delete('/:id', async c => {
     if (!success) {
       return c.json(
         {
-          success: false,
           error: 'Terminal not found',
         },
         404
@@ -149,14 +139,12 @@ terminals.delete('/:id', async c => {
     }
 
     return c.json({
-      success: true,
       message: 'Terminal killed successfully',
     });
   } catch (error) {
     console.error('Error killing terminal:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to kill terminal',
       },
       500
@@ -177,7 +165,6 @@ terminals.post('/:id/write', async c => {
     if (!data) {
       return c.json(
         {
-          success: false,
           error: 'Data is required',
         },
         400
@@ -189,7 +176,6 @@ terminals.post('/:id/write', async c => {
     if (!success) {
       return c.json(
         {
-          success: false,
           error: 'Terminal not found or has exited',
         },
         404
@@ -197,14 +183,12 @@ terminals.post('/:id/write', async c => {
     }
 
     return c.json({
-      success: true,
       message: 'Data written to terminal',
     });
   } catch (error) {
     console.error('Error writing to terminal:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to write to terminal',
       },
       500
@@ -225,7 +209,6 @@ terminals.post('/:id/resize', async c => {
     if (!cols || !rows) {
       return c.json(
         {
-          success: false,
           error: 'cols and rows are required',
         },
         400
@@ -237,7 +220,6 @@ terminals.post('/:id/resize', async c => {
     if (!success) {
       return c.json(
         {
-          success: false,
           error: 'Terminal not found or has exited',
         },
         404
@@ -245,14 +227,12 @@ terminals.post('/:id/resize', async c => {
     }
 
     return c.json({
-      success: true,
       message: 'Terminal resized',
     });
   } catch (error) {
     console.error('Error resizing terminal:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to resize terminal',
       },
       500

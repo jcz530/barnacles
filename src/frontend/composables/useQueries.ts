@@ -383,7 +383,7 @@ export const useQueries = () => {
         );
 
         // Return null if README not found (404) or any other error
-        if (!response || !response.success) {
+        if (!response) {
           return null;
         }
 
@@ -406,7 +406,7 @@ export const useQueries = () => {
           `${API_ROUTES.PROJECTS}/${unref(projectId)}/package-scripts`
         );
 
-        if (!response || !response.success) {
+        if (!response) {
           return {};
         }
 

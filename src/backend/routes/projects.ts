@@ -24,14 +24,12 @@ projects.get('/', async c => {
     const projectList = await projectService.getProjects(filters);
 
     return c.json({
-      success: true,
       data: projectList,
     });
   } catch (error) {
     console.error('Error fetching projects:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to fetch projects',
       },
       500
@@ -62,7 +60,6 @@ projects.post('/scan', async c => {
     const scannedProjects = await projectService.scanAndSaveProjects(dirsToScan, maxDepth);
 
     return c.json({
-      success: true,
       data: scannedProjects,
       message: `Scanned and saved ${scannedProjects.length} projects`,
     });
@@ -70,7 +67,6 @@ projects.post('/scan', async c => {
     console.error('Error scanning projects:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to scan projects',
       },
       500
@@ -88,14 +84,12 @@ projects.delete('/:id', async c => {
     await projectService.deleteProject(id);
 
     return c.json({
-      success: true,
       message: 'Project deleted successfully',
     });
   } catch (error) {
     console.error('Error deleting project:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to delete project',
       },
       500
@@ -116,7 +110,6 @@ projects.patch('/:id/status', async c => {
     if (!status || !['active', 'archived'].includes(status)) {
       return c.json(
         {
-          success: false,
           error: 'Invalid status. Must be "active" or "archived"',
         },
         400
@@ -126,14 +119,12 @@ projects.patch('/:id/status', async c => {
     await projectService.updateProjectStatus(id, status);
 
     return c.json({
-      success: true,
       message: 'Project status updated successfully',
     });
   } catch (error) {
     console.error('Error updating project status:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to update project status',
       },
       500
@@ -153,7 +144,6 @@ projects.post('/:id/rescan', async c => {
     if (!project) {
       return c.json(
         {
-          success: false,
           error: 'Project not found',
         },
         404
@@ -163,7 +153,6 @@ projects.post('/:id/rescan', async c => {
     const rescannedProject = await projectService.rescanProject(project.path);
 
     return c.json({
-      success: true,
       data: rescannedProject,
       message: 'Project rescanned successfully',
     });
@@ -171,7 +160,6 @@ projects.post('/:id/rescan', async c => {
     console.error('Error rescanning project:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to rescan project',
       },
       500
@@ -188,14 +176,12 @@ projects.get('/meta/technologies', async c => {
     const techs = await projectService.getTechnologies();
 
     return c.json({
-      success: true,
       data: techs,
     });
   } catch (error) {
     console.error('Error fetching technologies:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to fetch technologies',
       },
       500
@@ -212,14 +198,12 @@ projects.get('/ides/detected', async c => {
     const ides = await projectService.getDetectedIDEs();
 
     return c.json({
-      success: true,
       data: ides,
     });
   } catch (error) {
     console.error('Error detecting IDEs:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to detect IDEs',
       },
       500
@@ -236,14 +220,12 @@ projects.get('/ides/available', async c => {
     const ides = projectService.getAvailableIDEs();
 
     return c.json({
-      success: true,
       data: ides,
     });
   } catch (error) {
     console.error('Error fetching available IDEs:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to fetch available IDEs',
       },
       500
@@ -264,14 +246,12 @@ projects.patch('/:id/ide', async c => {
     await projectService.updatePreferredIDE(id, ideId);
 
     return c.json({
-      success: true,
       message: 'Preferred IDE updated successfully',
     });
   } catch (error) {
     console.error('Error updating preferred IDE:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to update preferred IDE',
       },
       500
@@ -292,14 +272,12 @@ projects.post('/:id/open', async c => {
     await projectService.openProjectInIDE(id, ideId);
 
     return c.json({
-      success: true,
       message: 'Project opened in IDE',
     });
   } catch (error) {
     console.error('Error opening project:', error);
     return c.json(
       {
-        success: false,
         error: error instanceof Error ? error.message : 'Failed to open project in IDE',
       },
       500
@@ -316,14 +294,12 @@ projects.get('/terminals/detected', async c => {
     const terminals = await projectService.getDetectedTerminals();
 
     return c.json({
-      success: true,
       data: terminals,
     });
   } catch (error) {
     console.error('Error detecting terminals:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to detect terminals',
       },
       500
@@ -340,14 +316,12 @@ projects.get('/terminals/available', async c => {
     const terminals = projectService.getAvailableTerminals();
 
     return c.json({
-      success: true,
       data: terminals,
     });
   } catch (error) {
     console.error('Error fetching available terminals:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to fetch available terminals',
       },
       500
@@ -368,14 +342,12 @@ projects.patch('/:id/terminal', async c => {
     await projectService.updatePreferredTerminal(id, terminalId);
 
     return c.json({
-      success: true,
       message: 'Preferred terminal updated successfully',
     });
   } catch (error) {
     console.error('Error updating preferred terminal:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to update preferred terminal',
       },
       500
@@ -396,14 +368,12 @@ projects.post('/:id/open-terminal', async c => {
     await projectService.openTerminalAtProject(id, terminalId);
 
     return c.json({
-      success: true,
       message: 'Terminal opened at project path',
     });
   } catch (error) {
     console.error('Error opening terminal:', error);
     return c.json(
       {
-        success: false,
         error: error instanceof Error ? error.message : 'Failed to open terminal',
       },
       500
@@ -423,7 +393,6 @@ projects.get('/:id/readme', async c => {
     if (!readme) {
       return c.json(
         {
-          success: false,
           error: 'README.md not found',
         },
         404
@@ -431,14 +400,12 @@ projects.get('/:id/readme', async c => {
     }
 
     return c.json({
-      success: true,
       data: readme,
     });
   } catch (error) {
     console.error('Error fetching README:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to fetch README',
       },
       500
@@ -458,7 +425,6 @@ projects.get('/:id/package-scripts', async c => {
     if (!project) {
       return c.json(
         {
-          success: false,
           error: 'Project not found',
         },
         404
@@ -472,12 +438,10 @@ projects.get('/:id/package-scripts', async c => {
       const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
 
       return c.json({
-        success: true,
         data: packageJson.scripts || {},
       });
     } catch {
       return c.json({
-        success: true,
         data: {},
       });
     }
@@ -485,7 +449,6 @@ projects.get('/:id/package-scripts', async c => {
     console.error('Error fetching package scripts:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to fetch package scripts',
       },
       500
@@ -505,7 +468,6 @@ projects.get('/:id', async c => {
     if (!project) {
       return c.json(
         {
-          success: false,
           error: 'Project not found',
         },
         404
@@ -513,14 +475,12 @@ projects.get('/:id', async c => {
     }
 
     return c.json({
-      success: true,
       data: project,
     });
   } catch (error) {
     console.error('Error fetching project:', error);
     return c.json(
       {
-        success: false,
         error: 'Failed to fetch project',
       },
       500
