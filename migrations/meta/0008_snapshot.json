@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8bf06682-10a3-437f-9d2b-a22f376722c4",
+  "id": "a4d8e5f2-3b91-4c7e-8f12-9a6b4c3d2e1f",
   "prevId": "0ca3cb9f-d477-4a63-9044-a220f80a3f48",
   "tables": {
     "project_stats": {
@@ -236,21 +236,20 @@
           "notNull": false,
           "autoincrement": false
         },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'active'"
-        },
         "is_favorite": {
           "name": "is_favorite",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": false
+          "default": 0
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "preferred_ide": {
           "name": "preferred_ide",
