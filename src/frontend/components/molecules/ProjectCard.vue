@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import type { ProjectWithDetails } from '../../../shared/types/api';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
-import { Folder, Calendar, HardDrive, GitBranch, Star, Trash2 } from 'lucide-vue-next';
+import { Folder, Calendar, HardDrive, GitBranch, Star } from 'lucide-vue-next';
 import { Button } from '../ui/button';
 import ProjectIcon from '../atoms/ProjectIcon.vue';
+import ProjectActionsDropdown from './ProjectActionsDropdown.vue';
 
 const props = defineProps<{
   project: ProjectWithDetails;
@@ -48,13 +48,6 @@ const formatDate = (date: Date | null | undefined): string => {
   return `${Math.floor(diffDays / 365)} years ago`;
 };
 
-const handleDelete = (e: Event) => {
-  e.stopPropagation();
-  if (confirm(`Are you sure you want to delete "${props.project.name}"?`)) {
-    emit('delete', props.project.id);
-  }
-};
-
 const handleOpen = () => {
   emit('open', props.project);
 };
@@ -96,14 +89,15 @@ const handleToggleFavorite = (e: Event) => {
           >
             <Star class="h-4 w-4" :fill="project.isFavorite ? 'currentColor' : 'none'" />
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-8 w-8 p-0 text-slate-500 hover:text-red-600"
-            @click="handleDelete"
-          >
-            <Trash2 class="h-4 w-4" />
-          </Button>
+          <ProjectActionsDropdown
+            :project-id="project.id"
+            :project-path="project.path"
+            :project-name="project.name"
+            :is-archived="!!project.archivedAt"
+            :is-favorite="project.isFavorite"
+            :git-remote-url="project.stats?.gitRemoteUrl"
+            @click.stop
+          />
         </div>
       </div>
     </CardHeader>

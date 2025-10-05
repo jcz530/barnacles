@@ -7,10 +7,11 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/vue-table';
-import { Calendar, GitBranch, HardDrive, Star, Trash2 } from 'lucide-vue-next';
+import { Calendar, GitBranch, HardDrive, Star } from 'lucide-vue-next';
 import { ref } from 'vue';
 import type { ProjectWithDetails } from '../../../shared/types/api';
 import ProjectIcon from '../atoms/ProjectIcon.vue';
+import ProjectActionsDropdown from '../molecules/ProjectActionsDropdown.vue';
 import ProjectCard from '../molecules/ProjectCard.vue';
 import TableHeader from '../molecules/TableHeader.vue';
 import { Button } from '../ui/button';
@@ -63,13 +64,6 @@ const formatDate = (date: Date | null | undefined): string => {
   if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
 
   return `${Math.floor(diffDays / 365)} years ago`;
-};
-
-const handleDelete = (project: ProjectWithDetails, e: Event) => {
-  e.stopPropagation();
-  if (confirm(`Are you sure you want to delete "${project.name}"?`)) {
-    emit('delete', project.id);
-  }
 };
 
 const handleOpen = (project: ProjectWithDetails) => {
@@ -296,14 +290,15 @@ const table = useVueTable({
 
                 <!-- Actions -->
                 <template v-else-if="cell.column.id === 'id'">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="h-8 w-8 p-0 text-slate-500 hover:text-red-600"
-                    @click="handleDelete(row.original, $event)"
-                  >
-                    <Trash2 class="h-4 w-4" />
-                  </Button>
+                  <ProjectActionsDropdown
+                    :project-id="row.original.id"
+                    :project-path="row.original.path"
+                    :project-name="row.original.name"
+                    :is-archived="!!row.original.archivedAt"
+                    :is-favorite="row.original.isFavorite"
+                    :git-remote-url="row.original.stats?.gitRemoteUrl"
+                    @click.stop
+                  />
                 </template>
               </td>
             </tr>

@@ -31,11 +31,13 @@ export const useProjectActions = () => {
     useRescanProjectMutation,
     useArchiveProjectMutation,
     useUnarchiveProjectMutation,
+    useToggleFavoriteMutation,
   } = useQueries();
   const deleteMutation = useDeleteProjectMutation();
   const rescanMutation = useRescanProjectMutation();
   const archiveMutation = useArchiveProjectMutation();
   const unarchiveMutation = useUnarchiveProjectMutation();
+  const favoriteMutation = useToggleFavoriteMutation();
 
   const deleteProject = async (projectId: string, projectName: string) => {
     if (confirm(`Are you sure you want to delete "${projectName}"?`)) {
@@ -76,6 +78,15 @@ export const useProjectActions = () => {
     }
   };
 
+  const toggleFavorite = async (projectId: string) => {
+    try {
+      await favoriteMutation.mutateAsync(projectId);
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+      alert('Failed to toggle favorite. Please try again.');
+    }
+  };
+
   const openInFinder = (projectPath: string) => {
     window.electron?.shell.openPath(projectPath);
   };
@@ -109,6 +120,7 @@ export const useProjectActions = () => {
     rescanProject,
     archiveProject,
     unarchiveProject,
+    toggleFavorite,
     openInFinder,
     copyPath,
     openGitRemote,
@@ -117,5 +129,6 @@ export const useProjectActions = () => {
     isRescanning: rescanMutation.isPending,
     isArchiving: archiveMutation.isPending,
     isUnarchiving: unarchiveMutation.isPending,
+    isTogglingFavorite: favoriteMutation.isPending,
   };
 };

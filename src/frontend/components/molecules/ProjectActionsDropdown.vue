@@ -6,6 +6,7 @@ import {
   FolderOpen,
   MoreVertical,
   RefreshCw,
+  Star,
   Trash2,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
@@ -25,6 +26,7 @@ interface Props {
   projectPath: string;
   projectName: string;
   isArchived: boolean;
+  isFavorite: boolean;
   gitRemoteUrl?: string | null;
 }
 
@@ -35,6 +37,7 @@ const {
   rescanProject,
   archiveProject,
   unarchiveProject,
+  toggleFavorite,
   openInFinder,
   copyPath,
   openGitRemote,
@@ -43,6 +46,7 @@ const {
   isRescanning,
   isArchiving,
   isUnarchiving,
+  isTogglingFavorite,
 } = useProjectActions();
 
 const gitProvider = computed(() => getGitProvider(props.gitRemoteUrl));
@@ -76,12 +80,16 @@ const handleArchive = () => {
 const handleUnarchive = () => {
   unarchiveProject(props.projectId);
 };
+
+const handleToggleFavorite = () => {
+  toggleFavorite(props.projectId);
+};
 </script>
 
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button variant="ghost" size="sm">
+      <Button variant="ghost" size="sm" @click.stop>
         <MoreVertical class="h-4 w-4" />
       </Button>
     </DropdownMenuTrigger>
@@ -104,6 +112,11 @@ const handleUnarchive = () => {
       <DropdownMenuItem @click="handleCopyPath">
         <Copy class="mr-2 h-4 w-4" />
         Copy Path
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem @click="handleToggleFavorite" :disabled="isTogglingFavorite">
+        <Star class="mr-2 h-4 w-4" :fill="isFavorite ? 'currentColor' : 'none'" />
+        {{ isFavorite ? 'Unfavorite' : 'Favorite' }}
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem v-if="!isArchived" @click="handleArchive" :disabled="isArchiving">
