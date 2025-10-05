@@ -22,9 +22,10 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const { useUpdatePreferredIDEMutation, useOpenProjectMutation } = useQueries();
+const { useUpdatePreferredIDEMutation, useOpenProjectMutation, useSettingsQuery } = useQueries();
 const updateIDEMutation = useUpdatePreferredIDEMutation();
 const openProjectMutation = useOpenProjectMutation();
+const settingsQuery = useSettingsQuery({ enabled: true });
 
 const dropdownOpen = ref(false);
 
@@ -32,9 +33,16 @@ const installedIDEs = computed(() => {
   return props.detectedIDEs?.filter(ide => ide.installed) || [];
 });
 
+const defaultIdeId = computed(() => {
+  const setting = settingsQuery.data.value?.find(s => s.key === 'defaultIde');
+  return setting?.value || null;
+});
+
 const preferredIDE = computed(() => {
-  if (!props.preferredIdeId) return null;
-  return installedIDEs.value.find(ide => ide.id === props.preferredIdeId);
+  // Use project-specific preference first, then fall back to default setting
+  const ideId = props.preferredIdeId || defaultIdeId.value;
+  if (!ideId) return null;
+  return installedIDEs.value.find(ide => ide.id === ideId);
 });
 
 const handleOpenInIDE = async () => {

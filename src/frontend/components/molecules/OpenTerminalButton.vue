@@ -22,9 +22,11 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const { useUpdatePreferredTerminalMutation, useOpenTerminalMutation } = useQueries();
+const { useUpdatePreferredTerminalMutation, useOpenTerminalMutation, useSettingsQuery } =
+  useQueries();
 const updateTerminalMutation = useUpdatePreferredTerminalMutation();
 const openTerminalMutation = useOpenTerminalMutation();
+const settingsQuery = useSettingsQuery({ enabled: true });
 
 const dropdownOpen = ref(false);
 
@@ -32,9 +34,16 @@ const installedTerminals = computed(() => {
   return props.detectedTerminals?.filter(terminal => terminal.installed) || [];
 });
 
+const defaultTerminalId = computed(() => {
+  const setting = settingsQuery.data.value?.find(s => s.key === 'defaultTerminal');
+  return setting?.value || null;
+});
+
 const preferredTerminal = computed(() => {
-  if (!props.preferredTerminalId) return null;
-  return installedTerminals.value.find(terminal => terminal.id === props.preferredTerminalId);
+  // Use project-specific preference first, then fall back to default setting
+  const terminalId = props.preferredTerminalId || defaultTerminalId.value;
+  if (!terminalId) return null;
+  return installedTerminals.value.find(terminal => terminal.id === terminalId);
 });
 
 const handleOpenTerminal = async () => {
