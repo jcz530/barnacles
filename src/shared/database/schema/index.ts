@@ -23,6 +23,7 @@ export const projects = sqliteTable('projects', {
   name: text('name').notNull(),
   path: text('path').notNull().unique(),
   description: text('description'),
+  icon: text('icon'), // relative path to icon/logo file from project root
   lastModified: integer('last_modified', { mode: 'timestamp' }),
   size: integer('size'), // in bytes
   status: text('status', { enum: ['active', 'archived'] })

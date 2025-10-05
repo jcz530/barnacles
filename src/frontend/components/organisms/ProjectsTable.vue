@@ -7,9 +7,10 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/vue-table';
-import { Calendar, Folder, GitBranch, HardDrive, Trash2 } from 'lucide-vue-next';
+import { Calendar, GitBranch, HardDrive, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
 import type { ProjectWithDetails } from '../../../shared/types/api';
+import ProjectIcon from '../atoms/ProjectIcon.vue';
 import ProjectCard from '../molecules/ProjectCard.vue';
 import TableHeader from '../molecules/TableHeader.vue';
 import { Button } from '../ui/button';
@@ -178,7 +179,13 @@ const table = useVueTable({
                 <!-- Project Name/Description/Path -->
                 <template v-if="cell.column.id === 'name'">
                   <div class="flex items-start gap-2">
-                    <Folder class="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-500" />
+                    <ProjectIcon
+                      :project-id="row.original.id"
+                      :project-name="row.original.name"
+                      :has-icon="!!row.original.icon"
+                      size="sm"
+                      class="mt-0.5"
+                    />
                     <div class="min-w-0 flex-1">
                       <div class="font-medium text-slate-900">
                         {{ row.original.name }}

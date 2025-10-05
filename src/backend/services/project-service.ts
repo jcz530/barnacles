@@ -10,12 +10,14 @@ import type { ProjectInfo } from './project-scanner-service';
 import { projectScannerService } from './project-scanner-service';
 import { ideDetectorService } from './ide-detector-service';
 import { terminalDetectorService } from './terminal-detector-service';
+import { findProjectIcon } from '../utils/icon-finder';
 
 export interface Project {
   id: string;
   name: string;
   path: string;
   description?: string | null;
+  icon?: string | null;
   lastModified?: Date | null;
   size?: number | null;
   status: 'active' | 'archived';
@@ -247,6 +249,9 @@ class ProjectService {
     // Detect preferred IDE from project files
     const detectedIde = await ideDetectorService.detectPreferredIDE(projectInfo.path);
 
+    // Find project icon
+    const iconPath = await findProjectIcon(projectInfo.path);
+
     // Check if project already exists by path
     const existing = await db
       .select()
@@ -265,6 +270,7 @@ class ProjectService {
         .set({
           name: projectInfo.name,
           description: projectInfo.description,
+          icon: iconPath,
           lastModified: projectInfo.stats.lastModified,
           size: projectInfo.stats.size,
           // Only update preferredIde if it was detected and not already set
@@ -280,6 +286,7 @@ class ProjectService {
           name: projectInfo.name,
           path: projectInfo.path,
           description: projectInfo.description,
+          icon: iconPath,
           lastModified: projectInfo.stats.lastModified,
           size: projectInfo.stats.size,
           status: 'active',

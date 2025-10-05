@@ -31,6 +31,7 @@ export interface Project {
   name: string;
   path: string;
   description?: string | null;
+  icon?: string | null;
   lastModified?: Date | null;
   size?: number | null;
   status: 'active' | 'archived';

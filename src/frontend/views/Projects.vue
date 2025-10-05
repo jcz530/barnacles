@@ -10,8 +10,8 @@ import ProjectSearchBar from '../components/molecules/ProjectSearchBar.vue';
 import TechnologyFilter from '../components/molecules/TechnologyFilter.vue';
 import ProjectsTable from '../components/organisms/ProjectsTable.vue';
 import { Button } from '../components/ui/button';
-import { useQueries } from '../composables/useQueries';
 import { useFuzzySearch } from '../composables/useFuzzySearch';
+import { useQueries } from '../composables/useQueries';
 
 const router = useRouter();
 
@@ -26,9 +26,9 @@ const {
 const searchQuery = ref('');
 const selectedTechnologies = ref<string[]>([]);
 const viewMode = ref<'table' | 'card'>('table');
-const sortField = ref<'name' | 'lastModified' | 'size'>('name');
-const sortDirection = ref<'asc' | 'desc'>('asc');
-const tableSorting = ref<SortingState>([{ id: 'name', desc: false }]);
+const sortField = ref<'name' | 'lastModified' | 'size'>('lastModified');
+const sortDirection = ref<'asc' | 'desc'>('desc');
+const tableSorting = ref<SortingState>([{ id: 'lastModified', desc: true }]);
 
 // Queries
 const {

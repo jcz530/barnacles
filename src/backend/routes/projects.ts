@@ -43,7 +43,14 @@ projects.get('/', async c => {
  */
 projects.post('/scan', async c => {
   try {
-    const body = await c.req.json();
+    let body;
+    try {
+      body = await c.req.json();
+    } catch {
+      // No body provided or invalid JSON
+      body = {};
+    }
+
     const { directories, maxDepth = 2 } = body;
 
     // If no directories provided, use common development directories
@@ -450,6 +457,75 @@ projects.get('/:id/package-scripts', async c => {
     return c.json(
       {
         error: 'Failed to fetch package scripts',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * GET /api/projects/:id/icon
+ * Serve the project icon file
+ */
+projects.get('/:id/icon', async c => {
+  try {
+    const id = c.req.param('id');
+    const project = await projectService.getProjectById(id);
+
+    if (!project) {
+      return c.json(
+        {
+          error: 'Project not found',
+        },
+        404
+      );
+    }
+
+    if (!project.icon) {
+      return c.json(
+        {
+          error: 'No icon found for this project',
+        },
+        404
+      );
+    }
+
+    const fs = await import('fs/promises');
+    const iconPath = path.join(project.path, project.icon);
+
+    try {
+      const iconData = await fs.readFile(iconPath);
+      const ext = path.extname(project.icon).toLowerCase();
+
+      // Set appropriate content type based on file extension
+      const contentType =
+        {
+          '.png': 'image/png',
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.svg': 'image/svg+xml',
+          '.ico': 'image/x-icon',
+        }[ext] || 'application/octet-stream';
+
+      return new Response(new Uint8Array(iconData), {
+        headers: {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=86400',
+        },
+      });
+    } catch {
+      return c.json(
+        {
+          error: 'Icon file not found',
+        },
+        404
+      );
+    }
+  } catch (error) {
+    console.error('Error serving project icon:', error);
+    return c.json(
+      {
+        error: 'Failed to serve project icon',
       },
       500
     );

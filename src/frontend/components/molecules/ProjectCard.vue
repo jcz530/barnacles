@@ -4,6 +4,7 @@ import type { ProjectWithDetails } from '../../../shared/types/api';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { Folder, Calendar, HardDrive, GitBranch, Trash2 } from 'lucide-vue-next';
 import { Button } from '../ui/button';
+import ProjectIcon from '../atoms/ProjectIcon.vue';
 
 const props = defineProps<{
   project: ProjectWithDetails;
@@ -65,11 +66,19 @@ const handleOpen = () => {
   >
     <CardHeader class="pb-3">
       <div class="flex items-start justify-between">
-        <div class="flex-1">
-          <CardTitle class="text-lg">{{ project.name }}</CardTitle>
-          <CardDescription v-if="project.description" class="mt-1">
-            {{ project.description }}
-          </CardDescription>
+        <div class="flex flex-1 items-start gap-3">
+          <ProjectIcon
+            :project-id="project.id"
+            :project-name="project.name"
+            :has-icon="!!project.icon"
+            size="md"
+          />
+          <div class="flex-1">
+            <CardTitle class="text-lg">{{ project.name }}</CardTitle>
+            <CardDescription v-if="project.description" class="mt-1">
+              {{ project.description }}
+            </CardDescription>
+          </div>
         </div>
         <Button
           variant="ghost"

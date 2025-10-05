@@ -2,6 +2,7 @@
 import { ArrowLeft } from 'lucide-vue-next';
 import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import ProjectIcon from '../components/atoms/ProjectIcon.vue';
 import OpenInIDEButton from '../components/molecules/OpenInIDEButton.vue';
 import OpenTerminalButton from '../components/molecules/OpenTerminalButton.vue';
 import ProjectActionsDropdown from '../components/molecules/ProjectActionsDropdown.vue';
@@ -85,9 +86,17 @@ const handleBack = () => {
         <Skeleton class="h-8 w-64" />
         <Skeleton class="h-4 w-96" />
       </div>
-      <div v-else-if="project">
-        <h1 class="text-3xl font-bold text-slate-800">{{ project.name }}</h1>
-        <p v-if="project.description" class="mt-1 text-slate-600">{{ project.description }}</p>
+      <div v-else-if="project" class="flex items-start gap-4">
+        <ProjectIcon
+          :project-id="project.id"
+          :project-name="project.name"
+          :has-icon="!!project.icon"
+          size="lg"
+        />
+        <div class="flex-1">
+          <h1 class="text-3xl font-bold text-slate-800">{{ project.name }}</h1>
+          <p v-if="project.description" class="mt-1 text-slate-600">{{ project.description }}</p>
+        </div>
       </div>
     </div>
 
