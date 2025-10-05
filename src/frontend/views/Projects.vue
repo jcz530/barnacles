@@ -9,6 +9,7 @@ import TechnologyFilter from '../components/molecules/TechnologyFilter.vue';
 import ProjectsTable from '../components/organisms/ProjectsTable.vue';
 import { Button } from '../components/ui/button';
 import { useQueries } from '../composables/useQueries';
+import { useFuzzySearch } from '../composables/useFuzzySearch';
 
 const router = useRouter();
 
@@ -26,15 +27,25 @@ const viewMode = ref<'table' | 'card'>('table');
 
 // Queries
 const {
-  data: projects,
+  data: allProjects,
   isLoading: projectsLoading,
   refetch: refetchProjects,
 } = useProjectsQuery({
-  search: searchQuery,
+  search: ref(''), // Remove server-side search
   technologies: selectedTechnologies,
 });
 
 const { data: technologies, isLoading: technologiesLoading } = useTechnologiesQuery();
+
+// Local fuzzy search
+const { filteredItems: projects } = useFuzzySearch<ProjectWithDetails>({
+  items: computed(() => allProjects.value || []),
+  searchQuery,
+  fuseOptions: {
+    threshold: 0.3,
+    keys: ['name', 'path', 'description'],
+  },
+});
 
 // Mutations
 const scanMutation = useScanProjectsMutation();
@@ -42,6 +53,23 @@ const deleteMutation = useDeleteProjectMutation();
 
 // Computed
 const isScanning = computed(() => scanMutation.isPending.value);
+
+const hasActiveFilters = computed(
+  () => searchQuery.value.trim() !== '' || selectedTechnologies.value.length > 0
+);
+
+const totalProjects = computed(() => allProjects.value?.length || 0);
+
+const resultsText = computed(() => {
+  const count = projects.value?.length || 0;
+  const total = totalProjects.value;
+
+  if (hasActiveFilters.value) {
+    return `${count} of ${total} ${total === 1 ? 'project' : 'projects'}`;
+  }
+
+  return `${count} ${count === 1 ? 'project' : 'projects'}`;
+});
 
 // Methods
 const handleScanProjects = async () => {
@@ -105,16 +133,15 @@ const handleRefresh = () => {
       </div>
 
       <!-- Results count -->
-      <div v-if="!projectsLoading && projects" class="mt-4 text-sm text-slate-600">
-        {{ projects.length }} {{ projects.length === 1 ? 'project' : 'projects' }}
-        <span v-if="searchQuery || selectedTechnologies.length > 0"> found</span>
+      <div v-if="!projectsLoading" class="mt-4 text-sm text-slate-600">
+        {{ resultsText }}
       </div>
     </div>
 
     <!-- Projects Table/Grid -->
     <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
       <ProjectsTable
-        :projects="projects || []"
+        :projects="projects"
         :is-loading="projectsLoading"
         :view-mode="viewMode"
         @delete="handleDeleteProject"
