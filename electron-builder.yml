@@ -1,5 +1,5 @@
-appId: com.joeczubiak.my-app
-productName: my-app
+appId: app.barnacles.app
+productName: Barnacles
 copyright: Copyright © 2025 Joe Czubiak
 
 # Build directories
@@ -41,7 +41,7 @@ files:
 
 # Include/exclude node modules patterns
 asarUnpack:
-  - "node_modules/@libsql/**/*"
+  - 'node_modules/@libsql/**/*'
 
 # Include migrations as extra resources
 extraResources:
@@ -52,9 +52,10 @@ icon: assets/icons/app
 
 # Auto updater
 publish:
-  provider: generic
-  url: https://your-website.com/releases/
-  channel: latest
+  provider: github
+  owner: jcz530
+  repo: barnacles
+  releaseType: release
 
 # macOS configuration
 mac:
