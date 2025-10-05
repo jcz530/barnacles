@@ -285,22 +285,35 @@ class ProjectScannerService {
   }
 
   /**
+   * Converts a folder name to title case
+   */
+  private folderNameToTitleCase(folderName: string): string {
+    return folderName
+      .split(/[-_\s]+/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  /**
    * Extracts project name and description from package.json or directory name
    */
   async getProjectMetadata(projectPath: string): Promise<{ name: string; description?: string }> {
+    const folderName = path.basename(projectPath);
+    const name = this.folderNameToTitleCase(folderName);
+
     try {
       const packageJsonPath = path.join(projectPath, 'package.json');
       const packageJsonContent = await fs.readFile(packageJsonPath, 'utf-8');
       const packageJson = JSON.parse(packageJsonContent);
 
       return {
-        name: packageJson.name || path.basename(projectPath),
+        name,
         description: packageJson.description,
       };
     } catch {
-      // Fallback to directory name
+      // Fallback when no package.json exists
       return {
-        name: path.basename(projectPath),
+        name,
       };
     }
   }
