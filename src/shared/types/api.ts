@@ -18,6 +18,7 @@ export interface ProjectStats {
   fileCount?: number | null;
   directoryCount?: number | null;
   languageStats?: string | null;
+  linesOfCode?: number | null;
   gitBranch?: string | null;
   gitStatus?: string | null;
   gitRemoteUrl?: string | null;

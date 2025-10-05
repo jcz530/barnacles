@@ -78,7 +78,8 @@ export const projectStats = sqliteTable('project_stats', {
     .references(() => projects.id, { onDelete: 'cascade' }),
   fileCount: integer('file_count'),
   directoryCount: integer('directory_count'),
-  languageStats: text('language_stats'), // JSON string of { techSlug: { fileCount: number, percentage: number } }
+  languageStats: text('language_stats'), // JSON string of { techSlug: { fileCount: number, percentage: number, linesOfCode: number } }
+  linesOfCode: integer('lines_of_code'), // total lines of code
   gitBranch: text('git_branch'),
   gitStatus: text('git_status'),
   gitRemoteUrl: text('git_remote_url'),

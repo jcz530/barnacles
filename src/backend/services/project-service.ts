@@ -322,6 +322,7 @@ class ProjectService {
       fileCount: projectInfo.stats.fileCount,
       directoryCount: projectInfo.stats.directoryCount,
       languageStats: JSON.stringify(projectInfo.stats.languageStats),
+      linesOfCode: projectInfo.stats.linesOfCode,
       gitBranch: projectInfo.gitInfo?.branch,
       gitStatus: projectInfo.gitInfo?.status,
       gitRemoteUrl: projectInfo.gitInfo?.remoteUrl,

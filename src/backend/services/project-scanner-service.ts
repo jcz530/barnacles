@@ -14,6 +14,7 @@ export interface LanguageStats {
   [techSlug: string]: {
     fileCount: number;
     percentage: number;
+    linesOfCode: number;
   };
 }
 
@@ -28,6 +29,7 @@ export interface ProjectInfo {
     size: number;
     lastModified: Date;
     languageStats: LanguageStats;
+    linesOfCode: number;
   };
   gitInfo?: {
     branch: string;
@@ -180,6 +182,18 @@ class ProjectScannerService {
   }
 
   /**
+   * Counts lines in a file
+   */
+  private async countLines(filePath: string): Promise<number> {
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      return content.split('\n').length;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
    * Calculates project statistics including language breakdown
    */
   async getProjectStats(
@@ -188,9 +202,11 @@ class ProjectScannerService {
     let fileCount = 0;
     let directoryCount = 0;
     let totalSize = 0;
+    let totalLinesOfCode = 0;
     let lastModified = new Date(0);
     const fileExtensions = new Set<string>();
     const extensionCounts: { [ext: string]: number } = {};
+    const extensionLines: { [ext: string]: number } = {};
 
     const ignoreDirs = [
       'node_modules',
@@ -233,6 +249,11 @@ class ProjectScannerService {
             if (ext) {
               fileExtensions.add(ext);
               extensionCounts[ext] = (extensionCounts[ext] || 0) + 1;
+
+              // Count lines for code files
+              const lines = await projectScannerService.countLines(fullPath);
+              totalLinesOfCode += lines;
+              extensionLines[ext] = (extensionLines[ext] || 0) + lines;
             }
 
             try {
@@ -259,14 +280,17 @@ class ProjectScannerService {
     for (const detector of TECHNOLOGY_DETECTORS) {
       if (detector.fileExtensions && detector.fileExtensions.length > 0) {
         let count = 0;
+        let lines = 0;
         for (const ext of detector.fileExtensions) {
           count += extensionCounts[ext] || 0;
+          lines += extensionLines[ext] || 0;
         }
 
         if (count > 0) {
           languageStats[detector.slug] = {
             fileCount: count,
             percentage: fileCount > 0 ? Math.round((count / fileCount) * 100 * 10) / 10 : 0,
+            linesOfCode: lines,
           };
         }
       }
@@ -279,6 +303,7 @@ class ProjectScannerService {
         size: totalSize,
         lastModified,
         languageStats,
+        linesOfCode: totalLinesOfCode,
       },
       fileExtensions,
     };
