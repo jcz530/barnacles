@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import type { MaybeRef } from 'vue';
-import { unref } from 'vue';
+import { computed, unref } from 'vue';
 import { API_ROUTES } from '../../shared/constants';
 import type {
   ApiResponse,
@@ -58,14 +58,17 @@ export const useQueries = () => {
     includeArchived?: MaybeRef<boolean>;
   }) => {
     return useQuery({
-      queryKey: [
-        'projects',
-        {
-          search: unref(options?.search),
-          technologies: unref(options?.technologies),
-          includeArchived: unref(options?.includeArchived),
-        },
-      ],
+      queryKey: computed(
+        () =>
+          [
+            'projects',
+            {
+              search: unref(options?.search),
+              technologies: unref(options?.technologies),
+              includeArchived: unref(options?.includeArchived),
+            },
+          ] as const
+      ),
       queryFn: async () => {
         const params = new URLSearchParams();
 
@@ -79,6 +82,13 @@ export const useQueries = () => {
         if (includeArchived) params.append('includeArchived', 'true');
 
         const query = params.toString() ? `?${params.toString()}` : '';
+        console.log('[useProjectsQuery] Fetching projects with:', {
+          search,
+          technologies,
+          includeArchived,
+          url: `${API_ROUTES.PROJECTS}${query}`,
+        });
+
         const response = await apiCall<ApiResponse<ProjectWithDetails[]>>(
           'GET',
           `${API_ROUTES.PROJECTS}${query}`

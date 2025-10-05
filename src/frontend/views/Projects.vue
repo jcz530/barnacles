@@ -33,7 +33,7 @@ const tableSorting = ref<SortingState>([{ id: 'lastModified', desc: true }]);
 
 // Queries
 const {
-  data: allProjects,
+  data: filteredProjects,
   isLoading: projectsLoading,
   refetch: refetchProjects,
 } = useProjectsQuery({
@@ -41,11 +41,17 @@ const {
   technologies: selectedTechnologies,
 });
 
+// Get all projects for total count
+const { data: allProjectsData } = useProjectsQuery({
+  search: ref(''),
+  technologies: ref([]),
+});
+
 const { data: technologies, isLoading: technologiesLoading } = useTechnologiesQuery();
 
 // Local fuzzy search
 const { filteredItems: searchedProjects } = useFuzzySearch<ProjectWithDetails>({
-  items: computed(() => allProjects.value || []),
+  items: computed(() => filteredProjects.value || []),
   searchQuery,
   fuseOptions: {
     threshold: 0.3,
@@ -96,7 +102,7 @@ const hasActiveFilters = computed(
   () => searchQuery.value.trim() !== '' || selectedTechnologies.value.length > 0
 );
 
-const totalProjects = computed(() => allProjects.value?.length || 0);
+const totalProjects = computed(() => allProjectsData.value?.length || 0);
 
 const resultsText = computed(() => {
   const count = projects.value.length;
@@ -190,14 +196,27 @@ watch([sortField, sortDirection], () => {
           :selected-technologies="selectedTechnologies"
           @update:selected-technologies="selectedTechnologies = $event"
         />
-        <SortControl
-          v-if="viewMode === 'card'"
-          :sort-field="sortField"
-          :sort-direction="sortDirection"
-          @update:sort-field="sortField = $event"
-          @update:sort-direction="sortDirection = $event"
-        />
-        <ViewToggle :current-view="viewMode" @update:view="viewMode = $event" />
+        <Button
+          v-if="hasActiveFilters"
+          variant="ghost"
+          size="sm"
+          @click="
+            searchQuery = '';
+            selectedTechnologies = [];
+          "
+        >
+          Clear Filters
+        </Button>
+        <div class="ml-auto flex items-center gap-3">
+          <SortControl
+            v-if="viewMode === 'card'"
+            :sort-field="sortField"
+            :sort-direction="sortDirection"
+            @update:sort-field="sortField = $event"
+            @update:sort-direction="sortDirection = $event"
+          />
+          <ViewToggle :current-view="viewMode" @update:view="viewMode = $event" />
+        </div>
       </div>
 
       <!-- Results count -->

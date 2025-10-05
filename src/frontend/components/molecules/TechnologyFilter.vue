@@ -59,12 +59,18 @@ const hasFilters = computed(() => props.selectedTechnologies.length > 0);
       <DropdownMenuLabel>Filter by Technology</DropdownMenuLabel>
       <DropdownMenuSeparator />
       <div class="max-h-80 overflow-y-auto">
-        <DropdownMenuCheckboxItem
+        <div
           v-for="tech in technologies"
           :key="tech.id"
-          :checked="selectedTechnologies.includes(tech.slug)"
-          @update:checked="toggleTechnology(tech.slug)"
+          class="relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none hover:bg-slate-100"
+          @click="toggleTechnology(tech.slug)"
         >
+          <input
+            type="checkbox"
+            :checked="selectedTechnologies.includes(tech.slug)"
+            class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
+            @click.stop="toggleTechnology(tech.slug)"
+          />
           <div class="flex items-center gap-2">
             <div
               v-if="tech.color"
@@ -73,7 +79,7 @@ const hasFilters = computed(() => props.selectedTechnologies.length > 0);
             />
             <span>{{ tech.name }}</span>
           </div>
-        </DropdownMenuCheckboxItem>
+        </div>
       </div>
       <DropdownMenuSeparator v-if="hasFilters" />
       <button
