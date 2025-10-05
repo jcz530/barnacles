@@ -55,7 +55,7 @@ export const useQueries = () => {
     enabled?: boolean;
     search?: MaybeRef<string>;
     technologies?: MaybeRef<string[]>;
-    status?: MaybeRef<'active' | 'archived'>;
+    includeArchived?: MaybeRef<boolean>;
   }) => {
     return useQuery({
       queryKey: [
@@ -63,7 +63,7 @@ export const useQueries = () => {
         {
           search: unref(options?.search),
           technologies: unref(options?.technologies),
-          status: unref(options?.status),
+          includeArchived: unref(options?.includeArchived),
         },
       ],
       queryFn: async () => {
@@ -71,12 +71,12 @@ export const useQueries = () => {
 
         const search = unref(options?.search);
         const technologies = unref(options?.technologies);
-        const status = unref(options?.status);
+        const includeArchived = unref(options?.includeArchived);
 
         if (search) params.append('search', search);
         if (technologies && technologies.length > 0)
           params.append('technologies', technologies.join(','));
-        if (status) params.append('status', status);
+        if (includeArchived) params.append('includeArchived', 'true');
 
         const query = params.toString() ? `?${params.toString()}` : '';
         const response = await apiCall<ApiResponse<ProjectWithDetails[]>>(
@@ -169,20 +169,6 @@ export const useQueries = () => {
     });
   };
 
-  // Update project status mutation
-  const useUpdateProjectStatusMutation = () => {
-    return useMutation({
-      mutationFn: async (params: { projectId: string; status: 'active' | 'archived' }) => {
-        await apiCall('PATCH', `${API_ROUTES.PROJECTS}/${params.projectId}/status`, {
-          status: params.status,
-        });
-      },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
-      },
-    });
-  };
-
   // Rescan project mutation
   const useRescanProjectMutation = () => {
     return useMutation({
@@ -200,6 +186,54 @@ export const useQueries = () => {
       },
       onSuccess: (data, projectId) => {
         // Invalidate both the projects list and the specific project query
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      },
+    });
+  };
+
+  // Toggle project favorite mutation
+  const useToggleFavoriteMutation = () => {
+    return useMutation({
+      mutationFn: async (projectId: string) => {
+        const response = await apiCall<ApiResponse<{ isFavorite: boolean }>>(
+          'PATCH',
+          `${API_ROUTES.PROJECTS}/${projectId}/favorite`
+        );
+
+        if (!response) {
+          throw new Error('Failed to toggle favorite');
+        }
+
+        return response.data;
+      },
+      onSuccess: (data, projectId) => {
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      },
+    });
+  };
+
+  // Archive project mutation
+  const useArchiveProjectMutation = () => {
+    return useMutation({
+      mutationFn: async (projectId: string) => {
+        await apiCall('PATCH', `${API_ROUTES.PROJECTS}/${projectId}/archive`);
+      },
+      onSuccess: (data, projectId) => {
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      },
+    });
+  };
+
+  // Unarchive project mutation
+  const useUnarchiveProjectMutation = () => {
+    return useMutation({
+      mutationFn: async (projectId: string) => {
+        await apiCall('PATCH', `${API_ROUTES.PROJECTS}/${projectId}/unarchive`);
+      },
+      onSuccess: (data, projectId) => {
         queryClient.invalidateQueries({ queryKey: ['projects'] });
         queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       },
@@ -578,8 +612,10 @@ export const useQueries = () => {
     useTechnologiesQuery,
     useScanProjectsMutation,
     useDeleteProjectMutation,
-    useUpdateProjectStatusMutation,
     useRescanProjectMutation,
+    useToggleFavoriteMutation,
+    useArchiveProjectMutation,
+    useUnarchiveProjectMutation,
     useDetectedIDEsQuery,
     useAvailableIDEsQuery,
     useUpdatePreferredIDEMutation,

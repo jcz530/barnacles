@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { Copy, ExternalLink, FolderOpen, MoreVertical, RefreshCw, Trash2 } from 'lucide-vue-next';
+import {
+  Archive,
+  Copy,
+  ExternalLink,
+  FolderOpen,
+  MoreVertical,
+  RefreshCw,
+  Trash2,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 import { useProjectActions } from '../../composables/useProjectActions';
 import { Button } from '../ui/button';
@@ -16,6 +24,7 @@ interface Props {
   projectId: string;
   projectPath: string;
   projectName: string;
+  isArchived: boolean;
   gitRemoteUrl?: string | null;
 }
 
@@ -24,12 +33,16 @@ const props = defineProps<Props>();
 const {
   deleteProject,
   rescanProject,
+  archiveProject,
+  unarchiveProject,
   openInFinder,
   copyPath,
   openGitRemote,
   getGitProvider,
   isDeleting,
   isRescanning,
+  isArchiving,
+  isUnarchiving,
 } = useProjectActions();
 
 const gitProvider = computed(() => getGitProvider(props.gitRemoteUrl));
@@ -54,6 +67,14 @@ const handleOpenGitRemote = () => {
   if (props.gitRemoteUrl) {
     openGitRemote(props.gitRemoteUrl);
   }
+};
+
+const handleArchive = () => {
+  archiveProject(props.projectId);
+};
+
+const handleUnarchive = () => {
+  unarchiveProject(props.projectId);
 };
 </script>
 
@@ -83,6 +104,15 @@ const handleOpenGitRemote = () => {
       <DropdownMenuItem @click="handleCopyPath">
         <Copy class="mr-2 h-4 w-4" />
         Copy Path
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem v-if="!isArchived" @click="handleArchive" :disabled="isArchiving">
+        <Archive class="mr-2 h-4 w-4" />
+        Archive Project
+      </DropdownMenuItem>
+      <DropdownMenuItem v-else @click="handleUnarchive" :disabled="isUnarchiving">
+        <Archive class="mr-2 h-4 w-4" />
+        Unarchive Project
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem

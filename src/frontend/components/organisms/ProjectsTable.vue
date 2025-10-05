@@ -7,7 +7,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/vue-table';
-import { Calendar, GitBranch, HardDrive, Trash2 } from 'lucide-vue-next';
+import { Calendar, GitBranch, HardDrive, Star, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
 import type { ProjectWithDetails } from '../../../shared/types/api';
 import ProjectIcon from '../atoms/ProjectIcon.vue';
@@ -26,6 +26,7 @@ const emit = defineEmits<{
   delete: [projectId: string];
   open: [project: ProjectWithDetails];
   'update:sorting': [sorting: SortingState];
+  'toggle-favorite': [projectId: string];
 }>();
 
 const internalSorting = ref<SortingState>(props.sorting || []);
@@ -75,7 +76,17 @@ const handleOpen = (project: ProjectWithDetails) => {
   emit('open', project);
 };
 
+const handleToggleFavorite = (project: ProjectWithDetails, e: Event) => {
+  e.stopPropagation();
+  emit('toggle-favorite', project.id);
+};
+
 const columns: ColumnDef<ProjectWithDetails, any>[] = [
+  columnHelper.accessor('isFavorite', {
+    header: '',
+    enableSorting: false,
+    cell: props => props.row.original,
+  }),
   columnHelper.accessor('name', {
     header: 'Project',
     enableSorting: true,
@@ -155,6 +166,7 @@ const table = useVueTable({
           :project="project"
           @delete="emit('delete', $event)"
           @open="emit('open', $event)"
+          @toggle-favorite="emit('toggle-favorite', $event)"
         />
       </div>
       <!-- Table View -->
@@ -174,8 +186,25 @@ const table = useVueTable({
                 class="px-4 py-3 text-sm"
                 :class="{
                   'w-80 max-w-80': cell.column.id === 'name',
+                  'w-12': cell.column.id === 'isFavorite',
                 }"
               >
+                <!-- Favorite Star -->
+                <template v-if="cell.column.id === 'isFavorite'">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="h-8 w-8 p-0"
+                    :class="row.original.isFavorite ? 'text-yellow-500' : 'text-slate-300'"
+                    @click="handleToggleFavorite(row.original, $event)"
+                  >
+                    <Star
+                      class="h-4 w-4"
+                      :fill="row.original.isFavorite ? 'currentColor' : 'none'"
+                    />
+                  </Button>
+                </template>
+
                 <!-- Project Name/Description/Path -->
                 <template v-if="cell.column.id === 'name'">
                   <div class="flex items-start gap-2">

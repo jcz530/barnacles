@@ -26,9 +26,8 @@ export const projects = sqliteTable('projects', {
   icon: text('icon'), // relative path to icon/logo file from project root
   lastModified: integer('last_modified', { mode: 'timestamp' }),
   size: integer('size'), // in bytes
-  status: text('status', { enum: ['active', 'archived'] })
-    .notNull()
-    .default('active'),
+  isFavorite: integer('is_favorite', { mode: 'boolean' }).notNull().default(false),
+  archivedAt: integer('archived_at', { mode: 'timestamp' }),
   preferredIde: text('preferred_ide'),
   preferredTerminal: text('preferred_terminal'),
   createdAt: integer('created_at', { mode: 'timestamp' })

@@ -57,6 +57,13 @@
       "when": 1759632876501,
       "tag": "0007_kind_wild_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1759695227196,
+      "tag": "0008_fantastic_storm",
+      "breakpoints": true
     }
   ]
 }

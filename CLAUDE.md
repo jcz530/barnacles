@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important Rules To Follow
+
+Never delete the database or its tables
+
 ## Development Commands
 
 - `npm run dev` - Start the Electron app in development mode with hot reload
@@ -54,10 +58,12 @@ This is an Electron application with a Vue.js frontend and Hono API backend that
 ## Code Organization and Standards
 
 ### File Size and Structure
+
 - Keep files under 500 lines of code by separating logic into focused modules
 - Maintain clear separation of concerns across files
 
 ### Frontend Organization
+
 - **Component Structure**: Use atomic design principles for organizing components:
   - `atoms/` - Basic building blocks (buttons, inputs, labels)
   - `molecules/` - Simple groups of atoms (search bars, form fields)
@@ -66,6 +72,7 @@ This is an Electron application with a Vue.js frontend and Hono API backend that
   - `pages/` - Specific instances of templates
 - **UI Components**: shadcn-vue components should remain in the `ui/` folder
 - **Vue File Structure**: Order sections as script → template → style
+
   ```vue
   <script setup lang="ts">
   // Component logic
@@ -81,5 +88,6 @@ This is an Electron application with a Vue.js frontend and Hono API backend that
   ```
 
 ### Libraries and Patterns
+
 - **Composables**: Use VueUse for common functionality instead of recreating utilities
 - **API Requests**: Use TanStack Query for all API calls and data fetching

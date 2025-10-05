@@ -20,6 +20,7 @@ const {
   useTechnologiesQuery,
   useScanProjectsMutation,
   useDeleteProjectMutation,
+  useToggleFavoriteMutation,
 } = useQueries();
 
 // State
@@ -86,6 +87,7 @@ const projects = computed(() => {
 // Mutations
 const scanMutation = useScanProjectsMutation();
 const deleteMutation = useDeleteProjectMutation();
+const toggleFavoriteMutation = useToggleFavoriteMutation();
 
 // Computed
 const isScanning = computed(() => scanMutation.isPending.value);
@@ -132,6 +134,15 @@ const handleOpenProject = (project: ProjectWithDetails) => {
 
 const handleRefresh = () => {
   refetchProjects();
+};
+
+const handleToggleFavorite = async (projectId: string) => {
+  try {
+    await toggleFavoriteMutation.mutateAsync(projectId);
+  } catch (error) {
+    console.error('Failed to toggle favorite:', error);
+    alert('Failed to toggle favorite. Please try again.');
+  }
 };
 
 // Sync table sorting with card sorting
@@ -205,6 +216,7 @@ watch([sortField, sortDirection], () => {
         @update:sorting="tableSorting = $event"
         @delete="handleDeleteProject"
         @open="handleOpenProject"
+        @toggle-favorite="handleToggleFavorite"
       />
     </div>
   </div>

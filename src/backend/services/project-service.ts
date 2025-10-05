@@ -20,7 +20,8 @@ export interface Project {
   icon?: string | null;
   lastModified?: Date | null;
   size?: number | null;
-  status: 'active' | 'archived';
+  isFavorite: boolean;
+  archivedAt?: Date | null;
   preferredIde?: string | null;
   preferredTerminal?: string | null;
   createdAt: Date;
@@ -55,7 +56,7 @@ export interface ProjectStats {
 export interface ProjectFilters {
   search?: string;
   technologies?: string[];
-  status?: 'active' | 'archived';
+  includeArchived?: boolean;
 }
 
 class ProjectService {
@@ -68,8 +69,9 @@ class ProjectService {
     // Apply filters
     const conditions = [];
 
-    if (filters?.status) {
-      conditions.push(eq(projects.status, filters.status));
+    // By default, exclude archived projects unless explicitly requested
+    if (!filters?.includeArchived) {
+      conditions.push(sql`${projects.archivedAt} IS NULL`);
     }
 
     if (filters?.search) {
@@ -289,7 +291,6 @@ class ProjectService {
           icon: iconPath,
           lastModified: projectInfo.stats.lastModified,
           size: projectInfo.stats.size,
-          status: 'active',
           preferredIde: detectedIde,
         })
         .returning();
@@ -356,10 +357,43 @@ class ProjectService {
   }
 
   /**
-   * Update project status
+   * Archive a project
    */
-  async updateProjectStatus(id: string, status: 'active' | 'archived'): Promise<void> {
-    await db.update(projects).set({ status, updatedAt: new Date() }).where(eq(projects.id, id));
+  async archiveProject(id: string): Promise<void> {
+    await db
+      .update(projects)
+      .set({ archivedAt: new Date(), updatedAt: new Date() })
+      .where(eq(projects.id, id));
+  }
+
+  /**
+   * Unarchive a project
+   */
+  async unarchiveProject(id: string): Promise<void> {
+    await db
+      .update(projects)
+      .set({ archivedAt: null, updatedAt: new Date() })
+      .where(eq(projects.id, id));
+  }
+
+  /**
+   * Toggle project favorite status
+   */
+  async toggleProjectFavorite(id: string): Promise<boolean> {
+    const project = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
+
+    if (project.length === 0) {
+      throw new Error('Project not found');
+    }
+
+    const newFavoriteStatus = !project[0].isFavorite;
+
+    await db
+      .update(projects)
+      .set({ isFavorite: newFavoriteStatus, updatedAt: new Date() })
+      .where(eq(projects.id, id));
+
+    return newFavoriteStatus;
   }
 
   /**

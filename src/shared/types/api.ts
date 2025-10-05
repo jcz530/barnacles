@@ -34,7 +34,8 @@ export interface Project {
   icon?: string | null;
   lastModified?: Date | null;
   size?: number | null;
-  status: 'active' | 'archived';
+  isFavorite: boolean;
+  archivedAt?: Date | null;
   preferredIde?: string | null;
   preferredTerminal?: string | null;
   createdAt: Date;

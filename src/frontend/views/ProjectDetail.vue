@@ -77,6 +77,7 @@ const handleBack = () => {
             :project-id="project.id"
             :project-path="project.path"
             :project-name="project.name"
+            :is-archived="!!project.archivedAt"
             :git-remote-url="project.stats?.gitRemoteUrl"
           />
         </div>

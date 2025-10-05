@@ -26,9 +26,16 @@ const getGitProviderInfo = (remoteUrl: string): { name: string; webUrl: string }
 
 export const useProjectActions = () => {
   const router = useRouter();
-  const { useDeleteProjectMutation, useRescanProjectMutation } = useQueries();
+  const {
+    useDeleteProjectMutation,
+    useRescanProjectMutation,
+    useArchiveProjectMutation,
+    useUnarchiveProjectMutation,
+  } = useQueries();
   const deleteMutation = useDeleteProjectMutation();
   const rescanMutation = useRescanProjectMutation();
+  const archiveMutation = useArchiveProjectMutation();
+  const unarchiveMutation = useUnarchiveProjectMutation();
 
   const deleteProject = async (projectId: string, projectName: string) => {
     if (confirm(`Are you sure you want to delete "${projectName}"?`)) {
@@ -48,6 +55,24 @@ export const useProjectActions = () => {
     } catch (error) {
       console.error('Failed to rescan project:', error);
       alert('Failed to rescan project. Please try again.');
+    }
+  };
+
+  const archiveProject = async (projectId: string) => {
+    try {
+      await archiveMutation.mutateAsync(projectId);
+    } catch (error) {
+      console.error('Failed to archive project:', error);
+      alert('Failed to archive project. Please try again.');
+    }
+  };
+
+  const unarchiveProject = async (projectId: string) => {
+    try {
+      await unarchiveMutation.mutateAsync(projectId);
+    } catch (error) {
+      console.error('Failed to unarchive project:', error);
+      alert('Failed to unarchive project. Please try again.');
     }
   };
 
@@ -82,11 +107,15 @@ export const useProjectActions = () => {
   return {
     deleteProject,
     rescanProject,
+    archiveProject,
+    unarchiveProject,
     openInFinder,
     copyPath,
     openGitRemote,
     getGitProvider,
     isDeleting: deleteMutation.isPending,
     isRescanning: rescanMutation.isPending,
+    isArchiving: archiveMutation.isPending,
+    isUnarchiving: unarchiveMutation.isPending,
   };
 };

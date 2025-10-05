@@ -14,12 +14,12 @@ projects.get('/', async c => {
   try {
     const search = c.req.query('search');
     const technologies = c.req.query('technologies');
-    const status = c.req.query('status') as 'active' | 'archived' | undefined;
+    const includeArchived = c.req.query('includeArchived') === 'true';
 
     const filters = {
       search,
       technologies: technologies ? technologies.split(',') : undefined,
-      status,
+      includeArchived,
     };
 
     const projectList = await projectService.getProjects(filters);
@@ -108,34 +108,69 @@ projects.delete('/:id', async c => {
 });
 
 /**
- * PATCH /api/projects/:id/status
- * Update project status
+ * PATCH /api/projects/:id/favorite
+ * Toggle project favorite status
  */
-projects.patch('/:id/status', async c => {
+projects.patch('/:id/favorite', async c => {
   try {
     const id = c.req.param('id');
-    const body = await c.req.json();
-    const { status } = body;
-
-    if (!status || !['active', 'archived'].includes(status)) {
-      return c.json(
-        {
-          error: 'Invalid status. Must be "active" or "archived"',
-        },
-        400
-      );
-    }
-
-    await projectService.updateProjectStatus(id, status);
+    const isFavorite = await projectService.toggleProjectFavorite(id);
 
     return c.json({
-      message: 'Project status updated successfully',
+      data: { isFavorite },
+      message: `Project ${isFavorite ? 'added to' : 'removed from'} favorites`,
     });
   } catch (error) {
-    console.error('Error updating project status:', error);
+    console.error('Error toggling favorite:', error);
     return c.json(
       {
-        error: 'Failed to update project status',
+        error: error instanceof Error ? error.message : 'Failed to toggle favorite',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * PATCH /api/projects/:id/archive
+ * Archive a project (sets archivedAt to current timestamp)
+ */
+projects.patch('/:id/archive', async c => {
+  try {
+    const id = c.req.param('id');
+    await projectService.archiveProject(id);
+
+    return c.json({
+      message: 'Project archived successfully',
+    });
+  } catch (error) {
+    console.error('Error archiving project:', error);
+    return c.json(
+      {
+        error: 'Failed to archive project',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * PATCH /api/projects/:id/unarchive
+ * Unarchive a project (sets archivedAt to null)
+ */
+projects.patch('/:id/unarchive', async c => {
+  try {
+    const id = c.req.param('id');
+    await projectService.unarchiveProject(id);
+
+    return c.json({
+      message: 'Project unarchived successfully',
+    });
+  } catch (error) {
+    console.error('Error unarchiving project:', error);
+    return c.json(
+      {
+        error: 'Failed to unarchive project',
       },
       500
     );
