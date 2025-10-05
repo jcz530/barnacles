@@ -13,6 +13,7 @@ export interface IDE {
   command: string;
   icon?: string;
   color?: string;
+  macAppName?: string; // Name of the .app bundle on macOS (e.g., "Cursor.app")
 }
 
 export interface DetectedIDE extends IDE {
@@ -28,6 +29,7 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'code',
     icon: 'vscode',
     color: '#007ACC',
+    macAppName: 'Visual Studio Code.app',
   },
   {
     id: 'cursor',
@@ -36,6 +38,7 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'cursor',
     icon: 'cursor',
     color: '#000000',
+    macAppName: 'Cursor.app',
   },
   {
     id: 'windsurf',
@@ -44,6 +47,7 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'windsurf',
     icon: 'windsurf',
     color: '#0EA5E9',
+    macAppName: 'Windsurf.app',
   },
   {
     id: 'webstorm',
@@ -180,9 +184,23 @@ class IdeDetectorService {
       const platform = os.platform();
 
       if (platform === 'darwin') {
-        // On macOS, check if the command exists in PATH
-        const { stdout } = await execAsync(`which ${ide.executable}`);
-        return stdout.trim().length > 0;
+        // On macOS, first check if the .app bundle exists
+        if (ide.macAppName) {
+          try {
+            await fs.access(`/Applications/${ide.macAppName}`);
+            return true;
+          } catch {
+            // App bundle not found, fall through to check PATH
+          }
+        }
+
+        // Check if the command exists in PATH
+        try {
+          const { stdout } = await execAsync(`which ${ide.executable}`);
+          return stdout.trim().length > 0;
+        } catch {
+          return false;
+        }
       } else if (platform === 'win32') {
         // On Windows, check if the command exists
         await execAsync(`where ${ide.executable}`);
@@ -266,6 +284,20 @@ class IdeDetectorService {
     }
 
     try {
+      const platform = os.platform();
+
+      // On macOS, if the app bundle exists but command isn't in PATH, use open command
+      if (platform === 'darwin' && ide.macAppName) {
+        try {
+          await fs.access(`/Applications/${ide.macAppName}`);
+          // Use 'open' command with the app bundle
+          await execAsync(`open -a "${ide.macAppName}" "${projectPath}"`);
+          return;
+        } catch {
+          // Fall through to try the command
+        }
+      }
+
       // Execute the command to open the project
       await execAsync(`${ide.command} "${projectPath}"`);
     } catch (error) {
