@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import os from 'os';
 import path from 'path';
 import { projectService } from '../services/project-service';
+import { settingsService } from '../services/settings-service';
 
 const projects = new Hono();
 
@@ -51,7 +52,9 @@ projects.post('/scan', async c => {
       body = {};
     }
 
-    const { directories, maxDepth = 2 } = body;
+    // Get maxDepth from settings, fallback to body param, then default to 3
+    const settingMaxDepth = await settingsService.getValue<number>('scanMaxDepth');
+    const { directories, maxDepth = settingMaxDepth ?? 3 } = body;
 
     // If no directories provided, use common development directories
     const defaultDirectories = [

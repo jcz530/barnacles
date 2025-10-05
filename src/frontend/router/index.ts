@@ -5,6 +5,7 @@ import Api from '../views/Api.vue';
 import Home from '../views/Home.vue';
 import ProjectDetail from '../views/ProjectDetail.vue';
 import Projects from '../views/Projects.vue';
+import Settings from '../views/Settings.vue';
 import Terminals from '../views/Terminals.vue';
 
 const routes = [
@@ -41,6 +42,11 @@ const routes = [
         path: '/users',
         name: 'Users',
         component: Users,
+      },
+      {
+        path: '/settings',
+        name: 'Settings',
+        component: Settings,
       },
     ],
   },

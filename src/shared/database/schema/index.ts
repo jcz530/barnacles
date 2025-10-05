@@ -124,3 +124,14 @@ export const projectStatsRelations = relations(projectStats, ({ one }) => ({
     references: [projects.id],
   }),
 }));
+
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  type: text('type', { enum: ['string', 'number', 'boolean', 'json'] })
+    .notNull()
+    .default('string'),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});

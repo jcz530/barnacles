@@ -98,3 +98,10 @@ export interface HelloResponse {
 }
 
 export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+
+export interface Setting {
+  key: string;
+  value: string;
+  type: 'string' | 'number' | 'boolean' | 'json';
+  updatedAt: Date;
+}

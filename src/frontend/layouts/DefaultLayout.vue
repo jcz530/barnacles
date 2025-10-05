@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import NavBreadcrumbs from '@/components/nav/molecules/NavBreadcrumbs.vue';
 import { provideBreadcrumbs } from '@/composables/useBreadcrumbs';
+import { useHotkeys } from '@/composables/useHotkeys';
 import AppSidebar from '../components/nav/organisms/AppSidebar.vue';
 import { Separator } from '../components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '../components/ui/sidebar';
 
 provideBreadcrumbs();
+useHotkeys();
 </script>
 
 <template>

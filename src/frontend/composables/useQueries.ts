@@ -9,6 +9,7 @@ import type {
   HelloResponse,
   IDE,
   ProjectWithDetails,
+  Setting,
   Technology,
   Terminal,
   TerminalInstance,
@@ -507,6 +508,67 @@ export const useQueries = () => {
     });
   };
 
+  // Settings queries
+  const useSettingsQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['settings'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<Setting[]>>('GET', API_ROUTES.SETTINGS);
+
+        if (!response) {
+          throw new Error('Failed to fetch settings');
+        }
+
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
+  const useSettingQuery = (key: MaybeRef<string>, options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['setting', unref(key)],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<Setting>>(
+          'GET',
+          API_ROUTES.SETTINGS_KEY(unref(key))
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch setting');
+        }
+
+        return response.data;
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
+  const useUpdateSettingMutation = () => {
+    return useMutation({
+      mutationFn: async (params: {
+        key: string;
+        value: string | number | boolean | object;
+        type?: 'string' | 'number' | 'boolean' | 'json';
+      }) => {
+        const response = await apiCall<ApiResponse<Setting>>(
+          'PUT',
+          API_ROUTES.SETTINGS_KEY(params.key),
+          { value: params.value, type: params.type }
+        );
+
+        if (!response) {
+          throw new Error('Failed to update setting');
+        }
+
+        return response.data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['settings'] });
+      },
+    });
+  };
+
   return {
     useHelloQuery,
     useUsersQuery,
@@ -532,5 +594,8 @@ export const useQueries = () => {
     useTerminalInstanceQuery,
     useCreateTerminalMutation,
     useKillTerminalMutation,
+    useSettingsQuery,
+    useSettingQuery,
+    useUpdateSettingMutation,
   };
 };

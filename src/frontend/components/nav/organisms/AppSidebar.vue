@@ -16,7 +16,7 @@ import {
 import { useApi } from '@/composables/useApi';
 import { useConfigs } from '@/composables/useConfigs';
 import { useQuery } from '@tanstack/vue-query';
-import { Command, FolderGit2, LifeBuoy, Send, SquareTerminal } from 'lucide-vue-next';
+import { Cog, Command, FolderGit2, LifeBuoy, SquareTerminal } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { API_ROUTES } from '../../../../shared/constants';
 
@@ -98,9 +98,9 @@ const data = computed(() => ({
       icon: LifeBuoy,
     },
     {
-      title: 'Feedback',
-      url: '#',
-      icon: Send,
+      title: 'Settings',
+      url: '/settings',
+      icon: Cog,
     },
   ],
   // projects: [

@@ -33,4 +33,7 @@ export const API_ROUTES = {
   TERMINALS: '/api/terminals',
   TERMINALS_WS: '/api/terminals/ws',
   PROJECTS_PACKAGE_SCRIPTS: (id: string) => `/api/projects/${id}/package-scripts`,
+  SETTINGS: '/api/settings',
+  SETTINGS_KEY: (key: string) => `/api/settings/${key}`,
+  SETTINGS_RESET: '/api/settings/reset',
 } as const;
