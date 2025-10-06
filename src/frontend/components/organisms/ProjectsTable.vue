@@ -9,7 +9,7 @@ import {
 } from '@tanstack/vue-table';
 import { Calendar, GitBranch, HardDrive, Star } from 'lucide-vue-next';
 import { ref } from 'vue';
-import type { ProjectWithDetails } from '../../../shared/types/api';
+import type { DetectedIDE, DetectedTerminal, ProjectWithDetails } from '../../../shared/types/api';
 import ProjectIcon from '../atoms/ProjectIcon.vue';
 import ProjectActionsDropdown from '../molecules/ProjectActionsDropdown.vue';
 import ProjectCard from '../molecules/ProjectCard.vue';
@@ -21,6 +21,8 @@ const props = defineProps<{
   isLoading?: boolean;
   viewMode?: 'table' | 'card';
   sorting?: SortingState;
+  detectedIDEs?: DetectedIDE[];
+  detectedTerminals?: DetectedTerminal[];
 }>();
 
 const emit = defineEmits<{
@@ -158,6 +160,8 @@ const table = useVueTable({
           v-for="project in projects"
           :key="project.id"
           :project="project"
+          :detected-i-d-es="detectedIDEs"
+          :detected-terminals="detectedTerminals"
           @delete="emit('delete', $event)"
           @open="emit('open', $event)"
           @toggle-favorite="emit('toggle-favorite', $event)"
@@ -298,6 +302,10 @@ const table = useVueTable({
                     :is-favorite="row.original.isFavorite"
                     :git-remote-url="row.original.stats?.gitRemoteUrl"
                     :third-party-size="row.original.stats?.thirdPartySize"
+                    :detected-i-d-es="detectedIDEs"
+                    :detected-terminals="detectedTerminals"
+                    :preferred-ide-id="row.original.preferredIde"
+                    :preferred-terminal-id="row.original.preferredTerminal"
                     @click.stop
                   />
                 </template>

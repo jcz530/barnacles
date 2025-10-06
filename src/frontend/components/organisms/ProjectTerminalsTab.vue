@@ -1,13 +1,14 @@
 <script setup lang="ts">
+import { Play, Plus, Terminal as TerminalIcon } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
-import Terminal from './Terminal.vue';
+import type { TerminalInstance } from '../../../shared/types/api';
+import { useQueries } from '../../composables/useQueries';
 import TerminalCard from '../molecules/TerminalCard.vue';
 import { Button } from '../ui/button';
-import { Card, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import CardContent from '../ui/card/CardContent.vue';
 import { Skeleton } from '../ui/skeleton';
-import { useQueries } from '../../composables/useQueries';
-import { Plus, Terminal as TerminalIcon, Play } from 'lucide-vue-next';
-import type { TerminalInstance } from '../../../shared/types/api';
+import Terminal from './Terminal.vue';
 
 const props = defineProps<{
   projectId: string;
@@ -88,7 +89,7 @@ autoSelectTerminal();
         <CardTitle>Package Scripts</CardTitle>
         <CardDescription>Run scripts from package.json</CardDescription>
       </CardHeader>
-      <div class="p-6 pt-0">
+      <CardContent>
         <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <Button
             v-for="(command, name) in packageJsonScripts"
@@ -100,11 +101,13 @@ autoSelectTerminal();
             <Play class="mr-2 h-4 w-4" />
             <div class="text-left">
               <div class="font-semibold">{{ name }}</div>
-              <div class="truncate text-xs text-slate-500">{{ command }}</div>
+              <div class="w-4/5 truncate text-xs text-slate-500">
+                {{ command }}
+              </div>
             </div>
           </Button>
         </div>
-      </div>
+      </CardContent>
     </Card>
 
     <!-- Terminals Section -->

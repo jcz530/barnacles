@@ -21,6 +21,8 @@ const {
   useScanProjectsMutation,
   useDeleteProjectMutation,
   useToggleFavoriteMutation,
+  useDetectedIDEsQuery,
+  useDetectedTerminalsQuery,
 } = useQueries();
 
 // State
@@ -48,6 +50,8 @@ const { data: allProjectsData } = useProjectsQuery({
 });
 
 const { data: technologies, isLoading: technologiesLoading } = useTechnologiesQuery();
+const { data: detectedIDEs } = useDetectedIDEsQuery();
+const { data: detectedTerminals } = useDetectedTerminalsQuery();
 
 // Local fuzzy search
 const { filteredItems: searchedProjects } = useFuzzySearch<ProjectWithDetails>({
@@ -232,6 +236,8 @@ watch([sortField, sortDirection], () => {
         :is-loading="projectsLoading"
         :view-mode="viewMode"
         :sorting="tableSorting"
+        :detected-i-d-es="detectedIDEs"
+        :detected-terminals="detectedTerminals"
         @update:sorting="tableSorting = $event"
         @delete="handleDeleteProject"
         @open="handleOpenProject"
