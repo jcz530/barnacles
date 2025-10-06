@@ -81,8 +81,6 @@ const handleBack = () => {
             :is-favorite="project.isFavorite"
             :git-remote-url="project.stats?.gitRemoteUrl"
             :third-party-size="project.stats?.thirdPartySize"
-            :detected-i-d-es="detectedIDEs"
-            :detected-terminals="detectedTerminals"
             :preferred-ide-id="project.preferredIde"
             :preferred-terminal-id="project.preferredTerminal"
           />

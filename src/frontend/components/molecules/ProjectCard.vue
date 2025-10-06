@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DetectedIDE, DetectedTerminal, ProjectWithDetails } from '../../../shared/types/api';
+import type { ProjectWithDetails } from '../../../shared/types/api';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { Folder, Calendar, HardDrive, GitBranch, Star } from 'lucide-vue-next';
 import { Button } from '../ui/button';
@@ -8,8 +8,6 @@ import ProjectActionsDropdown from './ProjectActionsDropdown.vue';
 
 const props = defineProps<{
   project: ProjectWithDetails;
-  detectedIDEs?: DetectedIDE[];
-  detectedTerminals?: DetectedTerminal[];
 }>();
 
 const emit = defineEmits<{
@@ -99,8 +97,6 @@ const handleToggleFavorite = (e: Event) => {
             :is-favorite="project.isFavorite"
             :git-remote-url="project.stats?.gitRemoteUrl"
             :third-party-size="project.stats?.thirdPartySize"
-            :detected-i-d-es="detectedIDEs"
-            :detected-terminals="detectedTerminals"
             :preferred-ide-id="project.preferredIde"
             :preferred-terminal-id="project.preferredTerminal"
             @click.stop

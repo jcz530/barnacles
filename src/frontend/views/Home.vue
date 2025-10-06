@@ -6,13 +6,7 @@ import ProjectCard from '../components/molecules/ProjectCard.vue';
 import { useQueries } from '../composables/useQueries';
 
 const router = useRouter();
-const {
-  useProjectsQuery,
-  useDeleteProjectMutation,
-  useToggleFavoriteMutation,
-  useDetectedIDEsQuery,
-  useDetectedTerminalsQuery,
-} = useQueries();
+const { useProjectsQuery, useDeleteProjectMutation, useToggleFavoriteMutation } = useQueries();
 
 // Get all projects
 const { data: allProjects, isLoading } = useProjectsQuery({
@@ -20,9 +14,6 @@ const { data: allProjects, isLoading } = useProjectsQuery({
   technologies: ref([]),
   includeArchived: ref(false),
 });
-
-const { data: detectedIDEs } = useDetectedIDEsQuery();
-const { data: detectedTerminals } = useDetectedTerminalsQuery();
 
 // Favorite projects
 const favoriteProjects = computed(() => {
@@ -97,8 +88,6 @@ const handleToggleFavorite = async (projectId: string) => {
               v-for="project in favoriteProjects"
               :key="project.id"
               :project="project"
-              :detected-i-d-es="detectedIDEs"
-              :detected-terminals="detectedTerminals"
               @delete="handleDeleteProject"
               @open="handleOpenProject"
               @toggle-favorite="handleToggleFavorite"
@@ -117,8 +106,6 @@ const handleToggleFavorite = async (projectId: string) => {
               v-for="project in recentProjects"
               :key="project.id"
               :project="project"
-              :detected-i-d-es="detectedIDEs"
-              :detected-terminals="detectedTerminals"
               @delete="handleDeleteProject"
               @open="handleOpenProject"
               @toggle-favorite="handleToggleFavorite"

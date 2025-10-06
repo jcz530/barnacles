@@ -12,7 +12,6 @@ import {
   Trash2,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
-import type { DetectedIDE, DetectedTerminal } from '../../../shared/types/api';
 import { useProjectActions } from '../../composables/useProjectActions';
 import { useQueries } from '../../composables/useQueries';
 import { Button } from '../ui/button';
@@ -36,8 +35,6 @@ interface Props {
   isFavorite: boolean;
   gitRemoteUrl?: string | null;
   thirdPartySize?: number | null;
-  detectedIDEs?: DetectedIDE[];
-  detectedTerminals?: DetectedTerminal[];
   preferredIdeId?: string | null;
   preferredTerminalId?: string | null;
 }
@@ -69,21 +66,25 @@ const {
   useUpdatePreferredIDEMutation,
   useOpenProjectMutation,
   useSettingsQuery,
+  useDetectedIDEsQuery,
+  useDetectedTerminalsQuery,
 } = useQueries();
 const updateTerminalMutation = useUpdatePreferredTerminalMutation();
 const openTerminalMutation = useOpenTerminalMutation();
 const updateIDEMutation = useUpdatePreferredIDEMutation();
 const openProjectMutation = useOpenProjectMutation();
 const settingsQuery = useSettingsQuery({ enabled: true });
+const { data: detectedIDEs } = useDetectedIDEsQuery();
+const { data: detectedTerminals } = useDetectedTerminalsQuery();
 
 const gitProvider = computed(() => getGitProvider(props.gitRemoteUrl));
 
 const installedTerminals = computed(() => {
-  return props.detectedTerminals?.filter(terminal => terminal.installed) || [];
+  return detectedTerminals.value?.filter(terminal => terminal.installed) || [];
 });
 
 const installedIDEs = computed(() => {
-  return props.detectedIDEs?.filter(ide => ide.installed) || [];
+  return detectedIDEs.value?.filter(ide => ide.installed) || [];
 });
 
 const defaultTerminalId = computed(() => {
