@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Calendar, Code2, FileText, FolderTree, HardDrive } from 'lucide-vue-next';
+import { Calendar, Code2, FileText, FolderTree, HardDrive, Package } from 'lucide-vue-next';
 import type { ProjectWithDetails } from '../../../shared/types/api';
 import { useFormatters } from '../../composables/useFormatters';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -56,6 +56,18 @@ const { formatSize, formatRelativeDate } = useFormatters();
         </div>
         <div class="text-lg font-semibold text-slate-900">
           {{ formatSize(project.size) }}
+        </div>
+      </div>
+      <div
+        v-if="project.stats?.thirdPartySize && project.stats.thirdPartySize > 0"
+        class="flex items-center justify-between"
+      >
+        <div class="flex items-center gap-2 text-sm text-slate-600">
+          <Package class="h-4 w-4" />
+          <span>Third-Party Packages</span>
+        </div>
+        <div class="text-lg font-semibold text-amber-600">
+          {{ formatSize(project.stats.thirdPartySize) }}
         </div>
       </div>
       <div class="flex items-center justify-between">

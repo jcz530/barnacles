@@ -323,6 +323,7 @@ class ProjectService {
       directoryCount: projectInfo.stats.directoryCount,
       languageStats: JSON.stringify(projectInfo.stats.languageStats),
       linesOfCode: projectInfo.stats.linesOfCode,
+      thirdPartySize: projectInfo.stats.thirdPartySize,
       gitBranch: projectInfo.gitInfo?.branch,
       gitStatus: projectInfo.gitInfo?.status,
       gitRemoteUrl: projectInfo.gitInfo?.remoteUrl,
@@ -540,6 +541,49 @@ class ProjectService {
     }
 
     return null;
+  }
+
+  /**
+   * Delete third-party packages from a project and recalculate stats
+   */
+  async deleteThirdPartyPackages(id: string): Promise<{ deletedSize: number }> {
+    const project = await this.getProjectById(id);
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const fs = await import('fs/promises');
+    const path = await import('path');
+
+    const thirdPartyDirs = [
+      'node_modules',
+      'vendor',
+      '.venv',
+      'venv',
+      'target/debug',
+      'target/release',
+    ];
+    let deletedSize = 0;
+
+    for (const dir of thirdPartyDirs) {
+      const dirPath = path.join(project.path, dir);
+      try {
+        await fs.access(dirPath);
+        // Calculate size before deleting
+        const size = await projectScannerService.getThirdPartySizeByPath(project.path);
+        // Delete the directory
+        await fs.rm(dirPath, { recursive: true, force: true });
+        deletedSize = size;
+      } catch {
+        // Directory doesn't exist or couldn't be deleted, skip
+      }
+    }
+
+    // Rescan the project to update stats
+    await this.rescanProject(project.path);
+
+    return { deletedSize };
   }
 }
 

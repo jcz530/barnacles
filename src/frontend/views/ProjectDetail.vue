@@ -78,7 +78,9 @@ const handleBack = () => {
             :project-path="project.path"
             :project-name="project.name"
             :is-archived="!!project.archivedAt"
+            :is-favorite="project.isFavorite"
             :git-remote-url="project.stats?.gitRemoteUrl"
+            :third-party-size="project.stats?.thirdPartySize"
           />
         </div>
       </div>

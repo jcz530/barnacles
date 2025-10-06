@@ -80,6 +80,7 @@ export const projectStats = sqliteTable('project_stats', {
   directoryCount: integer('directory_count'),
   languageStats: text('language_stats'), // JSON string of { techSlug: { fileCount: number, percentage: number, linesOfCode: number } }
   linesOfCode: integer('lines_of_code'), // total lines of code
+  thirdPartySize: integer('third_party_size'), // total size of third-party packages in bytes (node_modules, vendor, etc.)
   gitBranch: text('git_branch'),
   gitStatus: text('git_status'),
   gitRemoteUrl: text('git_remote_url'),

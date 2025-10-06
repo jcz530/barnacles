@@ -5,6 +5,7 @@ import {
   ExternalLink,
   FolderOpen,
   MoreVertical,
+  PackageX,
   RefreshCw,
   Star,
   Trash2,
@@ -28,6 +29,7 @@ interface Props {
   isArchived: boolean;
   isFavorite: boolean;
   gitRemoteUrl?: string | null;
+  thirdPartySize?: number | null;
 }
 
 const props = defineProps<Props>();
@@ -42,11 +44,13 @@ const {
   copyPath,
   openGitRemote,
   getGitProvider,
+  deleteThirdPartyPackages,
   isDeleting,
   isRescanning,
   isArchiving,
   isUnarchiving,
   isTogglingFavorite,
+  isDeletingPackages,
 } = useProjectActions();
 
 const gitProvider = computed(() => getGitProvider(props.gitRemoteUrl));
@@ -84,6 +88,10 @@ const handleUnarchive = () => {
 const handleToggleFavorite = () => {
   toggleFavorite(props.projectId);
 };
+
+const handleDeletePackages = () => {
+  deleteThirdPartyPackages(props.projectId, props.thirdPartySize);
+};
 </script>
 
 <template>
@@ -119,6 +127,16 @@ const handleToggleFavorite = () => {
         {{ isFavorite ? 'Unfavorite' : 'Favorite' }}
       </DropdownMenuItem>
       <DropdownMenuSeparator />
+      <DropdownMenuItem
+        v-if="thirdPartySize && thirdPartySize > 0"
+        @click="handleDeletePackages"
+        :disabled="isDeletingPackages"
+        class="text-amber-600 focus:text-amber-600"
+      >
+        <PackageX class="mr-2 h-4 w-4" />
+        Delete Packages
+      </DropdownMenuItem>
+      <DropdownMenuSeparator v-if="thirdPartySize && thirdPartySize > 0" />
       <DropdownMenuItem v-if="!isArchived" @click="handleArchive" :disabled="isArchiving">
         <Archive class="mr-2 h-4 w-4" />
         Archive Project

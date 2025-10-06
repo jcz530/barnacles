@@ -96,6 +96,7 @@ const handleToggleFavorite = (e: Event) => {
             :is-archived="!!project.archivedAt"
             :is-favorite="project.isFavorite"
             :git-remote-url="project.stats?.gitRemoteUrl"
+            :third-party-size="project.stats?.thirdPartySize"
             @click.stop
           />
         </div>

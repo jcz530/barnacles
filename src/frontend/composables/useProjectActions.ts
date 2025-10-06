@@ -32,12 +32,14 @@ export const useProjectActions = () => {
     useArchiveProjectMutation,
     useUnarchiveProjectMutation,
     useToggleFavoriteMutation,
+    useDeleteThirdPartyPackagesMutation,
   } = useQueries();
   const deleteMutation = useDeleteProjectMutation();
   const rescanMutation = useRescanProjectMutation();
   const archiveMutation = useArchiveProjectMutation();
   const unarchiveMutation = useUnarchiveProjectMutation();
   const favoriteMutation = useToggleFavoriteMutation();
+  const deletePackagesMutation = useDeleteThirdPartyPackagesMutation();
 
   const deleteProject = async (projectId: string, projectName: string) => {
     if (confirm(`Are you sure you want to delete "${projectName}"?`)) {
@@ -115,6 +117,32 @@ export const useProjectActions = () => {
     return getGitProviderInfo(remoteUrl);
   };
 
+  const deleteThirdPartyPackages = async (projectId: string, thirdPartySize?: number | null) => {
+    const sizeText = thirdPartySize ? ` (${formatBytes(thirdPartySize)})` : '';
+    if (
+      confirm(
+        `Are you sure you want to delete all third-party packages${sizeText}? This action cannot be undone.`
+      )
+    ) {
+      try {
+        const result = await deletePackagesMutation.mutateAsync(projectId);
+        const deletedSizeText = formatBytes(result?.deletedSize || 0);
+        alert(`Successfully deleted ${deletedSizeText} of third-party packages.`);
+      } catch (error) {
+        console.error('Failed to delete packages:', error);
+        alert('Failed to delete packages. Please try again.');
+      }
+    }
+  };
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  };
+
   return {
     deleteProject,
     rescanProject,
@@ -125,10 +153,12 @@ export const useProjectActions = () => {
     copyPath,
     openGitRemote,
     getGitProvider,
+    deleteThirdPartyPackages,
     isDeleting: deleteMutation.isPending,
     isRescanning: rescanMutation.isPending,
     isArchiving: archiveMutation.isPending,
     isUnarchiving: unarchiveMutation.isPending,
     isTogglingFavorite: favoriteMutation.isPending,
+    isDeletingPackages: deletePackagesMutation.isPending,
   };
 };

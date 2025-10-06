@@ -31,6 +31,7 @@ export interface ProjectInfo {
     lastModified: Date;
     languageStats: LanguageStats;
     linesOfCode: number;
+    thirdPartySize: number;
   };
   gitInfo?: {
     branch: string;
@@ -207,6 +208,87 @@ class ProjectScannerService {
     } catch {
       return 0;
     }
+  }
+
+  /**
+   * Calculates the total size of third-party package directories
+   * Uses OS-level commands for much faster performance
+   */
+  async getThirdPartySizeByPath(projectPath: string): Promise<number> {
+    const thirdPartyDirs = [
+      'node_modules',
+      'vendor',
+      '.venv',
+      'venv',
+      'target/debug',
+      'target/release',
+    ];
+    let totalSize = 0;
+
+    for (const dir of thirdPartyDirs) {
+      const dirPath = path.join(projectPath, dir);
+      try {
+        await fs.access(dirPath);
+        totalSize += await this.getDirectorySize(dirPath);
+      } catch {
+        // Directory doesn't exist, skip
+      }
+    }
+
+    return totalSize;
+  }
+
+  /**
+   * Calculates directory size using OS-level commands for performance
+   */
+  private async getDirectorySize(dirPath: string): Promise<number> {
+    try {
+      // Use 'du' command on Unix-like systems (macOS, Linux) for much faster calculation
+      // -sk: sum in kilobytes, -s: summarize (don't show subdirectories)
+      const { stdout } = await execAsync(`du -sk "${dirPath}"`, {
+        timeout: 30000, // 30 second timeout
+      });
+
+      // Output format: "size\tpath"
+      const sizeInKB = parseInt(stdout.split('\t')[0], 10);
+      return sizeInKB * 1024; // Convert KB to bytes
+    } catch {
+      // Fallback to slower recursive method if 'du' fails
+      return await this.getDirectorySizeRecursive(dirPath);
+    }
+  }
+
+  /**
+   * Fallback: Recursively calculates directory size (slower but works everywhere)
+   */
+  private async getDirectorySizeRecursive(dirPath: string): Promise<number> {
+    let totalSize = 0;
+
+    async function scanDir(currentPath: string): Promise<void> {
+      try {
+        const entries = await fs.readdir(currentPath, { withFileTypes: true });
+
+        for (const entry of entries) {
+          const fullPath = path.join(currentPath, entry.name);
+
+          if (entry.isDirectory()) {
+            await scanDir(fullPath);
+          } else if (entry.isFile()) {
+            try {
+              const stats = await fs.stat(fullPath);
+              totalSize += stats.size;
+            } catch {
+              // Skip files we can't stat
+            }
+          }
+        }
+      } catch {
+        // Skip directories we can't read
+      }
+    }
+
+    await scanDir(dirPath);
+    return totalSize;
   }
 
   /**
@@ -391,7 +473,10 @@ class ProjectScannerService {
       ...metadata,
       path: projectPath,
       technologies,
-      stats: statsResult.stats,
+      stats: {
+        ...statsResult.stats,
+        thirdPartySize: 0, // Don't calculate during scan for performance
+      },
       gitInfo,
     };
   }

@@ -297,6 +297,7 @@ const table = useVueTable({
                     :is-archived="!!row.original.archivedAt"
                     :is-favorite="row.original.isFavorite"
                     :git-remote-url="row.original.stats?.gitRemoteUrl"
+                    :third-party-size="row.original.stats?.thirdPartySize"
                     @click.stop
                   />
                 </template>

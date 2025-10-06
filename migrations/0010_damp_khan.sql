@@ -1,0 +1,1 @@
+ALTER TABLE `project_stats` ADD `third_party_size` integer;

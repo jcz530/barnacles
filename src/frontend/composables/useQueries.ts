@@ -613,6 +613,28 @@ export const useQueries = () => {
     });
   };
 
+  // Delete third-party packages mutation
+  const useDeleteThirdPartyPackagesMutation = () => {
+    return useMutation({
+      mutationFn: async (projectId: string) => {
+        const response = await apiCall<ApiResponse<{ deletedSize: number }>>(
+          'POST',
+          `${API_ROUTES.PROJECTS}/${projectId}/delete-packages`
+        );
+
+        if (!response) {
+          throw new Error('Failed to delete packages');
+        }
+
+        return response.data;
+      },
+      onSuccess: (data, projectId) => {
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      },
+    });
+  };
+
   return {
     useHelloQuery,
     useUsersQuery,
@@ -643,5 +665,6 @@ export const useQueries = () => {
     useSettingsQuery,
     useSettingQuery,
     useUpdateSettingMutation,
+    useDeleteThirdPartyPackagesMutation,
   };
 };

@@ -571,6 +571,30 @@ projects.get('/:id/icon', async c => {
 });
 
 /**
+ * POST /api/projects/:id/delete-packages
+ * Delete third-party packages from a project
+ */
+projects.post('/:id/delete-packages', async c => {
+  try {
+    const id = c.req.param('id');
+    const result = await projectService.deleteThirdPartyPackages(id);
+
+    return c.json({
+      data: result,
+      message: 'Third-party packages deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting packages:', error);
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to delete packages',
+      },
+      500
+    );
+  }
+});
+
+/**
  * GET /api/projects/:id
  * Get a single project by ID
  */
