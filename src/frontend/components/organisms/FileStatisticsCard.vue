@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Calendar, FileText, FolderTree, HardDrive } from 'lucide-vue-next';
+import { Calendar, Code2, FileText, FolderTree, HardDrive } from 'lucide-vue-next';
 import type { ProjectWithDetails } from '../../../shared/types/api';
 import { useFormatters } from '../../composables/useFormatters';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -38,6 +38,15 @@ const { formatSize, formatRelativeDate } = useFormatters();
         </div>
         <div class="text-lg font-semibold text-slate-900">
           {{ project.stats?.directoryCount?.toLocaleString() || 0 }}
+        </div>
+      </div>
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2 text-sm text-slate-600">
+          <Code2 class="h-4 w-4" />
+          <span>Lines of Code</span>
+        </div>
+        <div class="text-lg font-semibold text-slate-900">
+          {{ project.stats?.linesOfCode?.toLocaleString() || 0 }}
         </div>
       </div>
       <div class="flex items-center justify-between">
