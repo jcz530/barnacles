@@ -635,6 +635,152 @@ export const useQueries = () => {
     });
   };
 
+  // Get start processes configuration query
+  const useStartProcessesQuery = (projectId: MaybeRef<string>, options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: computed(() => ['project', unref(projectId), 'start-processes'] as const),
+      queryFn: async () => {
+        const id = unref(projectId);
+        const response = await apiCall<ApiResponse<unknown[]>>(
+          'GET',
+          API_ROUTES.PROJECTS_START_PROCESSES(id)
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch start processes');
+        }
+
+        return response.data;
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
+  // Update start processes configuration mutation
+  const useUpdateStartProcessesMutation = () => {
+    return useMutation({
+      mutationFn: async ({
+        projectId,
+        startProcesses,
+      }: {
+        projectId: string;
+        startProcesses: unknown[];
+      }) => {
+        const response = await apiCall<ApiResponse<void>>(
+          'PATCH',
+          API_ROUTES.PROJECTS_START_PROCESSES(projectId),
+          { startProcesses }
+        );
+
+        if (!response) {
+          throw new Error('Failed to update start processes');
+        }
+
+        return response.data;
+      },
+      onSuccess: (data, { projectId }) => {
+        queryClient.invalidateQueries({ queryKey: ['project', projectId, 'start-processes'] });
+        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      },
+    });
+  };
+
+  // Start project processes mutation
+  const useStartProjectProcessesMutation = () => {
+    return useMutation({
+      mutationFn: async (projectId: string) => {
+        const response = await apiCall<ApiResponse<unknown>>(
+          'POST',
+          API_ROUTES.PROJECTS_START(projectId)
+        );
+
+        if (!response) {
+          throw new Error('Failed to start project processes');
+        }
+
+        return response.data;
+      },
+      onSuccess: (data, projectId) => {
+        queryClient.invalidateQueries({ queryKey: ['project', projectId, 'process-status'] });
+      },
+    });
+  };
+
+  // Stop project processes mutation
+  const useStopProjectProcessesMutation = () => {
+    return useMutation({
+      mutationFn: async (projectId: string) => {
+        const response = await apiCall<ApiResponse<void>>(
+          'POST',
+          API_ROUTES.PROJECTS_STOP(projectId)
+        );
+
+        if (!response) {
+          throw new Error('Failed to stop project processes');
+        }
+
+        return response.data;
+      },
+      onSuccess: (data, projectId) => {
+        queryClient.invalidateQueries({ queryKey: ['project', projectId, 'process-status'] });
+      },
+    });
+  };
+
+  // Get process status query (optionally filtered by projectId)
+  const useProcessStatusQuery = (
+    projectId?: MaybeRef<string>,
+    options?: { enabled?: boolean; refetchInterval?: number }
+  ) => {
+    return useQuery({
+      queryKey: computed(() =>
+        projectId
+          ? (['project', unref(projectId), 'process-status'] as const)
+          : (['process-status-all'] as const)
+      ),
+      queryFn: async () => {
+        const params = new URLSearchParams();
+        const pid = projectId ? unref(projectId) : undefined;
+        if (pid) params.append('projectId', pid);
+
+        const query = params.toString() ? `?${params.toString()}` : '';
+        const response = await apiCall<ApiResponse<unknown>>(
+          'GET',
+          `${API_ROUTES.PROJECTS_PROCESS_STATUS}${query}`
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch process status');
+        }
+
+        return response.data;
+      },
+      enabled: options?.enabled ?? false,
+      refetchInterval: options?.refetchInterval ?? false,
+    });
+  };
+
+  // Stop specific process mutation
+  const useStopProcessMutation = () => {
+    return useMutation({
+      mutationFn: async ({ projectId, processId }: { projectId: string; processId: string }) => {
+        const response = await apiCall<ApiResponse<void>>(
+          'POST',
+          API_ROUTES.PROJECTS_STOP_PROCESS(projectId, processId)
+        );
+
+        if (!response) {
+          throw new Error('Failed to stop process');
+        }
+
+        return response.data;
+      },
+      onSuccess: (data, { projectId }) => {
+        queryClient.invalidateQueries({ queryKey: ['project', projectId, 'process-status'] });
+      },
+    });
+  };
+
   return {
     useHelloQuery,
     useUsersQuery,
@@ -666,5 +812,11 @@ export const useQueries = () => {
     useSettingQuery,
     useUpdateSettingMutation,
     useDeleteThirdPartyPackagesMutation,
+    useStartProcessesQuery,
+    useUpdateStartProcessesMutation,
+    useStartProjectProcessesMutation,
+    useStopProjectProcessesMutation,
+    useProcessStatusQuery,
+    useStopProcessMutation,
   };
 };

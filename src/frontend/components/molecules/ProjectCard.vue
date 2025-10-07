@@ -2,9 +2,11 @@
 import type { ProjectWithDetails } from '../../../shared/types/api';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
 import { Folder, Calendar, HardDrive, GitBranch, Star } from 'lucide-vue-next';
+import { computed } from 'vue';
 import { Button } from '../ui/button';
 import ProjectIcon from '../atoms/ProjectIcon.vue';
 import ProjectActionsDropdown from './ProjectActionsDropdown.vue';
+import { useQueries } from '../../composables/useQueries';
 
 const props = defineProps<{
   project: ProjectWithDetails;
@@ -15,6 +17,24 @@ const emit = defineEmits<{
   open: [project: ProjectWithDetails];
   'toggle-favorite': [projectId: string];
 }>();
+
+const { useProcessStatusQuery } = useQueries();
+const { data: processStatus } = useProcessStatusQuery(props.project.id, {
+  enabled: true,
+  refetchInterval: 2000,
+});
+
+const isProcessRunning = computed(() => {
+  if (!processStatus.value || !('processes' in processStatus.value)) return false;
+  const processes = (processStatus.value as { processes: { status: string }[] }).processes;
+  return processes.some((p: { status: string }) => p.status === 'running');
+});
+
+const runningProcessCount = computed(() => {
+  if (!processStatus.value || !('processes' in processStatus.value)) return 0;
+  const processes = (processStatus.value as { processes: { status: string }[] }).processes;
+  return processes.filter((p: { status: string }) => p.status === 'running').length;
+});
 
 const formatSize = (bytes: number | null | undefined): string => {
   if (!bytes) return '0 B';
@@ -73,7 +93,21 @@ const handleToggleFavorite = (e: Event) => {
             size="md"
           />
           <div class="flex-1">
-            <CardTitle class="text-lg">{{ project.name }}</CardTitle>
+            <div class="flex items-center gap-2">
+              <CardTitle class="text-lg">{{ project.name }}</CardTitle>
+              <span
+                v-if="isProcessRunning"
+                class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
+              >
+                <span class="relative flex h-2 w-2">
+                  <span
+                    class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+                  ></span>
+                  <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+                </span>
+                {{ runningProcessCount }} running
+              </span>
+            </div>
             <CardDescription v-if="project.description" class="mt-1">
               {{ project.description }}
             </CardDescription>

@@ -30,6 +30,7 @@ export const projects = sqliteTable('projects', {
   archivedAt: integer('archived_at', { mode: 'timestamp' }),
   preferredIde: text('preferred_ide'),
   preferredTerminal: text('preferred_terminal'),
+  startProcesses: text('start_processes'), // JSON array of StartProcess definitions
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),

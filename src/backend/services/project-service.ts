@@ -24,6 +24,7 @@ export interface Project {
   archivedAt?: Date | null;
   preferredIde?: string | null;
   preferredTerminal?: string | null;
+  startProcesses?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -541,6 +542,16 @@ class ProjectService {
     }
 
     return null;
+  }
+
+  /**
+   * Update the start processes configuration for a project
+   */
+  async updateStartProcesses(id: string, startProcesses: unknown[]): Promise<void> {
+    await db
+      .update(projects)
+      .set({ startProcesses: JSON.stringify(startProcesses), updatedAt: new Date() })
+      .where(eq(projects.id, id));
   }
 
   /**

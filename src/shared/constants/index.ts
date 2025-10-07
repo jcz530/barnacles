@@ -33,6 +33,12 @@ export const API_ROUTES = {
   TERMINALS: '/api/terminals',
   TERMINALS_WS: '/api/terminals/ws',
   PROJECTS_PACKAGE_SCRIPTS: (id: string) => `/api/projects/${id}/package-scripts`,
+  PROJECTS_START_PROCESSES: (id: string) => `/api/projects/${id}/start-processes`,
+  PROJECTS_START: (id: string) => `/api/projects/${id}/start`,
+  PROJECTS_STOP: (id: string) => `/api/projects/${id}/stop`,
+  PROJECTS_PROCESS_STATUS: '/api/projects/process-status',
+  PROJECTS_STOP_PROCESS: (id: string, processId: string) =>
+    `/api/projects/${id}/processes/${processId}/stop`,
   SETTINGS: '/api/settings',
   SETTINGS_KEY: (key: string) => `/api/settings/${key}`,
   SETTINGS_RESET: '/api/settings/reset',
