@@ -6,13 +6,24 @@ import ProjectCard from '../components/molecules/ProjectCard.vue';
 import { useQueries } from '../composables/useQueries';
 
 const router = useRouter();
-const { useProjectsQuery, useDeleteProjectMutation, useToggleFavoriteMutation } = useQueries();
+const {
+  useProjectsQuery,
+  useDeleteProjectMutation,
+  useToggleFavoriteMutation,
+  useProcessStatusQuery,
+} = useQueries();
 
 // Get all projects
 const { data: allProjects, isLoading } = useProjectsQuery({
   search: ref(''),
   technologies: ref([]),
   includeArchived: ref(false),
+});
+
+// Get all process statuses (no project filter)
+const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
+  enabled: true,
+  refetchInterval: 2000,
 });
 
 // Favorite projects
@@ -88,6 +99,7 @@ const handleToggleFavorite = async (projectId: string) => {
               v-for="project in favoriteProjects"
               :key="project.id"
               :project="project"
+              :process-statuses="allProcessStatuses"
               @delete="handleDeleteProject"
               @open="handleOpenProject"
               @toggle-favorite="handleToggleFavorite"
@@ -106,6 +118,7 @@ const handleToggleFavorite = async (projectId: string) => {
               v-for="project in recentProjects"
               :key="project.id"
               :project="project"
+              :process-statuses="allProcessStatuses"
               @delete="handleDeleteProject"
               @open="handleOpenProject"
               @toggle-favorite="handleToggleFavorite"

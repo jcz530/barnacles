@@ -14,13 +14,13 @@ const props = defineProps<{
   projectId: string;
   projectPath: string;
   packageJsonScripts?: Record<string, string>;
+  processStatuses?: any;
 }>();
 
 const {
   useTerminalInstancesQuery,
   useCreateTerminalMutation,
   useKillTerminalMutation,
-  useProcessStatusQuery,
   useStopProcessMutation,
   useProcessOutputQuery,
 } = useQueries();
@@ -28,11 +28,18 @@ const {
 const { data: terminals, isLoading } = useTerminalInstancesQuery(computed(() => props.projectId));
 const createTerminalMutation = useCreateTerminalMutation();
 const killTerminalMutation = useKillTerminalMutation();
-const { data: processStatus } = useProcessStatusQuery(props.projectId, {
-  enabled: true,
-  refetchInterval: 2000,
-});
 const stopProcessMutation = useStopProcessMutation();
+
+// Get process status from props instead of individual query
+const processStatus = computed(() => {
+  if (!props.processStatuses || !Array.isArray(props.processStatuses)) return null;
+
+  const projectStatus = props.processStatuses.find(
+    (ps: any) => ps.projectId === props.projectId
+  );
+
+  return projectStatus || null;
+});
 
 const selectedTerminal = ref<string | null>(null);
 
@@ -71,8 +78,9 @@ const activeTerminals = computed(() => {
 });
 
 const runningProcesses = computed(() => {
-  if (!processStatus.value || !('processes' in processStatus.value)) return [];
-  const processes = (processStatus.value as { processes: any[] }).processes;
+  const status = processStatus.value;
+  if (!status || !('processes' in status)) return [];
+  const processes = (status as { processes: any[] }).processes;
   return processes.filter(p => p.status === 'running');
 });
 

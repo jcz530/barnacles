@@ -6,10 +6,10 @@ import { computed } from 'vue';
 import { Button } from '../ui/button';
 import ProjectIcon from '../atoms/ProjectIcon.vue';
 import ProjectActionsDropdown from './ProjectActionsDropdown.vue';
-import { useQueries } from '../../composables/useQueries';
 
 const props = defineProps<{
   project: ProjectWithDetails;
+  processStatuses?: any;
 }>();
 
 const emit = defineEmits<{
@@ -18,29 +18,29 @@ const emit = defineEmits<{
   'toggle-favorite': [projectId: string];
 }>();
 
-const { useProcessStatusQuery } = useQueries();
-const { data: processStatus } = useProcessStatusQuery(props.project.id, {
-  enabled: true,
-  refetchInterval: 2000,
+// Find the process status for this project from the global statuses
+const projectProcesses = computed(() => {
+  if (!props.processStatuses || !Array.isArray(props.processStatuses)) return [];
+
+  // Find the project status in the array
+  const projectStatus = props.processStatuses.find(
+    (ps: any) => ps.projectId === props.project.id
+  );
+
+  if (!projectStatus || !('processes' in projectStatus)) return [];
+  return projectStatus.processes || [];
 });
 
 const isProcessRunning = computed(() => {
-  if (!processStatus.value || !('processes' in processStatus.value)) return false;
-  const processes = (processStatus.value as { processes: { status: string }[] }).processes;
-  return processes.some((p: { status: string }) => p.status === 'running');
+  return projectProcesses.value.some((p: { status: string }) => p.status === 'running');
 });
 
 const runningProcessCount = computed(() => {
-  if (!processStatus.value || !('processes' in processStatus.value)) return 0;
-  const processes = (processStatus.value as { processes: { status: string }[] }).processes;
-  return processes.filter((p: { status: string }) => p.status === 'running').length;
+  return projectProcesses.value.filter((p: { status: string }) => p.status === 'running').length;
 });
 
 const processUrls = computed(() => {
-  if (!processStatus.value || !('processes' in processStatus.value)) return [];
-  const processes = (processStatus.value as { processes: { status: string; url?: string }[] })
-    .processes;
-  return processes
+  return projectProcesses.value
     .filter((p: { status: string; url?: string }) => p.status === 'running' && p.url)
     .map((p: { url?: string }) => p.url!);
 });

@@ -21,6 +21,7 @@ const {
   useScanProjectsMutation,
   useDeleteProjectMutation,
   useToggleFavoriteMutation,
+  useProcessStatusQuery,
 } = useQueries();
 
 // State
@@ -48,6 +49,12 @@ const { data: allProjectsData } = useProjectsQuery({
 });
 
 const { data: technologies, isLoading: technologiesLoading } = useTechnologiesQuery();
+
+// Get all process statuses (no project filter)
+const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
+  enabled: true,
+  refetchInterval: 2000,
+});
 
 // Local fuzzy search
 const { filteredItems: searchedProjects } = useFuzzySearch<ProjectWithDetails>({
@@ -232,6 +239,7 @@ watch([sortField, sortDirection], () => {
         :is-loading="projectsLoading"
         :view-mode="viewMode"
         :sorting="tableSorting"
+        :process-statuses="allProcessStatuses"
         @update:sorting="tableSorting = $event"
         @delete="handleDeleteProject"
         @open="handleOpenProject"

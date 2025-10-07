@@ -813,6 +813,26 @@ export const useQueries = () => {
     });
   };
 
+  // Get hosts file entries
+  const useHostsQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['hosts'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<Array<{ ip: string; hostname: string }>>>(
+          'GET',
+          API_ROUTES.SYSTEM_HOSTS
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch hosts');
+        }
+
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
   return {
     useHelloQuery,
     useUsersQuery,
@@ -851,5 +871,6 @@ export const useQueries = () => {
     useProcessStatusQuery,
     useStopProcessMutation,
     useProcessOutputQuery,
+    useHostsQuery,
   };
 };

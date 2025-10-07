@@ -21,6 +21,7 @@ const props = defineProps<{
   isLoading?: boolean;
   viewMode?: 'table' | 'card';
   sorting?: SortingState;
+  processStatuses?: any;
 }>();
 
 const emit = defineEmits<{
@@ -158,6 +159,7 @@ const table = useVueTable({
           v-for="project in projects"
           :key="project.id"
           :project="project"
+          :process-statuses="processStatuses"
           @delete="emit('delete', $event)"
           @open="emit('open', $event)"
           @toggle-favorite="emit('toggle-favorite', $event)"
@@ -300,6 +302,7 @@ const table = useVueTable({
                     :third-party-size="row.original.stats?.thirdPartySize"
                     :preferred-ide-id="row.original.preferredIde"
                     :preferred-terminal-id="row.original.preferredTerminal"
+                    :process-statuses="processStatuses"
                     @click.stop
                   />
                 </template>

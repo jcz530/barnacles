@@ -42,6 +42,7 @@ interface Props {
   thirdPartySize?: number | null;
   preferredIdeId?: string | null;
   preferredTerminalId?: string | null;
+  processStatuses?: any;
 }
 
 const props = defineProps<Props>();
@@ -77,7 +78,6 @@ const {
   useUpdateStartProcessesMutation,
   useStartProjectProcessesMutation,
   useStopProjectProcessesMutation,
-  useProcessStatusQuery,
 } = useQueries();
 const updateTerminalMutation = useUpdatePreferredTerminalMutation();
 const openTerminalMutation = useOpenTerminalMutation();
@@ -93,9 +93,16 @@ const { data: startProcesses } = useStartProcessesQuery(props.projectId);
 const updateProcessesMutation = useUpdateStartProcessesMutation();
 const startProcessesMutation = useStartProjectProcessesMutation();
 const stopProcessesMutation = useStopProjectProcessesMutation();
-const { data: processStatus } = useProcessStatusQuery(props.projectId, {
-  enabled: true,
-  refetchInterval: 2000, // Poll every 2 seconds
+
+// Get process status from props instead of individual query
+const processStatus = computed(() => {
+  if (!props.processStatuses || !Array.isArray(props.processStatuses)) return null;
+
+  const projectStatus = props.processStatuses.find(
+    (ps: any) => ps.projectId === props.projectId
+  );
+
+  return projectStatus || null;
 });
 
 const gitProvider = computed(() => getGitProvider(props.gitRemoteUrl));
@@ -212,8 +219,9 @@ const hasProcesses = computed(() => {
 });
 
 const isProcessRunning = computed(() => {
-  if (!processStatus.value || !('processes' in processStatus.value)) return false;
-  const processes = (processStatus.value as { processes: { status: string }[] }).processes;
+  const status = processStatus.value;
+  if (!status || !('processes' in status)) return false;
+  const processes = (status as { processes: { status: string }[] }).processes;
   return processes.some((p: { status: string }) => p.status === 'running');
 });
 
@@ -266,10 +274,10 @@ const handleStopProcesses = async () => {
 };
 
 const processUrls = computed(() => {
-  if (!processStatus.value || !('processes' in processStatus.value)) return [];
-  const processes = (
-    processStatus.value as { processes: { status: string; url?: string; processId: string }[] }
-  ).processes;
+  const status = processStatus.value;
+  if (!status || !('processes' in status)) return [];
+  const processes = (status as { processes: { status: string; url?: string; processId: string }[] })
+    .processes;
   return processes
     .filter((p: { status: string; url?: string }) => p.status === 'running' && p.url)
     .map((p: { url?: string; processId: string }) => ({ url: p.url!, processId: p.processId }));

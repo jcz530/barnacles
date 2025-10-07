@@ -3,7 +3,6 @@ import { Plus, Trash2, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import type { StartProcess } from '../../../shared/types/process';
 import { useQueries } from '../../composables/useQueries';
-import CommandCombobox from './CommandCombobox.vue';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import {
@@ -15,6 +14,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../ui/sheet';
+import AutocompleteInput from './AutocompleteInput.vue';
 
 interface Props {
   projectId: string;
@@ -32,12 +32,13 @@ const emit = defineEmits<Emits>();
 
 const processes = ref<StartProcess[]>([]);
 
-// Fetch package scripts and project details for autocomplete
-const { useProjectPackageScriptsQuery, useProjectQuery } = useQueries();
+// Fetch package scripts, hosts, and project details for autocomplete
+const { useProjectPackageScriptsQuery, useProjectQuery, useHostsQuery } = useQueries();
 const { data: packageScripts } = useProjectPackageScriptsQuery(props.projectId, {
   enabled: true,
 });
 const { data: project } = useProjectQuery(props.projectId);
+const { data: hosts } = useHostsQuery({ enabled: true });
 
 // Detect package manager from project files
 const detectedPackageManager = ref<'npm' | 'yarn' | 'pnpm'>('npm');
@@ -97,6 +98,31 @@ const commandSuggestions = computed(() => {
       }
     });
   }
+
+  return suggestions;
+});
+
+// Generate URL suggestions from hosts file
+const urlSuggestions = computed(() => {
+  const suggestions: string[] = [];
+
+  if (hosts.value) {
+    // Common ports for development servers
+    const commonPorts = [3000, 3001, 4000, 5000, 5173, 8000, 8080, 9000];
+
+    hosts.value.forEach(host => {
+      // Add URLs with common ports for each hostname
+      commonPorts.forEach(port => {
+        suggestions.push(`http://${host.hostname}:${port}`);
+      });
+    });
+  }
+
+  // Add common localhost URLs
+  const commonPorts = [3000, 3001, 4000, 5000, 5173, 8000, 8080, 9000];
+  commonPorts.forEach(port => {
+    suggestions.push(`http://localhost:${port}`);
+  });
 
   return suggestions;
 });
@@ -207,10 +233,10 @@ const handleClose = () => {
             <!-- URL (Optional) -->
             <div class="space-y-2">
               <label class="text-sm font-medium">URL (optional)</label>
-              <Input
+              <AutocompleteInput
                 v-model="process.url"
+                :suggestions="urlSuggestions"
                 placeholder="e.g., http://localhost:3000"
-                class="w-full"
               />
               <p class="text-xs text-slate-500">
                 The URL where this process will be accessible. If not provided, we'll try to detect
@@ -227,7 +253,7 @@ const handleClose = () => {
                 class="flex items-center gap-2"
               >
                 <div class="relative flex-1">
-                  <CommandCombobox
+                  <AutocompleteInput
                     v-model="process.commands[commandIndex]"
                     :suggestions="commandSuggestions"
                     placeholder="e.g., npm install, npm run dev"

@@ -23,6 +23,7 @@ const {
   useDetectedIDEsQuery,
   useDetectedTerminalsQuery,
   useProjectPackageScriptsQuery,
+  useProcessStatusQuery,
 } = useQueries();
 
 const projectId = computed(() => route.params.id as string);
@@ -31,6 +32,12 @@ const { data: project, isLoading } = useProjectQuery(projectId);
 const { data: detectedIDEs } = useDetectedIDEsQuery();
 const { data: detectedTerminals } = useDetectedTerminalsQuery();
 const { data: packageScripts } = useProjectPackageScriptsQuery(projectId);
+
+// Get all process statuses (no project filter)
+const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
+  enabled: true,
+  refetchInterval: 2000,
+});
 
 onMounted(() => {
   setBreadcrumbs([
@@ -83,6 +90,7 @@ const handleBack = () => {
             :third-party-size="project.stats?.thirdPartySize"
             :preferred-ide-id="project.preferredIde"
             :preferred-terminal-id="project.preferredTerminal"
+            :process-statuses="allProcessStatuses"
           />
         </div>
       </div>
@@ -132,6 +140,7 @@ const handleBack = () => {
               :project-id="project.id"
               :project-path="project.path"
               :package-json-scripts="packageScripts"
+              :process-statuses="allProcessStatuses"
             />
           </TabsContent>
         </Tabs>
