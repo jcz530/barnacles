@@ -795,6 +795,43 @@ projects.post('/:id/processes/:processId/stop', async c => {
 });
 
 /**
+ * GET /api/projects/:id/processes/:processId/output
+ * Get the output from a specific process
+ */
+projects.get('/:id/processes/:processId/output', async c => {
+  try {
+    const id = c.req.param('id');
+    const processId = c.req.param('processId');
+
+    const output = processManagerService.getProcessOutput(id, processId);
+
+    if (output === null) {
+      return c.json(
+        {
+          error: 'Process not found',
+        },
+        404
+      );
+    }
+
+    return c.json({
+      data: {
+        output: output.join(''),
+        lines: output,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching process output:', error);
+    return c.json(
+      {
+        error: 'Failed to fetch process output',
+      },
+      500
+    );
+  }
+});
+
+/**
  * GET /api/projects/:id
  * Get a single project by ID
  */

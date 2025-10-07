@@ -236,6 +236,20 @@ const handleSaveProcessConfig = async (processes: StartProcess[]) => {
 const handleStartProcesses = async () => {
   try {
     await startProcessesMutation.mutateAsync(props.projectId);
+
+    // Check auto-open setting
+    const autoOpenSetting = settingsQuery.data.value?.find(s => s.key === 'autoOpenProcessUrls');
+    const shouldAutoOpen = autoOpenSetting?.value === 'true' || autoOpenSetting?.value === true;
+
+    if (shouldAutoOpen) {
+      // Wait a bit for URLs to be detected
+      setTimeout(() => {
+        const urls = processUrls.value;
+        urls.forEach(urlInfo => {
+          window.electron?.shell.openExternal(urlInfo.url);
+        });
+      }, 3000); // Wait 3 seconds for processes to start and URLs to be detected
+    }
   } catch (error) {
     console.error('Failed to start processes:', error);
     alert('Failed to start processes. Please try again.');
@@ -249,6 +263,20 @@ const handleStopProcesses = async () => {
     console.error('Failed to stop processes:', error);
     alert('Failed to stop processes. Please try again.');
   }
+};
+
+const processUrls = computed(() => {
+  if (!processStatus.value || !('processes' in processStatus.value)) return [];
+  const processes = (
+    processStatus.value as { processes: { status: string; url?: string; processId: string }[] }
+  ).processes;
+  return processes
+    .filter((p: { status: string; url?: string }) => p.status === 'running' && p.url)
+    .map((p: { url?: string; processId: string }) => ({ url: p.url!, processId: p.processId }));
+});
+
+const handleOpenUrl = (url: string) => {
+  window.electron?.shell.openExternal(url);
 };
 </script>
 
@@ -341,6 +369,16 @@ const handleStopProcesses = async () => {
         >
           <Square class="mr-2 h-4 w-4" />
           Stop Project
+        </DropdownMenuItem>
+
+        <!-- Open in Browser -->
+        <DropdownMenuItem
+          v-for="urlInfo in processUrls"
+          :key="urlInfo.processId"
+          @click="handleOpenUrl(urlInfo.url)"
+        >
+          <ExternalLinkIcon class="mr-2 h-4 w-4" />
+          Open {{ urlInfo.url }}
         </DropdownMenuItem>
 
         <!-- Configure Start Command -->

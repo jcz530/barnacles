@@ -204,6 +204,20 @@ const handleClose = () => {
               />
             </div>
 
+            <!-- URL (Optional) -->
+            <div class="space-y-2">
+              <label class="text-sm font-medium">URL (optional)</label>
+              <Input
+                v-model="process.url"
+                placeholder="e.g., http://localhost:3000"
+                class="w-full"
+              />
+              <p class="text-xs text-slate-500">
+                The URL where this process will be accessible. If not provided, we'll try to detect
+                it from the output.
+              </p>
+            </div>
+
             <!-- Commands -->
             <div class="space-y-2">
               <label class="text-sm font-medium">Commands</label>

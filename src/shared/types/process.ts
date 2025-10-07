@@ -4,6 +4,7 @@ export interface StartProcess {
   commands: string[];
   workingDir?: string; // relative to project root
   color?: string;
+  url?: string; // optional URL where the process will be accessible
 }
 
 export interface ProcessStatus {
@@ -12,6 +13,8 @@ export interface ProcessStatus {
   bashId?: string; // ID of the background bash session
   exitCode?: number;
   error?: string;
+  url?: string; // detected or configured URL
+  detectedUrl?: string; // URL detected from stdout
 }
 
 export interface ProjectProcessStatus {

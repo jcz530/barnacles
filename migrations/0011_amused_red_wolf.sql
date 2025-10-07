@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `start_processes` text;

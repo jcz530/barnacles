@@ -781,6 +781,38 @@ export const useQueries = () => {
     });
   };
 
+  // Get process output query
+  const useProcessOutputQuery = (
+    projectId: MaybeRef<string>,
+    processId: MaybeRef<string>,
+    options?: { enabled?: MaybeRef<boolean>; refetchInterval?: number }
+  ) => {
+    return useQuery({
+      queryKey: computed(
+        () => ['project', unref(projectId), 'process', unref(processId), 'output'] as const
+      ),
+      queryFn: async () => {
+        const pid = unref(projectId);
+        const procId = unref(processId);
+        const response = await apiCall<ApiResponse<{ output: string; lines: string[] }>>(
+          'GET',
+          API_ROUTES.PROJECTS_PROCESS_OUTPUT(pid, procId)
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch process output');
+        }
+
+        return response.data;
+      },
+      enabled: computed(() => {
+        const enabled = options?.enabled;
+        return enabled ? unref(enabled) : true;
+      }),
+      refetchInterval: options?.refetchInterval ?? false,
+    });
+  };
+
   return {
     useHelloQuery,
     useUsersQuery,
@@ -818,5 +850,6 @@ export const useQueries = () => {
     useStopProjectProcessesMutation,
     useProcessStatusQuery,
     useStopProcessMutation,
+    useProcessOutputQuery,
   };
 };

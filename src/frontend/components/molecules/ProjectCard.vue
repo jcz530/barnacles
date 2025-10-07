@@ -36,6 +36,20 @@ const runningProcessCount = computed(() => {
   return processes.filter((p: { status: string }) => p.status === 'running').length;
 });
 
+const processUrls = computed(() => {
+  if (!processStatus.value || !('processes' in processStatus.value)) return [];
+  const processes = (processStatus.value as { processes: { status: string; url?: string }[] })
+    .processes;
+  return processes
+    .filter((p: { status: string; url?: string }) => p.status === 'running' && p.url)
+    .map((p: { url?: string }) => p.url!);
+});
+
+const handleOpenUrl = (e: Event, url: string) => {
+  e.stopPropagation();
+  window.electron?.shell.openExternal(url);
+};
+
 const formatSize = (bytes: number | null | undefined): string => {
   if (!bytes) return '0 B';
 
@@ -93,20 +107,41 @@ const handleToggleFavorite = (e: Event) => {
             size="md"
           />
           <div class="flex-1">
-            <div class="flex items-center gap-2">
-              <CardTitle class="text-lg">{{ project.name }}</CardTitle>
-              <span
-                v-if="isProcessRunning"
-                class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
-              >
-                <span class="relative flex h-2 w-2">
-                  <span
-                    class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
-                  ></span>
-                  <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center gap-2">
+                <CardTitle class="text-lg">{{ project.name }}</CardTitle>
+                <span
+                  v-if="isProcessRunning"
+                  class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
+                >
+                  <span class="relative flex h-2 w-2">
+                    <span
+                      class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+                    ></span>
+                    <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+                  </span>
+                  {{ runningProcessCount }} running
                 </span>
-                {{ runningProcessCount }} running
-              </span>
+              </div>
+              <!-- URL badges -->
+              <div v-if="processUrls.length > 0" class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="(url, index) in processUrls"
+                  :key="index"
+                  @click="e => handleOpenUrl(e, url)"
+                  class="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
+                >
+                  <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
+                  </svg>
+                  {{ url }}
+                </button>
+              </div>
             </div>
             <CardDescription v-if="project.description" class="mt-1">
               {{ project.description }}

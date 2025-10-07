@@ -16,14 +16,51 @@ const props = defineProps<{
   packageJsonScripts?: Record<string, string>;
 }>();
 
-const { useTerminalInstancesQuery, useCreateTerminalMutation, useKillTerminalMutation } =
-  useQueries();
+const {
+  useTerminalInstancesQuery,
+  useCreateTerminalMutation,
+  useKillTerminalMutation,
+  useProcessStatusQuery,
+  useStopProcessMutation,
+  useProcessOutputQuery,
+} = useQueries();
 
 const { data: terminals, isLoading } = useTerminalInstancesQuery(computed(() => props.projectId));
 const createTerminalMutation = useCreateTerminalMutation();
 const killTerminalMutation = useKillTerminalMutation();
+const { data: processStatus } = useProcessStatusQuery(props.projectId, {
+  enabled: true,
+  refetchInterval: 2000,
+});
+const stopProcessMutation = useStopProcessMutation();
 
 const selectedTerminal = ref<string | null>(null);
+
+// Determine selected item type and IDs
+const selectedItemType = computed(() => {
+  if (!selectedTerminal.value) return null;
+  return selectedTerminal.value.startsWith('process-') ? 'process' : 'terminal';
+});
+
+const selectedProcessId = computed(() => {
+  if (selectedItemType.value !== 'process') return null;
+  return selectedTerminal.value?.replace('process-', '') || null;
+});
+
+const selectedTerminalId = computed(() => {
+  if (selectedItemType.value !== 'terminal') return null;
+  return selectedTerminal.value?.replace('terminal-', '') || null;
+});
+
+// Fetch process output for selected process
+const { data: processOutput } = useProcessOutputQuery(
+  props.projectId,
+  computed(() => selectedProcessId.value || ''),
+  {
+    enabled: computed(() => selectedItemType.value === 'process' && !!selectedProcessId.value),
+    refetchInterval: 1000,
+  }
+);
 
 const projectTerminals = computed(() => {
   return terminals.value?.filter(t => t.projectId === props.projectId) || [];
@@ -33,10 +70,51 @@ const activeTerminals = computed(() => {
   return projectTerminals.value.filter(t => t.status === 'running');
 });
 
-// Auto-select first terminal when available
+const runningProcesses = computed(() => {
+  if (!processStatus.value || !('processes' in processStatus.value)) return [];
+  const processes = (processStatus.value as { processes: any[] }).processes;
+  return processes.filter(p => p.status === 'running');
+});
+
+// Combine terminals and processes for display
+const allItems = computed(() => {
+  const items: Array<{
+    id: string;
+    type: 'terminal' | 'process';
+    title: string;
+    status: string;
+    data: any;
+  }> = [];
+
+  // Add running processes first
+  runningProcesses.value.forEach(process => {
+    items.push({
+      id: `process-${process.processId}`,
+      type: 'process',
+      title: `Process: ${process.processId}`,
+      status: process.status,
+      data: process,
+    });
+  });
+
+  // Then add terminals
+  activeTerminals.value.forEach(terminal => {
+    items.push({
+      id: `terminal-${terminal.id}`,
+      type: 'terminal',
+      title: terminal.title || 'Terminal',
+      status: terminal.status,
+      data: terminal,
+    });
+  });
+
+  return items;
+});
+
+// Auto-select first item when available
 const autoSelectTerminal = () => {
-  if (activeTerminals.value.length > 0 && !selectedTerminal.value) {
-    selectedTerminal.value = activeTerminals.value[0].id;
+  if (allItems.value.length > 0 && !selectedTerminal.value) {
+    selectedTerminal.value = allItems.value[0].id;
   }
 };
 
@@ -49,7 +127,7 @@ const handleCreateTerminal = async (command?: string, title?: string) => {
     });
 
     if (newTerminal) {
-      selectedTerminal.value = newTerminal.id;
+      selectedTerminal.value = `terminal-${newTerminal.id}`;
     }
   } catch (error) {
     console.error('Failed to create terminal:', error);
@@ -60,17 +138,13 @@ const handleKillTerminal = async (terminalId: string) => {
   try {
     await killTerminalMutation.mutateAsync(terminalId);
 
-    if (selectedTerminal.value === terminalId) {
+    if (selectedTerminal.value === `terminal-${terminalId}`) {
       const remaining = activeTerminals.value.filter(t => t.id !== terminalId);
-      selectedTerminal.value = remaining.length > 0 ? remaining[0].id : null;
+      selectedTerminal.value = remaining.length > 0 ? `terminal-${remaining[0].id}` : null;
     }
   } catch (error) {
     console.error('Failed to kill terminal:', error);
   }
-};
-
-const selectTerminal = (terminal: TerminalInstance) => {
-  selectedTerminal.value = terminal.id;
 };
 
 const runScript = (scriptName: string) => {
@@ -130,9 +204,9 @@ autoSelectTerminal();
           <Skeleton v-for="i in 2" :key="i" class="h-20 w-full" />
         </div>
 
-        <div v-else-if="activeTerminals.length === 0" class="py-8 text-center">
+        <div v-else-if="allItems.length === 0" class="py-8 text-center">
           <TerminalIcon class="mx-auto h-10 w-10 text-slate-400" />
-          <p class="mt-2 text-sm text-slate-600">No active terminals</p>
+          <p class="mt-2 text-sm text-slate-600">No active terminals or processes</p>
           <Button @click="() => handleCreateTerminal()" variant="outline" size="sm" class="mt-4">
             <Plus class="mr-2 h-4 w-4" />
             Create Terminal
@@ -140,28 +214,65 @@ autoSelectTerminal();
         </div>
 
         <div v-else class="space-y-2">
+          <!-- Processes -->
+          <div
+            v-for="item in allItems.filter(i => i.type === 'process')"
+            :key="item.id"
+            :class="[
+              'cursor-pointer rounded-lg border p-3 transition-all',
+              selectedTerminal === item.id
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-slate-200 bg-white hover:border-slate-300',
+            ]"
+            @click="selectedTerminal = item.id"
+          >
+            <div class="flex items-start justify-between">
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <Play class="h-4 w-4 text-green-500" />
+                  <p class="truncate text-sm font-medium">{{ item.title }}</p>
+                </div>
+                <p class="mt-1 text-xs text-slate-500">Process</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Terminals -->
           <TerminalCard
             v-for="terminal in activeTerminals"
             :key="terminal.id"
             :terminal="terminal"
-            :is-selected="selectedTerminal === terminal.id"
+            :is-selected="selectedTerminal === `terminal-${terminal.id}`"
             :show-cwd="false"
             :on-kill="handleKillTerminal"
             :is-killing="!!killTerminalMutation.isPending"
-            @select="selectTerminal"
+            @select="() => (selectedTerminal = `terminal-${terminal.id}`)"
           />
         </div>
       </div>
 
-      <!-- Terminal display area -->
+      <!-- Terminal/Process display area -->
       <div class="flex-1 bg-[#1e1e1e] p-4">
-        <div v-if="selectedTerminal" class="h-full">
-          <Terminal :terminal-id="selectedTerminal" />
+        <!-- Show terminal -->
+        <div v-if="selectedItemType === 'terminal' && selectedTerminalId" class="h-full">
+          <Terminal :terminal-id="selectedTerminalId" />
         </div>
+
+        <!-- Show process output -->
+        <div
+          v-else-if="selectedItemType === 'process' && processOutput"
+          class="h-full overflow-auto"
+        >
+          <pre class="font-mono text-sm whitespace-pre-wrap text-gray-300">{{
+            processOutput.output
+          }}</pre>
+        </div>
+
+        <!-- Empty state -->
         <div v-else class="flex h-full items-center justify-center text-slate-400">
           <div class="text-center">
             <TerminalIcon class="mx-auto mb-4 h-16 w-16" />
-            <p>Select a terminal or create a new one</p>
+            <p>Select a terminal or process</p>
           </div>
         </div>
       </div>

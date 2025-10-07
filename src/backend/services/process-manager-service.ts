@@ -10,11 +10,56 @@ interface RunningProcess {
   status: 'running' | 'stopped' | 'failed';
   exitCode?: number;
   error?: string;
+  output: string[]; // Store output lines
+  configuredUrl?: string; // URL from configuration
+  detectedUrl?: string; // URL detected from output
 }
 
 class ProcessManagerService {
   // Map of projectId -> Map of processId -> RunningProcess
   private runningProcesses: Map<string, Map<string, RunningProcess>> = new Map();
+
+  /**
+   * Detect URLs from process output
+   */
+  private detectUrl(output: string): string | undefined {
+    // Common URL patterns in development server output
+    const patterns = [
+      // Vite/Next.js style: "Local: http://localhost:3000"
+      /Local:\s+(https?:\/\/[^\s,)]+)/i,
+      // Various frameworks: "Running on http://localhost:8000"
+      /(?:Running|Listening|Server|App|started)\s+(?:on|at)[\s:]+?(https?:\/\/[^\s,)]+)/i,
+      // "Listening at http://localhost:3000"
+      /(?:Listening|Available)\s+at\s+(https?:\/\/[^\s,)]+)/i,
+      // Standard HTTP/HTTPS URLs with required port
+      /https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):\d+(?:\/[^\s,)]*)?/gi,
+      // Generic with optional port (fallback)
+      /(?:^|\s)(https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?)/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = output.match(pattern);
+      if (match) {
+        // Get the captured URL (either full match or first capture group)
+        let url = match[1] || match[0];
+        // Clean up the URL - remove trailing punctuation and ANSI codes
+        url = url
+          .trim()
+          .replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '') // Remove ANSI escape codes
+          .replace(/[,;.)\]]+$/, ''); // Remove trailing punctuation
+
+        // Ensure we have a valid URL with protocol
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          console.log(
+            `[URL Detection] Detected URL: ${url} from output: ${output.substring(0, 100)}`
+          );
+          return url;
+        }
+      }
+    }
+
+    return undefined;
+  }
 
   /**
    * Start all configured processes for a project
@@ -64,7 +109,49 @@ class ProcessManagerService {
           bashId,
           process: childProcess,
           status: 'running',
+          output: [],
+          configuredUrl: process.url,
         };
+
+        // Capture stdout
+        childProcess.stdout?.on('data', (data: Buffer) => {
+          const text = data.toString();
+          runningProcess.output.push(text);
+
+          // Keep only last 1000 lines to prevent memory issues
+          if (runningProcess.output.length > 1000) {
+            runningProcess.output = runningProcess.output.slice(-1000);
+          }
+
+          // Try to detect URL if not already detected and no configured URL
+          if (!runningProcess.detectedUrl && !runningProcess.configuredUrl) {
+            const detectedUrl = this.detectUrl(text);
+            if (detectedUrl) {
+              runningProcess.detectedUrl = detectedUrl;
+              console.log(`Detected URL for process ${process.name}: ${detectedUrl}`);
+            }
+          }
+        });
+
+        // Capture stderr
+        childProcess.stderr?.on('data', (data: Buffer) => {
+          const text = data.toString();
+          runningProcess.output.push(text);
+
+          // Keep only last 1000 lines
+          if (runningProcess.output.length > 1000) {
+            runningProcess.output = runningProcess.output.slice(-1000);
+          }
+
+          // Some servers output URLs to stderr
+          if (!runningProcess.detectedUrl && !runningProcess.configuredUrl) {
+            const detectedUrl = this.detectUrl(text);
+            if (detectedUrl) {
+              runningProcess.detectedUrl = detectedUrl;
+              console.log(`Detected URL for process ${process.name}: ${detectedUrl}`);
+            }
+          }
+        });
 
         // Handle process exit
         childProcess.on('exit', code => {
@@ -186,6 +273,8 @@ class ProcessManagerService {
         bashId: runningProcess.bashId,
         exitCode: runningProcess.exitCode,
         error: runningProcess.error,
+        url: runningProcess.configuredUrl || runningProcess.detectedUrl,
+        detectedUrl: runningProcess.detectedUrl,
       });
     }
 
@@ -198,7 +287,7 @@ class ProcessManagerService {
   /**
    * Get output from a specific process
    */
-  getProcessOutput(projectId: string, processId: string): string | null {
+  getProcessOutput(projectId: string, processId: string): string[] | null {
     const projectProcesses = this.runningProcesses.get(projectId);
 
     if (!projectProcesses || !projectProcesses.has(processId)) {
@@ -206,10 +295,7 @@ class ProcessManagerService {
     }
 
     const runningProcess = projectProcesses.get(processId)!;
-
-    // In a real implementation, you would capture stdout/stderr
-    // For now, we'll return a placeholder
-    return `Output for process ${processId}`;
+    return runningProcess.output;
   }
 
   /**
