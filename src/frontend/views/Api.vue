@@ -26,7 +26,7 @@ const fetchHealth = () => healthQuery.refetch();
     <div class="flex flex-col gap-8">
       <h1 class="mb-4 text-center text-4xl font-bold text-slate-800 md:text-3xl">API Demo</h1>
 
-      <Card class="bg-blue-50/50">
+      <Card class="bg-sky-50/50">
         <CardContent class="pt-6">
           <p class="text-slate-700">
             This page demonstrates the API architecture. The Vue frontend communicates with a Hono

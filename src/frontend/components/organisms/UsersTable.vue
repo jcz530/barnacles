@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {
-  useVueTable,
-  getCoreRowModel,
   createColumnHelper,
+  getCoreRowModel,
+  useVueTable,
   type ColumnDef,
 } from '@tanstack/vue-table';
 import type { User } from '../../../shared/types/api';
@@ -45,10 +45,10 @@ const table = useVueTable({
 <template>
   <div class="w-full">
     <div v-if="isLoading" class="py-8 text-center">
-      <p class="text-gray-500">Loading users...</p>
+      <p class="text-slate-500">Loading users...</p>
     </div>
     <div v-else-if="users.length === 0" class="py-8 text-center">
-      <p class="text-gray-500">No users found</p>
+      <p class="text-slate-500">No users found</p>
     </div>
     <div v-else>
       <!-- Card View -->

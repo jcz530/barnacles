@@ -21,6 +21,7 @@ useHotkeys();
           <NavBreadcrumbs />
         </div>
       </header>
+      <Separator class="bg-slate-700 opacity-20" />
       <main class="flex flex-1 flex-col gap-4 p-4 pt-0">
         <router-view />
       </main>

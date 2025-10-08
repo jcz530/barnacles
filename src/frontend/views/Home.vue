@@ -74,9 +74,9 @@ const handleToggleFavorite = async (projectId: string) => {
 </script>
 
 <template>
-  <div class="flex h-full flex-col overflow-y-auto bg-slate-50">
+  <div class="flex h-full flex-col overflow-y-auto">
     <!-- Header -->
-    <div class="border-b bg-white p-6">
+    <div class="border-b p-6">
       <h1 class="text-3xl font-bold text-slate-800">Dashboard</h1>
       <p class="mt-1 text-sm text-slate-600">Quick access to your projects</p>
     </div>

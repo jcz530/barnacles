@@ -131,13 +131,13 @@ const table = useVueTable({
         />
       </div>
       <!-- Table View -->
-      <div v-else class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div v-else class="overflow-x-auto rounded-lg border border-slate-200">
         <table class="w-full border-collapse">
           <TableHeader :header-groups="table.getHeaderGroups()" />
           <tbody>
             <template v-for="row in table.getRowModel().rows" :key="row.id">
               <tr
-                class="project-row group cursor-pointer border-slate-100 transition-colors hover:bg-slate-50"
+                class="project-row group cursor-pointer border-slate-100 transition-colors hover:bg-slate-200"
                 :data-project-id="row.original.id"
                 @click="handleOpen(row.original)"
               >
@@ -295,13 +295,10 @@ const table = useVueTable({
 
 <style scoped>
 /* Hover effect for project rows and their tech rows */
+.project-row:hover,
 .project-row:hover + .tech-row,
 .tech-row:hover,
-.tech-row:has(+ .project-row:hover) {
-  background-color: rgb(248 250 252);
-}
-
-.project-row:hover ~ .tech-row[data-project-id]:first-of-type {
-  background-color: rgb(248 250 252);
+.project-row:has(+ .tech-row:hover) {
+  background-color: var(--color-slate-200); /* slate-200 */
 }
 </style>

@@ -16,11 +16,11 @@ const openUrl = (url: string) => {
 
 <template>
   <div
-    class="inline-flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-0 text-sm"
+    class="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-0 text-sm"
   >
     <div class="flex items-center gap-1.5" :title="process.name">
-      <div class="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
-      <span v-if="!compact" class="font-medium text-green-700">Running</span>
+      <div class="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></div>
+      <span v-if="!compact" class="font-medium text-emerald-700">Running</span>
     </div>
 
     <div v-if="process.url || process.detectedUrl" class="flex items-center gap-1">
@@ -28,7 +28,7 @@ const openUrl = (url: string) => {
       <Button
         variant="link"
         @click="openUrl(process.url || process.detectedUrl || '')"
-        class="flex h-auto items-center gap-1 !px-0 !py-1 text-blue-600 hover:text-blue-700 hover:underline"
+        class="flex h-auto items-center gap-1 !px-0 !py-1 text-sky-600 hover:text-sky-700 hover:underline"
       >
         {{ process.url || process.detectedUrl }}
         <ExternalLink class="h-3 w-3" />

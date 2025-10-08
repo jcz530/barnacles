@@ -8,7 +8,7 @@ defineProps<{
 </script>
 
 <template>
-  <tr class="hover:bg-gray-50">
+  <tr class="hover:bg-slate-50">
     <td v-for="cell in row.getVisibleCells()" :key="cell.id" class="border-b px-4 py-2">
       <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
     </td>

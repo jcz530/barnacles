@@ -15,8 +15,8 @@ defineEmits<{
     <button
       type="button"
       :class="[
-        'rounded-l-lg border border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-100',
-        currentView === 'table' ? 'bg-gray-100' : 'bg-white',
+        'rounded-l-lg border border-slate-200 px-4 py-2 text-sm font-medium hover:bg-slate-100',
+        currentView === 'table' ? 'bg-slate-100' : 'bg-slate-50',
       ]"
       @click="$emit('update:view', 'table')"
     >
@@ -25,8 +25,8 @@ defineEmits<{
     <button
       type="button"
       :class="[
-        'rounded-r-lg border-t border-r border-b border-gray-200 px-4 py-2 text-sm font-medium hover:bg-gray-100',
-        currentView === 'card' ? 'bg-gray-100' : 'bg-white',
+        'rounded-r-lg border-t border-r border-b border-slate-200 px-4 py-2 text-sm font-medium hover:bg-slate-100',
+        currentView === 'card' ? 'bg-slate-100' : 'bg-slate-50',
       ]"
       @click="$emit('update:view', 'card')"
     >

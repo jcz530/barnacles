@@ -105,13 +105,13 @@ const handleToggleFavorite = (e: Event) => {
               <!-- Running process badge -->
               <!-- <div
                 v-if="isProcessRunning"
-                class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
+                class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700"
               >
                 <span class="relative flex h-2 w-2">
                   <span
-                    class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+                    class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
                   ></span>
-                  <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+                  <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
                 </span>
                 {{ runningProcessCount }} running
               </div> -->
@@ -121,7 +121,7 @@ const handleToggleFavorite = (e: Event) => {
                   v-for="(url, index) in processUrls"
                   :key="index"
                   @click="e => handleOpenUrl(e, url)"
-                  class="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100"
+                  class="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 transition-colors hover:bg-sky-100"
                 >
                   <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path

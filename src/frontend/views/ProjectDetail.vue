@@ -66,7 +66,7 @@ const navigateToProcess = () => {
 <template>
   <div class="flex h-full flex-col">
     <!-- Header -->
-    <div class="border-b bg-white p-6">
+    <div class="p-6">
       <div class="mb-4 flex items-center justify-between">
         <div class="flex items-center gap-4">
           <Button variant="ghost" size="sm" @click="handleBack">

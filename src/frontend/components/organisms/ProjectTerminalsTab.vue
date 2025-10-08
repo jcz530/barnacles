@@ -191,7 +191,7 @@ autoSelectTerminal();
     </Card>
 
     <!-- Terminals Section -->
-    <div class="flex h-[600px] overflow-hidden rounded-lg border bg-white">
+    <div class="flex h-[600px] overflow-hidden rounded-lg border">
       <!-- Sidebar with terminal list -->
       <div class="w-72 overflow-y-auto border-r bg-slate-50 p-4">
         <div class="mb-4 flex items-center justify-between">
@@ -227,15 +227,15 @@ autoSelectTerminal();
             :class="[
               'cursor-pointer rounded-lg border p-3 transition-all',
               selectedTerminal === item.id
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-slate-200 bg-white hover:border-slate-300',
+                ? 'border-sky-500 bg-sky-50'
+                : 'border-slate-200 bg-slate-50 hover:border-slate-300',
             ]"
             @click="selectedTerminal = item.id"
           >
             <div class="flex items-start justify-between">
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
-                  <Play class="h-4 w-4 text-green-500" />
+                  <Play class="h-4 w-4 text-emerald-500" />
                   <div class="flex flex-col">
                     <p class="truncate text-sm font-medium">{{ item.data.name }}</p>
                     <p class="truncate text-xs">{{ item.title }}</p>

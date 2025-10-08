@@ -1,15 +1,10 @@
 <script setup lang="ts">
-import { useDark } from '@vueuse/core';
+import { useColorInversion } from '@/composables/useColorInversion';
 
 // App now uses router-view for rendering pages
 
-// Set up dark mode
-useDark({
-  selector: 'html',
-  attribute: 'class',
-  valueDark: 'dark',
-  valueLight: 'light',
-});
+// Set up dark mode with automatic color inversion
+useColorInversion();
 </script>
 
 <template>

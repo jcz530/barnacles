@@ -32,7 +32,7 @@ const { formatDate } = useFormatters();
           <span
             class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium"
             :class="{
-              'bg-green-100 text-green-700': project.status === 'active',
+              'bg-emerald-100 text-emerald-700': project.status === 'active',
               'bg-slate-100 text-slate-700': project.status === 'archived',
             }"
           >

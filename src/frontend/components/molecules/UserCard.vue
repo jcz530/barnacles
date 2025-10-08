@@ -8,12 +8,12 @@ defineProps<{
 
 <template>
   <div
-    class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+    class="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm transition-shadow hover:shadow-md"
   >
     <div class="mb-2">
-      <span class="text-xs text-gray-500">ID: {{ user.id }}</span>
+      <span class="text-xs text-slate-500">ID: {{ user.id }}</span>
     </div>
     <h3 class="mb-1 text-lg font-semibold">{{ user.name }}</h3>
-    <p class="text-sm text-gray-600">{{ user.email }}</p>
+    <p class="text-sm text-slate-600">{{ user.email }}</p>
   </div>
 </template>

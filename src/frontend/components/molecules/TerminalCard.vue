@@ -41,7 +41,7 @@ const handleProjectClick = (e: Event) => {
   <Card
     class="cursor-pointer transition-all hover:shadow-md"
     :class="{
-      'ring-2 ring-blue-500': isSelected,
+      'ring-2 ring-sky-500': isSelected,
       'opacity-60': terminal.status === 'exited',
     }"
     @click="handleSelect"
@@ -64,7 +64,7 @@ const handleProjectClick = (e: Event) => {
             <!-- Project link if available -->
             <div
               v-if="terminal.projectId && projectName && onProjectClick"
-              class="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700"
+              class="flex items-center gap-1 text-xs text-sky-600 hover:text-sky-700"
               @click="handleProjectClick"
             >
               <span class="truncate">{{ projectName }}</span>
@@ -91,7 +91,7 @@ const handleProjectClick = (e: Event) => {
       <div class="mt-1.5 flex items-center gap-2">
         <div
           class="h-2 w-2 flex-shrink-0 rounded-full"
-          :class="terminal.status === 'running' ? 'bg-green-500' : 'bg-gray-500'"
+          :class="terminal.status === 'running' ? 'bg-emerald-500' : 'bg-slate-500'"
         ></div>
         <span class="text-xs text-slate-500">
           {{ terminal.status === 'running' ? 'Running' : 'Exited' }}

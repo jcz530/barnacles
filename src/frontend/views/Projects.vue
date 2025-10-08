@@ -187,7 +187,7 @@ watch([sortField, sortDirection], () => {
 <template>
   <div class="flex h-full flex-col">
     <!-- Header -->
-    <div class="border-b bg-white p-6">
+    <div class="p-6">
       <div class="mb-4 flex items-center justify-between">
         <div>
           <h1 class="text-3xl font-bold text-slate-800">Projects</h1>
@@ -253,7 +253,7 @@ watch([sortField, sortDirection], () => {
     </div>
 
     <!-- Projects Table/Grid -->
-    <div class="flex-1 overflow-y-auto bg-slate-50 p-6">
+    <div class="flex-1 overflow-y-auto p-6">
       <ProjectsTable
         :projects="projects"
         :is-loading="projectsLoading"
