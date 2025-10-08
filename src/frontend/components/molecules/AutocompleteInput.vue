@@ -14,7 +14,7 @@ import {
 } from '../ui/combobox';
 
 interface Props {
-  modelValue: string;
+  modelValue?: string;
   suggestions: string[];
   placeholder?: string;
 }
@@ -30,14 +30,12 @@ const searchTerm = ref('');
 
 const filteredSuggestions = computed(() => {
   if (!searchTerm.value) {
-    return props.suggestions; //.slice(0, 10); // Show top 10 when empty
+    return props.suggestions;
   }
   return props.suggestions.filter(cmd =>
     cmd.toLowerCase().includes(searchTerm.value.toLowerCase())
   );
-  // .slice(0, 10);
 });
-console.log(props.suggestions);
 useVModel(props, 'modelValue', emit);
 </script>
 
