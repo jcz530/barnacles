@@ -463,6 +463,30 @@ export const useQueries = () => {
     });
   };
 
+  // Project composer.json scripts query
+  const useProjectComposerScriptsQuery = (
+    projectId: MaybeRef<string>,
+    options?: { enabled?: boolean }
+  ) => {
+    return useQuery({
+      queryKey: ['project-composer-scripts', unref(projectId)],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<Record<string, string>>>(
+          'GET',
+          `${API_ROUTES.PROJECTS}/${unref(projectId)}/composer-scripts`
+        );
+
+        if (!response) {
+          return {};
+        }
+
+        return response.data || {};
+      },
+      enabled: options?.enabled ?? true,
+      staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    });
+  };
+
   // Get all terminal instances or filter by project
   const useTerminalInstancesQuery = (
     projectId?: MaybeRef<string>,
@@ -859,6 +883,7 @@ export const useQueries = () => {
     useOpenTerminalMutation,
     useProjectReadmeQuery,
     useProjectPackageScriptsQuery,
+    useProjectComposerScriptsQuery,
     useTerminalInstancesQuery,
     useTerminalInstanceQuery,
     useCreateTerminalMutation,

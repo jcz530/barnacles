@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { Play, Plus, Terminal as TerminalIcon } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, Play, Plus, Terminal as TerminalIcon } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { useQueries } from '../../composables/useQueries';
 import TerminalCard from '../molecules/TerminalCard.vue';
 import { Button } from '../ui/button';
-import { Card, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import CardContent from '../ui/card/CardContent.vue';
 import { Skeleton } from '../ui/skeleton';
 import ProcessOutput from './ProcessOutput.vue';
 import Terminal from './Terminal.vue';
@@ -14,6 +12,7 @@ const props = defineProps<{
   projectId: string;
   projectPath: string;
   packageJsonScripts?: Record<string, string>;
+  composerJsonScripts?: Record<string, string>;
   processStatuses?: any;
 }>();
 
@@ -21,14 +20,12 @@ const {
   useTerminalInstancesQuery,
   useCreateTerminalMutation,
   useKillTerminalMutation,
-  useStopProcessMutation,
   useProcessOutputQuery,
 } = useQueries();
 
 const { data: terminals, isLoading } = useTerminalInstancesQuery(computed(() => props.projectId));
 const createTerminalMutation = useCreateTerminalMutation();
 const killTerminalMutation = useKillTerminalMutation();
-const stopProcessMutation = useStopProcessMutation();
 
 // Get process status from props instead of individual query
 const processStatus = computed(() => {
@@ -40,6 +37,11 @@ const processStatus = computed(() => {
 });
 
 const selectedTerminal = ref<string | null>(null);
+
+// Collapsible sections state
+const scriptsExpanded = ref(true);
+const npmScriptsExpanded = ref(true);
+const composerScriptsExpanded = ref(true);
 
 // Determine selected item type and IDs
 const selectedItemType = computed(() => {
@@ -153,8 +155,9 @@ const handleKillTerminal = async (terminalId: string) => {
   }
 };
 
-const runScript = (scriptName: string) => {
-  handleCreateTerminal(`npm run ${scriptName}`, `npm run ${scriptName}`);
+const runScript = (scriptName: string, type: 'npm' | 'composer' = 'npm') => {
+  const command = type === 'npm' ? `npm run ${scriptName}` : `composer run-script ${scriptName}`;
+  handleCreateTerminal(command, command);
 };
 
 // Auto-select on load
@@ -162,46 +165,88 @@ autoSelectTerminal();
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
-    <!-- Package.json Scripts Section -->
-    <Card v-if="packageJsonScripts && Object.keys(packageJsonScripts).length > 0">
-      <CardHeader>
-        <CardTitle>Package Scripts</CardTitle>
-        <CardDescription>Run scripts from package.json</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <Button
-            v-for="(command, name) in packageJsonScripts"
-            :key="name"
-            variant="outline"
-            class="justify-start"
-            @click="() => runScript(name as string)"
-          >
-            <Play class="mr-2 h-4 w-4" />
-            <div class="text-left">
-              <div class="font-semibold">{{ name }}</div>
-              <div class="w-4/5 truncate text-xs text-slate-500">
-                {{ command }}
-              </div>
-            </div>
-          </Button>
+  <div class="flex h-[700px] overflow-hidden rounded-lg border">
+    <!-- Unified Sidebar -->
+    <div class="w-80 overflow-y-auto border-r bg-slate-50">
+      <!-- Scripts Section -->
+      <div
+        v-if="
+          (packageJsonScripts && Object.keys(packageJsonScripts).length > 0) ||
+          (composerJsonScripts && Object.keys(composerJsonScripts).length > 0)
+        "
+        class="border-b border-slate-200"
+      >
+        <div
+          class="hover:bg-slate-150 flex cursor-pointer items-center justify-between bg-slate-100 px-4 py-3"
+          @click="scriptsExpanded = !scriptsExpanded"
+        >
+          <h3 class="font-semibold text-slate-800">Scripts</h3>
+          <ChevronDown v-if="scriptsExpanded" class="h-4 w-4 text-slate-600" />
+          <ChevronRight v-else class="h-4 w-4 text-slate-600" />
         </div>
-      </CardContent>
-    </Card>
 
-    <!-- Terminals Section -->
-    <div class="flex h-[600px] overflow-hidden rounded-lg border">
-      <!-- Sidebar with terminal list -->
-      <div class="w-72 overflow-y-auto border-r bg-slate-50 p-4">
+        <div v-if="scriptsExpanded" class="p-2">
+          <!-- NPM Scripts -->
+          <div v-if="packageJsonScripts && Object.keys(packageJsonScripts).length > 0" class="mb-2">
+            <div
+              class="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 hover:bg-slate-100"
+              @click="npmScriptsExpanded = !npmScriptsExpanded"
+            >
+              <span class="text-sm font-medium text-slate-700">NPM Scripts</span>
+              <ChevronDown v-if="npmScriptsExpanded" class="h-3 w-3 text-slate-500" />
+              <ChevronRight v-else class="h-3 w-3 text-slate-500" />
+            </div>
+
+            <div v-if="npmScriptsExpanded" class="mt-1 space-y-1">
+              <button
+                v-for="(command, name) in packageJsonScripts"
+                :key="name"
+                class="flex w-full items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
+                @click="() => runScript(String(name), 'npm')"
+              >
+                <Play class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-600" />
+                <div class="min-w-0 flex-1">
+                  <div class="truncate text-sm font-medium text-slate-800">{{ name }}</div>
+                  <div class="truncate text-xs text-slate-500">{{ command }}</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Composer Scripts -->
+          <div v-if="composerJsonScripts && Object.keys(composerJsonScripts).length > 0">
+            <div
+              class="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 hover:bg-slate-100"
+              @click="composerScriptsExpanded = !composerScriptsExpanded"
+            >
+              <span class="text-sm font-medium text-slate-700">Composer Scripts</span>
+              <ChevronDown v-if="composerScriptsExpanded" class="h-3 w-3 text-slate-500" />
+              <ChevronRight v-else class="h-3 w-3 text-slate-500" />
+            </div>
+
+            <div v-if="composerScriptsExpanded" class="mt-1 space-y-1">
+              <button
+                v-for="(command, name) in composerJsonScripts"
+                :key="name"
+                class="flex w-full items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
+                @click="() => runScript(String(name), 'composer')"
+              >
+                <Play class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-purple-600" />
+                <div class="min-w-0 flex-1">
+                  <div class="truncate text-sm font-medium text-slate-800">{{ name }}</div>
+                  <div class="truncate text-xs text-slate-500">{{ command }}</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Processes & Terminals Section -->
+      <div class="p-4">
         <div class="mb-4 flex items-center justify-between">
           <h3 class="font-semibold text-slate-800">Terminals</h3>
-          <Button
-            size="sm"
-            variant="outline"
-            @click="() => handleCreateTerminal()"
-            :disabled="createTerminalMutation.isPending"
-          >
+          <Button size="sm" variant="outline" @click="() => handleCreateTerminal()">
             <Plus class="h-4 w-4" />
           </Button>
         </div>
@@ -222,13 +267,13 @@ autoSelectTerminal();
         <div v-else class="space-y-2">
           <!-- Processes -->
           <div
-            v-for="item in allItems.filter(i => i.type === 'process')"
+            v-for="item in allItems.filter((i: any) => i.type === 'process')"
             :key="item.id"
             :class="[
               'cursor-pointer rounded-lg border p-3 transition-all',
               selectedTerminal === item.id
                 ? 'border-sky-500 bg-sky-50'
-                : 'border-slate-200 bg-slate-50 hover:border-slate-300',
+                : 'border-slate-200 bg-white hover:border-slate-300',
             ]"
             @click="selectedTerminal = item.id"
           >
@@ -259,25 +304,25 @@ autoSelectTerminal();
           />
         </div>
       </div>
+    </div>
 
-      <!-- Terminal/Process display area -->
-      <div class="flex-1 bg-[#1e1e1e] p-4">
-        <!-- Show terminal -->
-        <div v-if="selectedItemType === 'terminal' && selectedTerminalId" class="h-full">
-          <Terminal :terminal-id="selectedTerminalId" />
-        </div>
+    <!-- Terminal/Process display area -->
+    <div class="flex-1 bg-[#1e1e1e] p-4">
+      <!-- Show terminal -->
+      <div v-if="selectedItemType === 'terminal' && selectedTerminalId" class="h-full">
+        <Terminal :terminal-id="selectedTerminalId" />
+      </div>
 
-        <!-- Show process output -->
-        <div v-else-if="selectedItemType === 'process' && processOutput" class="h-full">
-          <ProcessOutput :output="processOutput.output" />
-        </div>
+      <!-- Show process output -->
+      <div v-else-if="selectedItemType === 'process' && processOutput" class="h-full">
+        <ProcessOutput :output="processOutput.output" />
+      </div>
 
-        <!-- Empty state -->
-        <div v-else class="flex h-full items-center justify-center text-slate-400">
-          <div class="text-center">
-            <TerminalIcon class="mx-auto mb-4 h-16 w-16" />
-            <p>Select a terminal or process</p>
-          </div>
+      <!-- Empty state -->
+      <div v-else class="flex h-full items-center justify-center text-slate-400">
+        <div class="text-center">
+          <TerminalIcon class="mx-auto mb-4 h-16 w-16" />
+          <p>Select a terminal or process</p>
         </div>
       </div>
     </div>

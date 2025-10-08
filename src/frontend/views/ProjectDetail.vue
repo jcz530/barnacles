@@ -25,6 +25,7 @@ const {
   useDetectedIDEsQuery,
   useDetectedTerminalsQuery,
   useProjectPackageScriptsQuery,
+  useProjectComposerScriptsQuery,
   useProcessStatusQuery,
 } = useQueries();
 
@@ -34,6 +35,7 @@ const { data: project, isLoading } = useProjectQuery(projectId);
 const { data: detectedIDEs } = useDetectedIDEsQuery();
 const { data: detectedTerminals } = useDetectedTerminalsQuery();
 const { data: packageScripts } = useProjectPackageScriptsQuery(projectId);
+const { data: composerScripts } = useProjectComposerScriptsQuery(projectId);
 
 // Get all process statuses (no project filter)
 const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
@@ -160,6 +162,7 @@ const navigateToProcess = () => {
               :project-id="project.id"
               :project-path="project.path"
               :package-json-scripts="packageScripts"
+              :composer-json-scripts="composerScripts"
               :process-statuses="allProcessStatuses"
             />
           </TabsContent>

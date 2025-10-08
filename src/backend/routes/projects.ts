@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import os from 'os';
 import path from 'path';
+import type { StartProcess } from '../../shared/types/process';
+import { processManagerService } from '../services/process-manager-service';
 import { projectService } from '../services/project-service';
 import { settingsService } from '../services/settings-service';
-import { processManagerService } from '../services/process-manager-service';
-import type { StartProcess } from '../../shared/types/process';
 
 const projects = new Hono();
 
@@ -497,6 +497,49 @@ projects.get('/:id/package-scripts', async c => {
     return c.json(
       {
         error: 'Failed to fetch package scripts',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * GET /api/projects/:id/composer-scripts
+ * Get composer.json scripts for a project
+ */
+projects.get('/:id/composer-scripts', async c => {
+  try {
+    const id = c.req.param('id');
+    const project = await projectService.getProjectById(id);
+
+    if (!project) {
+      return c.json(
+        {
+          error: 'Project not found',
+        },
+        404
+      );
+    }
+
+    const composerJsonPath = path.join(project.path, 'composer.json');
+
+    try {
+      const fs = await import('fs/promises');
+      const composerJson = JSON.parse(await fs.readFile(composerJsonPath, 'utf-8'));
+
+      return c.json({
+        data: composerJson.scripts || {},
+      });
+    } catch {
+      return c.json({
+        data: {},
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching composer scripts:', error);
+    return c.json(
+      {
+        error: 'Failed to fetch composer scripts',
       },
       500
     );
