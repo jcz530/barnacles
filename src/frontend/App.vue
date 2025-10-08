@@ -1,5 +1,15 @@
 <script setup lang="ts">
+import { useDark } from '@vueuse/core';
+
 // App now uses router-view for rendering pages
+
+// Set up dark mode
+useDark({
+  selector: 'html',
+  attribute: 'class',
+  valueDark: 'dark',
+  valueLight: 'light',
+});
 </script>
 
 <template>

@@ -4,6 +4,7 @@ import type { SidebarProps } from '@/components/ui/sidebar';
 import NavMain from '@/components/nav/molecules/NavMain.vue';
 import NavSecondary from '@/components/nav/molecules/NavSecondary.vue';
 import NavUser from '@/components/nav/molecules/NavUser.vue';
+import ThemeToggle from '@/components/nav/molecules/ThemeToggle.vue';
 import {
   Sidebar,
   SidebarContent,
@@ -148,6 +149,7 @@ const data = computed(() => ({
       <NavSecondary :items="data.navSecondary" class="mt-auto" />
     </SidebarContent>
     <SidebarFooter>
+      <ThemeToggle />
       <NavUser :user="data.user" />
     </SidebarFooter>
   </Sidebar>
