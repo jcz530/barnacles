@@ -18,7 +18,7 @@ import { useApi } from '@/composables/useApi';
 import { useConfigs } from '@/composables/useConfigs';
 import { useQueries } from '@/composables/useQueries';
 import { useQuery } from '@tanstack/vue-query';
-import { Cog, Command, FolderGit2, LifeBuoy, SquareTerminal } from 'lucide-vue-next';
+import { Cog, Command, FolderGit2, SquareTerminal } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { API_ROUTES } from '../../../../shared/constants';
 
@@ -101,11 +101,11 @@ const data = computed(() => ({
     // },
   ],
   navSecondary: [
-    {
-      title: 'Developer',
-      url: '#',
-      icon: LifeBuoy,
-    },
+    // {
+    //   title: 'Developer',
+    //   url: '#',
+    //   icon: LifeBuoy,
+    // },
     {
       title: 'Settings',
       url: '/settings',
