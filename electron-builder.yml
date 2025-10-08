@@ -17,7 +17,12 @@ files:
   - 'dist/**/*'
   - 'package.json'
   - 'node_modules/@hono/**/*'
-  - 'node_modules/@libsql/**/*'
+  - 'node_modules/@libsql/client/**/*'
+  - 'node_modules/@libsql/core/**/*'
+  - 'node_modules/@libsql/darwin-arm64/**/*'
+  - 'node_modules/@libsql/hrana-client/**/*'
+  - 'node_modules/@libsql/isomorphic-fetch/**/*'
+  - 'node_modules/@libsql/isomorphic-ws/**/*'
   - 'node_modules/@paralleldrive/**/*'
   - 'node_modules/class-variance-authority/**/*'
   - 'node_modules/clsx/**/*'
@@ -41,7 +46,12 @@ files:
 
 # Include/exclude node modules patterns
 asarUnpack:
-  - 'node_modules/@libsql/**/*'
+  - 'node_modules/@libsql/client/**/*'
+  - 'node_modules/@libsql/core/**/*'
+  - 'node_modules/@libsql/darwin-arm64/**/*'
+  - 'node_modules/@libsql/hrana-client/**/*'
+  - 'node_modules/@libsql/isomorphic-fetch/**/*'
+  - 'node_modules/@libsql/isomorphic-ws/**/*'
 
 # Include migrations as extra resources
 extraResources:
@@ -70,7 +80,7 @@ mac:
 dmg:
   title: '${productName} ${version}'
   icon: assets/icons/app.icns
-  # backgroundColor: '#C3FFFF'
+  # backgroundColor: 'F6E3EF'
   window:
     width: 540
     height: 380

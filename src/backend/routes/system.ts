@@ -21,7 +21,7 @@ system.get('/hosts', async c => {
     // Parse hosts file - extract hostname and IP pairs
     const hosts: Array<{ ip: string; hostname: string }> = [];
     const lines = hostsContent.split('\n');
-    console.log(lines);
+
     for (const line of lines) {
       // Skip empty lines and comments
       const trimmed = line.trim();
@@ -44,7 +44,7 @@ system.get('/hosts', async c => {
         }
       }
     }
-    console.log(hosts);
+
     return c.json({
       data: hosts,
     });
