@@ -98,9 +98,7 @@ const stopProcessesMutation = useStopProjectProcessesMutation();
 const processStatus = computed(() => {
   if (!props.processStatuses || !Array.isArray(props.processStatuses)) return null;
 
-  const projectStatus = props.processStatuses.find(
-    (ps: any) => ps.projectId === props.projectId
-  );
+  const projectStatus = props.processStatuses.find((ps: any) => ps.projectId === props.projectId);
 
   return projectStatus || null;
 });

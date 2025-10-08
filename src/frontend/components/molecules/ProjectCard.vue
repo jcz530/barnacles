@@ -23,9 +23,7 @@ const projectProcesses = computed(() => {
   if (!props.processStatuses || !Array.isArray(props.processStatuses)) return [];
 
   // Find the project status in the array
-  const projectStatus = props.processStatuses.find(
-    (ps: any) => ps.projectId === props.project.id
-  );
+  const projectStatus = props.processStatuses.find((ps: any) => ps.projectId === props.project.id);
 
   if (!projectStatus || !('processes' in projectStatus)) return [];
   return projectStatus.processes || [];

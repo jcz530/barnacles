@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Play, Plus, Terminal as TerminalIcon } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
-import type { TerminalInstance } from '../../../shared/types/api';
 import { useQueries } from '../../composables/useQueries';
 import TerminalCard from '../molecules/TerminalCard.vue';
 import { Button } from '../ui/button';
@@ -34,9 +33,7 @@ const stopProcessMutation = useStopProcessMutation();
 const processStatus = computed(() => {
   if (!props.processStatuses || !Array.isArray(props.processStatuses)) return null;
 
-  const projectStatus = props.processStatuses.find(
-    (ps: any) => ps.projectId === props.projectId
-  );
+  const projectStatus = props.processStatuses.find((ps: any) => ps.projectId === props.projectId);
 
   return projectStatus || null;
 });

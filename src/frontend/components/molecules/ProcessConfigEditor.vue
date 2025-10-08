@@ -104,33 +104,23 @@ const commandSuggestions = computed(() => {
 
 // Generate URL suggestions from hosts file
 const urlSuggestions = computed(() => {
-  const suggestions: string[] = [];
+  const suggestions: Set<string> = new Set();
 
   if (hosts.value) {
-    // Common ports for development servers
-    const commonPorts = [3000, 3001, 4000, 5000, 5173, 8000, 8080, 9000];
-
     hosts.value.forEach(host => {
-      // Add URLs with common ports for each hostname
-      commonPorts.forEach(port => {
-        suggestions.push(`http://${host.hostname}:${port}`);
-      });
+      suggestions.add(`http://${host.hostname}`);
     });
   }
 
-  // Add common localhost URLs
-  const commonPorts = [3000, 3001, 4000, 5000, 5173, 8000, 8080, 9000];
-  commonPorts.forEach(port => {
-    suggestions.push(`http://localhost:${port}`);
-  });
-
-  return suggestions;
+  return [...suggestions].filter(
+    (url: string) => !url.includes('localhost') && !url.includes('127.0.0.1')
+  );
 });
 
 // Initialize processes when the sheet opens
 watch(
   () => props.isOpen,
-  isOpen => {
+  (isOpen: boolean) => {
     if (isOpen) {
       processes.value = props.initialProcesses
         ? JSON.parse(JSON.stringify(props.initialProcesses))
@@ -234,6 +224,7 @@ const handleClose = () => {
             <div class="space-y-2">
               <label class="text-sm font-medium">URL (optional)</label>
               <AutocompleteInput
+                class="w-full"
                 v-model="process.url"
                 :suggestions="urlSuggestions"
                 placeholder="e.g., http://localhost:3000"
