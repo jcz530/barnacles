@@ -33,10 +33,9 @@ const emit = defineEmits<{
 }>();
 
 const internalSorting = ref<SortingState>(props.sorting || []);
-const hoveredProjectId = ref<string | null>(null);
 
 const columnHelper = createColumnHelper<ProjectWithDetails>();
-const { formatSize, formatDate } = useFormatters();
+const { formatSize, formatShortDate, formatRelativeDate } = useFormatters();
 
 const handleOpen = (project: ProjectWithDetails) => {
   emit('open', project);
@@ -138,11 +137,9 @@ const table = useVueTable({
           <tbody>
             <template v-for="row in table.getRowModel().rows" :key="row.id">
               <tr
-                class="project-row cursor-pointer border-slate-100 transition-colors"
+                class="project-row group cursor-pointer border-slate-100 transition-colors hover:bg-slate-50"
                 :data-project-id="row.original.id"
                 @click="handleOpen(row.original)"
-                @mouseenter="() => (hoveredProjectId = row.original.id)"
-                @mouseleave="() => (hoveredProjectId = null)"
               >
                 <td
                   v-for="cell in row.getVisibleCells()"
@@ -151,7 +148,6 @@ const table = useVueTable({
                   :class="{
                     'w-80 max-w-80': cell.column.id === 'name',
                     'w-12': cell.column.id === 'isFavorite',
-                    'bg-slate-50': hoveredProjectId === row.original.id,
                   }"
                 >
                   <!-- Favorite Star -->
@@ -202,9 +198,16 @@ const table = useVueTable({
 
                   <!-- Last Modified -->
                   <template v-else-if="cell.column.id === 'lastModified'">
-                    <div class="flex items-center gap-1.5 text-slate-600">
-                      <Calendar class="h-3.5 w-3.5" />
-                      <span>{{ formatDate(row.original.lastModified) }}</span>
+                    <div class="flex items-center gap-1.5">
+                      <Calendar class="h-3.5 w-3.5 text-slate-600" />
+                      <div class="flex flex-col">
+                        <span class="text-sm text-slate-900">{{
+                          formatShortDate(row.original.lastModified)
+                        }}</span>
+                        <span class="text-xs text-slate-500">{{
+                          formatRelativeDate(row.original.lastModified)
+                        }}</span>
+                      </div>
                     </div>
                   </template>
 
@@ -254,18 +257,12 @@ const table = useVueTable({
               <!-- Technologies Row -->
               <tr
                 v-if="row.original.technologies.length > 0"
-                class="tech-row cursor-pointer border-b border-slate-100 transition-colors"
+                class="tech-row cursor-pointer border-b border-slate-100 transition-colors hover:bg-slate-50"
                 :data-project-id="row.original.id"
                 @click="handleOpen(row.original)"
-                @mouseenter="() => (hoveredProjectId = row.original.id)"
-                @mouseleave="() => (hoveredProjectId = null)"
               >
-                <td :class="{ 'bg-slate-50': hoveredProjectId === row.original.id }"></td>
-                <td
-                  :colspan="row.getVisibleCells().length - 1"
-                  class="px-4 py-2"
-                  :class="{ 'bg-slate-50': hoveredProjectId === row.original.id }"
-                >
+                <td></td>
+                <td :colspan="row.getVisibleCells().length - 1" class="px-4 py-0">
                   <div class="flex flex-wrap gap-1">
                     <span
                       v-for="tech in row.original.technologies"
@@ -295,3 +292,16 @@ const table = useVueTable({
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Hover effect for project rows and their tech rows */
+.project-row:hover + .tech-row,
+.tech-row:hover,
+.tech-row:has(+ .project-row:hover) {
+  background-color: rgb(248 250 252);
+}
+
+.project-row:hover ~ .tech-row[data-project-id]:first-of-type {
+  background-color: rgb(248 250 252);
+}
+</style>

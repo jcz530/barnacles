@@ -25,6 +25,15 @@ export const useFormatters = () => {
     });
   };
 
+  const formatShortDate = (date: Date | null | undefined): string => {
+    if (!date) return 'Unknown';
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   const formatRelativeDate = (date: Date | null | undefined): string => {
     if (!date) return 'Unknown';
 
@@ -45,6 +54,7 @@ export const useFormatters = () => {
   return {
     formatSize,
     formatDate,
+    formatShortDate,
     formatRelativeDate,
   };
 };
