@@ -2,6 +2,7 @@
 import { ArrowLeft } from 'lucide-vue-next';
 import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import ProcessIndicator from '../components/atoms/ProcessIndicator.vue';
 import ProjectIcon from '../components/atoms/ProjectIcon.vue';
 import OpenInIDEButton from '../components/molecules/OpenInIDEButton.vue';
 import OpenTerminalButton from '../components/molecules/OpenTerminalButton.vue';
@@ -46,8 +47,36 @@ onMounted(() => {
   ]);
 });
 
+// Get running processes for this project
+const runningProcesses = computed(() => {
+  if (!allProcessStatuses.value || !Array.isArray(allProcessStatuses.value)) return [];
+
+  const projectStatus = allProcessStatuses.value.find(
+    (ps: any) => ps.projectId === projectId.value
+  );
+
+  if (!projectStatus || !('processes' in projectStatus)) return [];
+
+  const processes = (projectStatus as { processes: any[] }).processes;
+  const running = processes.filter(p => p.status === 'running');
+
+  // Debug: log the running processes
+  if (running.length > 0) {
+    console.log('Running processes:', running);
+  }
+
+  return running;
+});
+
 const handleBack = () => {
   router.push('/projects');
+};
+
+const navigateToProcess = () => {
+  // Switch to the terminals tab
+  const tabsList = document.querySelector('[role="tablist"]');
+  const terminalsTab = tabsList?.querySelector('[value="terminals"]') as HTMLElement;
+  terminalsTab?.click();
 };
 </script>
 
@@ -107,7 +136,14 @@ const handleBack = () => {
           size="lg"
         />
         <div class="flex-1">
-          <h1 class="text-3xl font-bold text-slate-800">{{ project.name }}</h1>
+          <div class="flex items-center gap-3">
+            <h1 class="text-3xl font-bold text-slate-800">{{ project.name }}</h1>
+            <ProcessIndicator
+              v-if="runningProcesses.length > 0"
+              :process="runningProcesses[0]"
+              :on-navigate-to-process="navigateToProcess"
+            />
+          </div>
           <p v-if="project.description" class="mt-1 text-slate-600">{{ project.description }}</p>
         </div>
       </div>
