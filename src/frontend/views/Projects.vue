@@ -10,11 +10,13 @@ import ProjectSearchBar from '../components/molecules/ProjectSearchBar.vue';
 import TechnologyFilter from '../components/molecules/TechnologyFilter.vue';
 import ProjectsTable from '../components/organisms/ProjectsTable.vue';
 import { Button } from '../components/ui/button';
+import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useFuzzySearch } from '../composables/useFuzzySearch';
 import { useQueries } from '../composables/useQueries';
 
 const router = useRouter();
-
+const { setBreadcrumbs } = useBreadcrumbs();
+setBreadcrumbs([{ label: 'Projects', href: '/projects' }]);
 const {
   useProjectsQuery,
   useTechnologiesQuery,

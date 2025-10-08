@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useApi } from '@/composables/useApi';
 import { useConfigs } from '@/composables/useConfigs';
+import { useQueries } from '@/composables/useQueries';
 import { useQuery } from '@tanstack/vue-query';
 import { Cog, Command, FolderGit2, LifeBuoy, SquareTerminal } from 'lucide-vue-next';
 import { computed } from 'vue';
@@ -26,12 +27,17 @@ const props = withDefaults(defineProps<SidebarProps>(), {
 
 const config = useConfigs();
 const { apiCall } = useApi();
+const queries = useQueries();
 
 // Fetch current OS user
 const { data: currentUser } = useQuery({
   queryKey: ['currentUser'],
   queryFn: () => apiCall('GET', API_ROUTES.USERS_CURRENT),
 });
+
+// Fetch projects and terminals for counts
+const { data: projects } = queries.useProjectsQuery({ enabled: true });
+const { data: terminals } = queries.useTerminalInstancesQuery();
 
 const data = computed(() => ({
   user: currentUser.value || {
@@ -51,11 +57,13 @@ const data = computed(() => ({
       title: 'Projects',
       url: '/projects',
       icon: FolderGit2,
+      count: projects.value?.length ?? 0,
     },
     {
       title: 'Terminals',
       url: '/terminals',
       icon: SquareTerminal,
+      count: terminals.value?.length ?? 0,
     },
     // {
     //   title: 'Users',

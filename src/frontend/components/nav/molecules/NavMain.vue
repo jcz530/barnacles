@@ -19,6 +19,7 @@ defineProps<{
     url: string;
     icon: LucideIcon;
     isActive?: boolean;
+    count?: number;
     items?: {
       title: string;
       url: string;
@@ -37,6 +38,9 @@ defineProps<{
             <RouterLink :to="item.url">
               <component :is="item.icon" />
               <span>{{ item.title }}</span>
+              <span v-if="item.count" class="text-sidebar-foreground/70 ml-auto text-xs">
+                {{ item.count }}
+              </span>
             </RouterLink>
           </SidebarMenuButton>
           <template v-if="item.items?.length">
