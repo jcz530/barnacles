@@ -9,6 +9,7 @@ export interface StartProcess {
 
 export interface ProcessStatus {
   processId: string;
+  name?: string; // Process name from StartProcess
   status: 'running' | 'stopped' | 'failed';
   bashId?: string; // ID of the background bash session
   exitCode?: number;

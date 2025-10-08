@@ -7,6 +7,7 @@ import { Button } from '../ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import CardContent from '../ui/card/CardContent.vue';
 import { Skeleton } from '../ui/skeleton';
+import ProcessOutput from './ProcessOutput.vue';
 import Terminal from './Terminal.vue';
 
 const props = defineProps<{
@@ -235,7 +236,10 @@ autoSelectTerminal();
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
                   <Play class="h-4 w-4 text-green-500" />
-                  <p class="truncate text-sm font-medium">{{ item.title }}</p>
+                  <div class="flex flex-col">
+                    <p class="truncate text-sm font-medium">{{ item.data.name }}</p>
+                    <p class="truncate text-xs">{{ item.title }}</p>
+                  </div>
                 </div>
                 <p class="mt-1 text-xs text-slate-500">Process</p>
               </div>
@@ -264,13 +268,8 @@ autoSelectTerminal();
         </div>
 
         <!-- Show process output -->
-        <div
-          v-else-if="selectedItemType === 'process' && processOutput"
-          class="h-full overflow-auto"
-        >
-          <pre class="font-mono text-sm whitespace-pre-wrap text-gray-300">{{
-            processOutput.output
-          }}</pre>
+        <div v-else-if="selectedItemType === 'process' && processOutput" class="h-full">
+          <ProcessOutput :output="processOutput.output" />
         </div>
 
         <!-- Empty state -->

@@ -138,13 +138,14 @@ const navigateToProcess = () => {
         <div class="flex-1">
           <div class="flex items-center gap-3">
             <h1 class="text-3xl font-bold text-slate-800">{{ project.name }}</h1>
-            <ProcessIndicator
-              v-if="runningProcesses.length > 0"
-              :process="runningProcesses[0]"
-              :on-navigate-to-process="navigateToProcess"
-            />
           </div>
           <p v-if="project.description" class="mt-1 text-slate-600">{{ project.description }}</p>
+          <ProcessIndicator
+            v-if="runningProcesses.length > 0"
+            :process="runningProcesses[0]"
+            :on-navigate-to-process="navigateToProcess"
+            class="mt-2"
+          />
         </div>
       </div>
     </div>

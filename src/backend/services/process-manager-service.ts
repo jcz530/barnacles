@@ -5,6 +5,7 @@ import type { StartProcess, ProcessStatus, ProjectProcessStatus } from '../../sh
 const execAsync = promisify(exec);
 
 interface RunningProcess {
+  name: string;
   bashId: string;
   process: ReturnType<typeof exec>;
   status: 'running' | 'stopped' | 'failed';
@@ -23,35 +24,37 @@ class ProcessManagerService {
    * Detect URLs from process output
    */
   private detectUrl(output: string): string | undefined {
+    // First, strip all ANSI escape codes from the entire output
+    const cleanOutput = output.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+
     // Common URL patterns in development server output
     const patterns = [
-      // Vite/Next.js style: "Local: http://localhost:3000"
-      /Local:\s+(https?:\/\/[^\s,)]+)/i,
+      // Vite/Next.js style: "Local: http://localhost:3000" or "➜ Local: http://localhost:3000"
+      /(?:➜\s*)?Local:\s+(https?:\/\/[^\s,)]+)/i,
+      // Network: pattern
+      /(?:➜\s*)?Network:\s+(https?:\/\/[^\s,)]+)/i,
       // Various frameworks: "Running on http://localhost:8000"
       /(?:Running|Listening|Server|App|started)\s+(?:on|at)[\s:]+?(https?:\/\/[^\s,)]+)/i,
       // "Listening at http://localhost:3000"
       /(?:Listening|Available)\s+at\s+(https?:\/\/[^\s,)]+)/i,
       // Standard HTTP/HTTPS URLs with required port
-      /https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):\d+(?:\/[^\s,)]*)?/gi,
+      /https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0):\d+(?:\/[^\s,)]*)?/i,
       // Generic with optional port (fallback)
       /(?:^|\s)(https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?)/i,
     ];
 
     for (const pattern of patterns) {
-      const match = output.match(pattern);
+      const match = cleanOutput.match(pattern);
       if (match) {
         // Get the captured URL (either full match or first capture group)
         let url = match[1] || match[0];
-        // Clean up the URL - remove trailing punctuation and ANSI codes
-        url = url
-          .trim()
-          .replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '') // Remove ANSI escape codes
-          .replace(/[,;.)\]]+$/, ''); // Remove trailing punctuation
+        // Clean up the URL - remove trailing punctuation
+        url = url.trim().replace(/[,;.)\]]+$/, '');
 
         // Ensure we have a valid URL with protocol
         if (url.startsWith('http://') || url.startsWith('https://')) {
           console.log(
-            `[URL Detection] Detected URL: ${url} from output: ${output.substring(0, 100)}`
+            `[URL Detection] Detected URL: ${url} from output: ${cleanOutput.substring(0, 150)}`
           );
           return url;
         }
@@ -106,6 +109,7 @@ class ProcessManagerService {
         const bashId = `${projectId}-${process.id}-${Date.now()}`;
 
         const runningProcess: RunningProcess = {
+          name: process.name,
           bashId,
           process: childProcess,
           status: 'running',
@@ -269,6 +273,7 @@ class ProcessManagerService {
     for (const [processId, runningProcess] of projectProcesses.entries()) {
       statuses.push({
         processId,
+        name: runningProcess.name,
         status: runningProcess.status,
         bashId: runningProcess.bashId,
         exitCode: runningProcess.exitCode,
