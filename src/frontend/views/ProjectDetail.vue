@@ -146,7 +146,7 @@ const navigateToProcess = () => {
           <TabsList class="mb-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="readme">README.md</TabsTrigger>
-            <TabsTrigger value="terminals">Terminals</TabsTrigger>
+            <TabsTrigger value="terminals">Processes</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">

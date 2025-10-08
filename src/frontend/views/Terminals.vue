@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus, Terminal as TerminalIcon } from 'lucide-vue-next';
+import { Terminal as TerminalIcon } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { TerminalInstance } from '../../shared/types/api';
@@ -12,16 +12,10 @@ import { useQueries } from '../composables/useQueries';
 
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
-const {
-  useTerminalInstancesQuery,
-  useCreateTerminalMutation,
-  useKillTerminalMutation,
-  useProjectsQuery,
-} = useQueries();
+const { useTerminalInstancesQuery, useKillTerminalMutation, useProjectsQuery } = useQueries();
 
 const { data: terminals, isLoading } = useTerminalInstancesQuery();
 const { data: projects } = useProjectsQuery();
-const createTerminalMutation = useCreateTerminalMutation();
 const killTerminalMutation = useKillTerminalMutation();
 
 const selectedTerminal = ref<string | null>(null);
@@ -46,27 +40,13 @@ const exitedTerminals = computed(() => {
 });
 
 onMounted(() => {
-  setBreadcrumbs([{ label: 'Terminals' }]);
+  setBreadcrumbs([{ label: 'Processes' }]);
 
   // Auto-select the first terminal if available
   if (activeTerminals.value.length > 0 && !selectedTerminal.value) {
     selectedTerminal.value = activeTerminals.value[0].id;
   }
 });
-
-const handleCreateTerminal = async () => {
-  try {
-    const newTerminal = await createTerminalMutation.mutateAsync({
-      title: 'New Terminal',
-    });
-
-    if (newTerminal) {
-      selectedTerminal.value = newTerminal.id;
-    }
-  } catch (error) {
-    console.error('Failed to create terminal:', error);
-  }
-};
 
 const handleKillTerminal = async (terminalId: string) => {
   try {
@@ -93,13 +73,9 @@ const selectTerminal = (terminal: TerminalInstance) => {
     <div class="p-6">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-3xl font-bold text-slate-800">Terminals</h1>
-          <p class="mt-1 text-slate-600">Manage and view all terminal instances</p>
+          <h1 class="text-3xl font-bold text-slate-800">Processes</h1>
+          <p class="mt-1 text-slate-600">View all running processes</p>
         </div>
-        <Button @click="handleCreateTerminal" :disabled="createTerminalMutation.isPending">
-          <Plus class="mr-2 h-4 w-4" />
-          New Terminal
-        </Button>
       </div>
     </div>
 
@@ -116,11 +92,8 @@ const selectTerminal = (terminal: TerminalInstance) => {
           class="py-8 text-center"
         >
           <TerminalIcon class="mx-auto h-12 w-12 text-slate-400" />
-          <p class="mt-2 text-sm text-slate-600">No terminals yet</p>
-          <Button @click="handleCreateTerminal" variant="outline" size="sm" class="mt-4">
-            <Plus class="mr-2 h-4 w-4" />
-            Create your first terminal
-          </Button>
+          <p class="mt-2 text-sm text-slate-600">No active processes</p>
+          <p class="mt-1 text-xs text-slate-500">Go to a project and run a script</p>
         </div>
 
         <div v-else class="space-y-4">
@@ -175,7 +148,7 @@ const selectTerminal = (terminal: TerminalInstance) => {
         <div v-else class="flex h-full items-center justify-center text-slate-400">
           <div class="text-center">
             <TerminalIcon class="mx-auto mb-4 h-16 w-16" />
-            <p>Select a terminal or create a new one</p>
+            <p>Select a process to view output</p>
           </div>
         </div>
       </div>

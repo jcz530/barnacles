@@ -61,7 +61,7 @@ const data = computed(() => ({
       count: projects.value?.length ?? 0,
     },
     {
-      title: 'Terminals',
+      title: 'Processes',
       url: '/terminals',
       icon: SquareTerminal,
       count: terminals.value?.length ?? 0,

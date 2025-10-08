@@ -144,7 +144,7 @@ const table = useVueTable({
                 <td
                   v-for="cell in row.getVisibleCells()"
                   :key="cell.id"
-                  class="px-4 py-3 text-sm"
+                  class="px-4 pt-2 text-sm"
                   :class="{
                     'w-80 max-w-80': cell.column.id === 'name',
                     'w-12': cell.column.id === 'isFavorite',
@@ -262,7 +262,7 @@ const table = useVueTable({
                 @click="handleOpen(row.original)"
               >
                 <td></td>
-                <td :colspan="row.getVisibleCells().length - 1" class="px-4 py-0">
+                <td :colspan="row.getVisibleCells().length - 1" class="px-4 pt-0 pb-2">
                   <div class="flex flex-wrap gap-1">
                     <span
                       v-for="tech in row.original.technologies"

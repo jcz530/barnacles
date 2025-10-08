@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronRight, Play, Plus, Terminal as TerminalIcon } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, Play, Terminal as TerminalIcon, X } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { useQueries } from '../../composables/useQueries';
 import TerminalCard from '../molecules/TerminalCard.vue';
@@ -20,12 +20,14 @@ const {
   useTerminalInstancesQuery,
   useCreateTerminalMutation,
   useKillTerminalMutation,
+  useStopProcessMutation,
   useProcessOutputQuery,
 } = useQueries();
 
 const { data: terminals, isLoading } = useTerminalInstancesQuery(computed(() => props.projectId));
 const createTerminalMutation = useCreateTerminalMutation();
 const killTerminalMutation = useKillTerminalMutation();
+const stopProcessMutation = useStopProcessMutation();
 
 // Get process status from props instead of individual query
 const processStatus = computed(() => {
@@ -155,6 +157,21 @@ const handleKillTerminal = async (terminalId: string) => {
   }
 };
 
+const handleStopProcess = async (processId: string) => {
+  try {
+    await stopProcessMutation.mutateAsync({
+      projectId: props.projectId,
+      processId,
+    });
+
+    if (selectedTerminal.value === `process-${processId}`) {
+      selectedTerminal.value = null;
+    }
+  } catch (error) {
+    console.error('Failed to stop process:', error);
+  }
+};
+
 const runScript = (scriptName: string, type: 'npm' | 'composer' = 'npm') => {
   const command = type === 'npm' ? `npm run ${scriptName}` : `composer run-script ${scriptName}`;
   handleCreateTerminal(command, command);
@@ -242,13 +259,10 @@ autoSelectTerminal();
         </div>
       </div>
 
-      <!-- Processes & Terminals Section -->
+      <!-- Processes Section -->
       <div class="p-4">
-        <div class="mb-4 flex items-center justify-between">
-          <h3 class="font-semibold text-slate-800">Terminals</h3>
-          <Button size="sm" variant="outline" @click="() => handleCreateTerminal()">
-            <Plus class="h-4 w-4" />
-          </Button>
+        <div class="mb-4">
+          <h3 class="font-semibold text-slate-800">Processes</h3>
         </div>
 
         <div v-if="isLoading" class="space-y-2">
@@ -257,11 +271,8 @@ autoSelectTerminal();
 
         <div v-else-if="allItems.length === 0" class="py-8 text-center">
           <TerminalIcon class="mx-auto h-10 w-10 text-slate-400" />
-          <p class="mt-2 text-sm text-slate-600">No active terminals or processes</p>
-          <Button @click="() => handleCreateTerminal()" variant="outline" size="sm" class="mt-4">
-            <Plus class="mr-2 h-4 w-4" />
-            Create Terminal
-          </Button>
+          <p class="mt-2 text-sm text-slate-600">No active processes</p>
+          <p class="mt-1 text-xs text-slate-500">Run a script to start a process</p>
         </div>
 
         <div v-else class="space-y-2">
@@ -288,6 +299,14 @@ autoSelectTerminal();
                 </div>
                 <p class="mt-1 text-xs text-slate-500">Process</p>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                class="h-6 w-6 flex-shrink-0 p-0"
+                @click.stop="() => handleStopProcess(item.data.processId)"
+              >
+                <X class="h-3 w-3" />
+              </Button>
             </div>
           </div>
 
@@ -299,7 +318,6 @@ autoSelectTerminal();
             :is-selected="selectedTerminal === `terminal-${terminal.id}`"
             :show-cwd="false"
             :on-kill="handleKillTerminal"
-            :is-killing="!!killTerminalMutation.isPending"
             @select="() => (selectedTerminal = `terminal-${terminal.id}`)"
           />
         </div>
