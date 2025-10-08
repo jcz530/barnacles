@@ -121,6 +121,7 @@ export const useQueries = () => {
         return response.data;
       },
       enabled: options?.enabled ?? true,
+      staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     });
   };
 
@@ -458,6 +459,7 @@ export const useQueries = () => {
         return response.data || {};
       },
       enabled: options?.enabled ?? true,
+      staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     });
   };
 
@@ -653,6 +655,7 @@ export const useQueries = () => {
         return response.data;
       },
       enabled: options?.enabled ?? true,
+      staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     });
   };
 
