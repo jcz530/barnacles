@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import type { ProjectWithDetails } from '../../../shared/types/api';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/card';
-import { Folder, Calendar, HardDrive, GitBranch, Star } from 'lucide-vue-next';
+import { useFormatters } from '@/composables/useFormatters';
+import { Calendar, Folder, GitBranch, HardDrive, Star } from 'lucide-vue-next';
 import { computed } from 'vue';
-import { Button } from '../ui/button';
+import type { ProjectWithDetails } from '../../../shared/types/api';
+import { useRunningProcesses } from '../../composables/useRunningProcesses';
 import ProjectIcon from '../atoms/ProjectIcon.vue';
+import { Button } from '../ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import ProjectActionsDropdown from './ProjectActionsDropdown.vue';
 
 const props = defineProps<{
@@ -18,67 +20,27 @@ const emit = defineEmits<{
   'toggle-favorite': [projectId: string];
 }>();
 
-// Find the process status for this project from the global statuses
-const projectProcesses = computed(() => {
-  if (!props.processStatuses || !Array.isArray(props.processStatuses)) return [];
+// Get running processes using the composable
+const runningProcesses = useRunningProcesses(
+  () => props.project.id,
+  () => props.processStatuses
+);
 
-  // Find the project status in the array
-  const projectStatus = props.processStatuses.find((ps: any) => ps.projectId === props.project.id);
+const isProcessRunning = computed(() => runningProcesses.value.length > 0);
 
-  if (!projectStatus || !('processes' in projectStatus)) return [];
-  return projectStatus.processes || [];
-});
-
-const isProcessRunning = computed(() => {
-  return projectProcesses.value.some((p: { status: string }) => p.status === 'running');
-});
-
-const runningProcessCount = computed(() => {
-  return projectProcesses.value.filter((p: { status: string }) => p.status === 'running').length;
-});
+const runningProcessCount = computed(() => runningProcesses.value.length);
 
 const processUrls = computed(() => {
-  return projectProcesses.value
-    .filter((p: { status: string; url?: string }) => p.status === 'running' && p.url)
-    .map((p: { url?: string }) => p.url!);
+  return runningProcesses.value
+    .filter(p => p.url || p.detectedUrl)
+    .map(p => p.url || p.detectedUrl!);
 });
 
 const handleOpenUrl = (e: Event, url: string) => {
   e.stopPropagation();
   window.electron?.shell.openExternal(url);
 };
-
-const formatSize = (bytes: number | null | undefined): string => {
-  if (!bytes) return '0 B';
-
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  return `${size.toFixed(1)} ${units[unitIndex]}`;
-};
-
-const formatDate = (date: Date | null | undefined): string => {
-  if (!date) return 'Unknown';
-
-  const d = new Date(date);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-
-  return `${Math.floor(diffDays / 365)} years ago`;
-};
+const { formatSize, formatDate } = useFormatters();
 
 const handleOpen = () => {
   emit('open', props.project);
@@ -108,6 +70,8 @@ const handleToggleFavorite = (e: Event) => {
             <div class="flex flex-col gap-2">
               <div class="flex items-center gap-2">
                 <CardTitle class="text-lg">{{ project.name }}</CardTitle>
+
+                <!-- Running process badge -->
                 <span
                   v-if="isProcessRunning"
                   class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
@@ -121,6 +85,12 @@ const handleToggleFavorite = (e: Event) => {
                   {{ runningProcessCount }} running
                 </span>
               </div>
+              <!-- <ProcessIndicator
+                v-if="runningProcesses.length > 0"
+                :process="runningProcesses[0]"
+                :on-navigate-to-process="navigateToProcess"
+                class="mt-0"
+              /> -->
               <!-- URL badges -->
               <div v-if="processUrls.length > 0" class="flex flex-wrap gap-1.5">
                 <button

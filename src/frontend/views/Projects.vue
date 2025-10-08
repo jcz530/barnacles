@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SortingState } from '@tanstack/vue-table';
-import { RefreshCw, Scan } from 'lucide-vue-next';
+import { RefreshCw, Scan, Star } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import type { ProjectWithDetails } from '../../shared/types/api';
@@ -27,6 +27,7 @@ const {
 // State
 const searchQuery = ref('');
 const selectedTechnologies = ref<string[]>([]);
+const showFavoritesOnly = ref(false);
 const viewMode = ref<'table' | 'card'>('table');
 const sortField = ref<'name' | 'lastModified' | 'size'>('lastModified');
 const sortDirection = ref<'asc' | 'desc'>('desc');
@@ -66,9 +67,14 @@ const { filteredItems: searchedProjects } = useFuzzySearch<ProjectWithDetails>({
   },
 });
 
-// Sorted projects
+// Sorted and filtered projects
 const projects = computed(() => {
-  const items = [...(searchedProjects.value || [])];
+  let items = [...(searchedProjects.value || [])];
+
+  // Filter by favorites if enabled
+  if (showFavoritesOnly.value) {
+    items = items.filter(project => project.isFavorite);
+  }
 
   items.sort((a, b) => {
     let aVal: any;
@@ -106,7 +112,10 @@ const toggleFavoriteMutation = useToggleFavoriteMutation();
 const isScanning = computed(() => scanMutation.isPending.value);
 
 const hasActiveFilters = computed(
-  () => searchQuery.value.trim() !== '' || selectedTechnologies.value.length > 0
+  () =>
+    searchQuery.value.trim() !== '' ||
+    selectedTechnologies.value.length > 0 ||
+    showFavoritesOnly.value
 );
 
 const totalProjects = computed(() => allProjectsData.value?.length || 0);
@@ -197,6 +206,14 @@ watch([sortField, sortDirection], () => {
       <!-- Filters -->
       <div class="flex items-center gap-3">
         <ProjectSearchBar v-model="searchQuery" />
+        <Button
+          :variant="showFavoritesOnly ? 'default' : 'outline'"
+          size="sm"
+          @click="showFavoritesOnly = !showFavoritesOnly"
+        >
+          <Star class="mr-2 h-4 w-4" :fill="showFavoritesOnly ? 'currentColor' : 'none'" />
+          Favorites
+        </Button>
         <TechnologyFilter
           v-if="!technologiesLoading && technologies"
           :technologies="technologies"
@@ -210,6 +227,7 @@ watch([sortField, sortDirection], () => {
           @click="
             searchQuery = '';
             selectedTechnologies = [];
+            showFavoritesOnly = false;
           "
         >
           Clear Filters

@@ -15,6 +15,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useQueries } from '../composables/useQueries';
+import { useRunningProcesses } from '../composables/useRunningProcesses';
 
 const route = useRoute();
 const router = useRouter();
@@ -48,25 +49,7 @@ onMounted(() => {
 });
 
 // Get running processes for this project
-const runningProcesses = computed(() => {
-  if (!allProcessStatuses.value || !Array.isArray(allProcessStatuses.value)) return [];
-
-  const projectStatus = allProcessStatuses.value.find(
-    (ps: any) => ps.projectId === projectId.value
-  );
-
-  if (!projectStatus || !('processes' in projectStatus)) return [];
-
-  const processes = (projectStatus as { processes: any[] }).processes;
-  const running = processes.filter(p => p.status === 'running');
-
-  // Debug: log the running processes
-  if (running.length > 0) {
-    console.log('Running processes:', running);
-  }
-
-  return running;
-});
+const runningProcesses = useRunningProcesses(projectId, allProcessStatuses);
 
 const handleBack = () => {
   router.push('/projects');
