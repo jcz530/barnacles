@@ -4,6 +4,7 @@ import { Calendar, Folder, GitBranch, HardDrive, Star } from 'lucide-vue-next';
 import { computed } from 'vue';
 import type { ProjectWithDetails } from '../../../shared/types/api';
 import { useRunningProcesses } from '../../composables/useRunningProcesses';
+import ProcessIndicator from '../atoms/ProcessIndicator.vue';
 import ProjectIcon from '../atoms/ProjectIcon.vue';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -54,45 +55,68 @@ const handleToggleFavorite = (e: Event) => {
 
 <template>
   <Card
-    class="cursor-pointer transition-all hover:shadow-lg hover:ring-2 hover:ring-slate-200"
+    class="flex cursor-pointer flex-col gap-0 pt-0 transition-all hover:shadow-lg hover:ring-2 hover:ring-slate-200"
     @click="handleOpen"
   >
     <CardHeader class="pb-3">
-      <div class="flex items-start justify-between">
+      <div class="-mr-6 flex justify-end gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          class="h-8 w-8 p-0"
+          :class="project.isFavorite ? 'text-yellow-500' : 'text-slate-300'"
+          @click="handleToggleFavorite"
+        >
+          <Star class="h-4 w-4" :fill="project.isFavorite ? 'currentColor' : 'none'" />
+        </Button>
+        <ProjectActionsDropdown
+          :project-id="project.id"
+          :project-path="project.path"
+          :project-name="project.name"
+          :is-archived="!!project.archivedAt"
+          :is-favorite="project.isFavorite"
+          :git-remote-url="project.stats?.gitRemoteUrl"
+          :third-party-size="project.stats?.thirdPartySize"
+          :preferred-ide-id="project.preferredIde"
+          :preferred-terminal-id="project.preferredTerminal"
+          @click.stop
+        />
+      </div>
+      <div class="-mt-2 flex items-start justify-between">
         <div class="flex flex-1 items-start gap-3">
-          <ProjectIcon
-            :project-id="project.id"
-            :project-name="project.name"
-            :has-icon="!!project.icon"
-            size="md"
-          />
           <div class="flex-1">
             <div class="flex flex-col gap-2">
               <div class="flex items-center gap-2">
-                <CardTitle class="text-lg">{{ project.name }}</CardTitle>
-
-                <!-- Running process badge -->
-                <span
-                  v-if="isProcessRunning"
-                  class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
-                >
-                  <span class="relative flex h-2 w-2">
-                    <span
-                      class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
-                    ></span>
-                    <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
-                  </span>
-                  {{ runningProcessCount }} running
-                </span>
+                <ProjectIcon
+                  :project-id="project.id"
+                  :project-name="project.name"
+                  :has-icon="!!project.icon"
+                  size="md"
+                /><CardTitle class="text-lg">{{ project.name }}</CardTitle>
               </div>
-              <!-- <ProcessIndicator
-                v-if="runningProcesses.length > 0"
-                :process="runningProcesses[0]"
-                :on-navigate-to-process="navigateToProcess"
-                class="mt-0"
-              /> -->
+              <div v-if="runningProcesses.length > 0" class="flex">
+                <ProcessIndicator
+                  :process="runningProcesses[0]"
+                  :on-navigate-to-process="navigateToProcess"
+                  compact
+                  class="mt-0"
+                />
+              </div>
+              <!-- Running process badge -->
+              <!-- <div
+                v-if="isProcessRunning"
+                class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700"
+              >
+                <span class="relative flex h-2 w-2">
+                  <span
+                    class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+                  ></span>
+                  <span class="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+                </span>
+                {{ runningProcessCount }} running
+              </div> -->
               <!-- URL badges -->
-              <div v-if="processUrls.length > 0" class="flex flex-wrap gap-1.5">
+              <!-- <div v-if="processUrls.length > 0" class="flex flex-wrap gap-1.5">
                 <button
                   v-for="(url, index) in processUrls"
                   :key="index"
@@ -109,48 +133,25 @@ const handleToggleFavorite = (e: Event) => {
                   </svg>
                   {{ url }}
                 </button>
-              </div>
+              </div> -->
             </div>
             <CardDescription v-if="project.description" class="mt-1">
               {{ project.description }}
             </CardDescription>
           </div>
         </div>
-        <div class="flex items-start gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-8 w-8 p-0"
-            :class="project.isFavorite ? 'text-yellow-500' : 'text-slate-300'"
-            @click="handleToggleFavorite"
-          >
-            <Star class="h-4 w-4" :fill="project.isFavorite ? 'currentColor' : 'none'" />
-          </Button>
-          <ProjectActionsDropdown
-            :project-id="project.id"
-            :project-path="project.path"
-            :project-name="project.name"
-            :is-archived="!!project.archivedAt"
-            :is-favorite="project.isFavorite"
-            :git-remote-url="project.stats?.gitRemoteUrl"
-            :third-party-size="project.stats?.thirdPartySize"
-            :preferred-ide-id="project.preferredIde"
-            :preferred-terminal-id="project.preferredTerminal"
-            @click.stop
-          />
-        </div>
       </div>
     </CardHeader>
 
-    <CardContent class="space-y-3">
+    <CardContent class="mt-auto space-y-3">
       <!-- Path -->
       <div class="flex items-center gap-2 text-sm text-slate-600">
         <Folder class="h-4 w-4 flex-shrink-0" />
-        <span class="truncate font-mono text-xs">{{ project.path }}</span>
+        <span dir="rtl" class="truncate font-mono text-xs">{{ project.path }}</span>
       </div>
 
       <!-- Technologies -->
-      <div v-if="project.technologies.length > 0" class="flex flex-wrap gap-1.5">
+      <!-- <div v-if="project.technologies.length > 0" class="flex flex-wrap gap-1.5">
         <span
           v-for="tech in project.technologies"
           :key="tech.id"
@@ -168,7 +169,7 @@ const handleToggleFavorite = (e: Event) => {
           />
           {{ tech.name }}
         </span>
-      </div>
+      </div> -->
 
       <!-- Stats -->
       <div class="grid grid-cols-2 gap-2 text-xs text-slate-600">
