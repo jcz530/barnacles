@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useVModel } from '@vueuse/core';
-import { Check, SearchIcon } from 'lucide-vue-next';
+import { Check } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import {
   Combobox,
@@ -41,17 +41,8 @@ useVModel(props, 'modelValue', emit);
 
 <template>
   <Combobox v-bind:model-value="modelValue" by="" class="w-full">
-    <ComboboxAnchor>
-      <div class="relative w-full max-w-sm items-center">
-        <ComboboxInput
-          class="pl-9"
-          :display-value="val => val ?? ''"
-          :placeholder="placeholder || 'Search...'"
-        />
-        <span class="absolute inset-y-0 start-0 flex items-center justify-center px-3">
-          <SearchIcon class="text-muted-foreground size-4" />
-        </span>
-      </div>
+    <ComboboxAnchor class="w-full">
+      <ComboboxInput :display-value="val => val ?? ''" :placeholder="placeholder || 'Search...'" />
     </ComboboxAnchor>
     <ComboboxList>
       <ComboboxEmpty> No framework found. </ComboboxEmpty>
