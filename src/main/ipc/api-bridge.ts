@@ -30,11 +30,16 @@ export const setupAPIBridge = (): void => {
           body: body ? JSON.stringify(body) : undefined,
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          // Throw error with message from response or status text
+          throw new Error(
+            data.error || data.message || `HTTP ${response.status}: ${response.statusText}`
+          );
         }
 
-        return await response.json();
+        return data;
       } catch (error) {
         console.error('API Bridge Error:', error);
         throw error;

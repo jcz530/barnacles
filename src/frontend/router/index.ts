@@ -3,6 +3,10 @@ import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router
 import DefaultLayout from '../layouts/DefaultLayout.vue';
 import Api from '../views/Api.vue';
 import Home from '../views/Home.vue';
+import ProjectDetail from '../views/ProjectDetail.vue';
+import Projects from '../views/Projects.vue';
+import Settings from '../views/Settings.vue';
+import Terminals from '../views/Terminals.vue';
 
 const routes = [
   {
@@ -15,6 +19,21 @@ const routes = [
         component: Home,
       },
       {
+        path: '/projects',
+        name: 'Projects',
+        component: Projects,
+      },
+      {
+        path: '/projects/:id',
+        name: 'ProjectDetail',
+        component: ProjectDetail,
+      },
+      {
+        path: '/terminals',
+        name: 'Terminals',
+        component: Terminals,
+      },
+      {
         path: '/api',
         name: 'API',
         component: Api,
@@ -23,6 +42,11 @@ const routes = [
         path: '/users',
         name: 'Users',
         component: Users,
+      },
+      {
+        path: '/settings',
+        name: 'Settings',
+        component: Settings,
       },
     ],
   },

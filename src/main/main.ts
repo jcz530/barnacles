@@ -1,8 +1,9 @@
 import { app, BrowserWindow } from 'electron';
+import contextMenu from 'electron-context-menu';
 import started from 'electron-squirrel-startup';
 import { startServer } from '../backend/server';
-import { createWindow } from './window-manager';
 import { setupIPC } from './ipc';
+import { createWindow } from './window-manager';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (started) {
@@ -12,6 +13,11 @@ if (started) {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
 let mainWindow: BrowserWindow | null = null;
 
+// Enable right-click context menu with Inspect Element in development mode
+contextMenu({
+  showInspectElement: !app.isPackaged,
+});
+
 const initialize = async (): Promise<void> => {
   try {
     // Start the API server
@@ -20,8 +26,8 @@ const initialize = async (): Promise<void> => {
     // Setup IPC communication
     setupIPC();
 
-    // Create the main window
-    mainWindow = await createWindow();
+    // Create the main window with the actual API port for CSP
+    mainWindow = await createWindow(serverInfo.port);
 
     console.log('🚀 Application initialized successfully');
     console.log(`📡 API available at ${serverInfo.baseUrl}`);

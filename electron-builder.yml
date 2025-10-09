@@ -1,5 +1,5 @@
-appId: com.joeczubiak.my-app
-productName: my-app
+appId: app.barnacles.app
+productName: Barnacles
 copyright: Copyright © 2025 Joe Czubiak
 
 # Build directories
@@ -16,32 +16,25 @@ nodeGypRebuild: false
 files:
   - 'dist/**/*'
   - 'package.json'
-  - 'node_modules/@hono/**/*'
-  - 'node_modules/@libsql/**/*'
-  - 'node_modules/@paralleldrive/**/*'
-  - 'node_modules/class-variance-authority/**/*'
-  - 'node_modules/clsx/**/*'
-  - 'node_modules/drizzle-orm/**/*'
-  - 'node_modules/electron-squirrel-startup/**/*'
-  - 'node_modules/hono/**/*'
-  - 'node_modules/lucide-vue-next/**/*'
-  - 'node_modules/reka-ui/**/*'
-  - 'node_modules/shadcn-vue/**/*'
-  - 'node_modules/tailwind-merge/**/*'
-  - 'node_modules/tw-animate-css/**/*'
-  - 'node_modules/vue/**/*'
-  - 'node_modules/vue-router/**/*'
-  - '!node_modules/**/test/**/*'
-  - '!node_modules/**/tests/**/*'
+  - 'node_modules/**/*'
+  # Exclude test files and documentation
+  - '!node_modules/**/test{,/**/*}'
+  - '!node_modules/**/tests{,/**/*}'
   - '!node_modules/**/*.test.*'
   - '!node_modules/**/*.spec.*'
   - '!node_modules/**/README.*'
   - '!node_modules/**/CHANGELOG.*'
-  - '!node_modules/**/.github/**/*'
+  - '!node_modules/**/.github{,/**/*}'
+  - '!node_modules/**/*.md'
+  # Exclude source maps and TypeScript files
+  - '!node_modules/**/*.map'
+  - '!node_modules/**/*.ts'
+  - '!node_modules/**/tsconfig.json'
 
 # Include/exclude node modules patterns
+# Note: Only unpack native modules that need direct file system access
 asarUnpack:
-  - "node_modules/@libsql/**/*"
+  - 'node_modules/@libsql/**/*'
 
 # Include migrations as extra resources
 extraResources:
@@ -52,9 +45,10 @@ icon: assets/icons/app
 
 # Auto updater
 publish:
-  provider: generic
-  url: https://your-website.com/releases/
-  channel: latest
+  provider: github
+  owner: jcz530
+  repo: barnacles
+  releaseType: release
 
 # macOS configuration
 mac:
@@ -69,7 +63,8 @@ mac:
 dmg:
   title: '${productName} ${version}'
   icon: assets/icons/app.icns
-  # backgroundColor: '#C3FFFF'
+  background: assets/dmg-background.png
+  # backgroundColor: 'F6E3EF'
   window:
     width: 540
     height: 380

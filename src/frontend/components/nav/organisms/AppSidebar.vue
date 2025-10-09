@@ -2,9 +2,9 @@
 import type { SidebarProps } from '@/components/ui/sidebar';
 
 import NavMain from '@/components/nav/molecules/NavMain.vue';
-import NavProjects from '@/components/nav/molecules/NavProjects.vue';
 import NavSecondary from '@/components/nav/molecules/NavSecondary.vue';
 import NavUser from '@/components/nav/molecules/NavUser.vue';
+import ThemeToggle from '@/components/nav/molecules/ThemeToggle.vue';
 import {
   Sidebar,
   SidebarContent,
@@ -14,26 +14,38 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import {
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  LifeBuoy,
-  Send,
-  Settings2,
-  SquareTerminal,
-} from 'lucide-vue-next';
+import { useApi } from '@/composables/useApi';
+import { useConfigs } from '@/composables/useConfigs';
+import { useQueries } from '@/composables/useQueries';
+import { useQuery } from '@tanstack/vue-query';
+import { Cog, Command, FolderGit2, SquareTerminal } from 'lucide-vue-next';
+import { computed } from 'vue';
+import { API_ROUTES } from '../../../../shared/constants';
 
 const props = withDefaults(defineProps<SidebarProps>(), {
   variant: 'inset',
 });
 
-const data = {
-  user: {
-    name: 'shadcn',
-    email: 'm@example.com',
-    avatar: '/avatars/shadcn.jpg',
+const config = useConfigs();
+const { apiCall } = useApi();
+const queries = useQueries();
+
+// Fetch current OS user
+const { data: currentUser } = useQuery({
+  queryKey: ['currentUser'],
+  queryFn: () => apiCall('GET', API_ROUTES.USERS_CURRENT),
+});
+
+// Fetch projects and processes for counts
+const { data: projects } = queries.useProjectsQuery({ enabled: true });
+const { data: processes } = queries.useProcessesQuery();
+
+const data = computed(() => ({
+  user: currentUser.value || {
+    name: 'User',
+    email: 'user@local',
+    avatar: '',
+    initials: 'US',
   },
   navMain: [
     {
@@ -43,59 +55,71 @@ const data = {
       isActive: true,
     },
     {
-      title: 'Users',
-      url: '/users',
-      icon: Bot,
+      title: 'Projects',
+      url: '/projects',
+      icon: FolderGit2,
+      count: projects.value?.length ?? 0,
     },
     {
-      title: 'API',
-      url: '/api',
-      icon: BookOpen,
+      title: 'Processes',
+      url: '/terminals',
+      icon: SquareTerminal,
+      count: processes.value?.length ?? 0,
     },
-    {
-      title: 'Settings',
-      url: '#',
-      icon: Settings2,
-      items: [
-        {
-          title: 'General',
-          url: '#',
-        },
-        {
-          title: 'Team',
-          url: '#',
-        },
-        {
-          title: 'Billing',
-          url: '#',
-        },
-        {
-          title: 'Limits',
-          url: '#',
-        },
-      ],
-    },
+    // {
+    //   title: 'Users',
+    //   url: '/users',
+    //   icon: Bot,
+    // },
+    // {
+    //   title: 'API',
+    //   url: '/api',
+    //   icon: BookOpen,
+    // },
+    // {
+    //   title: 'Settings',
+    //   url: '#',
+    //   icon: Settings2,
+    //   items: [
+    //     {
+    //       title: 'General',
+    //       url: '#',
+    //     },
+    //     {
+    //       title: 'Team',
+    //       url: '#',
+    //     },
+    //     {
+    //       title: 'Billing',
+    //       url: '#',
+    //     },
+    //     {
+    //       title: 'Limits',
+    //       url: '#',
+    //     },
+    //   ],
+    // },
   ],
   navSecondary: [
+    // {
+    //   title: 'Developer',
+    //   url: '#',
+    //   icon: LifeBuoy,
+    // },
     {
-      title: 'Support',
-      url: '#',
-      icon: LifeBuoy,
-    },
-    {
-      title: 'Feedback',
-      url: '#',
-      icon: Send,
-    },
-  ],
-  projects: [
-    {
-      name: 'Other Section',
-      url: '#',
-      icon: Frame,
+      title: 'Settings',
+      url: '/settings',
+      icon: Cog,
     },
   ],
-};
+  // projects: [
+  //   {
+  //     name: 'Other Section',
+  //     url: '#',
+  //     icon: Frame,
+  //   },
+  // ],
+}));
 </script>
 
 <template>
@@ -111,8 +135,8 @@ const data = {
                 <Command class="size-4" />
               </div>
               <div class="grid flex-1 text-left text-sm leading-tight">
-                <span class="truncate font-medium">Acme Inc</span>
-                <span class="truncate text-xs">Enterprise</span>
+                <span class="truncate font-medium">{{ config.appName }}</span>
+                <span class="truncate text-xs"></span>
               </div>
             </RouterLink>
           </SidebarMenuButton>
@@ -121,10 +145,11 @@ const data = {
     </SidebarHeader>
     <SidebarContent>
       <NavMain :items="data.navMain" />
-      <NavProjects :projects="data.projects" />
+      <!-- <NavProjects :projects="data.projects" /> -->
       <NavSecondary :items="data.navSecondary" class="mt-auto" />
     </SidebarContent>
     <SidebarFooter>
+      <ThemeToggle />
       <NavUser :user="data.user" />
     </SidebarFooter>
   </Sidebar>

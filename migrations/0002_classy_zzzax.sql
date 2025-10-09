@@ -1,0 +1,1 @@
+ALTER TABLE `project_stats` ADD `language_stats` text;

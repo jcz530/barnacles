@@ -1,0 +1,60 @@
+<script setup lang="ts">
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
+import { onMounted } from 'vue';
+import Card from '../components/ui/card/Card.vue';
+import CardHeader from '../components/ui/card/CardHeader.vue';
+import CardTitle from '../components/ui/card/CardTitle.vue';
+import CardDescription from '../components/ui/card/CardDescription.vue';
+import CardContent from '../components/ui/card/CardContent.vue';
+import ScanMaxDepthSetting from '../components/organisms/ScanMaxDepthSetting.vue';
+import DefaultIDESetting from '../components/organisms/DefaultIDESetting.vue';
+import DefaultTerminalSetting from '../components/organisms/DefaultTerminalSetting.vue';
+
+const { setBreadcrumbs } = useBreadcrumbs();
+
+onMounted(() => {
+  setBreadcrumbs([{ label: 'Settings' }]);
+});
+</script>
+
+<template>
+  <div>
+    <section class="mt-8">
+      <div class="mb-6">
+        <h2 class="text-2xl font-semibold">Settings</h2>
+        <p class="text-muted-foreground mt-1">Manage your application preferences</p>
+      </div>
+
+      <div class="space-y-6">
+        <!-- Project Scanning Settings -->
+        <Card>
+          <CardHeader>
+            <CardTitle>Project Scanning</CardTitle>
+            <CardDescription>Configure how projects are discovered and scanned</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScanMaxDepthSetting />
+          </CardContent>
+        </Card>
+
+        <!-- Default Applications -->
+        <Card>
+          <CardHeader>
+            <CardTitle>Default Applications</CardTitle>
+            <CardDescription
+              >Set your preferred IDE and terminal for opening projects</CardDescription
+            >
+          </CardHeader>
+          <CardContent>
+            <div class="space-y-6">
+              <DefaultIDESetting />
+              <DefaultTerminalSetting />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </section>
+  </div>
+</template>
+
+<style scoped></style>

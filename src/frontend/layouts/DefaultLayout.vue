@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import NavBreadcrumbs from '@/components/nav/molecules/NavBreadcrumbs.vue';
 import { provideBreadcrumbs } from '@/composables/useBreadcrumbs';
+import { useHotkeys } from '@/composables/useHotkeys';
 import AppSidebar from '../components/nav/organisms/AppSidebar.vue';
 import { Separator } from '../components/ui/separator';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '../components/ui/sidebar';
 
 provideBreadcrumbs();
+useHotkeys();
 </script>
 
 <template>
@@ -19,6 +21,7 @@ provideBreadcrumbs();
           <NavBreadcrumbs />
         </div>
       </header>
+      <Separator class="bg-slate-700 opacity-20" />
       <main class="flex flex-1 flex-col gap-4 p-4 pt-0">
         <router-view />
       </main>

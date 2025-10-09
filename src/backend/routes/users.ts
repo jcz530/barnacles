@@ -1,9 +1,24 @@
 import { Hono } from 'hono';
+import { userInfo } from 'os';
 import { userService } from '../services/user-service';
 
 const users = new Hono();
 
 users
+  .get('/current', async c => {
+    const osUser = userInfo();
+    const username = osUser.username;
+
+    // Generate initials from username (first 2 chars uppercase)
+    const initials = username.slice(0, 2).toUpperCase();
+
+    return c.json({
+      name: username,
+      email: ``,
+      avatar: '',
+      initials: initials,
+    });
+  })
   .get('/', async c => {
     const allUsers = await userService.getUsers();
     return c.json(allUsers);

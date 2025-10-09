@@ -22,4 +22,28 @@ export const updateRuntimeConfig = (config: Partial<typeof RUNTIME_CONFIG>) => {
 export const API_ROUTES = {
   HELLO: '/api/hello',
   USERS: '/api/users',
+  USERS_CURRENT: '/api/users/current',
+  PROJECTS: '/api/projects',
+  PROJECTS_SCAN: '/api/projects/scan',
+  PROJECTS_TECHNOLOGIES: '/api/projects/meta/technologies',
+  PROJECTS_IDES_DETECTED: '/api/projects/ides/detected',
+  PROJECTS_IDES_AVAILABLE: '/api/projects/ides/available',
+  PROJECTS_TERMINALS_DETECTED: '/api/projects/terminals/detected',
+  PROJECTS_TERMINALS_AVAILABLE: '/api/projects/terminals/available',
+  TERMINALS: '/api/terminals',
+  TERMINALS_WS: '/api/terminals/ws',
+  PROCESSES: '/api/processes',
+  PROJECTS_PACKAGE_SCRIPTS: (id: string) => `/api/projects/${id}/package-scripts`,
+  PROJECTS_START_PROCESSES: (id: string) => `/api/projects/${id}/start-processes`,
+  PROJECTS_START: (id: string) => `/api/projects/${id}/start`,
+  PROJECTS_STOP: (id: string) => `/api/projects/${id}/stop`,
+  PROJECTS_PROCESS_STATUS: '/api/projects/process-status',
+  PROJECTS_STOP_PROCESS: (id: string, processId: string) =>
+    `/api/projects/${id}/processes/${processId}/stop`,
+  PROJECTS_PROCESS_OUTPUT: (id: string, processId: string) =>
+    `/api/projects/${id}/processes/${processId}/output`,
+  SETTINGS: '/api/settings',
+  SETTINGS_KEY: (key: string) => `/api/settings/${key}`,
+  SETTINGS_RESET: '/api/settings/reset',
+  SYSTEM_HOSTS: '/api/system/hosts',
 } as const;

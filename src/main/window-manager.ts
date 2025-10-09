@@ -1,8 +1,8 @@
-import { BrowserWindow } from 'electron';
+import { app, BrowserWindow, session } from 'electron';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { APP_CONFIG } from '../shared/constants';
-import { createRequire } from 'node:module';
 
 createRequire(import.meta.url);
 
@@ -17,7 +17,38 @@ const checkViteDevServer = async (): Promise<boolean> => {
   }
 };
 
-export const createWindow = async (): Promise<BrowserWindow> => {
+export const createWindow = async (apiPort?: number): Promise<BrowserWindow> => {
+  // Set Content Security Policy
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    // Build connect-src with specific ports if available
+    const viteDevServer = 'ws://localhost:5173';
+    const apiServer = apiPort
+      ? `http://localhost:${apiPort} ws://localhost:${apiPort}`
+      : 'http://localhost:* ws://localhost:*';
+    const connectSrc = `'self' ${apiServer} ${viteDevServer}`;
+
+    // Build img-src to allow images from API server
+    const imgSrc = apiPort
+      ? `'self' data: blob: http://localhost:${apiPort}`
+      : "'self' data: blob: http://localhost:*";
+
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'; " +
+            "script-src 'self'; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            `img-src ${imgSrc}; ` +
+            "font-src 'self' data:; " +
+            `connect-src ${connectSrc}; ` +
+            "object-src 'none'; " +
+            "base-uri 'self'",
+        ],
+      },
+    });
+  });
+
   const mainWindow = new BrowserWindow({
     width: APP_CONFIG.WINDOW_SIZE.width,
     height: APP_CONFIG.WINDOW_SIZE.height,
@@ -41,8 +72,10 @@ export const createWindow = async (): Promise<BrowserWindow> => {
   const isDevServer = await checkViteDevServer();
   if (isDevServer) {
     mainWindow.loadURL('http://localhost:5173');
-    // Open DevTools in development
-    mainWindow.webContents.openDevTools();
+    // Open DevTools only in development (not in production build)
+    if (!app.isPackaged) {
+      mainWindow.webContents.openDevTools();
+    }
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
