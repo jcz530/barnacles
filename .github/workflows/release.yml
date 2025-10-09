@@ -20,7 +20,7 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            arch: x64
+            arch: arm64
           # - os: ubuntu-latest
           #   arch: x64
           # - os: windows-latest
@@ -54,7 +54,7 @@ jobs:
 
       - name: Package application (macOS)
         if: matrix.os == 'macos-latest'
-        run: npx --yes electron-builder --mac
+        run: npx --yes electron-builder --mac --${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
