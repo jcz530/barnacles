@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - 'v*'
+  # pull_request:
+  #   branches:
+  #     - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   release:
@@ -13,11 +20,11 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            arch: x64
-          - os: ubuntu-latest
-            arch: x64
-          - os: windows-latest
-            arch: x64
+            arch: arm64
+          # - os: ubuntu-latest
+          #   arch: x64
+          # - os: windows-latest
+          #   arch: x64
 
     steps:
       - name: Check out Git repository
@@ -34,20 +41,18 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Prune dev dependencies
+      - name: Prune dev dependencies (keep optional platform packages)
         run: npm prune --omit=dev
 
-      - name: Create dummy libsql packages (for missing optional dependencies)
+      - name: Create placeholder for missing libsql platform packages
         shell: bash
         run: |
-          for pkg in darwin-x64 linux-arm-gnueabihf linux-arm-musleabihf linux-arm64-gnu linux-arm64-musl linux-x64-gnu linux-x64-musl win32-x64-msvc; do
-            mkdir -p "node_modules/@libsql/$pkg"
-            echo "{\"name\":\"@libsql/$pkg\",\"version\":\"0.5.22\"}" > "node_modules/@libsql/$pkg/package.json"
-          done
+          mkdir -p node_modules/@libsql/darwin-x64
+          echo '{"name":"@libsql/darwin-x64","version":"0.0.0"}' > node_modules/@libsql/darwin-x64/package.json
 
       - name: Package application (macOS)
         if: matrix.os == 'macos-latest'
-        run: npx --yes electron-builder --mac
+        run: npx --yes electron-builder --mac --${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

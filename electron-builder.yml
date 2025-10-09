@@ -54,10 +54,8 @@ publish:
 mac:
   icon: assets/icons/app.icns
   category: public.app-category.productivity
-  hardenedRuntime: true
+  hardenedRuntime: false
   gatekeeperAssess: false
-  entitlements: build/entitlements.mac.plist
-  entitlementsInherit: build/entitlements.mac.inherit.plist
 
 # DMG configuration with custom background
 dmg:
