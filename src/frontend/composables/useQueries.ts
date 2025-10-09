@@ -12,7 +12,6 @@ import type {
   Setting,
   Technology,
   Terminal,
-  TerminalInstance,
   User,
 } from '../../shared/types/api';
 import { useApi } from './useApi';
@@ -487,97 +486,6 @@ export const useQueries = () => {
     });
   };
 
-  // Get all terminal instances or filter by project
-  const useTerminalInstancesQuery = (
-    projectId?: MaybeRef<string>,
-    options?: { enabled?: boolean }
-  ) => {
-    return useQuery({
-      queryKey: projectId ? ['terminal-instances', unref(projectId)] : ['terminal-instances'],
-      queryFn: async () => {
-        const params = new URLSearchParams();
-        const pid = unref(projectId);
-        if (pid) params.append('projectId', pid);
-
-        const query = params.toString() ? `?${params.toString()}` : '';
-        const response = await apiCall<ApiResponse<TerminalInstance[]>>(
-          'GET',
-          `${API_ROUTES.TERMINALS}${query}`
-        );
-
-        if (!response) {
-          throw new Error('Failed to fetch terminal instances');
-        }
-
-        return response.data || [];
-      },
-      enabled: options?.enabled ?? true,
-      refetchInterval: 5000, // Auto-refresh every 5 seconds
-    });
-  };
-
-  // Get a single terminal instance
-  const useTerminalInstanceQuery = (
-    terminalId: MaybeRef<string>,
-    options?: { enabled?: boolean }
-  ) => {
-    return useQuery({
-      queryKey: ['terminal-instance', unref(terminalId)],
-      queryFn: async () => {
-        const response = await apiCall<ApiResponse<TerminalInstance>>(
-          'GET',
-          `${API_ROUTES.TERMINALS}/${unref(terminalId)}`
-        );
-
-        if (!response) {
-          throw new Error('Failed to fetch terminal instance');
-        }
-
-        return response.data;
-      },
-      enabled: options?.enabled ?? true,
-    });
-  };
-
-  // Create a new terminal instance
-  const useCreateTerminalMutation = () => {
-    return useMutation({
-      mutationFn: async (params: {
-        cwd?: string;
-        projectId?: string;
-        command?: string;
-        title?: string;
-      }) => {
-        const response = await apiCall<ApiResponse<TerminalInstance>>(
-          'POST',
-          API_ROUTES.TERMINALS,
-          params
-        );
-
-        if (!response) {
-          throw new Error('Failed to create terminal');
-        }
-
-        return response.data;
-      },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['terminal-instances'] });
-      },
-    });
-  };
-
-  // Kill a terminal instance
-  const useKillTerminalMutation = () => {
-    return useMutation({
-      mutationFn: async (terminalId: string) => {
-        await apiCall('DELETE', `${API_ROUTES.TERMINALS}/${terminalId}`);
-      },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['terminal-instances'] });
-      },
-    });
-  };
-
   // Settings queries
   const useSettingsQuery = (options?: { enabled?: boolean }) => {
     return useQuery({
@@ -993,10 +901,6 @@ export const useQueries = () => {
     useProjectReadmeQuery,
     useProjectPackageScriptsQuery,
     useProjectComposerScriptsQuery,
-    useTerminalInstancesQuery,
-    useTerminalInstanceQuery,
-    useCreateTerminalMutation,
-    useKillTerminalMutation,
     useSettingsQuery,
     useSettingQuery,
     useUpdateSettingMutation,

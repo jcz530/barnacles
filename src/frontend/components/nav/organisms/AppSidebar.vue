@@ -36,9 +36,9 @@ const { data: currentUser } = useQuery({
   queryFn: () => apiCall('GET', API_ROUTES.USERS_CURRENT),
 });
 
-// Fetch projects and terminals for counts
+// Fetch projects and processes for counts
 const { data: projects } = queries.useProjectsQuery({ enabled: true });
-const { data: terminals } = queries.useTerminalInstancesQuery();
+const { data: processes } = queries.useProcessesQuery();
 
 const data = computed(() => ({
   user: currentUser.value || {
@@ -64,7 +64,7 @@ const data = computed(() => ({
       title: 'Processes',
       url: '/terminals',
       icon: SquareTerminal,
-      count: terminals.value?.length ?? 0,
+      count: processes.value?.length ?? 0,
     },
     // {
     //   title: 'Users',
