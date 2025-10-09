@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - 'v*'
+  # pull_request:
+  #   branches:
+  #     - main
+  workflow_dispatch:
 
 jobs:
   release:
@@ -14,10 +18,10 @@ jobs:
         include:
           - os: macos-latest
             arch: x64
-          - os: ubuntu-latest
-            arch: x64
-          - os: windows-latest
-            arch: x64
+          # - os: ubuntu-latest
+          #   arch: x64
+          # - os: windows-latest
+          #   arch: x64
 
     steps:
       - name: Check out Git repository
