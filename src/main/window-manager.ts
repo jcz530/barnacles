@@ -1,4 +1,4 @@
-import { BrowserWindow, session } from 'electron';
+import { app, BrowserWindow, session } from 'electron';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,6 +27,11 @@ export const createWindow = async (apiPort?: number): Promise<BrowserWindow> => 
       : 'http://localhost:* ws://localhost:*';
     const connectSrc = `'self' ${apiServer} ${viteDevServer}`;
 
+    // Build img-src to allow images from API server
+    const imgSrc = apiPort
+      ? `'self' data: blob: http://localhost:${apiPort}`
+      : "'self' data: blob: http://localhost:*";
+
     callback({
       responseHeaders: {
         ...details.responseHeaders,
@@ -34,7 +39,7 @@ export const createWindow = async (apiPort?: number): Promise<BrowserWindow> => 
           "default-src 'self'; " +
             "script-src 'self'; " +
             "style-src 'self' 'unsafe-inline'; " +
-            `img-src 'self' data: http://localhost:${apiPort || '*'}; ` +
+            `img-src ${imgSrc}; ` +
             "font-src 'self' data:; " +
             `connect-src ${connectSrc}; ` +
             "object-src 'none'; " +
@@ -67,8 +72,10 @@ export const createWindow = async (apiPort?: number): Promise<BrowserWindow> => 
   const isDevServer = await checkViteDevServer();
   if (isDevServer) {
     mainWindow.loadURL('http://localhost:5173');
-    // Open DevTools in development
-    mainWindow.webContents.openDevTools();
+    // Open DevTools only in development (not in production build)
+    if (!app.isPackaged) {
+      mainWindow.webContents.openDevTools();
+    }
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
