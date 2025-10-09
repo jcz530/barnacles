@@ -81,12 +81,6 @@ export const useQueries = () => {
         if (includeArchived) params.append('includeArchived', 'true');
 
         const query = params.toString() ? `?${params.toString()}` : '';
-        console.log('[useProjectsQuery] Fetching projects with:', {
-          search,
-          technologies,
-          includeArchived,
-          url: `${API_ROUTES.PROJECTS}${query}`,
-        });
 
         const response = await apiCall<ApiResponse<ProjectWithDetails[]>>(
           'GET',

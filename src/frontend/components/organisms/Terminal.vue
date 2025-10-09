@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
+import { Terminal } from '@xterm/xterm';
+import '@xterm/xterm/css/xterm.css';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { RUNTIME_CONFIG } from '../../../shared/constants';
-import '@xterm/xterm/css/xterm.css';
 
 const props = defineProps<{
   terminalId: string;
@@ -85,9 +85,9 @@ const connectWebSocket = () => {
   const wsUrl = RUNTIME_CONFIG.API_BASE_URL.replace('http', 'ws');
   ws = new WebSocket(`${wsUrl}/api/terminals/ws?id=${props.terminalId}`);
 
-  ws.onopen = () => {
-    console.log('WebSocket connected');
-  };
+  // ws.onopen = () => {
+  // console.log('WebSocket connected');
+  // };
 
   ws.onmessage = event => {
     if (terminal) {
@@ -96,14 +96,14 @@ const connectWebSocket = () => {
   };
 
   ws.onclose = () => {
-    console.log('WebSocket closed');
+    // console.log('WebSocket closed');
     if (terminal) {
       terminal.write('\r\n[Connection closed]\r\n');
     }
   };
 
   ws.onerror = error => {
-    console.error('WebSocket error:', error);
+    // console.error('WebSocket error:', error);
     if (terminal) {
       terminal.write('\r\n[Connection error]\r\n');
     }

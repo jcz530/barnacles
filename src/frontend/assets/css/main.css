@@ -2,7 +2,22 @@
 @import 'tw-animate-css';
 @plugin '@tailwindcss/typography';
 @custom-variant dark (&: is(.dark *));
+@import url('https://fonts.googleapis.com/css2?family=Istok+Web:wght@400;700&display=swap');
 
+/* Heading styles with Istok Web font */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Istok Web', sans-serif !important;
+  font-weight: 700 !important;
+}
+p {
+  font-family: 'Istok Web', sans-serif !important;
+  font-weight: 400 !important;
+}
 @theme inline {
   --color-white: var(--color-slate-800);
 

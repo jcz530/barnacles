@@ -16,7 +16,7 @@ export class TerminalWebSocketService {
     });
 
     this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-      console.log('WebSocket connection established');
+      // console.log('WebSocket connection established');
 
       // Extract terminal ID from query params
       const url = new URL(req.url || '', `http://${req.headers.host}`);

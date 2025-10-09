@@ -1,10 +1,8 @@
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { createApp } from 'vue';
-import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
 import App from './App.vue';
-import router from './router';
 import './assets/css/main.css';
-
-console.log('👋 Vue app starting in Electron renderer process');
+import router from './router';
 
 // Create QueryClient for TanStack Query
 const queryClient = new QueryClient({
