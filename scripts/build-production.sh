@@ -13,14 +13,19 @@ cp package-lock.json package-lock.json.bak
 echo "Removing node_modules..."
 rm -rf node_modules
 
-echo "Installing production dependencies only..."
+echo "Installing production dependencies..."
 npm ci --omit=dev
 
-echo "Creating dummy packages for missing libsql optional dependencies..."
-for pkg in darwin-x64 linux-arm-gnueabihf linux-arm-musleabihf linux-arm64-gnu linux-arm64-musl linux-x64-gnu linux-x64-musl win32-x64-msvc; do
-  mkdir -p "node_modules/@libsql/$pkg"
-  echo "{\"name\":\"@libsql/$pkg\",\"version\":\"0.5.22\"}" > "node_modules/@libsql/$pkg/package.json"
-done
+echo "Verifying production-only install..."
+echo "Number of packages installed: $(ls node_modules | wc -l | tr -d ' ')"
+if [ -d "node_modules/electron" ]; then
+  echo "ERROR: electron (dev dependency) was installed!"
+  exit 1
+fi
+
+echo "Creating placeholder directories for missing libsql platform packages..."
+mkdir -p node_modules/@libsql/darwin-x64
+echo '{"name":"@libsql/darwin-x64","version":"0.0.0"}' > node_modules/@libsql/darwin-x64/package.json
 
 echo "Running electron-builder for platform: $PLATFORM"
 npx --yes electron-builder "$PLATFORM"
