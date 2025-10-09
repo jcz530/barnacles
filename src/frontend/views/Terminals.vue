@@ -2,9 +2,7 @@
 import { Terminal as TerminalIcon } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import type { TerminalInstance } from '../../shared/types/api';
-import TerminalCard from '../components/molecules/TerminalCard.vue';
-import Terminal from '../components/organisms/Terminal.vue';
+import ProcessOutput from '../components/organisms/ProcessOutput.vue';
 import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/skeleton';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
@@ -12,13 +10,14 @@ import { useQueries } from '../composables/useQueries';
 
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
-const { useTerminalInstancesQuery, useKillTerminalMutation, useProjectsQuery } = useQueries();
+const { useProcessesQuery, useKillProcessMutation, useProjectsQuery, useProcessOutputByIdQuery } =
+  useQueries();
 
-const { data: terminals, isLoading } = useTerminalInstancesQuery();
+const { data: processes, isLoading } = useProcessesQuery();
 const { data: projects } = useProjectsQuery();
-const killTerminalMutation = useKillTerminalMutation();
+const killProcessMutation = useKillProcessMutation();
 
-const selectedTerminal = ref<string | null>(null);
+const selectedProcess = ref<string | null>(null);
 
 // Helper to get project name by ID
 const getProjectName = (projectId?: string) => {
@@ -31,39 +30,48 @@ const navigateToProject = (projectId: string) => {
   router.push(`/projects/${projectId}`);
 };
 
-const activeTerminals = computed(() => {
-  return terminals.value?.filter(t => t.status === 'running') || [];
+// Fetch process output for selected process
+const { data: processOutput } = useProcessOutputByIdQuery(
+  computed(() => selectedProcess.value || ''),
+  {
+    enabled: computed(() => !!selectedProcess.value),
+    refetchInterval: 1000,
+  }
+);
+
+const activeProcesses = computed(() => {
+  return processes.value?.filter(p => p.status === 'running') || [];
 });
 
-const exitedTerminals = computed(() => {
-  return terminals.value?.filter(t => t.status === 'exited') || [];
+const stoppedProcesses = computed(() => {
+  return processes.value?.filter(p => p.status === 'stopped' || p.status === 'failed') || [];
 });
 
 onMounted(() => {
   setBreadcrumbs([{ label: 'Processes' }]);
 
-  // Auto-select the first terminal if available
-  if (activeTerminals.value.length > 0 && !selectedTerminal.value) {
-    selectedTerminal.value = activeTerminals.value[0].id;
+  // Auto-select the first process if available
+  if (activeProcesses.value.length > 0 && !selectedProcess.value) {
+    selectedProcess.value = activeProcesses.value[0].processId;
   }
 });
 
-const handleKillTerminal = async (terminalId: string) => {
+const handleKillProcess = async (processId: string) => {
   try {
-    await killTerminalMutation.mutateAsync(terminalId);
+    await killProcessMutation.mutateAsync(processId);
 
-    // If we killed the selected terminal, select another one
-    if (selectedTerminal.value === terminalId) {
-      const remaining = activeTerminals.value.filter(t => t.id !== terminalId);
-      selectedTerminal.value = remaining.length > 0 ? remaining[0].id : null;
+    // If we killed the selected process, select another one
+    if (selectedProcess.value === processId) {
+      const remaining = activeProcesses.value.filter(p => p.processId !== processId);
+      selectedProcess.value = remaining.length > 0 ? remaining[0].processId : null;
     }
   } catch (error) {
-    console.error('Failed to kill terminal:', error);
+    console.error('Failed to kill process:', error);
   }
 };
 
-const selectTerminal = (terminal: TerminalInstance) => {
-  selectedTerminal.value = terminal.id;
+const selectProcess = (process: any) => {
+  selectedProcess.value = process.processId;
 };
 </script>
 
@@ -81,14 +89,14 @@ const selectTerminal = (terminal: TerminalInstance) => {
 
     <!-- Content -->
     <div class="flex flex-1 overflow-hidden">
-      <!-- Sidebar with terminal list -->
+      <!-- Sidebar with process list -->
       <div class="w-80 overflow-y-auto border-r bg-slate-50 p-4">
         <div v-if="isLoading" class="space-y-2">
           <Skeleton v-for="i in 3" :key="i" class="h-20 w-full" />
         </div>
 
         <div
-          v-else-if="activeTerminals.length === 0 && exitedTerminals.length === 0"
+          v-else-if="activeProcesses.length === 0 && stoppedProcesses.length === 0"
           class="py-8 text-center"
         >
           <TerminalIcon class="mx-auto h-12 w-12 text-slate-400" />
@@ -97,53 +105,95 @@ const selectTerminal = (terminal: TerminalInstance) => {
         </div>
 
         <div v-else class="space-y-4">
-          <!-- Active Terminals -->
-          <div v-if="activeTerminals.length > 0">
+          <!-- Active Processes -->
+          <div v-if="activeProcesses.length > 0">
             <h3 class="mb-2 text-sm font-semibold text-slate-700">
-              Running ({{ activeTerminals.length }})
+              Running ({{ activeProcesses.length }})
             </h3>
             <div class="space-y-2">
-              <TerminalCard
-                v-for="terminal in activeTerminals"
-                :key="terminal.id"
-                :terminal="terminal"
-                :is-selected="selectedTerminal === terminal.id"
-                :project-name="getProjectName(terminal.projectId)"
-                :show-cwd="true"
-                :on-kill="handleKillTerminal"
-                :on-project-click="navigateToProject"
-                :is-killing="!!killTerminalMutation.isPending"
-                @select="selectTerminal"
-              />
+              <div
+                v-for="process in activeProcesses"
+                :key="process.processId"
+                :class="[
+                  'cursor-pointer rounded-lg border p-3 transition-all',
+                  selectedProcess === process.processId
+                    ? 'border-sky-500 bg-sky-50'
+                    : 'border-slate-200 bg-white hover:border-slate-300',
+                ]"
+                @click="selectProcess(process)"
+              >
+                <div class="flex items-start justify-between">
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-medium">
+                      {{ process.title || process.name || process.command || 'Process' }}
+                    </p>
+                    <p
+                      v-if="getProjectName(process.projectId)"
+                      class="mt-1 truncate text-xs text-slate-500 hover:text-sky-600"
+                      @click.stop="navigateToProject(process.projectId)"
+                    >
+                      {{ getProjectName(process.projectId) }}
+                    </p>
+                    <p v-if="process.cwd" class="mt-1 truncate text-xs text-slate-400">
+                      {{ process.cwd }}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    class="ml-2 h-6 w-6 flex-shrink-0 p-0"
+                    @click.stop="handleKillProcess(process.processId)"
+                  >
+                    ×
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Exited Terminals -->
-          <div v-if="exitedTerminals.length > 0">
+          <!-- Stopped Processes -->
+          <div v-if="stoppedProcesses.length > 0">
             <h3 class="mb-2 text-sm font-semibold text-slate-700">
-              Exited ({{ exitedTerminals.length }})
+              Stopped ({{ stoppedProcesses.length }})
             </h3>
             <div class="space-y-2">
-              <TerminalCard
-                v-for="terminal in exitedTerminals"
-                :key="terminal.id"
-                :terminal="terminal"
-                :is-selected="selectedTerminal === terminal.id"
-                :project-name="getProjectName(terminal.projectId)"
-                :show-cwd="true"
-                :on-kill="handleKillTerminal"
-                :on-project-click="navigateToProject"
-                @select="selectTerminal"
-              />
+              <div
+                v-for="process in stoppedProcesses"
+                :key="process.processId"
+                :class="[
+                  'cursor-pointer rounded-lg border p-3 opacity-60 transition-all',
+                  selectedProcess === process.processId
+                    ? 'border-sky-500 bg-sky-50'
+                    : 'border-slate-200 bg-white hover:border-slate-300',
+                ]"
+                @click="selectProcess(process)"
+              >
+                <div class="flex items-start justify-between">
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-medium">
+                      {{ process.title || process.name || process.command || 'Process' }}
+                    </p>
+                    <p
+                      v-if="getProjectName(process.projectId)"
+                      class="mt-1 truncate text-xs text-slate-500"
+                    >
+                      {{ getProjectName(process.projectId) }}
+                    </p>
+                    <p class="mt-1 text-xs text-slate-400">
+                      {{ process.status === 'failed' ? 'Failed' : 'Stopped' }}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Terminal display area -->
+      <!-- Process display area -->
       <div class="flex-1 bg-[#1e1e1e] p-4">
-        <div v-if="selectedTerminal" class="h-full">
-          <Terminal :terminal-id="selectedTerminal" />
+        <div v-if="selectedProcess && processOutput" class="h-full">
+          <ProcessOutput :output="processOutput.output" />
         </div>
         <div v-else class="flex h-full items-center justify-center text-slate-400">
           <div class="text-center">

@@ -163,7 +163,6 @@ const navigateToProcess = () => {
               :project-path="project.path"
               :package-json-scripts="packageScripts"
               :composer-json-scripts="composerScripts"
-              :process-statuses="allProcessStatuses"
             />
           </TabsContent>
         </Tabs>

@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
+import processes from './processes';
 import projects from './projects';
 import settings from './settings';
 import system from './system';
-import terminals from './terminals';
 import users from './users';
 
 const api = new Hono();
@@ -26,7 +26,7 @@ api
 
   .route('/users', users)
   .route('/projects', projects)
-  .route('/terminals', terminals)
+  .route('/processes', processes)
   .route('/settings', settings)
   .route('/system', system);
 

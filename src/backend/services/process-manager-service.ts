@@ -1,6 +1,6 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import type { StartProcess, ProcessStatus, ProjectProcessStatus } from '../../shared/types/process';
+import type { ProcessStatus, ProjectProcessStatus, StartProcess } from '../../shared/types/process';
 
 const execAsync = promisify(exec);
 
@@ -14,6 +14,10 @@ interface RunningProcess {
   output: string[]; // Store output lines
   configuredUrl?: string; // URL from configuration
   detectedUrl?: string; // URL detected from output
+  title?: string; // Title for ad-hoc processes
+  cwd?: string; // Working directory for ad-hoc processes
+  command?: string; // Original command for ad-hoc processes
+  createdAt: Date; // Creation timestamp
 }
 
 class ProcessManagerService {
@@ -115,6 +119,7 @@ class ProcessManagerService {
           status: 'running',
           output: [],
           configuredUrl: process.url,
+          createdAt: new Date(),
         };
 
         // Capture stdout
@@ -320,6 +325,209 @@ class ProcessManagerService {
     }
 
     return false;
+  }
+
+  /**
+   * Create an ad-hoc process (for running scripts)
+   */
+  async createProcess(params: {
+    projectId?: string;
+    cwd?: string;
+    command?: string;
+    title?: string;
+  }): Promise<ProcessStatus> {
+    const processId = `adhoc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const projectId = params.projectId || 'global';
+
+    // Initialize project map if it doesn't exist
+    if (!this.runningProcesses.has(projectId)) {
+      this.runningProcesses.set(projectId, new Map());
+    }
+
+    const projectProcesses = this.runningProcesses.get(projectId)!;
+
+    // Determine the command to run
+    const command = params.command || process.env.SHELL || '/bin/bash';
+    const cwd = params.cwd || process.cwd();
+    const title = params.title || (params.command ? `Running: ${params.command}` : 'Process');
+
+    // Start the process
+    const childProcess = exec(command, {
+      cwd,
+      shell: '/bin/bash',
+    });
+
+    const bashId = `${projectId}-${processId}-${Date.now()}`;
+
+    const runningProcess: RunningProcess = {
+      name: title,
+      title,
+      command: params.command,
+      cwd,
+      bashId,
+      process: childProcess,
+      status: 'running',
+      output: [],
+      createdAt: new Date(),
+    };
+
+    // Capture stdout
+    childProcess.stdout?.on('data', (data: Buffer) => {
+      const text = data.toString();
+      runningProcess.output.push(text);
+
+      // Keep only last 1000 lines
+      if (runningProcess.output.length > 1000) {
+        runningProcess.output = runningProcess.output.slice(-1000);
+      }
+
+      // Try to detect URL
+      if (!runningProcess.detectedUrl) {
+        const detectedUrl = this.detectUrl(text);
+        if (detectedUrl) {
+          runningProcess.detectedUrl = detectedUrl;
+          console.log(`Detected URL for process ${title}: ${detectedUrl}`);
+        }
+      }
+    });
+
+    // Capture stderr
+    childProcess.stderr?.on('data', (data: Buffer) => {
+      const text = data.toString();
+      runningProcess.output.push(text);
+
+      if (runningProcess.output.length > 1000) {
+        runningProcess.output = runningProcess.output.slice(-1000);
+      }
+
+      if (!runningProcess.detectedUrl) {
+        const detectedUrl = this.detectUrl(text);
+        if (detectedUrl) {
+          runningProcess.detectedUrl = detectedUrl;
+        }
+      }
+    });
+
+    // Handle process exit
+    childProcess.on('exit', code => {
+      runningProcess.status = code === 0 ? 'stopped' : 'failed';
+      runningProcess.exitCode = code ?? undefined;
+    });
+
+    // Handle process errors
+    childProcess.on('error', error => {
+      runningProcess.status = 'failed';
+      runningProcess.error = error.message;
+    });
+
+    projectProcesses.set(processId, runningProcess);
+
+    return {
+      processId,
+      name: title,
+      status: 'running',
+      bashId,
+    };
+  }
+
+  /**
+   * Get all processes (for listing all processes across projects)
+   */
+  getAllProcesses(): ProcessStatus[] {
+    const allProcesses: ProcessStatus[] = [];
+
+    for (const [projectId, projectProcesses] of this.runningProcesses.entries()) {
+      for (const [processId, runningProcess] of projectProcesses.entries()) {
+        allProcesses.push({
+          processId,
+          name: runningProcess.name,
+          status: runningProcess.status,
+          bashId: runningProcess.bashId,
+          exitCode: runningProcess.exitCode,
+          error: runningProcess.error,
+          url: runningProcess.configuredUrl || runningProcess.detectedUrl,
+          detectedUrl: runningProcess.detectedUrl,
+        });
+      }
+    }
+
+    return allProcesses;
+  }
+
+  /**
+   * Get a single process by ID across all projects
+   */
+  getProcess(processId: string):
+    | (ProcessStatus & {
+        projectId: string;
+        title?: string;
+        cwd?: string;
+        command?: string;
+        createdAt?: Date;
+      })
+    | null {
+    for (const [projectId, projectProcesses] of this.runningProcesses.entries()) {
+      if (projectProcesses.has(processId)) {
+        const runningProcess = projectProcesses.get(processId)!;
+        return {
+          processId,
+          projectId,
+          name: runningProcess.name,
+          title: runningProcess.title,
+          cwd: runningProcess.cwd,
+          command: runningProcess.command,
+          status: runningProcess.status,
+          bashId: runningProcess.bashId,
+          exitCode: runningProcess.exitCode,
+          error: runningProcess.error,
+          url: runningProcess.configuredUrl || runningProcess.detectedUrl,
+          detectedUrl: runningProcess.detectedUrl,
+          createdAt: runningProcess.createdAt,
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Kill a specific process by ID (search across all projects)
+   */
+  async killProcess(processId: string): Promise<boolean> {
+    for (const [projectId, projectProcesses] of this.runningProcesses.entries()) {
+      if (projectProcesses.has(processId)) {
+        const runningProcess = projectProcesses.get(processId)!;
+
+        try {
+          runningProcess.process.kill('SIGTERM');
+          runningProcess.status = 'stopped';
+        } catch (error) {
+          console.error(`Failed to kill process ${processId}:`, error);
+        }
+
+        projectProcesses.delete(processId);
+
+        // Clean up project map if empty
+        if (projectProcesses.size === 0) {
+          this.runningProcesses.delete(projectId);
+        }
+
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Get output from a process by ID (search across all projects)
+   */
+  getProcessOutputById(processId: string): string[] | null {
+    for (const [projectId, projectProcesses] of this.runningProcesses.entries()) {
+      if (projectProcesses.has(processId)) {
+        const runningProcess = projectProcesses.get(processId)!;
+        return runningProcess.output;
+      }
+    }
+    return null;
   }
 
   /**

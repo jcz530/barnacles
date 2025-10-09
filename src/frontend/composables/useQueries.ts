@@ -840,6 +840,115 @@ export const useQueries = () => {
     });
   };
 
+  // Get all processes or filter by project (new unified API)
+  const useProcessesQuery = (projectId?: MaybeRef<string>, options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: projectId ? ['processes', unref(projectId)] : ['processes'],
+      queryFn: async () => {
+        const params = new URLSearchParams();
+        const pid = unref(projectId);
+        if (pid) params.append('projectId', pid);
+
+        const query = params.toString() ? `?${params.toString()}` : '';
+        const response = await apiCall<ApiResponse<any[]>>(
+          'GET',
+          `${API_ROUTES.PROCESSES}${query}`
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch processes');
+        }
+
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+      refetchInterval: 5000, // Auto-refresh every 5 seconds
+    });
+  };
+
+  // Get a single process by ID
+  const useProcessQuery = (processId: MaybeRef<string>, options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['process', unref(processId)],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<any>>(
+          'GET',
+          `${API_ROUTES.PROCESSES}/${unref(processId)}`
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch process');
+        }
+
+        return response.data;
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
+  // Create a new process (ad-hoc script run)
+  const useCreateProcessMutation = () => {
+    return useMutation({
+      mutationFn: async (params: {
+        cwd?: string;
+        projectId?: string;
+        command?: string;
+        title?: string;
+      }) => {
+        const response = await apiCall<ApiResponse<any>>('POST', API_ROUTES.PROCESSES, params);
+
+        if (!response) {
+          throw new Error('Failed to create process');
+        }
+
+        return response.data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['processes'] });
+      },
+    });
+  };
+
+  // Kill a process by ID
+  const useKillProcessMutation = () => {
+    return useMutation({
+      mutationFn: async (processId: string) => {
+        await apiCall('DELETE', `${API_ROUTES.PROCESSES}/${processId}`);
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['processes'] });
+      },
+    });
+  };
+
+  // Get process output by ID
+  const useProcessOutputByIdQuery = (
+    processId: MaybeRef<string>,
+    options?: { enabled?: MaybeRef<boolean>; refetchInterval?: number }
+  ) => {
+    return useQuery({
+      queryKey: computed(() => ['process', unref(processId), 'output'] as const),
+      queryFn: async () => {
+        const procId = unref(processId);
+        const response = await apiCall<ApiResponse<{ output: string; lines: string[] }>>(
+          'GET',
+          `${API_ROUTES.PROCESSES}/${procId}/output`
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch process output');
+        }
+
+        return response.data;
+      },
+      enabled: computed(() => {
+        const enabled = options?.enabled;
+        return enabled ? unref(enabled) : true;
+      }),
+      refetchInterval: options?.refetchInterval ?? false,
+    });
+  };
+
   // Get hosts file entries
   const useHostsQuery = (options?: { enabled?: boolean }) => {
     return useQuery({
@@ -899,6 +1008,11 @@ export const useQueries = () => {
     useProcessStatusQuery,
     useStopProcessMutation,
     useProcessOutputQuery,
+    useProcessesQuery,
+    useProcessQuery,
+    useCreateProcessMutation,
+    useKillProcessMutation,
+    useProcessOutputByIdQuery,
     useHostsQuery,
   };
 };
