@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Get platform argument (defaults to --mac if not specified)
+PLATFORM="${1:---mac}"
+
 echo "Building application..."
 npm run build
 
@@ -19,8 +22,8 @@ for pkg in darwin-x64 linux-arm-gnueabihf linux-arm-musleabihf linux-arm64-gnu l
   echo "{\"name\":\"@libsql/$pkg\",\"version\":\"0.5.22\"}" > "node_modules/@libsql/$pkg/package.json"
 done
 
-echo "Running electron-builder..."
-npx --yes electron-builder --mac
+echo "Running electron-builder for platform: $PLATFORM"
+npx --yes electron-builder "$PLATFORM"
 
 echo "Restoring development dependencies..."
 rm -rf node_modules

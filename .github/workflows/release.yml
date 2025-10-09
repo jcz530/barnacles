@@ -34,21 +34,32 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Prune dev dependencies
+        run: npm prune --omit=dev
+
+      - name: Create dummy libsql packages (for missing optional dependencies)
+        shell: bash
+        run: |
+          for pkg in darwin-x64 linux-arm-gnueabihf linux-arm-musleabihf linux-arm64-gnu linux-arm64-musl linux-x64-gnu linux-x64-musl win32-x64-msvc; do
+            mkdir -p "node_modules/@libsql/$pkg"
+            echo "{\"name\":\"@libsql/$pkg\",\"version\":\"0.5.22\"}" > "node_modules/@libsql/$pkg/package.json"
+          done
+
       - name: Package application (macOS)
         if: matrix.os == 'macos-latest'
-        run: npm run dist:mac
+        run: npx --yes electron-builder --mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package application (Windows)
         if: matrix.os == 'windows-latest'
-        run: npm run dist:win
+        run: npx --yes electron-builder --win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Package application (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: npm run dist:linux
+        run: npx --yes electron-builder --linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
