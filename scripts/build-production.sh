@@ -33,6 +33,6 @@ npx --yes electron-builder "$PLATFORM"
 echo "Restoring development dependencies..."
 rm -rf node_modules
 mv package-lock.json.bak package-lock.json
-npm ci
-
-echo "Build complete!"
+# npm ci
+echo "⚠️ If you ran this locally, you'll need to reinstall your dependencies"
+echo "✅ Build complete!"
