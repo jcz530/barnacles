@@ -63,6 +63,7 @@ mac:
 dmg:
   title: '${productName} ${version}'
   icon: assets/icons/app.icns
+  background: assets/dmg-background.png
   # backgroundColor: 'F6E3EF'
   window:
     width: 540
