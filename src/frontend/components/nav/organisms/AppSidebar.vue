@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SidebarProps } from '@/components/ui/sidebar';
 
+import LogoMark from '@/assets/logo-mark.svg';
 import NavMain from '@/components/nav/molecules/NavMain.vue';
 import NavSecondary from '@/components/nav/molecules/NavSecondary.vue';
 import NavUser from '@/components/nav/molecules/NavUser.vue';
@@ -18,8 +19,9 @@ import { useApi } from '@/composables/useApi';
 import { useConfigs } from '@/composables/useConfigs';
 import { useQueries } from '@/composables/useQueries';
 import { useQuery } from '@tanstack/vue-query';
-import { Cog, Command, FolderGit2, SquareTerminal } from 'lucide-vue-next';
+import { Cog, FolderGit2, SquareTerminal } from 'lucide-vue-next';
 import { computed } from 'vue';
+import { useRoute } from 'vue-router';
 import { API_ROUTES } from '../../../../shared/constants';
 
 const props = withDefaults(defineProps<SidebarProps>(), {
@@ -29,6 +31,7 @@ const props = withDefaults(defineProps<SidebarProps>(), {
 const config = useConfigs();
 const { apiCall } = useApi();
 const queries = useQueries();
+const route = useRoute();
 
 // Fetch current OS user
 const { data: currentUser } = useQuery({
@@ -52,19 +55,21 @@ const data = computed(() => ({
       title: 'Dashboard',
       url: '/',
       icon: SquareTerminal,
-      isActive: true,
+      isActive: route.path === '/',
     },
     {
       title: 'Projects',
       url: '/projects',
       icon: FolderGit2,
       count: projects.value?.length ?? 0,
+      isActive: route.path.startsWith('/projects'),
     },
     {
       title: 'Processes',
       url: '/terminals',
       icon: SquareTerminal,
       count: processes.value?.length ?? 0,
+      isActive: route.path.startsWith('/terminals'),
     },
     // {
     //   title: 'Users',
@@ -110,6 +115,7 @@ const data = computed(() => ({
       title: 'Settings',
       url: '/settings',
       icon: Cog,
+      isActive: route.path.startsWith('/settings'),
     },
   ],
   // projects: [
@@ -127,16 +133,16 @@ const data = computed(() => ({
     <SidebarHeader>
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton size="lg" as-child>
+          <SidebarMenuButton class="hover:bg-sidebar" size="lg" as-child>
             <RouterLink to="/">
               <div
-                class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
+                class="text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
               >
-                <Command class="size-4" />
+                <img :src="LogoMark" alt="Logo" class="size-8" />
               </div>
-              <div class="grid flex-1 text-left text-sm leading-tight">
-                <span class="truncate font-medium">{{ config.appName }}</span>
-                <span class="truncate text-xs"></span>
+              <div class="ml-2 grid flex-1 text-left text-lg leading-tight text-slate-600">
+                <span class="truncate font-semibold">{{ config.appName }}</span>
+                <!-- <span class="truncate text-xs"></span> -->
               </div>
             </RouterLink>
           </SidebarMenuButton>
