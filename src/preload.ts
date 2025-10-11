@@ -21,4 +21,5 @@ contextBridge.exposeInMainWorld('electron', {
     openPath: (path: string) => ipcRenderer.invoke('shell:open-path', path),
     openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url),
   },
+  updateWindowTitle: (title: string) => ipcRenderer.send('update-window-title', title),
 });

@@ -11,6 +11,7 @@ declare global {
         openPath: (path: string) => Promise<string>;
         openExternal: (url: string) => Promise<void>;
       };
+      updateWindowTitle: (title: string) => void;
     };
   }
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowLeft } from 'lucide-vue-next';
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ProcessIndicator from '../components/atoms/ProcessIndicator.vue';
 import ProjectIcon from '../components/atoms/ProjectIcon.vue';
@@ -49,6 +49,20 @@ onMounted(() => {
     { label: project.value?.name || 'Loading...' },
   ]);
 });
+
+// Update window title when project data loads
+watch(
+  () => project.value?.name,
+  projectName => {
+    if (projectName) {
+      document.title = projectName;
+      if (window.electron?.updateWindowTitle) {
+        window.electron.updateWindowTitle(projectName);
+      }
+    }
+  },
+  { immediate: true }
+);
 
 // Get running processes for this project
 const runningProcesses = useRunningProcesses(projectId, allProcessStatuses);

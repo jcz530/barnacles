@@ -3,6 +3,7 @@ import contextMenu from 'electron-context-menu';
 import started from 'electron-squirrel-startup';
 import { startServer } from '../backend/server';
 import { setupIPC } from './ipc';
+import { createMenu } from './menu';
 import { createWindow } from './window-manager';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
@@ -10,24 +11,55 @@ if (started) {
   app.quit();
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
-let mainWindow: BrowserWindow | null = null;
+// Track all windows
+const windows = new Set<BrowserWindow>();
+let apiPort: number | undefined;
 
 // Enable right-click context menu with Inspect Element in development mode
 contextMenu({
   showInspectElement: !app.isPackaged,
 });
 
+// Function to create and track a new window
+export const createAppWindow = async (): Promise<BrowserWindow> => {
+  const newWindow = await createWindow(apiPort);
+  windows.add(newWindow);
+
+  // Rebuild menu to update window list
+  createMenu();
+
+  newWindow.on('closed', () => {
+    windows.delete(newWindow);
+    // Rebuild menu to update window list
+    createMenu();
+  });
+
+  // Update menu when window focus changes
+  newWindow.on('focus', () => {
+    createMenu();
+  });
+
+  newWindow.on('blur', () => {
+    createMenu();
+  });
+
+  return newWindow;
+};
+
 const initialize = async (): Promise<void> => {
   try {
     // Start the API server
     const serverInfo = await startServer();
+    apiPort = serverInfo.port;
 
     // Setup IPC communication
     setupIPC();
 
+    // Create the application menu
+    createMenu();
+
     // Create the main window with the actual API port for CSP
-    mainWindow = await createWindow(serverInfo.port);
+    await createAppWindow();
 
     console.log('🚀 Application initialized successfully');
     console.log(`📡 API available at ${serverInfo.baseUrl}`);
@@ -50,13 +82,13 @@ app.on('window-all-closed', () => {
 app.on('activate', async () => {
   // On macOS, re-create a window when the dock icon is clicked
   if (BrowserWindow.getAllWindows().length === 0) {
-    mainWindow = await createWindow();
+    await createAppWindow();
   }
 });
 
-// Security: Prevent new window creation
+// Security: Prevent unauthorized new window creation
 app.on('web-contents-created', (_, contents) => {
-  contents.on('new-window', event => {
-    event.preventDefault();
+  contents.setWindowOpenHandler(() => {
+    return { action: 'deny' };
   });
 });
