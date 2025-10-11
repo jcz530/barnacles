@@ -11,8 +11,8 @@ useHotkeys();
 </script>
 
 <template>
-  <SidebarProvider>
-    <AppSidebar />
+  <SidebarProvider class="flex-1">
+    <AppSidebar class="pt-10" />
     <SidebarInset>
       <header class="flex h-16 shrink-0 items-center gap-2">
         <div class="flex items-center gap-2 px-4">

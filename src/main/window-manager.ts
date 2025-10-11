@@ -49,6 +49,8 @@ export const createWindow = async (apiPort?: number): Promise<BrowserWindow> => 
     });
   });
 
+  const isMac = process.platform === 'darwin';
+
   const mainWindow = new BrowserWindow({
     width: APP_CONFIG.WINDOW_SIZE.width,
     height: APP_CONFIG.WINDOW_SIZE.height,
@@ -59,7 +61,9 @@ export const createWindow = async (apiPort?: number): Promise<BrowserWindow> => 
       contextIsolation: true,
       nodeIntegration: false,
     },
-    titleBarStyle: 'default',
+    titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
+    trafficLightPosition: isMac ? { x: 10, y: 10 } : undefined,
+    frame: !isMac, // Keep frame on Windows/Linux for native controls
     show: false, // Don't show until ready-to-show
   });
 
