@@ -10,7 +10,6 @@ useColorInversion();
 
 <template>
   <div id="app">
-    <TitleBar />
     <div class="app-content">
       <router-view />
     </div>
