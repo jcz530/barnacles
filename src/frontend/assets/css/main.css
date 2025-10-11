@@ -1,8 +1,8 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import url('https://fonts.googleapis.com/css2?family=Istok+Web:wght@400;700&display=swap');
 @plugin '@tailwindcss/typography';
 @custom-variant dark (&: is(.dark *));
-@import url('https://fonts.googleapis.com/css2?family=Istok+Web:wght@400;700&display=swap');
 
 /* Heading styles with Istok Web font */
 h1,
@@ -21,17 +21,29 @@ p {
 @theme inline {
   --color-white: var(--color-slate-800);
 
-  --color-primary-50: var(--color-emerald-50);
-  --color-primary-100: var(--color-emerald-100);
-  --color-primary-200: var(--color-emerald-200);
-  --color-primary-300: var(--color-emerald-300);
-  --color-primary-400: var(--color-emerald-400);
-  --color-primary-500: var(--color-emerald-500);
-  --color-primary-600: var(--color-emerald-600);
-  --color-primary-700: var(--color-emerald-700);
-  --color-primary-800: var(--color-emerald-800);
-  --color-primary-900: var(--color-emerald-900);
-  --color-primary-950: var(--color-emerald-950);
+  --color-sky-50: #eaffff;
+  --color-sky-100: #cbfdff;
+  --color-sky-200: #9ef9ff;
+  --color-sky-300: #5bf1ff;
+  --color-sky-400: #02ddff;
+  --color-sky-500: #00c2e5;
+  --color-sky-600: #009ac0;
+  --color-sky-700: #037a9b;
+  --color-sky-800: #0d627d;
+  --color-sky-900: #105169;
+  --color-sky-950: #033549;
+
+  --color-primary-50: var(--color-sky-50);
+  --color-primary-100: var(--color-sky-100);
+  --color-primary-200: var(--color-sky-200);
+  --color-primary-300: var(--color-sky-300);
+  --color-primary-400: var(--color-sky-400);
+  --color-primary-500: var(--color-sky-500);
+  --color-primary-600: var(--color-sky-600);
+  --color-primary-700: var(--color-sky-700);
+  --color-primary-800: var(--color-sky-800);
+  --color-primary-900: var(--color-sky-900);
+  --color-primary-950: var(--color-sky-950);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);

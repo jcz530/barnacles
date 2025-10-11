@@ -1,7 +1,7 @@
 {
   "name": "barnacles",
   "productName": "Barnacles",
-  "version": "0.1.02",
+  "version": "0.1.03",
   "description": "App for developers",
   "main": "dist/main/main.js",
   "type": "module",

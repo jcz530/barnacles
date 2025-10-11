@@ -1,8 +1,10 @@
+![Barnacles](./assets/images/barnacles-social.png)
+
 # Barnacles
 
 A desktop application for developers to organize, manage, and analyze their coding projects. Barnacles automatically scans directories, detects technologies, tracks project metadata, and provides integrated terminals and IDE access.
 
-Barnacles provides tools for every day development. Easily find, open, or start your projects from a single interface.
+Barnacles provides tools for everyday development. Easily find, open, or start your projects from a single interface.
 
 ## Download
 

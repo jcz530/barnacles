@@ -4,19 +4,20 @@ import { provideBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useHotkeys } from '@/composables/useHotkeys';
 import AppSidebar from '../components/nav/organisms/AppSidebar.vue';
 import { Separator } from '../components/ui/separator';
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '../components/ui/sidebar';
+import { SidebarInset, SidebarProvider } from '../components/ui/sidebar';
+import TitleBar from '@/components/nav/molecules/TitleBar.vue';
 
 provideBreadcrumbs();
 useHotkeys();
 </script>
 
 <template>
-  <SidebarProvider>
-    <AppSidebar />
+  <SidebarProvider class="flex-1">
+    <TitleBar />
+    <AppSidebar class="pt-10" />
     <SidebarInset>
       <header class="flex h-16 shrink-0 items-center gap-2">
         <div class="flex items-center gap-2 px-4">
-          <SidebarTrigger class="-ml-1" />
           <Separator orientation="vertical" class="mr-2 data-[orientation=vertical]:h-4" />
           <NavBreadcrumbs />
         </div>

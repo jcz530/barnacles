@@ -57,4 +57,15 @@ const router = createRouter({
   routes,
 });
 
+// Update document title and window title on route changes
+router.afterEach(to => {
+  const pageTitle = (to.name as string) || 'Barnacles';
+  document.title = pageTitle;
+
+  // Notify Electron to update window title
+  if (window.electron?.updateWindowTitle) {
+    window.electron.updateWindowTitle(pageTitle);
+  }
+});
+
 export default router;
