@@ -3,6 +3,7 @@ import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router
 import DefaultLayout from '../layouts/DefaultLayout.vue';
 import Api from '../views/Api.vue';
 import Home from '../views/Home.vue';
+import Hosts from '../views/Hosts.vue';
 import ProjectDetail from '../views/ProjectDetail.vue';
 import Projects from '../views/Projects.vue';
 import Settings from '../views/Settings.vue';
@@ -47,6 +48,11 @@ const routes = [
         path: '/settings',
         name: 'Settings',
         component: Settings,
+      },
+      {
+        path: '/hosts',
+        name: 'Hosts',
+        component: Hosts,
       },
     ],
   },

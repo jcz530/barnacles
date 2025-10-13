@@ -856,10 +856,9 @@ export const useQueries = () => {
     return useQuery({
       queryKey: ['hosts'],
       queryFn: async () => {
-        const response = await apiCall<ApiResponse<Array<{ ip: string; hostname: string }>>>(
-          'GET',
-          API_ROUTES.SYSTEM_HOSTS
-        );
+        const response = await apiCall<
+          ApiResponse<Array<{ id: string; ip: string; hostname: string }>>
+        >('GET', API_ROUTES.SYSTEM_HOSTS);
 
         if (!response) {
           throw new Error('Failed to fetch hosts');
@@ -868,6 +867,47 @@ export const useQueries = () => {
         return response.data || [];
       },
       enabled: options?.enabled ?? true,
+    });
+  };
+
+  // Get hosts file path
+  const useHostsPathQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['hosts-path'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<{ path: string }>>(
+          'GET',
+          API_ROUTES.SYSTEM_HOSTS_PATH
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch hosts file path');
+        }
+
+        return response.data?.path || '';
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
+  // Update hosts file entries mutation
+  const useUpdateHostsMutation = () => {
+    return useMutation({
+      mutationFn: async (hosts: Array<{ ip: string; hostname: string }>) => {
+        const response = await apiCall<ApiResponse<Array<{ ip: string; hostname: string }>>>(
+          'POST',
+          API_ROUTES.SYSTEM_HOSTS,
+          { hosts }
+        );
+        if (!response) {
+          throw new Error('Failed to update hosts');
+        }
+
+        return response.data;
+      },
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: ['hosts'] });
+      },
     });
   };
 
@@ -912,5 +952,7 @@ export const useQueries = () => {
     useKillProcessMutation,
     useProcessOutputByIdQuery,
     useHostsQuery,
+    useHostsPathQuery,
+    useUpdateHostsMutation,
   };
 };
