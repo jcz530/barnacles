@@ -46,4 +46,5 @@ export const API_ROUTES = {
   SETTINGS_KEY: (key: string) => `/api/settings/${key}`,
   SETTINGS_RESET: '/api/settings/reset',
   SYSTEM_HOSTS: '/api/system/hosts',
+  SYSTEM_HOSTS_PATH: '/api/system/hosts/path',
 } as const;
