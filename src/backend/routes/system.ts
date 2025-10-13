@@ -140,13 +140,14 @@ system.post('/hosts', async c => {
     const existingContent = await fs.readFile(hostsPath, 'utf-8');
     const lines = existingContent.split('\n');
 
-    // Build new content preserving comments
+    // Build new content preserving comments (but skip our custom marker)
     const commentLines: string[] = [];
+    const customMarker = '# Custom local domains managed by Barnacles';
 
     for (const line of lines) {
       const trimmed = line.trim();
-      // Keep comments and empty lines
-      if (!trimmed || trimmed.startsWith('#')) {
+      // Keep comments and empty lines, but skip our custom marker to avoid duplicates
+      if ((!trimmed || trimmed.startsWith('#')) && trimmed !== customMarker) {
         commentLines.push(line);
       }
     }
@@ -158,20 +159,11 @@ system.post('/hosts', async c => {
     }
 
     // Add custom hosts section marker
-    newContent += '\n# Custom local domains managed by Barnacles\n';
+    newContent += `\n${customMarker}\n`;
 
-    // Group hosts by IP
-    const hostsByIp = new Map<string, string[]>();
+    // Write each host entry on its own line
     for (const host of hosts) {
-      if (!hostsByIp.has(host.ip)) {
-        hostsByIp.set(host.ip, []);
-      }
-      hostsByIp.get(host.ip)?.push(host.hostname);
-    }
-
-    // Write grouped entries
-    for (const [ip, hostnames] of hostsByIp) {
-      newContent += `${ip}\t${hostnames.join(' ')}\n`;
+      newContent += `${host.ip}\t${host.hostname}\n`;
     }
 
     // Write to a temporary file first (in /tmp which we have access to)
@@ -194,7 +186,7 @@ system.post('/hosts', async c => {
         const script = `do shell script "mv '${escapedTmpPath}' '${escapedHostsPath}'" with administrator privileges`;
 
         //Executing osascript command to update hosts file...
-        const result = await execAsync(`osascript -e '${script}'`);
+        await execAsync(`osascript -e '${script}'`);
       } catch (error) {
         console.error('Failed to update hosts file with osascript:', error);
         // If osascript fails (not macOS or user cancelled), clean up temp file
