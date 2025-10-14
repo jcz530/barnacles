@@ -1,16 +1,7 @@
 import os from 'os';
 import path from 'path';
 import { settingsService } from '../services/settings-service';
-
-/**
- * Expands tilde (~) in paths to the user's home directory
- */
-function expandTilde(filepath: string): string {
-  if (filepath.startsWith('~/') || filepath === '~') {
-    return path.join(os.homedir(), filepath.slice(2));
-  }
-  return filepath;
-}
+import { expandTilde } from './path-utils';
 
 /**
  * Get the default directories to scan for projects

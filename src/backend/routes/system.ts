@@ -98,6 +98,47 @@ system.get('/directories/search', async c => {
     const matchedDirectories: string[] = [];
     const MAX_RESULTS = 20;
 
+    // Handle tilde expansion and determine search path
+    let searchPath = homeDir;
+    let searchQuery = rawQuery.toLowerCase();
+
+    if (rawQuery.startsWith('~')) {
+      // Expand tilde to home directory
+      const expandedPath = expandTilde(rawQuery);
+      const resolvedPath = path.resolve(expandedPath);
+
+      // Check if the path is a complete directory path
+      let foundValidDirectory = false;
+      try {
+        const stat = await fs.stat(resolvedPath);
+        if (stat.isDirectory()) {
+          // If it's a valid directory, search within it
+          searchPath = resolvedPath;
+          searchQuery = ''; // Empty query to list all subdirectories
+          foundValidDirectory = true;
+        }
+      } catch {
+        // Path doesn't exist or is not a directory, treat as partial path
+      }
+
+      // If we haven't found a valid directory, try using parent directory
+      if (!foundValidDirectory) {
+        const dirname = path.dirname(resolvedPath);
+        const basename = path.basename(resolvedPath);
+        try {
+          const dirStat = await fs.stat(dirname);
+          if (dirStat.isDirectory()) {
+            searchPath = dirname;
+            searchQuery = basename.toLowerCase();
+          }
+        } catch {
+          // Parent directory doesn't exist, fall back to searching from home
+          searchPath = homeDir;
+          searchQuery = rawQuery.toLowerCase();
+        }
+      }
+    }
+
     // Recursive function to search directories
     async function searchDir(dir: string, currentDepth: number): Promise<void> {
       if (currentDepth > maxDepth || matchedDirectories.length >= MAX_RESULTS) {
