@@ -8,7 +8,7 @@ Barnacles provides tools for everyday development. Easily find, open, or start y
 
 ## Download
 
-You can download the latest release for your platform from the [Releases]() page.
+You can download the latest release for your platform from the [Releases](https://github.com/jcz530/barnacles/releases) page.
 
 ## Features
 
