@@ -57,17 +57,21 @@ export const useQueries = () => {
     includeArchived?: MaybeRef<boolean>;
   }) => {
     return useQuery({
-      queryKey: computed(
-        () =>
-          [
-            'projects',
-            {
-              search: unref(options?.search),
-              technologies: unref(options?.technologies),
-              includeArchived: unref(options?.includeArchived),
-            },
-          ] as const
-      ),
+      queryKey: computed(() => {
+        // Normalize empty values to ensure consistent cache keys
+        const search = unref(options?.search);
+        const technologies = unref(options?.technologies);
+        const includeArchived = unref(options?.includeArchived);
+
+        return [
+          'projects',
+          {
+            search: search || undefined,
+            technologies: technologies && technologies.length > 0 ? technologies : undefined,
+            includeArchived: includeArchived || undefined,
+          },
+        ] as const;
+      }),
       queryFn: async () => {
         const params = new URLSearchParams();
 
@@ -94,6 +98,7 @@ export const useQueries = () => {
         return response.data || [];
       },
       enabled: options?.enabled ?? true,
+      staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     });
   };
 
