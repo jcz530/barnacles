@@ -1,6 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Istok+Web:wght@400;700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import url('https://fonts.googleapis.com/css2?family=Istok+Web:wght@400;700&display=swap');
 @plugin '@tailwindcss/typography';
 @custom-variant dark (&: is(.dark *));
 
