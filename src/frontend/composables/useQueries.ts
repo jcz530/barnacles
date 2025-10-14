@@ -60,7 +60,9 @@ export const useQueries = () => {
       queryKey: computed(() => {
         // Normalize empty values to ensure consistent cache keys
         const search = unref(options?.search);
-        const technologies = unref(options?.technologies);
+        const technologiesRef = unref(options?.technologies);
+        // Convert to plain array to avoid reactive proxy issues
+        const technologies = technologiesRef ? [...technologiesRef] : undefined;
         const includeArchived = unref(options?.includeArchived);
 
         return [
@@ -74,9 +76,10 @@ export const useQueries = () => {
       }),
       queryFn: async () => {
         const params = new URLSearchParams();
-
         const search = unref(options?.search);
-        const technologies = unref(options?.technologies);
+        const technologiesRef = unref(options?.technologies);
+        // Convert to plain array to avoid reactive proxy issues
+        const technologies = technologiesRef ? [...technologiesRef] : undefined;
         const includeArchived = unref(options?.includeArchived);
 
         if (search) params.append('search', search);
