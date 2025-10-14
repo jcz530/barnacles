@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import os from 'os';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { expandTilde } from '../utils/path-utils';
 
 const system = new Hono();
 
@@ -82,15 +83,15 @@ system.get('/hosts', async c => {
  * GET /api/system/directories/search
  * Search for directories under user's home folder that match a query
  * Query params:
- * - query: string to match directory names against
+ * - query: string to match directory names against (supports ~ for home directory)
  * - maxDepth: optional max depth to search (default 3)
  */
 system.get('/directories/search', async c => {
   try {
-    const query = c.req.query('query')?.toLowerCase() || '';
+    const rawQuery = c.req.query('query') || '';
     const maxDepth = parseInt(c.req.query('maxDepth') || '3', 10);
 
-    if (!query || query.length < 1) {
+    if (!rawQuery || rawQuery.length < 1) {
       return c.json({ data: [] });
     }
 
@@ -173,8 +174,8 @@ system.get('/directories/search', async c => {
 
           const fullPath = path.join(dir, name);
 
-          // Check if directory name matches query
-          if (name.toLowerCase().includes(query)) {
+          // Check if directory name matches query (or include all if query is empty)
+          if (!searchQuery || name.toLowerCase().includes(searchQuery)) {
             // Convert absolute path to use ~ for home directory
             const displayPath = fullPath.replace(homeDir, '~');
             matchedDirectories.push(displayPath);
@@ -195,8 +196,8 @@ system.get('/directories/search', async c => {
       }
     }
 
-    // Start search from home directory
-    await searchDir(homeDir, 0);
+    // Start search from the determined search path
+    await searchDir(searchPath, 0);
 
     return c.json({
       data: matchedDirectories.sort(),
