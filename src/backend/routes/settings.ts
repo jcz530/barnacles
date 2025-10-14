@@ -138,4 +138,58 @@ settings.post('/reset', async c => {
   }
 });
 
+/**
+ * GET /api/settings/defaults
+ * Get all default settings
+ */
+settings.get('/defaults', async c => {
+  try {
+    const defaults = settingsService.getDefaultSettings();
+
+    return c.json({
+      data: defaults,
+    });
+  } catch (error) {
+    console.error('Error fetching default settings:', error);
+    return c.json(
+      {
+        error: 'Failed to fetch default settings',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * GET /api/settings/defaults/:key
+ * Get default value for a specific setting
+ */
+settings.get('/defaults/:key', async c => {
+  try {
+    const key = c.req.param('key');
+    const defaultValue = settingsService.getDefaultValue(key);
+
+    if (defaultValue === null) {
+      return c.json(
+        {
+          error: 'Default setting not found',
+        },
+        404
+      );
+    }
+
+    return c.json({
+      data: defaultValue,
+    });
+  } catch (error) {
+    console.error('Error fetching default setting:', error);
+    return c.json(
+      {
+        error: 'Failed to fetch default setting',
+      },
+      500
+    );
+  }
+});
+
 export default settings;

@@ -5,28 +5,32 @@ import Button from '../ui/button/Button.vue';
 import Input from '../ui/input/Input.vue';
 import { X, Plus } from 'lucide-vue-next';
 
-const { useSettingsQuery, useUpdateSettingMutation } = useQueries();
+const { useSettingsQuery, useUpdateSettingMutation, useDefaultSettingQuery } = useQueries();
 
 const settingsQuery = useSettingsQuery({ enabled: true });
 const updateSettingMutation = useUpdateSettingMutation();
+const defaultSettingQuery = useDefaultSettingQuery('scanExcludedDirectories', { enabled: true });
 
-const DEFAULT_EXCLUDED_DIRECTORIES = [
-  'node_modules',
-  '.git',
-  'vendor',
-  'dist',
-  'build',
-  '.next',
-  '.nuxt',
-  '__pycache__',
-  'venv',
-  'target',
-];
-
-const excludedDirectories = ref<string[]>([...DEFAULT_EXCLUDED_DIRECTORIES]);
+const DEFAULT_EXCLUDED_DIRECTORIES = ref<string[]>([]);
+const excludedDirectories = ref<string[]>([]);
 const newDirectory = ref('');
 const isInitialized = ref(false);
 const hasLoadedFromSettings = ref(false);
+
+// Update default directories when loaded from backend
+watch(
+  () => defaultSettingQuery.data.value,
+  newData => {
+    if (newData && Array.isArray(newData)) {
+      DEFAULT_EXCLUDED_DIRECTORIES.value = newData;
+      // Initialize excludedDirectories if not yet loaded from settings
+      if (!hasLoadedFromSettings.value && excludedDirectories.value.length === 0) {
+        excludedDirectories.value = [...newData];
+      }
+    }
+  },
+  { immediate: true }
+);
 
 // Update local state when settings are loaded
 watch(
@@ -42,7 +46,7 @@ watch(
           }
         } catch {
           // If parsing fails, use default
-          excludedDirectories.value = [...DEFAULT_EXCLUDED_DIRECTORIES];
+          excludedDirectories.value = [...DEFAULT_EXCLUDED_DIRECTORIES.value];
         }
       }
       hasLoadedFromSettings.value = true;
@@ -92,15 +96,15 @@ const removeDirectory = (index: number) => {
 };
 
 const resetToDefault = () => {
-  excludedDirectories.value = [...DEFAULT_EXCLUDED_DIRECTORIES];
+  excludedDirectories.value = [...DEFAULT_EXCLUDED_DIRECTORIES.value];
 };
 
 const isDefaultValue = computed(() => {
-  if (excludedDirectories.value.length !== DEFAULT_EXCLUDED_DIRECTORIES.length) {
+  if (excludedDirectories.value.length !== DEFAULT_EXCLUDED_DIRECTORIES.value.length) {
     return false;
   }
   const sorted1 = [...excludedDirectories.value].sort();
-  const sorted2 = [...DEFAULT_EXCLUDED_DIRECTORIES].sort();
+  const sorted2 = [...DEFAULT_EXCLUDED_DIRECTORIES.value].sort();
   return sorted1.every((dir, i) => dir === sorted2[i]);
 });
 

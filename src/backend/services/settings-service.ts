@@ -181,6 +181,36 @@ class SettingsService {
   async resetToDefaults(): Promise<void> {
     await db.delete(settings);
   }
+
+  /**
+   * Get default value for a setting
+   */
+  getDefaultValue<T = string>(key: string): T | null {
+    const defaultSetting = DEFAULT_SETTINGS[key as keyof typeof DEFAULT_SETTINGS];
+    if (!defaultSetting) return null;
+
+    switch (defaultSetting.type) {
+      case 'number':
+        return Number(defaultSetting.value) as T;
+      case 'boolean':
+        return (defaultSetting.value === 'true') as T;
+      case 'json':
+        return JSON.parse(defaultSetting.value) as T;
+      default:
+        return defaultSetting.value as T;
+    }
+  }
+
+  /**
+   * Get all default settings
+   */
+  getDefaultSettings(): Record<string, unknown> {
+    const defaults: Record<string, unknown> = {};
+    for (const [key, setting] of Object.entries(DEFAULT_SETTINGS)) {
+      defaults[key] = this.getDefaultValue(key);
+    }
+    return defaults;
+  }
 }
 
 export const settingsService = new SettingsService();

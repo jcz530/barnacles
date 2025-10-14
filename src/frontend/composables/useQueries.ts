@@ -521,6 +521,46 @@ export const useQueries = () => {
     });
   };
 
+  const useDefaultSettingsQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['settings', 'defaults'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<Record<string, unknown>>>(
+          'GET',
+          API_ROUTES.SETTINGS_DEFAULTS
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch default settings');
+        }
+
+        return response.data || {};
+      },
+      enabled: options?.enabled ?? true,
+      staleTime: Infinity, // Defaults never change during runtime
+    });
+  };
+
+  const useDefaultSettingQuery = (key: MaybeRef<string>, options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['settings', 'defaults', unref(key)],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<unknown>>(
+          'GET',
+          API_ROUTES.SETTINGS_DEFAULTS_KEY(unref(key))
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch default setting');
+        }
+
+        return response.data;
+      },
+      enabled: options?.enabled ?? true,
+      staleTime: Infinity, // Defaults never change during runtime
+    });
+  };
+
   const useUpdateSettingMutation = () => {
     return useMutation({
       mutationFn: async (params: {
@@ -942,6 +982,8 @@ export const useQueries = () => {
     useProjectComposerScriptsQuery,
     useSettingsQuery,
     useSettingQuery,
+    useDefaultSettingsQuery,
+    useDefaultSettingQuery,
     useUpdateSettingMutation,
     useDeleteThirdPartyPackagesMutation,
     useStartProcessesQuery,
