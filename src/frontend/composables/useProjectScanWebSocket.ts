@@ -1,9 +1,9 @@
 import { ref, onUnmounted } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { toast } from 'vue-sonner';
-import { APP_CONFIG } from '../../shared/constants';
 import type { ProjectWithDetails } from '../../shared/types/api';
 import { toastLoadingWithVariant } from '@/components/ui/sonner';
+import { useApiPort } from './useApiPort';
 
 interface ScanProgressMessage {
   type:
@@ -30,6 +30,7 @@ export function useProjectScanWebSocket() {
   const totalDiscovered = ref(0);
   const error = ref<string | null>(null);
   const discoveredProjects = ref<ProjectWithDetails[]>([]);
+  const { wsBaseUrl } = useApiPort();
   let scanToastId: string | number | undefined;
 
   /**
@@ -40,34 +41,7 @@ export function useProjectScanWebSocket() {
       return; // Already connected
     }
 
-    // Get the API base URL from the API_BASE_URL constant
-    // which is set at runtime by the backend
-    // We need to extract it from a meta tag or use the RUNTIME_CONFIG
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-
-    // Try to get the actual API host and port from existing fetch calls
-    // For Electron apps, the API runs on a different port than the renderer
-    // We can check the document for any script or meta tags that might have it
-    // Or we can try both 51000 and 51001
-
-    // First, try to find an existing API call's URL
-    let apiPort = APP_CONFIG.API_PORT_PREFERRED;
-
-    // Check if there's a performance entry from a recent API call
-    try {
-      const perfEntries = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
-      const apiCall = perfEntries.find(
-        entry => entry.name.includes('/api/') && entry.name.includes('localhost')
-      );
-      if (apiCall) {
-        const url = new URL(apiCall.name);
-        apiPort = parseInt(url.port) || apiPort;
-      }
-    } catch {
-      // Fallback to default port
-    }
-
-    const wsUrl = `${protocol}//localhost:${apiPort}/api/projects/scan/ws`;
+    const wsUrl = `${wsBaseUrl.value}/api/projects/scan/ws`;
     console.log('Connecting to WebSocket:', wsUrl);
 
     ws.value = new WebSocket(wsUrl);
