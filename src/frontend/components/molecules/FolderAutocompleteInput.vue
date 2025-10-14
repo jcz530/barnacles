@@ -17,6 +17,11 @@ interface Props {
   modelValue?: string;
   placeholder?: string;
   maxDepth?: number;
+  /**
+   * If true, only allows selection from suggestions.
+   * If false, allows freeform text entry of any path.
+   */
+  strict?: boolean;
 }
 
 interface Emits {
@@ -26,6 +31,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   placeholder: 'Type to search directories...',
   maxDepth: 3,
+  strict: true,
 });
 
 const emit = defineEmits<Emits>();
@@ -50,6 +56,16 @@ watch(selectedValue, newValue => {
   emit('update:modelValue', newValue);
   // Also update input value when selection changes
   inputValue.value = newValue;
+});
+
+// Watch inputValue changes and sync to selectedValue (only in non-strict mode)
+// This allows users to type any path, not just select from suggestions
+watch(inputValue, newValue => {
+  // In non-strict mode, sync inputValue to selectedValue immediately
+  // This allows freeform text entry
+  if (!props.strict && newValue !== selectedValue.value) {
+    selectedValue.value = newValue;
+  }
 });
 
 // Watch inputValue and update debouncedInputValue with a delay

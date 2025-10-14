@@ -144,6 +144,7 @@ const isSaving = computed(() => updateSettingMutation.isPending.value);
         placeholder="Add directory to exclude..."
         class="flex-1"
         :max-depth="3"
+        :strict="false"
       />
       <Button @click="addDirectory" variant="outline" size="sm" :disabled="!newDirectory.trim()">
         <Plus :size="16" class="mr-1" />
