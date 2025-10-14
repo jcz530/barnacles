@@ -40,6 +40,11 @@ const props = defineProps<ToasterProps>();
   border-bottom: 5px solid var(--success-border) !important;
 }
 
+/* Success icon color */
+[data-sonner-toast][data-type='success'] [data-icon] {
+  color: var(--color-emerald-500) !important;
+}
+
 [data-sonner-toast][data-type='info'] {
   /*
   background-color: var(--info-bg) !important;

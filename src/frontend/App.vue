@@ -28,7 +28,7 @@ onMounted(() => {
 
 <template>
   <div id="app">
-    <Toaster position="bottom-center" />
+    <Toaster position="bottom-center" :closeButton="true" />
     <div class="app-content">
       <router-view />
     </div>

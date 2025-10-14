@@ -174,15 +174,16 @@ export function useProjectScanWebSocket() {
         totalDiscovered.value = message.totalDiscovered || totalDiscovered.value;
         console.log(`Scan completed: ${totalDiscovered.value} projects discovered`);
 
-        // Dismiss the loading toast and show success
+        // Dismiss the loading toast and show a fresh success toast
         if (scanToastId !== undefined) {
-          toast.success('Scan completed', {
-            id: scanToastId,
-            description: `Found ${totalDiscovered.value} projects`,
-            duration: 3000,
-          });
+          toast.dismiss(scanToastId);
           scanToastId = undefined;
         }
+
+        toast.success('Scan completed', {
+          description: `Found ${totalDiscovered.value} projects`,
+          duration: 15000,
+        });
         break;
 
       case 'scan-error':
@@ -190,23 +191,22 @@ export function useProjectScanWebSocket() {
         error.value = message.error || 'Unknown error occurred';
         console.error('Scan error:', message.error);
 
-        // Dismiss the loading toast and show error (or success if cancelled)
+        // Dismiss the loading toast and show error (or info if cancelled)
         if (scanToastId !== undefined) {
-          const isCancelled = message.error?.toLowerCase().includes('cancel');
-          if (isCancelled) {
-            toast.info('Scan cancelled', {
-              id: scanToastId,
-              description: `Found ${totalDiscovered.value} projects before cancellation`,
-              duration: 3000,
-            });
-          } else {
-            toast.error('Scan failed', {
-              id: scanToastId,
-              description: message.error || 'An error occurred during scanning',
-              duration: 5000,
-            });
-          }
+          toast.dismiss(scanToastId);
           scanToastId = undefined;
+        }
+
+        if (message.error?.toLowerCase().includes('cancel')) {
+          toast.info('Scan cancelled', {
+            description: `Found ${totalDiscovered.value} projects before cancellation`,
+            duration: 10000,
+          });
+        } else {
+          toast.error('Scan failed', {
+            description: message.error || 'An error occurred during scanning',
+            duration: 5000,
+          });
         }
         break;
     }
