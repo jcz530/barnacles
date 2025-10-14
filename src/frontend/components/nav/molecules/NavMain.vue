@@ -38,7 +38,11 @@ defineProps<{
             <RouterLink :to="item.url">
               <component :is="item.icon" />
               <span>{{ item.title }}</span>
-              <span v-if="item.count" class="text-sidebar-foreground/70 ml-auto text-xs">
+              <span
+                v-if="item.count"
+                class="ml-auto text-xs opacity-90"
+                :class="[item.isActive ? 'text-slate-100' : '']"
+              >
                 {{ item.count }}
               </span>
             </RouterLink>
