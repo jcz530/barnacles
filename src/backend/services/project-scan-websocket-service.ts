@@ -2,6 +2,7 @@ import { Server as HttpServer, IncomingMessage } from 'http';
 import { WebSocket, WebSocketServer } from 'ws';
 import { projectScannerService } from './project-scanner-service';
 import { projectService } from './project-service';
+import { getDefaultScanDirectories } from '../utils/default-scan-directories';
 
 export interface ScanProgress {
   type:
@@ -118,17 +119,7 @@ export class ProjectScanWebSocketService {
 
     try {
       // Default directories if none provided
-      const os = await import('os');
-      const path = await import('path');
-      const defaultDirectories = [
-        path.join(os.homedir(), 'Development'),
-        path.join(os.homedir(), 'Projects'),
-        path.join(os.homedir(), 'Code'),
-        path.join(os.homedir(), 'workspace'),
-        path.join(os.homedir(), 'Documents', 'Projects'),
-      ];
-
-      const dirsToScan = directories || defaultDirectories;
+      const dirsToScan = directories || getDefaultScanDirectories();
 
       // Notify scan started
       this.sendToClient(ws, {

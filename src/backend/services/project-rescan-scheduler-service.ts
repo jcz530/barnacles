@@ -1,7 +1,8 @@
 import { projectService } from './project-service';
-import { projectScannerService } from './project-scanner-service';
 import { projectScanWebSocketService } from './project-scan-websocket-service';
 import { settingsService } from './settings-service';
+import { getDefaultScanDirectories } from '../utils/default-scan-directories';
+import { projectScannerService } from './project-scanner-service';
 
 export class ProjectRescanSchedulerService {
   private intervalId: NodeJS.Timeout | null = null;
@@ -28,9 +29,10 @@ export class ProjectRescanSchedulerService {
 
     this.isRunning = true;
 
-    // Run initial scan after a short delay (10 seconds)
-    setTimeout(() => {
+    // Check if this is first run (no projects in database) and trigger initial scan
+    setTimeout(async () => {
       if (this.isRunning) {
+        await this.checkAndRunFirstScan();
         this.rescanAllProjects();
       }
     }, 10000);
@@ -39,6 +41,48 @@ export class ProjectRescanSchedulerService {
     this.intervalId = setInterval(() => {
       this.rescanAllProjects();
     }, intervalMs);
+  }
+
+  /**
+   * Check if this is the first run and trigger initial scan if needed
+   */
+  private async checkAndRunFirstScan(): Promise<void> {
+    try {
+      const projects = await projectService.getProjects({ includeArchived: true });
+
+      if (projects.length === 0) {
+        console.log('🔍 First run detected - starting initial project scan...');
+        await this.performInitialScan();
+      }
+    } catch (error) {
+      console.error('Error checking for first run:', error);
+    }
+  }
+
+  /**
+   * Perform initial scan on first app launch
+   */
+  private async performInitialScan(): Promise<void> {
+    try {
+      // Get maxDepth from settings or use default
+      const maxDepth = (await settingsService.getValue<number>('scanMaxDepth')) ?? 3;
+
+      // Perform the scan and save projects
+      const savedProjects = await projectService.scanAndSaveProjects(
+        getDefaultScanDirectories(),
+        maxDepth
+      );
+
+      console.log(`✅ Initial scan completed: ${savedProjects.length} projects discovered`);
+
+      // Broadcast scan completion to any connected clients
+      projectScanWebSocketService.broadcast({
+        type: 'scan-completed',
+        totalDiscovered: savedProjects.length,
+      });
+    } catch (error) {
+      console.error('Error during initial scan:', error);
+    }
   }
 
   /**
@@ -166,7 +210,7 @@ export class ProjectRescanSchedulerService {
    * Update rescan interval
    */
   async updateInterval(minutes: number): Promise<void> {
-    await settingsService.setValue('rescanIntervalMinutes', minutes, 'number');
+    await settingsService.setSetting('rescanIntervalMinutes', minutes, 'number');
 
     // Restart scheduler with new interval
     if (this.isRunning) {

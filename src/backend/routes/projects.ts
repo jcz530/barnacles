@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
-import os from 'os';
 import path from 'path';
 import type { StartProcess } from '../../shared/types/process';
 import { processManagerService } from '../services/process-manager-service';
 import { projectService } from '../services/project-service';
 import { settingsService } from '../services/settings-service';
+import { getDefaultScanDirectories } from '../utils/default-scan-directories';
 
 const projects = new Hono();
 
@@ -59,15 +59,7 @@ projects.post('/scan', async c => {
     const { directories, maxDepth = settingMaxDepth ?? 3 } = body;
 
     // If no directories provided, use common development directories
-    const defaultDirectories = [
-      path.join(os.homedir(), 'Development'),
-      path.join(os.homedir(), 'Projects'),
-      path.join(os.homedir(), 'Code'),
-      path.join(os.homedir(), 'workspace'),
-      path.join(os.homedir(), 'Documents', 'Projects'),
-    ];
-
-    const dirsToScan = directories || defaultDirectories;
+    const dirsToScan = directories || getDefaultScanDirectories();
 
     const scannedProjects = await projectService.scanAndSaveProjects(dirsToScan, maxDepth);
 
