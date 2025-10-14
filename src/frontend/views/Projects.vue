@@ -13,6 +13,7 @@ import { Button } from '../components/ui/button';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useFuzzySearch } from '../composables/useFuzzySearch';
 import { useQueries } from '../composables/useQueries';
+import { useProjectScanWebSocket } from '../composables/useProjectScanWebSocket';
 
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
@@ -20,11 +21,21 @@ setBreadcrumbs([{ label: 'Projects', href: '/projects' }]);
 const {
   useProjectsQuery,
   useTechnologiesQuery,
-  useScanProjectsMutation,
   useDeleteProjectMutation,
   useToggleFavoriteMutation,
   useProcessStatusQuery,
 } = useQueries();
+
+// WebSocket scanning
+const {
+  isConnected: wsConnected,
+  isScanning: wsScanning,
+  totalDiscovered,
+  error: wsScanError,
+  discoveredProjects,
+  startScan: startWebSocketScan,
+  connect: connectWebSocket,
+} = useProjectScanWebSocket();
 
 // State
 const searchQuery = ref('');
@@ -106,12 +117,11 @@ const projects = computed(() => {
 });
 
 // Mutations
-const scanMutation = useScanProjectsMutation();
 const deleteMutation = useDeleteProjectMutation();
 const toggleFavoriteMutation = useToggleFavoriteMutation();
 
 // Computed
-const isScanning = computed(() => scanMutation.isPending.value);
+const isScanning = computed(() => wsScanning.value);
 
 const hasActiveFilters = computed(
   () =>
@@ -136,7 +146,8 @@ const resultsText = computed(() => {
 // Methods
 const handleScanProjects = async () => {
   try {
-    await scanMutation.mutateAsync();
+    // Use WebSocket scanning for real-time updates
+    startWebSocketScan();
   } catch (error) {
     console.error('Failed to scan projects:', error);
     alert('Failed to scan projects. Please try again.');
@@ -200,7 +211,7 @@ watch([sortField, sortDirection], () => {
           </Button>
           <Button @click="handleScanProjects" :disabled="isScanning">
             <Scan class="mr-2 h-4 w-4" :class="{ 'animate-spin': isScanning }" />
-            {{ isScanning ? 'Scanning...' : 'Scan Projects' }}
+            {{ isScanning ? `Scanning... (${totalDiscovered} found)` : 'Scan Projects' }}
           </Button>
         </div>
       </div>
@@ -246,9 +257,24 @@ watch([sortField, sortDirection], () => {
         </div>
       </div>
 
-      <!-- Results count -->
-      <div v-if="!projectsLoading" class="mt-4 text-sm text-slate-600">
-        {{ resultsText }}
+      <!-- Results count and scan status -->
+      <div class="mt-4 flex items-center gap-4">
+        <div v-if="!projectsLoading" class="text-sm text-slate-600">
+          {{ resultsText }}
+        </div>
+        <div
+          v-if="isScanning"
+          class="flex items-center gap-2 rounded-md bg-blue-50 px-3 py-1 text-sm text-blue-700"
+        >
+          <Scan class="h-4 w-4 animate-spin" />
+          <span>Discovering projects... {{ totalDiscovered }} found so far</span>
+        </div>
+        <div
+          v-if="wsScanError"
+          class="flex items-center gap-2 rounded-md bg-red-50 px-3 py-1 text-sm text-red-700"
+        >
+          <span>⚠️ {{ wsScanError }}</span>
+        </div>
       </div>
     </div>
 

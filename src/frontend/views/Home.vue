@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { ProjectWithDetails } from '../../shared/types/api';
 import ProjectCard from '../components/molecules/ProjectCard.vue';
-import { useQueries } from '../composables/useQueries';
+import { useQueries } from '@/composables/useQueries';
 
 const router = useRouter();
 const {

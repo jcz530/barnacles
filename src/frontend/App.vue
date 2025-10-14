@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import TitleBar from '@/components/nav/molecules/TitleBar.vue';
 import { useColorInversion } from '@/composables/useColorInversion';
+import { Toaster } from '@/components/ui/sonner';
+import 'vue-sonner/style.css'; // vue-sonner v2 requires this import
 
 // App now uses router-view for rendering pages
 
@@ -10,6 +11,7 @@ useColorInversion();
 
 <template>
   <div id="app">
+    <Toaster position="bottom-center" />
     <div class="app-content">
       <router-view />
     </div>
