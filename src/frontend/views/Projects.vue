@@ -34,7 +34,6 @@ const {
   error: wsScanError,
   discoveredProjects,
   startScan: startWebSocketScan,
-  connect: connectWebSocket,
 } = useProjectScanWebSocket();
 
 // State
@@ -264,7 +263,7 @@ watch([sortField, sortDirection], () => {
         </div>
         <div
           v-if="isScanning"
-          class="flex items-center gap-2 rounded-md bg-blue-50 px-3 py-1 text-sm text-blue-700"
+          class="flex items-center gap-2 rounded-md bg-sky-400/20 px-3 py-1 text-sm text-sky-700"
         >
           <Scan class="h-4 w-4 animate-spin" />
           <span>Discovering projects... {{ totalDiscovered }} found so far</span>

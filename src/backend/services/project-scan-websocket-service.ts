@@ -4,17 +4,24 @@ import { projectScannerService } from './project-scanner-service';
 import { projectService } from './project-service';
 
 export interface ScanProgress {
-  type: 'scan-started' | 'project-discovered' | 'project-updated' | 'scan-completed' | 'scan-error';
+  type:
+    | 'scan-started'
+    | 'project-discovered'
+    | 'project-updated'
+    | 'scan-completed'
+    | 'scan-error'
+    | 'scan-status';
   projectPath?: string;
   projectData?: any;
   totalDiscovered?: number;
   error?: string;
+  isScanning?: boolean;
 }
 
 export class ProjectScanWebSocketService {
   private wss: WebSocketServer | null = null;
   private connections: Set<WebSocket> = new Set();
-  private activeScans: Map<string, boolean> = new Map();
+  private activeScans: Map<string, { cancelled: boolean; totalDiscovered: number }> = new Map();
 
   /**
    * Initialize WebSocket server
@@ -43,6 +50,8 @@ export class ProjectScanWebSocketService {
           if (message.action === 'start-scan') {
             const { directories, maxDepth } = message.payload || {};
             await this.handleScanRequest(ws, directories, maxDepth);
+          } else if (message.action === 'stop-scan') {
+            this.handleStopRequest(ws);
           }
         } catch (error) {
           console.error('Error handling scan WebSocket message:', error);
@@ -65,9 +74,21 @@ export class ProjectScanWebSocketService {
         this.connections.delete(ws);
       });
 
-      // Send initial connection success message
+      // Send initial connection success message and scan status
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'connected', message: 'Connected to project scanner' }));
+
+        // If there's an active scan, notify the client
+        if (this.activeScans.size > 0) {
+          const [scanId, scanState] = Array.from(this.activeScans.entries())[0];
+          ws.send(
+            JSON.stringify({
+              type: 'scan-status',
+              isScanning: true,
+              totalDiscovered: scanState.totalDiscovered,
+            })
+          );
+        }
       }
     });
 
@@ -93,7 +114,7 @@ export class ProjectScanWebSocketService {
       return;
     }
 
-    this.activeScans.set(scanId, true);
+    this.activeScans.set(scanId, { cancelled: false, totalDiscovered: 0 });
 
     try {
       // Default directories if none provided
@@ -118,43 +139,92 @@ export class ProjectScanWebSocketService {
       let totalDiscovered = 0;
 
       // Scan directories and emit projects as they're discovered
-      await this.scanDirectoriesIncremental(dirsToScan, maxDepth, async projectInfo => {
-        try {
-          // Save project to database
-          const savedProject = await projectService.saveProject(projectInfo);
+      await this.scanDirectoriesIncremental(
+        dirsToScan,
+        maxDepth,
+        async projectInfo => {
+          // Check if scan was cancelled
+          const scanState = this.activeScans.get(scanId);
+          if (scanState?.cancelled) {
+            throw new Error('Scan cancelled by user');
+          }
 
-          totalDiscovered++;
+          try {
+            // Save project to database
+            const savedProject = await projectService.saveProject(projectInfo);
 
-          // Emit to client
-          this.sendToClient(ws, {
-            type: 'project-discovered',
-            projectPath: projectInfo.path,
-            projectData: savedProject,
-            totalDiscovered,
-          });
-        } catch (error) {
-          console.error('Error saving discovered project:', error);
-          this.sendToClient(ws, {
-            type: 'scan-error',
-            error: `Failed to save project: ${projectInfo.path}`,
-          });
-        }
-      });
+            totalDiscovered++;
 
-      // Notify scan completed
-      this.sendToClient(ws, {
-        type: 'scan-completed',
-        totalDiscovered,
-      });
+            // Update the scan state with current count
+            const scanState = this.activeScans.get(scanId);
+            if (scanState) {
+              scanState.totalDiscovered = totalDiscovered;
+            }
+
+            // Emit to client
+            this.sendToClient(ws, {
+              type: 'project-discovered',
+              projectPath: projectInfo.path,
+              projectData: savedProject,
+              totalDiscovered,
+            });
+          } catch (error) {
+            console.error('Error saving discovered project:', error);
+            this.sendToClient(ws, {
+              type: 'scan-error',
+              error: `Failed to save project: ${projectInfo.path}`,
+            });
+          }
+        },
+        scanId
+      );
+
+      // Check if cancelled before sending completion
+      const scanState = this.activeScans.get(scanId);
+      if (scanState?.cancelled) {
+        this.sendToClient(ws, {
+          type: 'scan-error',
+          error: 'Scan cancelled',
+        });
+      } else {
+        // Notify scan completed
+        this.sendToClient(ws, {
+          type: 'scan-completed',
+          totalDiscovered,
+        });
+      }
     } catch (error) {
       console.error('Error during scan:', error);
-      this.sendToClient(ws, {
-        type: 'scan-error',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      const scanState = this.activeScans.get(scanId);
+      if (scanState?.cancelled) {
+        this.sendToClient(ws, {
+          type: 'scan-error',
+          error: 'Scan cancelled',
+        });
+      } else {
+        this.sendToClient(ws, {
+          type: 'scan-error',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
     } finally {
       this.activeScans.delete(scanId);
     }
+  }
+
+  /**
+   * Handle stop scan request from client
+   */
+  private handleStopRequest(ws: WebSocket): void {
+    // Cancel all active scans
+    for (const [scanId, scanState] of this.activeScans) {
+      scanState.cancelled = true;
+    }
+
+    this.sendToClient(ws, {
+      type: 'scan-error',
+      error: 'Scan cancelled by user',
+    });
   }
 
   /**
@@ -163,13 +233,21 @@ export class ProjectScanWebSocketService {
   private async scanDirectoriesIncremental(
     basePaths: string[],
     maxDepth: number,
-    onProjectDiscovered: (projectInfo: any) => Promise<void>
+    onProjectDiscovered: (projectInfo: any) => Promise<void>,
+    scanId: string
   ): Promise<void> {
     const fs = await import('fs/promises');
     const path = await import('path');
     const scanned = new Set<string>();
 
+    const self = this;
     async function scanRecursive(dirPath: string, depth: number): Promise<void> {
+      // Check if scan was cancelled
+      const scanState = self.activeScans.get(scanId);
+      if (scanState?.cancelled) {
+        return;
+      }
+
       if (depth > maxDepth || scanned.has(dirPath)) {
         return;
       }
@@ -190,6 +268,12 @@ export class ProjectScanWebSocketService {
         const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
         for (const entry of entries) {
+          // Check cancellation before each subdirectory
+          const scanState = self.activeScans.get(scanId);
+          if (scanState?.cancelled) {
+            return;
+          }
+
           if (entry.isDirectory() && !entry.name.startsWith('.')) {
             await scanRecursive(path.join(dirPath, entry.name), depth + 1);
           }

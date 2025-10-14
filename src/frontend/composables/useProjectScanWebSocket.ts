@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/vue-query';
 import { toast } from 'vue-sonner';
 import { APP_CONFIG } from '../../shared/constants';
 import type { ProjectWithDetails } from '../../shared/types/api';
+import { toastLoadingWithVariant } from '@/components/ui/sonner';
 
 interface ScanProgressMessage {
   type:
@@ -11,12 +12,14 @@ interface ScanProgressMessage {
     | 'project-discovered'
     | 'project-updated'
     | 'scan-completed'
-    | 'scan-error';
+    | 'scan-error'
+    | 'scan-status';
   projectPath?: string;
   projectData?: ProjectWithDetails;
   totalDiscovered?: number;
   error?: string;
   message?: string;
+  isScanning?: boolean;
 }
 
 export function useProjectScanWebSocket() {
@@ -111,15 +114,44 @@ export function useProjectScanWebSocket() {
         console.log('WebSocket connected:', message.message);
         break;
 
+      case 'scan-status':
+        // Server is telling us about an ongoing scan (happens on reconnect/refresh)
+        if (message.isScanning) {
+          isScanning.value = true;
+          totalDiscovered.value = message.totalDiscovered || 0;
+          // Show the toast with current progress
+          scanToastId = toastLoadingWithVariant('Discovering projects...', {
+            description: `${totalDiscovered.value} projects found so far`,
+            duration: Infinity,
+            variant: 'info',
+            loader: 'scan',
+            action: {
+              label: 'Cancel',
+              onClick: () => {
+                stopScan();
+              },
+            },
+          });
+        }
+        break;
+
       case 'scan-started':
         isScanning.value = true;
         totalDiscovered.value = 0;
         discoveredProjects.value = [];
         error.value = null;
         // Show persistent toast during scanning
-        scanToastId = toast.loading('Discovering projects...', {
+        scanToastId = toastLoadingWithVariant('Discovering projects...', {
           description: '0 projects found so far',
           duration: Infinity, // Keep it open until we dismiss it
+          variant: 'info',
+          loader: 'scan',
+          action: {
+            label: 'Cancel',
+            onClick: () => {
+              stopScan();
+            },
+          },
         });
         break;
 
@@ -130,10 +162,18 @@ export function useProjectScanWebSocket() {
 
           // Update the scanning toast with current count
           if (scanToastId !== undefined) {
-            toast.loading('Discovering projects...', {
+            toastLoadingWithVariant('Discovering projects...', {
               id: scanToastId,
               description: `${totalDiscovered.value} projects found so far`,
               duration: Infinity,
+              variant: 'info',
+              loader: 'scan',
+              action: {
+                label: 'Cancel',
+                onClick: () => {
+                  stopScan();
+                },
+              },
             });
           }
 
@@ -176,13 +216,22 @@ export function useProjectScanWebSocket() {
         error.value = message.error || 'Unknown error occurred';
         console.error('Scan error:', message.error);
 
-        // Dismiss the loading toast and show error
+        // Dismiss the loading toast and show error (or success if cancelled)
         if (scanToastId !== undefined) {
-          toast.error('Scan failed', {
-            id: scanToastId,
-            description: message.error || 'An error occurred during scanning',
-            duration: 5000,
-          });
+          const isCancelled = message.error?.toLowerCase().includes('cancel');
+          if (isCancelled) {
+            toast.info('Scan cancelled', {
+              id: scanToastId,
+              description: `Found ${totalDiscovered.value} projects before cancellation`,
+              duration: 3000,
+            });
+          } else {
+            toast.error('Scan failed', {
+              id: scanToastId,
+              description: message.error || 'An error occurred during scanning',
+              duration: 5000,
+            });
+          }
           scanToastId = undefined;
         }
         break;
@@ -233,6 +282,19 @@ export function useProjectScanWebSocket() {
   };
 
   /**
+   * Stop the current scan
+   */
+  const stopScan = () => {
+    if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+      ws.value.send(
+        JSON.stringify({
+          action: 'stop-scan',
+        })
+      );
+    }
+  };
+
+  /**
    * Disconnect from the WebSocket server
    */
   const disconnect = () => {
@@ -270,6 +332,7 @@ export function useProjectScanWebSocket() {
     connect,
     disconnect,
     startScan,
+    stopScan,
     reset,
   };
 }
