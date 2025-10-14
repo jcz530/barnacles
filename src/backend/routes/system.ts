@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import os from 'os';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 const system = new Hono();
 
@@ -70,6 +72,99 @@ system.get('/hosts', async c => {
     return c.json(
       {
         error: 'Failed to read hosts file',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * GET /api/system/directories/search
+ * Search for directories under user's home folder that match a query
+ * Query params:
+ * - query: string to match directory names against
+ * - maxDepth: optional max depth to search (default 3)
+ */
+system.get('/directories/search', async c => {
+  try {
+    const query = c.req.query('query')?.toLowerCase() || '';
+    const maxDepth = parseInt(c.req.query('maxDepth') || '3', 10);
+
+    if (!query || query.length < 1) {
+      return c.json({ data: [] });
+    }
+
+    const homeDir = os.homedir();
+    const matchedDirectories: string[] = [];
+    const MAX_RESULTS = 20;
+
+    // Recursive function to search directories
+    async function searchDir(dir: string, currentDepth: number): Promise<void> {
+      if (currentDepth > maxDepth || matchedDirectories.length >= MAX_RESULTS) {
+        return;
+      }
+
+      try {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+          if (matchedDirectories.length >= MAX_RESULTS) {
+            return;
+          }
+
+          if (!entry.isDirectory()) {
+            continue;
+          }
+
+          // Skip hidden directories and common system directories
+          const name = entry.name;
+          if (
+            name.startsWith('.') ||
+            name === 'node_modules' ||
+            name === 'vendor' ||
+            name === 'Library' ||
+            name === 'System' ||
+            name === 'Applications' ||
+            name === 'Volumes'
+          ) {
+            continue;
+          }
+
+          const fullPath = path.join(dir, name);
+
+          // Check if directory name matches query
+          if (name.toLowerCase().includes(query)) {
+            // Convert absolute path to use ~ for home directory
+            const displayPath = fullPath.replace(homeDir, '~');
+            matchedDirectories.push(displayPath);
+          }
+
+          // Recursively search subdirectories
+          if (currentDepth < maxDepth) {
+            try {
+              await searchDir(fullPath, currentDepth + 1);
+            } catch (err) {
+              // Skip directories we don't have permission to read
+            }
+          }
+        }
+      } catch (error) {
+        // Skip directories we can't read
+        return;
+      }
+    }
+
+    // Start search from home directory
+    await searchDir(homeDir, 0);
+
+    return c.json({
+      data: matchedDirectories.sort(),
+    });
+  } catch (error) {
+    console.error('Error searching directories:', error);
+    return c.json(
+      {
+        error: 'Failed to search directories',
       },
       500
     );

@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useQueries } from '../../composables/useQueries';
 import Button from '../ui/button/Button.vue';
-import Input from '../ui/input/Input.vue';
+import FolderAutocompleteInput from '../molecules/FolderAutocompleteInput.vue';
 import { X, Plus, FolderOpen } from 'lucide-vue-next';
 
 const { useSettingsQuery, useUpdateSettingMutation, useDefaultSettingQuery } = useQueries();
@@ -146,11 +146,11 @@ const isSaving = computed(() => updateSettingMutation.isPending.value);
 
     <!-- Add new directory -->
     <div class="mt-2 flex items-center gap-2">
-      <Input
+      <FolderAutocompleteInput
         v-model="newDirectory"
         placeholder="Add directory path (e.g., ~/MyProjects)..."
-        @keyup.enter="addDirectory"
         class="flex-1"
+        :max-depth="3"
       />
       <Button @click="addDirectory" variant="outline" size="sm" :disabled="!newDirectory.trim()">
         <Plus :size="16" class="mr-1" />

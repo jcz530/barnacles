@@ -49,4 +49,5 @@ export const API_ROUTES = {
   SETTINGS_DEFAULTS_KEY: (key: string) => `/api/settings/defaults/${key}`,
   SYSTEM_HOSTS: '/api/system/hosts',
   SYSTEM_HOSTS_PATH: '/api/system/hosts/path',
+  SYSTEM_DIRECTORIES_SEARCH: '/api/system/directories/search',
 } as const;
