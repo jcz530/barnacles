@@ -413,6 +413,7 @@ class ProjectScannerService {
         lastModified,
         languageStats,
         linesOfCode: totalLinesOfCode,
+        thirdPartySize: 0, // Don't calculate during scan for performance
       },
       fileExtensions,
     };
