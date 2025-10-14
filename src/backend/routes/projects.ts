@@ -59,7 +59,7 @@ projects.post('/scan', async c => {
     const { directories, maxDepth = settingMaxDepth ?? 3 } = body;
 
     // If no directories provided, use common development directories
-    const dirsToScan = directories || getDefaultScanDirectories();
+    const dirsToScan = directories || (await getDefaultScanDirectories());
 
     const scannedProjects = await projectService.scanAndSaveProjects(dirsToScan, maxDepth);
 

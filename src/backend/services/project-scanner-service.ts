@@ -5,6 +5,7 @@ import path from 'path';
 import { promisify } from 'util';
 import type { TechnologyDetector } from './technology-detectors';
 import { TECHNOLOGY_DETECTORS } from './technology-detectors';
+import { settingsService } from './settings-service';
 
 const execAsync = promisify(exec);
 
@@ -309,7 +310,9 @@ class ProjectScannerService {
     // Load .gitignore if it exists
     const gitignoreFilter = await this.loadGitignore(projectPath);
 
-    const ignoreDirs = [
+    // Load excluded directories from settings
+    const excludedDirs = await settingsService.getValue<string[]>('scanExcludedDirectories');
+    const ignoreDirs = excludedDirs || [
       'node_modules',
       '.git',
       'vendor',

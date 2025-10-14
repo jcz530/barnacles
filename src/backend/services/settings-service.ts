@@ -12,6 +12,31 @@ export interface Setting {
 // Default settings
 const DEFAULT_SETTINGS = {
   scanMaxDepth: { value: '3', type: 'number' as const },
+  scanIncludedDirectories: {
+    value: JSON.stringify([
+      '~/Development',
+      '~/Projects',
+      '~/Code',
+      '~/workspace',
+      '~/Documents/Projects',
+    ]),
+    type: 'json' as const,
+  },
+  scanExcludedDirectories: {
+    value: JSON.stringify([
+      'node_modules',
+      '.git',
+      'vendor',
+      'dist',
+      'build',
+      '.next',
+      '.nuxt',
+      '__pycache__',
+      'venv',
+      'target',
+    ]),
+    type: 'json' as const,
+  },
   // Add more default settings here as needed
 };
 

@@ -119,7 +119,7 @@ export class ProjectScanWebSocketService {
 
     try {
       // Default directories if none provided
-      const dirsToScan = directories || getDefaultScanDirectories();
+      const dirsToScan = directories || (await getDefaultScanDirectories());
 
       // Notify scan started
       this.sendToClient(ws, {
