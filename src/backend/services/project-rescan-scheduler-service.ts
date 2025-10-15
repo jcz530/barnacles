@@ -141,11 +141,11 @@ export class ProjectRescanSchedulerService {
         stats: {
           fileCount: existingProject?.stats?.fileCount || 0,
           directoryCount: existingProject?.stats?.directoryCount || 0,
-          size: 0, // Don't recalculate size for performance
+          size: existingProject?.stats?.size || 0, // Preserve existing size instead of recalculating
           lastModified: stats.mtime,
-          languageStats: {},
+          languageStats: existingProject?.stats?.languageStats || {},
           linesOfCode: existingProject?.stats?.linesOfCode || 0,
-          thirdPartySize: 0,
+          thirdPartySize: existingProject?.stats?.thirdPartySize || 0,
         },
         gitInfo,
       };
