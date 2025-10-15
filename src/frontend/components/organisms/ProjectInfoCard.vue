@@ -1,16 +1,23 @@
 <script setup lang="ts">
-import { Folder } from 'lucide-vue-next';
+import { Folder, Copy } from 'lucide-vue-next';
+import { useClipboard } from '@vueuse/core';
 import type { Project } from '../../../shared/types/api';
 import { useFormatters } from '../../composables/useFormatters';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
 
 interface Props {
   project: Project;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const { formatDate } = useFormatters();
+const { copy, copied } = useClipboard();
+
+const copyPath = () => {
+  copy(props.project.path);
+};
 </script>
 
 <template>
@@ -23,8 +30,21 @@ const { formatDate } = useFormatters();
     </CardHeader>
     <CardContent class="space-y-4">
       <div>
-        <div class="text-sm font-medium text-slate-500">Path</div>
-        <div class="mt-1 font-mono text-sm text-slate-900">{{ project.path }}</div>
+        <div class="flex items-center justify-between">
+          <div class="text-sm font-medium text-slate-500">Path</div>
+          <Button
+            variant="ghost"
+            size="sm"
+            class="h-7 w-7 p-0"
+            @click="copyPath"
+            :title="copied ? 'Copied!' : 'Copy path'"
+          >
+            <Copy class="h-4 w-4" :class="{ 'text-emerald-600': copied }" />
+          </Button>
+        </div>
+        <div class="mt-1 overflow-scroll rounded bg-slate-100 p-1 font-mono text-sm text-slate-700">
+          {{ project.path }}
+        </div>
       </div>
       <div>
         <div class="text-sm font-medium text-slate-500">Status</div>
