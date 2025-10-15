@@ -1,5 +1,6 @@
 import { ref, onUnmounted } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
+import { useThrottleFn } from '@vueuse/core';
 import { toast } from 'vue-sonner';
 import type { ProjectWithDetails } from '../../shared/types/api';
 import { toastLoadingWithVariant } from '@/components/ui/sonner';
@@ -32,6 +33,19 @@ export function useProjectScanWebSocket() {
   const discoveredProjects = ref<ProjectWithDetails[]>([]);
   const { wsBaseUrl } = useApiPort();
   let scanToastId: string | number | undefined;
+
+  /**
+   * Throttle query invalidation to avoid excessive refetches
+   * This ensures we only invalidate once per second at most
+   */
+  const throttledInvalidateProjects = useThrottleFn(
+    () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+    3000,
+    true, // trailing - ensures a final call happens after the last invocation
+    false // leading - don't call immediately on first invocation
+  );
 
   /**
    * Connect to the WebSocket server
@@ -147,8 +161,8 @@ export function useProjectScanWebSocket() {
             });
           }
 
-          // Invalidate queries to trigger refetch and update UI
-          queryClient.invalidateQueries({ queryKey: ['projects'] });
+          // Use throttled invalidation to avoid excessive refetches
+          throttledInvalidateProjects();
         }
         break;
 
@@ -160,14 +174,17 @@ export function useProjectScanWebSocket() {
             discoveredProjects.value[index] = message.projectData;
           }
 
-          // Invalidate queries to trigger refetch
-          queryClient.invalidateQueries({ queryKey: ['projects'] });
+          // Use throttled invalidation to avoid excessive refetches
+          throttledInvalidateProjects();
         }
         break;
 
       case 'scan-completed':
         isScanning.value = false;
         totalDiscovered.value = message.totalDiscovered || totalDiscovered.value;
+
+        // Do a final invalidation to ensure UI is up-to-date
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
 
         // Dismiss the loading toast and show a fresh success toast
         if (scanToastId !== undefined) {
@@ -185,6 +202,9 @@ export function useProjectScanWebSocket() {
         isScanning.value = false;
         error.value = message.error || 'Unknown error occurred';
         console.error('Scan error:', message.error);
+
+        // Do a final invalidation to ensure UI is up-to-date
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
 
         // Dismiss the loading toast and show error (or info if cancelled)
         if (scanToastId !== undefined) {
