@@ -42,12 +42,10 @@ export function useProjectScanWebSocket() {
     }
 
     const wsUrl = `${wsBaseUrl.value}/api/projects/scan/ws`;
-    console.log('Connecting to WebSocket:', wsUrl);
 
     ws.value = new WebSocket(wsUrl);
 
     ws.value.onopen = () => {
-      console.log('Connected to project scan WebSocket');
       isConnected.value = true;
       error.value = null;
     };
@@ -74,7 +72,6 @@ export function useProjectScanWebSocket() {
     };
 
     ws.value.onclose = () => {
-      console.log('Disconnected from project scan WebSocket');
       isConnected.value = false;
     };
   };
@@ -85,7 +82,6 @@ export function useProjectScanWebSocket() {
   const handleMessage = (message: ScanProgressMessage) => {
     switch (message.type) {
       case 'connected':
-        console.log('WebSocket connected:', message.message);
         break;
 
       case 'scan-status':
@@ -172,7 +168,6 @@ export function useProjectScanWebSocket() {
       case 'scan-completed':
         isScanning.value = false;
         totalDiscovered.value = message.totalDiscovered || totalDiscovered.value;
-        console.log(`Scan completed: ${totalDiscovered.value} projects discovered`);
 
         // Dismiss the loading toast and show a fresh success toast
         if (scanToastId !== undefined) {
