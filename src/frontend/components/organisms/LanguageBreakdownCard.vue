@@ -8,12 +8,24 @@ interface Props {
   project: ProjectWithDetails;
 }
 
+interface LanguageStatsItem {
+  fileCount: number;
+  percentage: number;
+}
+
+type LanguageStats = Record<string, LanguageStatsItem>;
+
 const props = defineProps<Props>();
 
-const languageStats = computed(() => {
+const languageStats = computed<LanguageStats | null>(() => {
   if (!props.project.stats?.languageStats) return null;
   try {
-    return JSON.parse(props.project.stats.languageStats);
+    const parsed = JSON.parse(props.project.stats.languageStats);
+    // Validate the structure
+    if (typeof parsed === 'object' && parsed !== null) {
+      return parsed as LanguageStats;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -31,7 +43,11 @@ const languageStats = computed(() => {
     </CardHeader>
     <CardContent>
       <div class="space-y-3">
-        <div v-for="(stats, techSlug) in languageStats" :key="techSlug" class="space-y-1.5">
+        <div
+          v-for="[techSlug, stats] in Object.entries(languageStats)"
+          :key="techSlug"
+          class="space-y-1.5"
+        >
           <div class="flex items-center justify-between text-sm">
             <div class="flex items-center gap-2">
               <div
