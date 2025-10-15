@@ -134,18 +134,14 @@ export class ProjectRescanSchedulerService {
       const existingProject = existingProjects.find(p => p.path === projectPath);
 
       // Return lightweight project info
+      // Don't include fileCount, directoryCount, size, languageStats, linesOfCode, or thirdPartySize
+      // as we're not recalculating them in the lightweight scan - they should be preserved from DB
       return {
         ...metadata,
         path: projectPath,
         technologies: existingProject?.technologies.map(t => t.slug) || [],
         stats: {
-          fileCount: existingProject?.stats?.fileCount || 0,
-          directoryCount: existingProject?.stats?.directoryCount || 0,
-          size: existingProject?.stats?.size || 0, // Preserve existing size instead of recalculating
           lastModified: stats.mtime,
-          languageStats: existingProject?.stats?.languageStats || {},
-          linesOfCode: existingProject?.stats?.linesOfCode || 0,
-          thirdPartySize: existingProject?.stats?.thirdPartySize || 0,
         },
         gitInfo,
       };

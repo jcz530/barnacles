@@ -307,19 +307,23 @@ class ProjectService {
       // Update existing project
       projectId = existing[0].id;
 
-      await db
-        .update(projects)
-        .set({
-          name: projectInfo.name,
-          description: projectInfo.description,
-          icon: iconPath,
-          lastModified: projectInfo.stats.lastModified,
-          size: projectInfo.stats.size,
-          // Only update preferredIde if it was detected and not already set
-          preferredIde: existing[0].preferredIde || detectedIde,
-          updatedAt: new Date(),
-        })
-        .where(eq(projects.id, projectId));
+      // Build update object, only including fields that are provided
+      const updateData: Record<string, any> = {
+        name: projectInfo.name,
+        description: projectInfo.description,
+        icon: iconPath,
+        lastModified: projectInfo.stats.lastModified,
+        // Only update preferredIde if it was detected and not already set
+        preferredIde: existing[0].preferredIde || detectedIde,
+        updatedAt: new Date(),
+      };
+
+      // Only update size if it's provided (not undefined)
+      if (projectInfo.stats.size !== undefined) {
+        updateData.size = projectInfo.stats.size;
+      }
+
+      await db.update(projects).set(updateData).where(eq(projects.id, projectId));
     } else {
       // Create new project
       const result = await db
@@ -358,11 +362,8 @@ class ProjectService {
       .where(eq(projectStats.projectId, projectId))
       .limit(1);
 
-    const statsData = {
-      fileCount: projectInfo.stats.fileCount,
-      directoryCount: projectInfo.stats.directoryCount,
-      linesOfCode: projectInfo.stats.linesOfCode,
-      thirdPartySize: projectInfo.stats.thirdPartySize,
+    // Build stats data, only including fields that are provided
+    const statsData: Record<string, any> = {
       gitBranch: projectInfo.gitInfo?.branch,
       gitStatus: projectInfo.gitInfo?.status,
       gitRemoteUrl: projectInfo.gitInfo?.remoteUrl,
@@ -371,6 +372,20 @@ class ProjectService {
       hasUncommittedChanges: projectInfo.gitInfo?.hasUncommittedChanges,
       updatedAt: new Date(),
     };
+
+    // Only update these fields if they're provided (not undefined)
+    if (projectInfo.stats.fileCount !== undefined) {
+      statsData.fileCount = projectInfo.stats.fileCount;
+    }
+    if (projectInfo.stats.directoryCount !== undefined) {
+      statsData.directoryCount = projectInfo.stats.directoryCount;
+    }
+    if (projectInfo.stats.linesOfCode !== undefined) {
+      statsData.linesOfCode = projectInfo.stats.linesOfCode;
+    }
+    if (projectInfo.stats.thirdPartySize !== undefined) {
+      statsData.thirdPartySize = projectInfo.stats.thirdPartySize;
+    }
 
     if (existingStats.length > 0) {
       await db.update(projectStats).set(statsData).where(eq(projectStats.projectId, projectId));
