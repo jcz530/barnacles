@@ -3,6 +3,7 @@ import { db } from '../../shared/database';
 import {
   projects,
   projectStats,
+  projectLanguageStats,
   projectTechnologies,
   technologies,
 } from '../../shared/database/schema';
@@ -47,6 +48,7 @@ export interface ProjectStats {
   projectId: string;
   fileCount?: number | null;
   directoryCount?: number | null;
+  languageStats?: Record<string, { fileCount: number; percentage: number; linesOfCode: number }>;
   gitBranch?: string | null;
   gitStatus?: string | null;
   lastCommitDate?: Date | null;
@@ -95,7 +97,7 @@ class ProjectService {
       projectResults.map(async project => {
         const [techs, stats] = await Promise.all([
           this.getProjectTechnologies(project.id),
-          this.getProjectStats(project.id),
+          this.getProjectStats(project.id, false), // Don't include language stats in list view
         ]);
 
         return {
@@ -163,14 +165,51 @@ class ProjectService {
   /**
    * Get stats for a project
    */
-  private async getProjectStats(projectId: string): Promise<ProjectStats | null> {
+  private async getProjectStats(
+    projectId: string,
+    includeLanguageStats: boolean = true
+  ): Promise<ProjectStats | null> {
     const result = await db
       .select()
       .from(projectStats)
       .where(eq(projectStats.projectId, projectId))
       .limit(1);
 
-    return result[0] || null;
+    if (result.length === 0) {
+      return null;
+    }
+
+    let languageStats:
+      | Record<string, { fileCount: number; percentage: number; linesOfCode: number }>
+      | undefined = undefined;
+
+    // Only fetch language stats if requested
+    if (includeLanguageStats) {
+      // Fetch language stats from the new table
+      const langStats = await db
+        .select()
+        .from(projectLanguageStats)
+        .where(eq(projectLanguageStats.projectId, projectId));
+
+      // Convert to the expected format for backward compatibility
+      const stats: Record<string, { fileCount: number; percentage: number; linesOfCode: number }> =
+        {};
+
+      for (const stat of langStats) {
+        stats[stat.technologySlug] = {
+          fileCount: stat.fileCount,
+          percentage: stat.percentage / 10, // Convert back from integer storage (525 -> 52.5)
+          linesOfCode: stat.linesOfCode,
+        };
+      }
+
+      languageStats = stats;
+    }
+
+    return {
+      ...result[0],
+      languageStats,
+    };
   }
 
   /**
@@ -322,7 +361,6 @@ class ProjectService {
     const statsData = {
       fileCount: projectInfo.stats.fileCount,
       directoryCount: projectInfo.stats.directoryCount,
-      languageStats: JSON.stringify(projectInfo.stats.languageStats),
       linesOfCode: projectInfo.stats.linesOfCode,
       thirdPartySize: projectInfo.stats.thirdPartySize,
       gitBranch: projectInfo.gitInfo?.branch,
@@ -341,6 +379,27 @@ class ProjectService {
         ...statsData,
         projectId,
       });
+    }
+
+    // Only update language stats if they're provided and not empty
+    // (lightweight scans pass empty objects, so we should preserve existing data)
+    const hasLanguageStats =
+      projectInfo.stats.languageStats && Object.keys(projectInfo.stats.languageStats).length > 0;
+
+    if (hasLanguageStats) {
+      // Delete existing language stats and insert new ones
+      await db.delete(projectLanguageStats).where(eq(projectLanguageStats.projectId, projectId));
+
+      // Insert new language stats
+      for (const [techSlug, stats] of Object.entries(projectInfo.stats.languageStats)) {
+        await db.insert(projectLanguageStats).values({
+          projectId,
+          technologySlug: techSlug,
+          fileCount: stats.fileCount,
+          percentage: Math.round(stats.percentage * 10), // Store as integer (e.g., 52.5 -> 525)
+          linesOfCode: stats.linesOfCode,
+        });
+      }
     }
 
     // Return the complete project

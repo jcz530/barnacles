@@ -11,6 +11,7 @@ interface Props {
 interface LanguageStatsItem {
   fileCount: number;
   percentage: number;
+  linesOfCode: number;
 }
 
 type LanguageStats = Record<string, LanguageStatsItem>;
@@ -18,17 +19,7 @@ type LanguageStats = Record<string, LanguageStatsItem>;
 const props = defineProps<Props>();
 
 const languageStats = computed<LanguageStats | null>(() => {
-  if (!props.project.stats?.languageStats) return null;
-  try {
-    const parsed = JSON.parse(props.project.stats.languageStats);
-    // Validate the structure
-    if (typeof parsed === 'object' && parsed !== null) {
-      return parsed as LanguageStats;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+  return props.project.stats?.languageStats || null;
 });
 </script>
 

@@ -79,7 +79,6 @@ export const projectStats = sqliteTable('project_stats', {
     .references(() => projects.id, { onDelete: 'cascade' }),
   fileCount: integer('file_count'),
   directoryCount: integer('directory_count'),
-  languageStats: text('language_stats'), // JSON string of { techSlug: { fileCount: number, percentage: number, linesOfCode: number } }
   linesOfCode: integer('lines_of_code'), // total lines of code
   thirdPartySize: integer('third_party_size'), // total size of third-party packages in bytes (node_modules, vendor, etc.)
   gitBranch: text('git_branch'),
@@ -88,6 +87,25 @@ export const projectStats = sqliteTable('project_stats', {
   lastCommitDate: integer('last_commit_date', { mode: 'timestamp' }),
   lastCommitMessage: text('last_commit_message'),
   hasUncommittedChanges: integer('has_uncommitted_changes', { mode: 'boolean' }),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export const projectLanguageStats = sqliteTable('project_language_stats', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  technologySlug: text('technology_slug').notNull(),
+  fileCount: integer('file_count').notNull(),
+  percentage: integer('percentage').notNull(), // stored as integer (e.g., 525 = 52.5%)
+  linesOfCode: integer('lines_of_code').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -120,10 +138,22 @@ export const projectTechnologiesRelations = relations(projectTechnologies, ({ on
   }),
 }));
 
-export const projectStatsRelations = relations(projectStats, ({ one }) => ({
+export const projectStatsRelations = relations(projectStats, ({ one, many }) => ({
   project: one(projects, {
     fields: [projectStats.projectId],
     references: [projects.id],
+  }),
+  languageStats: many(projectLanguageStats),
+}));
+
+export const projectLanguageStatsRelations = relations(projectLanguageStats, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectLanguageStats.projectId],
+    references: [projects.id],
+  }),
+  projectStats: one(projectStats, {
+    fields: [projectLanguageStats.projectId],
+    references: [projectStats.projectId],
   }),
 }));
 
