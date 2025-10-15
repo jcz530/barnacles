@@ -26,7 +26,7 @@ const { isMobile } = useSidebar();
 </script>
 
 <template>
-  <SidebarMenu>
+  <SidebarMenu class="px-2">
     <SidebarMenuItem>
       <DropdownMenu>
         <!-- <DropdownMenuTrigger as-child> -->
