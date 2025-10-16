@@ -1,25 +1,17 @@
-import { onMounted, onUnmounted } from 'vue';
+import { useMagicKeys, whenever } from '@vueuse/core';
 import { useRouter } from 'vue-router';
 
 export const useHotkeys = () => {
   const router = useRouter();
+  const keys = useMagicKeys();
 
-  const handleKeydown = (event: KeyboardEvent) => {
-    // Cmd+, or Ctrl+, - Open Settings
-    if ((event.metaKey || event.ctrlKey) && event.key === ',') {
-      event.preventDefault();
-      router.push('/settings');
-      return;
-    }
-
-    // Add more hotkeys here in the future
-  };
-
-  onMounted(() => {
-    window.addEventListener('keydown', handleKeydown);
+  // Cmd+, or Ctrl+, - Open Settings
+  whenever(keys['Meta+Comma'], () => {
+    void router.push('/settings');
+  });
+  whenever(keys['Ctrl+Comma'], () => {
+    void router.push('/settings');
   });
 
-  onUnmounted(() => {
-    window.removeEventListener('keydown', handleKeydown);
-  });
+  // Add more global hotkeys here in the future
 };

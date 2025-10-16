@@ -3,6 +3,7 @@ import type { SortingState } from '@tanstack/vue-table';
 import { RefreshCw, Scan, Star } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useMagicKeys, whenever } from '@vueuse/core';
 import type { ProjectWithDetails } from '../../shared/types/api';
 import SortControl from '../components/atoms/SortControl.vue';
 import ViewToggle from '../components/atoms/ViewToggle.vue';
@@ -44,6 +45,7 @@ const viewMode = ref<'table' | 'card'>('table');
 const sortField = ref<'name' | 'lastModified' | 'size'>('lastModified');
 const sortDirection = ref<'asc' | 'desc'>('desc');
 const tableSorting = ref<SortingState>([{ id: 'lastModified', desc: true }]);
+const searchBarRef = ref<InstanceType<typeof ProjectSearchBar> | null>(null);
 
 // Queries
 const {
@@ -192,6 +194,26 @@ watch(tableSorting, newSorting => {
 watch([sortField, sortDirection], () => {
   tableSorting.value = [{ id: sortField.value, desc: sortDirection.value === 'desc' }];
 });
+
+// Expose method for focusing search input
+const focusSearch = () => {
+  searchBarRef.value?.focus();
+};
+
+defineExpose({
+  focusSearch,
+});
+
+// Setup keyboard shortcuts for this page
+const keys = useMagicKeys();
+
+// Cmd+K or Ctrl+K - Focus search input
+whenever(keys['Meta+K'], () => {
+  focusSearch();
+});
+whenever(keys['Ctrl+K'], () => {
+  focusSearch();
+});
 </script>
 
 <template>
@@ -217,7 +239,7 @@ watch([sortField, sortDirection], () => {
 
       <!-- Filters -->
       <div class="flex items-center gap-3">
-        <ProjectSearchBar v-model="searchQuery" />
+        <ProjectSearchBar ref="searchBarRef" v-model="searchQuery" />
         <Button
           :variant="showFavoritesOnly ? 'default' : 'outline'"
           size="sm"
