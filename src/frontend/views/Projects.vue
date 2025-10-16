@@ -9,6 +9,10 @@ import SortControl from '../components/atoms/SortControl.vue';
 import ViewToggle from '../components/atoms/ViewToggle.vue';
 import ProjectSearchBar from '../components/molecules/ProjectSearchBar.vue';
 import TechnologyFilter from '../components/molecules/TechnologyFilter.vue';
+import DateFilter, {
+  type DatePreset,
+  type DateFilterDirection,
+} from '../components/molecules/DateFilter.vue';
 import ProjectsTable from '../components/organisms/ProjectsTable.vue';
 import { Button } from '../components/ui/button';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
@@ -41,6 +45,8 @@ const {
 const searchQuery = ref('');
 const selectedTechnologies = ref<string[]>([]);
 const showFavoritesOnly = ref(false);
+const datePreset = ref<DatePreset>('all');
+const dateDirection = ref<DateFilterDirection>('within');
 const viewMode = ref<'table' | 'card'>('table');
 const sortField = ref<'name' | 'lastModified' | 'size'>('lastModified');
 const sortDirection = ref<'asc' | 'desc'>('desc');
@@ -90,6 +96,45 @@ const projects = computed(() => {
     items = items.filter(project => project.isFavorite);
   }
 
+  // Filter by date preset
+  if (datePreset.value !== 'all') {
+    const now = new Date();
+    let cutoffDate: Date;
+
+    switch (datePreset.value) {
+      case 'today':
+        cutoffDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'week':
+        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case 'quarter':
+        cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case 'year':
+        cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        cutoffDate = new Date(0);
+    }
+
+    items = items.filter(project => {
+      if (!project.lastModified) return false;
+      const projectDate = new Date(project.lastModified);
+
+      // Apply filter based on direction
+      if (dateDirection.value === 'within') {
+        return projectDate >= cutoffDate;
+      } else {
+        // 'older' - show projects modified before the cutoff date
+        return projectDate < cutoffDate;
+      }
+    });
+  }
+
   items.sort((a, b) => {
     let aVal: any;
     let bVal: any;
@@ -128,7 +173,8 @@ const hasActiveFilters = computed(
   () =>
     searchQuery.value.trim() !== '' ||
     selectedTechnologies.value.length > 0 ||
-    showFavoritesOnly.value
+    showFavoritesOnly.value ||
+    datePreset.value !== 'all'
 );
 
 const totalProjects = computed(() => allProjectsData.value?.length || 0);
@@ -256,6 +302,12 @@ whenever(keys['Ctrl+K'], () => {
           :selected-technologies="selectedTechnologies"
           @update:selected-technologies="selectedTechnologies = $event"
         />
+        <DateFilter
+          :selected-preset="datePreset"
+          :direction="dateDirection"
+          @update:selected-preset="datePreset = $event"
+          @update:direction="dateDirection = $event"
+        />
         <Button
           v-if="hasActiveFilters"
           variant="ghost"
@@ -264,6 +316,8 @@ whenever(keys['Ctrl+K'], () => {
             searchQuery = '';
             selectedTechnologies = [];
             showFavoritesOnly = false;
+            datePreset = 'all';
+            dateDirection = 'within';
           "
         >
           Clear Filters
