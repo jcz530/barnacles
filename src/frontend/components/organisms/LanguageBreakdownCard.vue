@@ -8,15 +8,18 @@ interface Props {
   project: ProjectWithDetails;
 }
 
+interface LanguageStatsItem {
+  fileCount: number;
+  percentage: number;
+  linesOfCode: number;
+}
+
+type LanguageStats = Record<string, LanguageStatsItem>;
+
 const props = defineProps<Props>();
 
-const languageStats = computed(() => {
-  if (!props.project.stats?.languageStats) return null;
-  try {
-    return JSON.parse(props.project.stats.languageStats);
-  } catch {
-    return null;
-  }
+const languageStats = computed<LanguageStats | null>(() => {
+  return props.project.stats?.languageStats || null;
 });
 </script>
 
@@ -31,7 +34,11 @@ const languageStats = computed(() => {
     </CardHeader>
     <CardContent>
       <div class="space-y-3">
-        <div v-for="(stats, techSlug) in languageStats" :key="techSlug" class="space-y-1.5">
+        <div
+          v-for="[techSlug, stats] in Object.entries(languageStats)"
+          :key="techSlug"
+          class="space-y-1.5"
+        >
           <div class="flex items-center justify-between text-sm">
             <div class="flex items-center gap-2">
               <div

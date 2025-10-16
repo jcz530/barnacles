@@ -1,4 +1,5 @@
-PRAGMA foreign_keys=OFF;--> statement-breakpoint
+PRAGMA foreign_keys=OFF;
+--> statement-breakpoint
 CREATE TABLE `__new_projects` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -15,9 +16,14 @@ CREATE TABLE `__new_projects` (
 	`updated_at` integer NOT NULL
 );
 --> statement-breakpoint
-INSERT INTO `__new_projects`("id", "name", "path", "description", "icon", "last_modified", "size", "is_favorite", "archived_at", "preferred_ide", "preferred_terminal", "created_at", "updated_at") SELECT "id", "name", "path", "description", "icon", "last_modified", "size", "is_favorite", "archived_at", "preferred_ide", "preferred_terminal", "created_at", "updated_at" FROM `projects`;--> statement-breakpoint
-DROP TABLE `projects`;--> statement-breakpoint
-ALTER TABLE `__new_projects` RENAME TO `projects`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;--> statement-breakpoint
-CREATE UNIQUE INDEX `projects_path_unique` ON `projects` (`path`);--> statement-breakpoint
+INSERT INTO `__new_projects`("id", "name", "path", "description", "icon", "last_modified", "size", "is_favorite", "archived_at", "preferred_ide", "preferred_terminal", "created_at", "updated_at") SELECT "id", "name", "path", "description", "icon", "last_modified", "size", "is_favorite", "archived_at", "preferred_ide", "preferred_terminal", "created_at", "updated_at" FROM `projects`;
+--> statement-breakpoint
+DROP TABLE `projects`;
+--> statement-breakpoint
+ALTER TABLE `__new_projects` RENAME TO `projects`;
+--> statement-breakpoint
+PRAGMA foreign_keys=ON;
+--> statement-breakpoint
+CREATE UNIQUE INDEX `projects_path_unique` ON `projects` (`path`);
+--> statement-breakpoint
 ALTER TABLE `project_stats` ADD `lines_of_code` integer;

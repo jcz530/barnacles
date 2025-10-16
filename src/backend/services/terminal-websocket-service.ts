@@ -10,9 +10,15 @@ export class TerminalWebSocketService {
    * Initialize WebSocket server
    */
   initialize(server: HttpServer): void {
-    this.wss = new WebSocketServer({
-      server,
-      path: '/api/terminals/ws',
+    this.wss = new WebSocketServer({ noServer: true });
+
+    // Handle upgrade requests manually
+    server.on('upgrade', (request, socket, head) => {
+      if (request.url?.startsWith('/api/terminals/ws')) {
+        this.wss!.handleUpgrade(request, socket, head, ws => {
+          this.wss!.emit('connection', ws, request);
+        });
+      }
     });
 
     this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {

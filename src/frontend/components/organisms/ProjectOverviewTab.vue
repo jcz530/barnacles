@@ -16,7 +16,7 @@ defineProps<Props>();
 <template>
   <div class="grid gap-6 md:grid-cols-2">
     <ProjectInfoCard :project="project" />
-    <TechnologiesCard :technologies="project.technologies" />
+    <TechnologiesCard :technologies="project.technologies ?? []" />
     <LanguageBreakdownCard :project="project" />
     <FileStatisticsCard :project="project" />
     <GitInformationCard :project="project" />

@@ -17,7 +17,7 @@ export interface ProjectStats {
   projectId: string;
   fileCount?: number | null;
   directoryCount?: number | null;
-  languageStats?: string | null;
+  languageStats?: Record<string, { fileCount: number; percentage: number; linesOfCode: number }>;
   linesOfCode?: number | null;
   thirdPartySize?: number | null;
   gitBranch?: string | null;

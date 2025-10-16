@@ -57,22 +57,29 @@ export const useQueries = () => {
     includeArchived?: MaybeRef<boolean>;
   }) => {
     return useQuery({
-      queryKey: computed(
-        () =>
-          [
-            'projects',
-            {
-              search: unref(options?.search),
-              technologies: unref(options?.technologies),
-              includeArchived: unref(options?.includeArchived),
-            },
-          ] as const
-      ),
+      queryKey: computed(() => {
+        // Normalize empty values to ensure consistent cache keys
+        const search = unref(options?.search);
+        const technologiesRef = unref(options?.technologies);
+        // Convert to plain array to avoid reactive proxy issues
+        const technologies = technologiesRef ? [...technologiesRef] : undefined;
+        const includeArchived = unref(options?.includeArchived);
+
+        return [
+          'projects',
+          {
+            search: search || undefined,
+            technologies: technologies && technologies.length > 0 ? technologies : undefined,
+            includeArchived: includeArchived || undefined,
+          },
+        ] as const;
+      }),
       queryFn: async () => {
         const params = new URLSearchParams();
-
         const search = unref(options?.search);
-        const technologies = unref(options?.technologies);
+        const technologiesRef = unref(options?.technologies);
+        // Convert to plain array to avoid reactive proxy issues
+        const technologies = technologiesRef ? [...technologiesRef] : undefined;
         const includeArchived = unref(options?.includeArchived);
 
         if (search) params.append('search', search);
@@ -94,6 +101,7 @@ export const useQueries = () => {
         return response.data || [];
       },
       enabled: options?.enabled ?? true,
+      staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     });
   };
 
@@ -516,6 +524,46 @@ export const useQueries = () => {
     });
   };
 
+  const useDefaultSettingsQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['settings', 'defaults'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<Record<string, unknown>>>(
+          'GET',
+          API_ROUTES.SETTINGS_DEFAULTS
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch default settings');
+        }
+
+        return response.data || {};
+      },
+      enabled: options?.enabled ?? true,
+      staleTime: Infinity, // Defaults never change during runtime
+    });
+  };
+
+  const useDefaultSettingQuery = (key: MaybeRef<string>, options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['settings', 'defaults', unref(key)],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<unknown>>(
+          'GET',
+          API_ROUTES.SETTINGS_DEFAULTS_KEY(unref(key))
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch default setting');
+        }
+
+        return response.data;
+      },
+      enabled: options?.enabled ?? true,
+      staleTime: Infinity, // Defaults never change during runtime
+    });
+  };
+
   const useUpdateSettingMutation = () => {
     return useMutation({
       mutationFn: async (params: {
@@ -523,10 +571,18 @@ export const useQueries = () => {
         value: string | number | boolean | object;
         type?: 'string' | 'number' | 'boolean' | 'json';
       }) => {
+        // Convert proxy objects to plain values to ensure proper serialization through IPC
+        let plainValue = params.value;
+        if (Array.isArray(params.value)) {
+          plainValue = [...params.value];
+        } else if (typeof params.value === 'object' && params.value !== null) {
+          plainValue = JSON.parse(JSON.stringify(params.value));
+        }
+
         const response = await apiCall<ApiResponse<Setting>>(
           'PUT',
           API_ROUTES.SETTINGS_KEY(params.key),
-          { value: params.value, type: params.type }
+          { value: plainValue, type: params.type }
         );
 
         if (!response) {
@@ -535,8 +591,8 @@ export const useQueries = () => {
 
         return response.data;
       },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['settings'] });
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: ['settings'] });
       },
     });
   };
@@ -851,6 +907,45 @@ export const useQueries = () => {
     });
   };
 
+  // Search directories query
+  const useSearchDirectoriesQuery = (
+    query: MaybeRef<string>,
+    options?: { enabled?: MaybeRef<boolean>; maxDepth?: number }
+  ) => {
+    return useQuery({
+      queryKey: computed(() => ['directories', 'search', unref(query)] as const),
+      queryFn: async () => {
+        const searchQuery = unref(query);
+        if (!searchQuery || searchQuery.length < 1) {
+          return [];
+        }
+
+        const params = new URLSearchParams();
+        params.append('query', searchQuery);
+        if (options?.maxDepth) {
+          params.append('maxDepth', options.maxDepth.toString());
+        }
+
+        const response = await apiCall<ApiResponse<string[]>>(
+          'GET',
+          `${API_ROUTES.SYSTEM_DIRECTORIES_SEARCH}?${params.toString()}`
+        );
+
+        if (!response) {
+          throw new Error('Failed to search directories');
+        }
+
+        return response.data || [];
+      },
+      enabled: computed(() => {
+        const enabled = options?.enabled;
+        const searchQuery = unref(query);
+        return (enabled ? unref(enabled) : true) && searchQuery.length >= 1;
+      }),
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
+  };
+
   // Get hosts file entries
   const useHostsQuery = (options?: { enabled?: boolean }) => {
     return useQuery({
@@ -937,6 +1032,8 @@ export const useQueries = () => {
     useProjectComposerScriptsQuery,
     useSettingsQuery,
     useSettingQuery,
+    useDefaultSettingsQuery,
+    useDefaultSettingQuery,
     useUpdateSettingMutation,
     useDeleteThirdPartyPackagesMutation,
     useStartProcessesQuery,
@@ -951,6 +1048,7 @@ export const useQueries = () => {
     useCreateProcessMutation,
     useKillProcessMutation,
     useProcessOutputByIdQuery,
+    useSearchDirectoriesQuery,
     useHostsQuery,
     useHostsPathQuery,
     useUpdateHostsMutation,

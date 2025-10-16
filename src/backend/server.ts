@@ -6,26 +6,37 @@ import { findAvailablePortInRange } from '../shared/utils/port-finder';
 import { corsMiddleware } from './middleware/cors';
 import { cspMiddleware } from './middleware/csp';
 import api from './routes';
+import { projectScanWebSocketService } from './services/project-scan-websocket-service';
+import { projectRescanSchedulerService } from './services/project-rescan-scheduler-service';
+import { terminalWebSocketService } from './services/terminal-websocket-service';
 
 export const createServer = () => {
   const app = new Hono();
 
-  // Middleware
-  app.use('*', corsMiddleware());
-  app.use(
-    '*',
-    cspMiddleware({
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'blob:'],
-      connectSrc: ["'self'", 'localhost:*'],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    })
-  );
+  // Middleware - Skip for WebSocket upgrade requests
+  app.use('*', async (c, next) => {
+    // Skip middleware for WebSocket upgrade requests
+    const upgrade = c.req.header('upgrade');
+    if (upgrade && upgrade.toLowerCase() === 'websocket') {
+      return await next();
+    }
+
+    // Apply CORS middleware
+    await corsMiddleware()(c, async () => {
+      // Apply CSP middleware
+      await cspMiddleware({
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        connectSrc: ["'self'", 'localhost:*', 'ws://localhost:*', 'wss://localhost:*'],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      })(c, next);
+    });
+  });
 
   // Request logging
   app.use('*', async (c, next) => {
@@ -62,11 +73,73 @@ export const startServer = async () => {
 
   const app = createServer();
 
-  const server = serve({
-    fetch: app.fetch,
-    port: availablePort,
-    hostname: APP_CONFIG.API_HOST,
+  // Create a raw Node.js HTTP server for proper WebSocket support
+  const http = await import('http');
+  const httpServer = http.createServer();
+
+  // Handle regular HTTP requests (not WebSocket upgrades)
+  httpServer.on('request', async (req, res) => {
+    try {
+      // Convert Node.js IncomingMessage to Fetch API Request
+      const protocol = req.socket.encrypted ? 'https' : 'http';
+      const url = `${protocol}://${req.headers.host || `${APP_CONFIG.API_HOST}:${availablePort}`}${req.url}`;
+
+      // Collect request body for non-GET/HEAD requests
+      let body: Buffer | undefined;
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) {
+          chunks.push(chunk);
+        }
+        body = Buffer.concat(chunks);
+      }
+
+      // Create Fetch API Request
+      const request = new Request(url, {
+        method: req.method,
+        headers: Object.fromEntries(
+          Object.entries(req.headers)
+            .filter(([_, v]) => v !== undefined)
+            .map(([k, v]) => [k, Array.isArray(v) ? v.join(', ') : String(v)])
+        ),
+        body: body,
+      });
+
+      // Let Hono handle the request
+      const response = await app.fetch(request);
+
+      // Convert Fetch API Response back to Node.js response
+      res.statusCode = response.status;
+      response.headers.forEach((value, key) => {
+        res.setHeader(key, value);
+      });
+
+      // Stream response body
+      if (response.body) {
+        const reader = response.body.getReader();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(value);
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      }
+
+      res.end();
+    } catch (error) {
+      console.error('Error handling request:', error);
+      if (!res.headersSent) {
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: 'Internal server error' }));
+      }
+    }
   });
+
+  httpServer.listen(availablePort, APP_CONFIG.API_HOST);
 
   console.log(`🔥 Hono API server running on ${apiBaseUrl}`);
 
@@ -76,5 +149,12 @@ export const startServer = async () => {
     );
   }
 
-  return { server, port: availablePort, baseUrl: apiBaseUrl };
+  // Initialize WebSocket services with the HTTP server
+  projectScanWebSocketService.initialize(httpServer);
+  terminalWebSocketService.initialize(httpServer);
+
+  // Start periodic rescan scheduler
+  await projectRescanSchedulerService.start();
+
+  return { server: httpServer, port: availablePort, baseUrl: apiBaseUrl };
 };

@@ -34,7 +34,8 @@ CREATE TABLE `projects` (
 	`updated_at` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `projects_path_unique` ON `projects` (`path`);--> statement-breakpoint
+CREATE UNIQUE INDEX `projects_path_unique` ON `projects` (`path`);
+--> statement-breakpoint
 CREATE TABLE `technologies` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -45,5 +46,6 @@ CREATE TABLE `technologies` (
 	`updated_at` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `technologies_name_unique` ON `technologies` (`name`);--> statement-breakpoint
+CREATE UNIQUE INDEX `technologies_name_unique` ON `technologies` (`name`);
+--> statement-breakpoint
 CREATE UNIQUE INDEX `technologies_slug_unique` ON `technologies` (`slug`);

@@ -7,6 +7,8 @@ import CardTitle from '../components/ui/card/CardTitle.vue';
 import CardDescription from '../components/ui/card/CardDescription.vue';
 import CardContent from '../components/ui/card/CardContent.vue';
 import ScanMaxDepthSetting from '../components/organisms/ScanMaxDepthSetting.vue';
+import ScanIncludedDirectoriesSetting from '../components/organisms/ScanIncludedDirectoriesSetting.vue';
+import ScanExcludedDirectoriesSetting from '../components/organisms/ScanExcludedDirectoriesSetting.vue';
 import DefaultIDESetting from '../components/organisms/DefaultIDESetting.vue';
 import DefaultTerminalSetting from '../components/organisms/DefaultTerminalSetting.vue';
 
@@ -33,7 +35,11 @@ onMounted(() => {
             <CardDescription>Configure how projects are discovered and scanned</CardDescription>
           </CardHeader>
           <CardContent>
-            <ScanMaxDepthSetting />
+            <div class="space-y-6">
+              <ScanIncludedDirectoriesSetting />
+              <ScanMaxDepthSetting />
+              <ScanExcludedDirectoriesSetting />
+            </div>
           </CardContent>
         </Card>
 

@@ -38,9 +38,9 @@ export const createWindow = async (apiPort?: number): Promise<BrowserWindow> => 
         'Content-Security-Policy': [
           "default-src 'self'; " +
             "script-src 'self'; " +
-            "style-src 'self' 'unsafe-inline'; " +
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
             `img-src ${imgSrc}; ` +
-            "font-src 'self' data:; " +
+            "font-src 'self' data: https://fonts.gstatic.com; " +
             `connect-src ${connectSrc}; ` +
             "object-src 'none'; " +
             "base-uri 'self'",

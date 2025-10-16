@@ -395,10 +395,6 @@ const handleOpenUrl = (url: string) => {
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem @click="handleRescan" :disabled="isRescanning">
-          <RefreshCw class="mr-2 h-4 w-4" :class="{ 'animate-spin': isRescanning }" />
-          Rescan Project
-        </DropdownMenuItem>
         <DropdownMenuItem @click="handleOpenInFinder">
           <FolderOpen class="mr-2 h-4 w-4" />
           Open in Finder
@@ -428,6 +424,10 @@ const handleOpenUrl = (url: string) => {
           Delete Packages
         </DropdownMenuItem>
         <DropdownMenuSeparator v-if="thirdPartySize && thirdPartySize > 0" />
+        <DropdownMenuItem @click="handleRescan" :disabled="isRescanning">
+          <RefreshCw class="mr-2 h-4 w-4" :class="{ 'animate-spin': isRescanning }" />
+          Rescan Project
+        </DropdownMenuItem>
         <DropdownMenuItem v-if="!isArchived" @click="handleArchive" :disabled="isArchiving">
           <Archive class="mr-2 h-4 w-4" />
           Archive Project
