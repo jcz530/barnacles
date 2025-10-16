@@ -238,8 +238,10 @@ whenever(keys['Ctrl+K'], () => {
       </div>
 
       <!-- Filters -->
-      <div class="flex items-center gap-3">
+      <div class="grid grid-cols-2 gap-3">
         <ProjectSearchBar ref="searchBarRef" v-model="searchQuery" />
+      </div>
+      <div class="mt-4 flex items-center gap-3">
         <Button
           :variant="showFavoritesOnly ? 'default' : 'outline'"
           size="sm"
