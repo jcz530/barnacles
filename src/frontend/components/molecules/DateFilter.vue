@@ -89,6 +89,10 @@ const selectedLabel = computed(() => {
   const label = preset?.label || '';
   const prefix = props.direction === 'within' ? 'Past' : 'Older than';
 
+  if (props.selectedPreset === 'today' && props.direction === 'within') {
+    return 'Today';
+  }
+
   return `${prefix} ${label}`;
 });
 </script>
