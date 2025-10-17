@@ -1,4 +1,14 @@
-import { inject, onUnmounted, provide, ref, type InjectionKey, type Ref } from 'vue';
+import {
+  inject,
+  isRef,
+  onUnmounted,
+  provide,
+  ref,
+  watch,
+  type ComputedRef,
+  type InjectionKey,
+  type Ref,
+} from 'vue';
 
 export interface BreadcrumbItem {
   label: string;
@@ -7,7 +17,9 @@ export interface BreadcrumbItem {
 
 interface BreadcrumbContext {
   breadcrumbs: Ref<BreadcrumbItem[]>;
-  setBreadcrumbs: (items: BreadcrumbItem[]) => void;
+  setBreadcrumbs: (
+    items: BreadcrumbItem[] | Ref<BreadcrumbItem[]> | ComputedRef<BreadcrumbItem[]>
+  ) => void;
 }
 
 export const BreadcrumbSymbol: InjectionKey<BreadcrumbContext> = Symbol('breadcrumbs');
@@ -18,8 +30,19 @@ export const BreadcrumbSymbol: InjectionKey<BreadcrumbContext> = Symbol('breadcr
 export function provideBreadcrumbs() {
   const breadcrumbs = ref<BreadcrumbItem[]>([]);
 
-  const setBreadcrumbs = (items: BreadcrumbItem[]) => {
-    breadcrumbs.value = items;
+  const setBreadcrumbs = (
+    items: BreadcrumbItem[] | Ref<BreadcrumbItem[]> | ComputedRef<BreadcrumbItem[]>
+  ) => {
+    if (isRef(items)) {
+      // If items is a ref/computed, set up a watcher
+      breadcrumbs.value = items.value;
+      watch(items, newItems => {
+        breadcrumbs.value = newItems;
+      });
+    } else {
+      // Plain array
+      breadcrumbs.value = items;
+    }
   };
 
   provide(BreadcrumbSymbol, { breadcrumbs, setBreadcrumbs });

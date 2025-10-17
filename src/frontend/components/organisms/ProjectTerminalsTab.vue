@@ -1,17 +1,16 @@
 <script setup lang="ts">
 import { ChevronDown, ChevronRight, Play, Terminal as TerminalIcon, X } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import type { ComputedRef, Ref } from 'vue';
+import { computed, inject, ref } from 'vue';
 import { useQueries } from '../../composables/useQueries';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import ProcessOutput from './ProcessOutput.vue';
 
-const props = defineProps<{
-  projectId: string;
-  projectPath: string;
-  packageJsonScripts?: Record<string, string>;
-  composerJsonScripts?: Record<string, string>;
-}>();
+const projectId = inject<ComputedRef<string>>('projectId');
+const projectPath = inject<ComputedRef<string | undefined>>('projectPath');
+const packageJsonScripts = inject<Ref<Record<string, string> | undefined>>('packageScripts');
+const composerJsonScripts = inject<Ref<Record<string, string> | undefined>>('composerScripts');
 
 const {
   useProcessesQuery,
@@ -20,7 +19,7 @@ const {
   useProcessOutputByIdQuery,
 } = useQueries();
 
-const { data: processes, isLoading } = useProcessesQuery(computed(() => props.projectId));
+const { data: processes, isLoading } = useProcessesQuery(projectId!);
 const createProcessMutation = useCreateProcessMutation();
 const killProcessMutation = useKillProcessMutation();
 
@@ -64,8 +63,8 @@ const autoSelectProcess = () => {
 const handleCreateProcess = async (command?: string, title?: string) => {
   try {
     const newProcess = await createProcessMutation.mutateAsync({
-      projectId: props.projectId,
-      cwd: props.projectPath,
+      projectId: projectId!.value,
+      cwd: projectPath!.value,
       command,
       title: title || command || 'Process',
     });
@@ -107,8 +106,8 @@ autoSelectProcess();
       <!-- Scripts Section -->
       <div
         v-if="
-          (packageJsonScripts && Object.keys(packageJsonScripts).length > 0) ||
-          (composerJsonScripts && Object.keys(composerJsonScripts).length > 0)
+          (packageJsonScripts?.value && Object.keys(packageJsonScripts.value).length > 0) ||
+          (composerJsonScripts?.value && Object.keys(composerJsonScripts.value).length > 0)
         "
         class="border-b border-slate-200"
       >
@@ -123,7 +122,10 @@ autoSelectProcess();
 
         <div v-if="scriptsExpanded" class="p-2">
           <!-- NPM Scripts -->
-          <div v-if="packageJsonScripts && Object.keys(packageJsonScripts).length > 0" class="mb-2">
+          <div
+            v-if="packageJsonScripts?.value && Object.keys(packageJsonScripts.value).length > 0"
+            class="mb-2"
+          >
             <div
               class="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 hover:bg-slate-100"
               @click="npmScriptsExpanded = !npmScriptsExpanded"
@@ -135,7 +137,7 @@ autoSelectProcess();
 
             <div v-if="npmScriptsExpanded" class="mt-1 space-y-1">
               <button
-                v-for="(command, name) in packageJsonScripts"
+                v-for="(command, name) in packageJsonScripts?.value"
                 :key="name"
                 class="flex w-full items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
                 @click="() => runScript(String(name), 'npm')"
@@ -150,7 +152,9 @@ autoSelectProcess();
           </div>
 
           <!-- Composer Scripts -->
-          <div v-if="composerJsonScripts && Object.keys(composerJsonScripts).length > 0">
+          <div
+            v-if="composerJsonScripts?.value && Object.keys(composerJsonScripts.value).length > 0"
+          >
             <div
               class="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 hover:bg-slate-100"
               @click="composerScriptsExpanded = !composerScriptsExpanded"
@@ -162,7 +166,7 @@ autoSelectProcess();
 
             <div v-if="composerScriptsExpanded" class="mt-1 space-y-1">
               <button
-                v-for="(command, name) in composerJsonScripts"
+                v-for="(command, name) in composerJsonScripts?.value"
                 :key="name"
                 class="flex w-full items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
                 @click="() => runScript(String(name), 'composer')"
