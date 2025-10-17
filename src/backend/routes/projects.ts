@@ -453,6 +453,93 @@ projects.get('/:id/readme', async c => {
 });
 
 /**
+ * GET /api/projects/:id/file?path=...
+ * Serve a file from the project directory (for README images, etc.)
+ */
+projects.get('/:id/file', async c => {
+  try {
+    const id = c.req.param('id');
+    const filePath = c.req.query('path');
+
+    if (!filePath) {
+      return c.json(
+        {
+          error: 'File path is required',
+        },
+        400
+      );
+    }
+
+    const project = await projectService.getProjectById(id);
+
+    if (!project) {
+      return c.json(
+        {
+          error: 'Project not found',
+        },
+        404
+      );
+    }
+
+    const fs = await import('fs/promises');
+    const fullPath = path.join(project.path, filePath);
+
+    // Security: Ensure the resolved path is within the project directory
+    const normalizedProjectPath = path.resolve(project.path);
+    const normalizedFilePath = path.resolve(fullPath);
+
+    if (!normalizedFilePath.startsWith(normalizedProjectPath)) {
+      return c.json(
+        {
+          error: 'Access denied',
+        },
+        403
+      );
+    }
+
+    // Check if file exists
+    try {
+      await fs.access(fullPath);
+    } catch {
+      return c.json(
+        {
+          error: 'File not found',
+        },
+        404
+      );
+    }
+
+    // Read and serve the file
+    const fileBuffer = await fs.readFile(fullPath);
+
+    // Determine content type based on file extension
+    const ext = path.extname(filePath).toLowerCase();
+    const contentTypes: Record<string, string> = {
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.gif': 'image/gif',
+      '.svg': 'image/svg+xml',
+      '.webp': 'image/webp',
+    };
+
+    const contentType = contentTypes[ext] || 'application/octet-stream';
+
+    // Set content type header and return the file
+    c.header('Content-Type', contentType);
+    return c.body(fileBuffer);
+  } catch (error) {
+    console.error('Error serving project file:', error);
+    return c.json(
+      {
+        error: 'Failed to serve file',
+      },
+      500
+    );
+  }
+});
+
+/**
  * GET /api/projects/:id/package-scripts
  * Get package.json scripts for a project
  */

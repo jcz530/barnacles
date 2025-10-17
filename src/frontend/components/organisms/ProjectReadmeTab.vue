@@ -3,10 +3,12 @@ import DOMPurify from 'dompurify';
 import { FileText } from 'lucide-vue-next';
 import { marked } from 'marked';
 import { computed } from 'vue';
+import { RUNTIME_CONFIG } from '../../../shared/constants';
 import { useQueries } from '../../composables/useQueries';
 
 interface Props {
   projectId: string;
+  projectPath: string;
 }
 
 const props = defineProps<Props>();
@@ -14,9 +16,41 @@ const props = defineProps<Props>();
 const { useProjectReadmeQuery } = useQueries();
 const { data: readme, isLoading } = useProjectReadmeQuery(props.projectId);
 
-const htmlContent = computed(() => {
+/**
+ * Transforms relative image paths in markdown to use the API endpoint
+ * so they load correctly in the Electron renderer
+ */
+const transformedMarkdown = computed(() => {
   if (!readme.value) return null;
-  const rawHtml = marked(readme.value) as string;
+
+  // Replace relative image paths with API URLs
+  // Matches: ![alt](./path), ![alt](../path), ![alt](path/to/file)
+  // But NOT: ![alt](http://...), ![alt](https://...), ![alt](data:...)
+  return readme.value.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    (_match, alt: string, imagePath: string) => {
+      // Skip absolute URLs
+      if (
+        imagePath.startsWith('http://') ||
+        imagePath.startsWith('https://') ||
+        imagePath.startsWith('data:')
+      ) {
+        return _match;
+      }
+
+      // Remove leading ./ if present
+      const cleanPath = imagePath.startsWith('./') ? imagePath.slice(2) : imagePath;
+
+      // Construct API URL to serve the file using runtime config with query parameter
+      const apiUrl = `${RUNTIME_CONFIG.API_BASE_URL}/api/projects/${props.projectId}/file?path=${encodeURIComponent(cleanPath)}`;
+      return `![${alt}](${apiUrl})`;
+    }
+  );
+});
+
+const htmlContent = computed(() => {
+  if (!transformedMarkdown.value) return null;
+  const rawHtml = marked(transformedMarkdown.value) as string;
   return DOMPurify.sanitize(rawHtml);
 });
 </script>

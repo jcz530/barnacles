@@ -168,7 +168,7 @@ const navigateToProcess = () => {
           </TabsContent>
 
           <TabsContent value="readme">
-            <ProjectReadmeTab :project-id="project.id" />
+            <ProjectReadmeTab :project-id="project.id" :project-path="project.path" />
           </TabsContent>
 
           <TabsContent value="terminals">
