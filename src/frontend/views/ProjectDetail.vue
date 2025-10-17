@@ -50,11 +50,14 @@ provide('packageScripts', packageScripts);
 provide('composerScripts', composerScripts);
 provide('isLoading', isLoading);
 
+// Set breadcrumbs with reactive project name
+const breadcrumbs = computed(() => [
+  { label: 'Projects', href: '/projects' },
+  { label: project.value?.name || 'Loading...', href: `/projects/${projectId}` },
+]);
+
 onMounted(() => {
-  setBreadcrumbs([
-    { label: 'Projects', href: '/projects' },
-    { label: project.value?.name || 'Loading...' },
-  ]);
+  setBreadcrumbs(breadcrumbs);
 });
 
 // Update window title when project data loads
