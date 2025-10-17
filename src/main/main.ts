@@ -4,6 +4,7 @@ import started from 'electron-squirrel-startup';
 import { startServer } from '../backend/server';
 import { setupIPC } from './ipc';
 import { createMenu } from './menu';
+import { initializeUpdater } from './updater';
 import { createWindow } from './window-manager';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
@@ -54,6 +55,9 @@ const initialize = async (): Promise<void> => {
 
     // Setup IPC communication
     setupIPC();
+
+    // Initialize auto-updater
+    initializeUpdater();
 
     // Create the application menu
     createMenu();

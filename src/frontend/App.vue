@@ -4,6 +4,8 @@ import { useColorInversion } from '@/composables/useColorInversion';
 import { Toaster } from '@/components/ui/sonner';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
 import { useFirstRunDetection } from '@/composables/useFirstRunDetection';
+import { useUpdater } from '@/composables/useUpdater';
+import UpdateNotification from '@/components/organisms/UpdateNotification.vue';
 import 'vue-sonner/style.css'; // vue-sonner v2 requires this import
 
 // App now uses router-view for rendering pages
@@ -17,6 +19,9 @@ const { connect: connectScanWebSocket } = useProjectScanWebSocket();
 // Initialize first-run detection
 const { checkFirstRun } = useFirstRunDetection();
 
+// Initialize auto-updater
+const { updateState, downloadUpdate, installUpdate, dismissUpdate } = useUpdater();
+
 onMounted(() => {
   // Connect to WebSocket to check for active scans and receive updates
   connectScanWebSocket();
@@ -29,6 +34,12 @@ onMounted(() => {
 <template>
   <div id="app">
     <Toaster position="bottom-center" :closeButton="true" />
+    <UpdateNotification
+      :update-state="updateState"
+      @download="downloadUpdate"
+      @install="installUpdate"
+      @dismiss="dismissUpdate"
+    />
     <div class="app-content">
       <router-view />
     </div>

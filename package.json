@@ -1,7 +1,7 @@
 {
   "name": "barnacles",
   "productName": "Barnacles",
-  "version": "0.2.01",
+  "version": "0.2.2",
   "description": "App for developers",
   "main": "dist/main/main.js",
   "type": "module",
@@ -88,6 +88,7 @@
     "drizzle-orm": "^0.44.5",
     "electron-context-menu": "^4.1.1",
     "electron-squirrel-startup": "^1.0.1",
+    "electron-updater": "^6.6.2",
     "hono": "^4.9.8",
     "vue-sonner": "^2.0.9",
     "ws": "^8.18.3"
