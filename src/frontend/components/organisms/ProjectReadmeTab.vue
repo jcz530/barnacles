@@ -2,19 +2,15 @@
 import DOMPurify from 'dompurify';
 import { FileText } from 'lucide-vue-next';
 import { marked } from 'marked';
-import { computed } from 'vue';
+import type { ComputedRef } from 'vue';
+import { computed, inject } from 'vue';
 import { RUNTIME_CONFIG } from '../../../shared/constants';
 import { useQueries } from '../../composables/useQueries';
 
-interface Props {
-  projectId: string;
-  projectPath: string;
-}
-
-const props = defineProps<Props>();
+const projectId = inject<ComputedRef<string>>('projectId');
 
 const { useProjectReadmeQuery } = useQueries();
-const { data: readme, isLoading } = useProjectReadmeQuery(props.projectId);
+const { data: readme, isLoading } = useProjectReadmeQuery(projectId!);
 
 /**
  * Transforms relative image paths in markdown to use the API endpoint
@@ -42,7 +38,7 @@ const transformedMarkdown = computed(() => {
       const cleanPath = imagePath.startsWith('./') ? imagePath.slice(2) : imagePath;
 
       // Construct API URL to serve the file using runtime config with query parameter
-      const apiUrl = `${RUNTIME_CONFIG.API_BASE_URL}/api/projects/${props.projectId}/file?path=${encodeURIComponent(cleanPath)}`;
+      const apiUrl = `${RUNTIME_CONFIG.API_BASE_URL}/api/projects/${projectId!.value}/file?path=${encodeURIComponent(cleanPath)}`;
       return `![${alt}](${apiUrl})`;
     }
   );

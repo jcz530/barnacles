@@ -1,6 +1,9 @@
 import Users from '@/views/Users.vue';
 import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router';
 import DefaultLayout from '../layouts/DefaultLayout.vue';
+import ProjectOverviewTab from '../components/organisms/ProjectOverviewTab.vue';
+import ProjectReadmeTab from '../components/organisms/ProjectReadmeTab.vue';
+import ProjectTerminalsTab from '../components/organisms/ProjectTerminalsTab.vue';
 import Api from '../views/Api.vue';
 import Home from '../views/Home.vue';
 import Hosts from '../views/Hosts.vue';
@@ -28,6 +31,24 @@ const routes = [
         path: '/projects/:id',
         name: 'ProjectDetail',
         component: ProjectDetail,
+        redirect: { name: 'ProjectOverview' },
+        children: [
+          {
+            path: 'overview',
+            name: 'ProjectOverview',
+            component: ProjectOverviewTab,
+          },
+          {
+            path: 'readme',
+            name: 'ProjectReadme',
+            component: ProjectReadmeTab,
+          },
+          {
+            path: 'terminals',
+            name: 'ProjectTerminals',
+            component: ProjectTerminalsTab,
+          },
+        ],
       },
       {
         path: '/terminals',

@@ -1,18 +1,14 @@
 <script setup lang="ts">
 import { ArrowLeft } from 'lucide-vue-next';
-import { computed, onMounted, watch } from 'vue';
+import { computed, onMounted, provide, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ProcessIndicator from '../components/atoms/ProcessIndicator.vue';
 import ProjectIcon from '../components/atoms/ProjectIcon.vue';
 import OpenInIDEButton from '../components/molecules/OpenInIDEButton.vue';
 import OpenTerminalButton from '../components/molecules/OpenTerminalButton.vue';
 import ProjectActionsDropdown from '../components/molecules/ProjectActionsDropdown.vue';
-import ProjectOverviewTab from '../components/organisms/ProjectOverviewTab.vue';
-import ProjectReadmeTab from '../components/organisms/ProjectReadmeTab.vue';
-import ProjectTerminalsTab from '../components/organisms/ProjectTerminalsTab.vue';
 import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useQueries } from '../composables/useQueries';
 import { useRunningProcesses } from '../composables/useRunningProcesses';
@@ -42,6 +38,17 @@ const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
   enabled: true,
   refetchInterval: 2000,
 });
+
+// Provide data to child routes
+provide('project', project);
+provide('projectId', projectId);
+provide(
+  'projectPath ',
+  computed(() => project.value?.path)
+);
+provide('packageScripts', packageScripts);
+provide('composerScripts', composerScripts);
+provide('isLoading', isLoading);
 
 onMounted(() => {
   setBreadcrumbs([
@@ -73,10 +80,22 @@ const handleBack = () => {
 
 const navigateToProcess = () => {
   // Switch to the terminals tab
-  const tabsList = document.querySelector('[role="tablist"]');
-  const terminalsTab = tabsList?.querySelector('[value="terminals"]') as HTMLElement;
-  terminalsTab?.click();
+  router.push({ name: 'ProjectTerminals', params: { id: projectId.value } });
 };
+
+// Tab configuration
+const tabs = [
+  { name: 'ProjectOverview', label: 'Overview', value: 'overview' },
+  { name: 'ProjectReadme', label: 'README.md', value: 'readme' },
+  { name: 'ProjectTerminals', label: 'Processes', value: 'terminals' },
+];
+
+// Computed property to determine active tab based on current route
+const activeTab = computed(() => {
+  const routeName = route.name as string;
+  const tab = tabs.find(t => t.name === routeName);
+  return tab?.value || 'overview';
+});
 </script>
 
 <template>
@@ -155,31 +174,24 @@ const navigateToProcess = () => {
         <Skeleton v-for="i in 4" :key="i" class="h-48 w-full" />
       </div>
 
-      <div v-else-if="project">
-        <Tabs default-value="overview" class="w-full">
-          <TabsList class="mb-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="readme">README.md</TabsTrigger>
-            <TabsTrigger value="terminals">Processes</TabsTrigger>
-          </TabsList>
+      <div v-else-if="project" class="w-full">
+        <!-- Tab Navigation -->
+        <div
+          class="mb-6 inline-flex h-9 items-center justify-center rounded-lg bg-slate-100 p-1 text-slate-500"
+        >
+          <router-link
+            v-for="tab in tabs"
+            :key="tab.value"
+            :to="{ name: tab.name, params: { id: projectId } }"
+            class="inline-flex items-center justify-center rounded-md px-3 py-1 text-sm font-medium whitespace-nowrap ring-offset-white transition-all focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+            :class="activeTab === tab.value ? 'text-slate-950 shadow' : 'hover:bg-slate-200/50'"
+          >
+            {{ tab.label }}
+          </router-link>
+        </div>
 
-          <TabsContent value="overview">
-            <ProjectOverviewTab :project="project" />
-          </TabsContent>
-
-          <TabsContent value="readme">
-            <ProjectReadmeTab :project-id="project.id" :project-path="project.path" />
-          </TabsContent>
-
-          <TabsContent value="terminals">
-            <ProjectTerminalsTab
-              :project-id="project.id"
-              :project-path="project.path"
-              :package-json-scripts="packageScripts"
-              :composer-json-scripts="composerScripts"
-            />
-          </TabsContent>
-        </Tabs>
+        <!-- Tab Content via Router View -->
+        <router-view />
       </div>
 
       <div v-else class="py-12 text-center">

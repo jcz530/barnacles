@@ -51,7 +51,7 @@ const toggleFavoriteMutation = useToggleFavoriteMutation();
 
 // Handlers
 const handleOpenProject = (project: ProjectWithDetails) => {
-  router.push(`/projects/${project.id}`);
+  router.push({ name: 'ProjectOverview', params: { id: project.id } });
 };
 
 const handleDeleteProject = async (projectId: string) => {

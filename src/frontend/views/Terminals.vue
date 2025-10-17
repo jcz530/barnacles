@@ -27,7 +27,7 @@ const getProjectName = (projectId?: string) => {
 };
 
 const navigateToProject = (projectId: string) => {
-  router.push(`/projects/${projectId}`);
+  router.push({ name: 'ProjectTerminals', params: { id: projectId } });
 };
 
 // Fetch process output for selected process

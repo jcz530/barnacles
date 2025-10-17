@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { ComputedRef } from 'vue';
+import { inject } from 'vue';
 import type { ProjectWithDetails } from '../../../shared/types/api';
 import FileStatisticsCard from './FileStatisticsCard.vue';
 import GitInformationCard from './GitInformationCard.vue';
@@ -6,11 +8,7 @@ import LanguageBreakdownCard from './LanguageBreakdownCard.vue';
 import ProjectInfoCard from './ProjectInfoCard.vue';
 import TechnologiesCard from './TechnologiesCard.vue';
 
-interface Props {
-  project: ProjectWithDetails;
-}
-
-defineProps<Props>();
+const project = inject<ComputedRef<ProjectWithDetails | undefined>>('project');
 </script>
 
 <template>
