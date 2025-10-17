@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# Load environment variables from .env file if it exists
-if [ -f ".env" ]; then
+# Load environment variables from .env file if it exists and vars aren't already set
+if [ -f ".env" ] && [ -z "$APPLE_ID" ]; then
   echo "Loading environment variables from .env file..."
   export $(cat .env | grep -v '^#' | xargs)
 fi
