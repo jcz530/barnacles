@@ -44,6 +44,9 @@ jobs:
       - name: Prune dev dependencies (keep optional platform packages)
         run: npm prune --omit=dev
 
+      - name: Install @electron/notarize for code signing
+        run: npm install --no-save @electron/notarize
+
       - name: Create placeholder for missing libsql platform packages
         shell: bash
         run: |
