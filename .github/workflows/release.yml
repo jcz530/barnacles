@@ -44,6 +44,16 @@ jobs:
       - name: Prune dev dependencies (keep optional platform packages)
         run: npm prune --omit=dev
 
+      - name: Install @electron/notarize for code signing
+        run: npm install --no-save @electron/notarize
+
+      - name: Import Code-Signing Certificates (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+
       - name: Create placeholder for missing libsql platform packages
         shell: bash
         run: |
@@ -55,6 +65,9 @@ jobs:
         run: npx --yes electron-builder --mac --${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Package application (Windows)
         if: matrix.os == 'windows-latest'
