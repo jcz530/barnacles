@@ -91,7 +91,7 @@ const handleDismiss = () => {
       </CardHeader>
       <CardContent class="space-y-4">
         <div class="space-y-2">
-          <p class="text-sm text-gray-600 dark:text-gray-400">
+          <p class="text-sm text-slate-600 dark:text-slate-400">
             Current State: <span class="font-semibold">{{ updateState.status }}</span>
           </p>
           <div class="flex flex-wrap gap-2">
