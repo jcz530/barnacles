@@ -1,5 +1,3 @@
-PRAGMA foreign_keys=OFF;
---> statement-breakpoint
 CREATE TABLE `__new_projects` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -21,8 +19,6 @@ INSERT INTO `__new_projects`("id", "name", "path", "description", "icon", "last_
 DROP TABLE `projects`;
 --> statement-breakpoint
 ALTER TABLE `__new_projects` RENAME TO `projects`;
---> statement-breakpoint
-PRAGMA foreign_keys=ON;
 --> statement-breakpoint
 CREATE UNIQUE INDEX `projects_path_unique` ON `projects` (`path`);
 --> statement-breakpoint
