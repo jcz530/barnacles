@@ -24,7 +24,7 @@ const emit = defineEmits<{
 }>();
 
 const showNotification = computed(() => {
-  return ['available', 'downloading', 'downloaded'].includes(props.updateState.status);
+  return ['available', 'downloading', 'downloaded', 'error'].includes(props.updateState.status);
 });
 
 const title = computed(() => {
@@ -35,6 +35,8 @@ const title = computed(() => {
       return 'Downloading Update';
     case 'downloaded':
       return 'Update Ready';
+    case 'error':
+      return 'Update Error';
     default:
       return '';
   }
@@ -48,6 +50,8 @@ const description = computed(() => {
       return `Downloading version ${props.updateState.updateInfo?.version}...`;
     case 'downloaded':
       return `Version ${props.updateState.updateInfo?.version} is ready to install. Restart the app to apply the update.`;
+    case 'error':
+      return props.updateState.error?.message || 'An error occurred while checking for updates.';
     default:
       return '';
   }
@@ -79,7 +83,15 @@ const showPrimaryAction = computed(() => {
 });
 
 const showDismiss = computed(() => {
-  return props.updateState.status === 'available';
+  return ['available', 'error'].includes(props.updateState.status);
+});
+
+const cardClass = computed(() => {
+  const baseClass = 'fixed right-4 bottom-4 w-96 shadow-lg';
+  if (props.updateState.status === 'error') {
+    return `${baseClass} border-red-500`;
+  }
+  return `${baseClass} border-primary-500`;
 });
 </script>
 
@@ -92,20 +104,20 @@ const showDismiss = computed(() => {
     leave-from-class="opacity-100 translate-y-0"
     leave-to-class="opacity-0 translate-y-2"
   >
-    <Card v-if="showNotification" class="fixed right-4 bottom-4 w-96 border-blue-500 shadow-lg">
+    <Card v-if="showNotification" :class="cardClass">
       <CardHeader>
         <CardTitle class="text-lg">{{ title }}</CardTitle>
         <CardDescription>{{ description }}</CardDescription>
       </CardHeader>
 
       <CardContent v-if="updateState.status === 'downloading'" class="pb-4">
-        <div class="h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+        <div class="h-2.5 w-full rounded-full bg-slate-200 dark:bg-slate-700">
           <div
-            class="h-2.5 rounded-full bg-blue-600 transition-all duration-300"
+            class="bg-primary-600 h-2.5 rounded-full transition-all duration-300"
             :style="{ width: `${progressPercent}%` }"
           />
         </div>
-        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">
           {{ progressPercent.toFixed(1) }}%
         </p>
       </CardContent>

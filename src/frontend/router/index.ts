@@ -11,6 +11,7 @@ import ProjectDetail from '../views/ProjectDetail.vue';
 import Projects from '../views/Projects.vue';
 import Settings from '../views/Settings.vue';
 import Terminals from '../views/Terminals.vue';
+import UpdateTest from '../views/UpdateTest.vue';
 
 const routes = [
   {
@@ -74,6 +75,11 @@ const routes = [
         path: '/hosts',
         name: 'Hosts',
         component: Hosts,
+      },
+      {
+        path: '/update-test',
+        name: 'UpdateTest',
+        component: UpdateTest,
       },
     ],
   },
