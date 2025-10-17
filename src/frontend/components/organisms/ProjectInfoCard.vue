@@ -52,11 +52,11 @@ const copyPath = () => {
           <span
             class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium"
             :class="{
-              'bg-emerald-100 text-emerald-700': project.status === 'active',
-              'bg-slate-100 text-slate-700': project.status === 'archived',
+              'bg-emerald-100 text-emerald-700': !project.archivedAt,
+              'bg-slate-100 text-slate-700': !!project.archivedAt,
             }"
           >
-            {{ project.status }}
+            {{ project.archivedAt ? 'Archived' : 'Active' }}
           </span>
         </div>
       </div>
