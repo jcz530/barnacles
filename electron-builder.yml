@@ -33,8 +33,9 @@ files:
 
 # Include/exclude node modules patterns
 # Note: Only unpack native modules that need direct file system access
-asarUnpack:
-  - 'node_modules/@libsql/**/*'
+# Disabled asarUnpack to avoid issues with missing optional dependencies
+# asarUnpack:
+#   - '**/node_modules/@libsql/**'
 
 # Include migrations as extra resources
 extraResources:
@@ -54,8 +55,17 @@ publish:
 mac:
   icon: assets/icons/app.icns
   category: public.app-category.productivity
-  hardenedRuntime: false
+  hardenedRuntime: true
   gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  notarize: true
+  target:
+    - target: dmg
+      arch:
+        - arm64
+
+afterSign: scripts/notarize.cjs
 
 # DMG configuration with custom background
 dmg:
