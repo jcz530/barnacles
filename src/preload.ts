@@ -61,4 +61,6 @@ contextBridge.exposeInMainWorld('electron', {
     openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url),
   },
   updateWindowTitle: (title: string) => ipcRenderer.send('update-window-title', title),
+  createNewWindow: () => ipcRenderer.invoke('create-new-window'),
+  quitApp: () => ipcRenderer.invoke('quit-app'),
 });

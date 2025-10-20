@@ -6,7 +6,8 @@ import { setupIPC } from './ipc';
 import { createMenu } from './menu';
 import { initializeUpdater } from './updater';
 import { createWindow } from './window-manager';
-import { createTray, updateTrayMenu } from './tray-manager';
+import { createTray, updateTrayMenu, destroyTray } from './tray-manager';
+import { settingsService } from '../backend/services/settings-service';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (started) {
@@ -61,6 +62,17 @@ export const createAppWindow = async (): Promise<BrowserWindow> => {
   return newWindow;
 };
 
+/**
+ * Toggle the system tray icon on/off
+ */
+export const toggleTrayIcon = async (enabled: boolean): Promise<void> => {
+  if (enabled) {
+    createTray();
+  } else {
+    destroyTray();
+  }
+};
+
 const initialize = async (): Promise<void> => {
   try {
     // Start the API server
@@ -76,8 +88,11 @@ const initialize = async (): Promise<void> => {
     // Create the application menu
     createMenu();
 
-    // Create the system tray
-    createTray();
+    // Create the system tray if enabled in settings
+    const showTrayIcon = await settingsService.getValue<boolean>('showTrayIcon');
+    if (showTrayIcon) {
+      createTray();
+    }
 
     // Create the main window with the actual API port for CSP
     await createAppWindow();

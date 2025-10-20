@@ -12,8 +12,15 @@ import Projects from '../views/Projects.vue';
 import Settings from '../views/Settings.vue';
 import Terminals from '../views/Terminals.vue';
 import UpdateTest from '../views/UpdateTest.vue';
+import TrayPopup from '../views/TrayPopup.vue';
 
 const routes = [
+  // Tray popup route (no layout)
+  {
+    path: '/tray-popup',
+    name: 'TrayPopup',
+    component: TrayPopup,
+  },
   {
     path: '/',
     component: DefaultLayout,

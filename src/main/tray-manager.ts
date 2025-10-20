@@ -2,6 +2,15 @@ import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createAppWindow } from './main';
+import {
+  getFavoriteProjects,
+  getRecentProjects,
+  openProjectInIDE,
+  openProjectTerminal,
+  showProjectInFinder,
+  showProjectInApp,
+} from './tray-project-service';
+import { createTrayPopup } from './tray-popup-manager';
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -13,6 +22,11 @@ let tray: Tray | null = null;
  * Creates and initializes the system tray icon
  */
 export const createTray = (): Tray => {
+  // If tray already exists, return it
+  if (tray) {
+    return tray;
+  }
+
   // Get the appropriate icon path
   // In development: src/main/assets/tray-icon.png
   // In production: dist/main/assets/tray-icon.png (bundled in the app)
@@ -35,63 +49,42 @@ export const createTray = (): Tray => {
   tray = new Tray(icon);
   tray.setToolTip('Barnacles');
 
-  // Build the context menu
-  updateTrayMenu();
+  // Disable native context menu by setting an empty menu
+  // This prevents the default menu from showing
+  // tray.setContextMenu(Menu.buildFromTemplate([]));
 
-  // Show window on tray icon click (mainly for Windows/Linux)
+  // Show custom popup on both click and right-click
   tray.on('click', () => {
-    showOrCreateWindow();
+    const bounds = tray!.getBounds();
+    createTrayPopup(bounds);
   });
+
+  tray.on('right-click', () => {
+    const bounds = tray!.getBounds();
+    createTrayPopup(bounds);
+  });
+
+  // Native context menu is disabled
+  // To re-enable, uncomment updateTrayMenu() call and remove the empty menu above
 
   return tray;
 };
 
 /**
- * Updates the tray context menu with current window state
+ * Updates the tray context menu with current window state and projects
  */
-export const updateTrayMenu = (): void => {
+export const updateTrayMenu = async (): Promise<void> => {
   if (!tray) return;
 
-  const windows = BrowserWindow.getAllWindows();
-  const hasWindows = windows.length > 0;
-  const isMac = process.platform === 'darwin';
+  // const windows = BrowserWindow.getAllWindows();
+  // const hasWindows = windows.length > 0;
+  // const isMac = process.platform === 'darwin';
 
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Show Barnacles',
-      click: () => showOrCreateWindow(),
-      enabled: true,
-    },
-    {
-      label: 'New Window',
-      accelerator: isMac ? 'Cmd+N' : 'Ctrl+N',
-      click: async () => {
-        await createAppWindow();
-        updateTrayMenu(); // Update menu after new window
-      },
-    },
-    { type: 'separator' },
-    ...(hasWindows
-      ? [
-          {
-            label: 'Hide All Windows',
-            click: () => {
-              windows.forEach(window => window.hide());
-            },
-          },
-          { type: 'separator' as const },
-        ]
-      : []),
-    {
-      label: 'Quit Barnacles',
-      accelerator: isMac ? 'Cmd+Q' : 'Ctrl+Q',
-      click: () => {
-        app.quit();
-      },
-    },
-  ]);
-
-  tray.setContextMenu(contextMenu);
+  // Fetch projects data
+  // const [favoriteProjects, recentProjects] = await Promise.all([
+  //   getFavoriteProjects(5),
+  //   getRecentProjects(5),
+  // ]);
 };
 
 /**

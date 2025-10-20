@@ -11,6 +11,7 @@ import ScanIncludedDirectoriesSetting from '../components/organisms/ScanIncluded
 import ScanExcludedDirectoriesSetting from '../components/organisms/ScanExcludedDirectoriesSetting.vue';
 import DefaultIDESetting from '../components/organisms/DefaultIDESetting.vue';
 import DefaultTerminalSetting from '../components/organisms/DefaultTerminalSetting.vue';
+import ShowTrayIconSetting from '../components/organisms/ShowTrayIconSetting.vue';
 
 const { setBreadcrumbs } = useBreadcrumbs();
 
@@ -55,6 +56,19 @@ onMounted(() => {
             <div class="space-y-6">
               <DefaultIDESetting />
               <DefaultTerminalSetting />
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Appearance -->
+        <Card>
+          <CardHeader>
+            <CardTitle>Appearance</CardTitle>
+            <CardDescription>Customize how Barnacles appears on your system</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div class="space-y-6">
+              <ShowTrayIconSetting />
             </div>
           </CardContent>
         </Card>

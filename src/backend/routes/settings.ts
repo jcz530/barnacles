@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { settingsService } from '../services/settings-service';
+import { toggleTrayIcon } from '../../main/main';
 
 const settings = new Hono();
 
@@ -77,6 +78,12 @@ settings.put('/:key', async c => {
     }
 
     const setting = await settingsService.setSetting(key, value, type);
+
+    // Handle special case for showTrayIcon setting
+    if (key === 'showTrayIcon') {
+      const boolValue = value === true || value === 'true' || value === 1;
+      await toggleTrayIcon(boolValue);
+    }
 
     return c.json({
       data: setting,
