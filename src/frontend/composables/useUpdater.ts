@@ -1,11 +1,10 @@
-import { ref, onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import type {
-  UpdateState,
-  UpdateInfo,
   DownloadProgress,
   UpdateError,
+  UpdateInfo,
+  UpdateState,
 } from '../../shared/types/updater';
-import { toast } from 'vue-sonner';
 
 export function useUpdater() {
   const updateState = ref<UpdateState>({
@@ -40,10 +39,6 @@ export function useUpdater() {
       updateState.value.status = 'available';
       updateState.value.updateInfo = info;
       isCheckingForUpdates.value = false;
-
-      toast.success('Update Available', {
-        description: `Version ${info.version} is ready to download.`,
-      });
     });
     cleanupFunctions.push(removeAvailable);
 
@@ -67,11 +62,6 @@ export function useUpdater() {
       updateState.value.status = 'downloaded';
       updateState.value.updateInfo = info;
       isDownloading.value = false;
-
-      toast.success('Update Ready', {
-        description: `Version ${info.version} is ready to install. Restart to apply.`,
-        duration: 10000,
-      });
     });
     cleanupFunctions.push(removeDownloaded);
 
@@ -80,10 +70,6 @@ export function useUpdater() {
       updateState.value.error = error;
       isCheckingForUpdates.value = false;
       isDownloading.value = false;
-
-      toast.error('Update Error', {
-        description: error.message,
-      });
     });
     cleanupFunctions.push(removeError);
   });
@@ -99,9 +85,6 @@ export function useUpdater() {
       await window.electronAPI.updateCheck();
     } catch (error) {
       console.error('Failed to check for updates:', error);
-      toast.error('Failed to check for updates', {
-        description: error instanceof Error ? error.message : 'Unknown error',
-      });
     }
   };
 
@@ -109,14 +92,8 @@ export function useUpdater() {
   const downloadUpdate = async () => {
     try {
       await window.electronAPI.updateDownload();
-      toast.info('Downloading Update', {
-        description: 'The update is being downloaded in the background.',
-      });
     } catch (error) {
       console.error('Failed to download update:', error);
-      toast.error('Failed to download update', {
-        description: error instanceof Error ? error.message : 'Unknown error',
-      });
     }
   };
 
@@ -126,16 +103,15 @@ export function useUpdater() {
       await window.electronAPI.updateInstall();
     } catch (error) {
       console.error('Failed to install update:', error);
-      toast.error('Failed to install update', {
-        description: error instanceof Error ? error.message : 'Unknown error',
-      });
     }
   };
 
   // Dismiss the update notification
   const dismissUpdate = () => {
-    if (updateState.value.status === 'available') {
+    if (updateState.value.status === 'available' || updateState.value.status === 'error') {
       updateState.value.status = 'idle';
+      updateState.value.updateInfo = undefined;
+      updateState.value.error = undefined;
     }
   };
 
