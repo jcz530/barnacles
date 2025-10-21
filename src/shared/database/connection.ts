@@ -4,39 +4,18 @@ import path from 'node:path';
 import os from 'os';
 import * as schema from './schema';
 
-// Detect if we're running in Electron context
-function isElectronContext(): boolean {
-  return typeof process !== 'undefined' && process.versions && 'electron' in process.versions;
-}
-
-// Get the proper database path for production or development
+// Get the standard database path for both Electron and CLI contexts
 function getDatabasePath(): string {
   if (process.env.DATABASE_URL) {
     return process.env.DATABASE_URL;
   }
 
-  if (isElectronContext()) {
-    // In Electron context, try to require electron synchronously
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { app } = require('electron');
-      const isPackaged = app.isPackaged;
-
-      if (isPackaged) {
-        // In packaged app, use the userData directory
-        const userDataPath = app.getPath('userData');
-        const dbPath = path.join(userDataPath, 'database.db');
-        return `file:${dbPath}`;
-      } else {
-        // In development or when running from dist, use the project root
-        return 'file:./database.db';
-      }
-    } catch {
-      // If electron fails to load, fall through to CLI path
-    }
+  // Use development database if not in production
+  if (process.env.NODE_ENV === 'development') {
+    return 'file:./database.db';
   }
 
-  // CLI context - use the same location as Electron's userData would be
+  // Standard user data location for all contexts
   const homeDir = os.homedir();
   let userDataPath: string;
 
