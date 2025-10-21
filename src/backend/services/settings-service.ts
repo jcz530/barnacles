@@ -38,6 +38,7 @@ const DEFAULT_SETTINGS = {
     type: 'json' as const,
   },
   showTrayIcon: { value: 'false', type: 'boolean' as const },
+  installCliCommand: { value: 'true', type: 'boolean' as const },
   // Add more default settings here as needed
 };
 

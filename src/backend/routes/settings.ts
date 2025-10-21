@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { settingsService } from '../services/settings-service';
-import { toggleTrayIcon } from '../../main/main';
+import { toggleTrayIcon, toggleCliInstallation } from '../../main/main';
 
 const settings = new Hono();
 
@@ -79,10 +79,15 @@ settings.put('/:key', async c => {
 
     const setting = await settingsService.setSetting(key, value, type);
 
-    // Handle special case for showTrayIcon setting
+    // Handle special cases for settings that trigger system changes
     if (key === 'showTrayIcon') {
       const boolValue = value === true || value === 'true' || value === 1;
       await toggleTrayIcon(boolValue);
+    }
+
+    if (key === 'installCliCommand') {
+      const boolValue = value === true || value === 'true' || value === 1;
+      await toggleCliInstallation(boolValue);
     }
 
     return c.json({

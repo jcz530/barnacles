@@ -1,0 +1,39 @@
+#!/usr/bin/env node
+
+import { intro, outro } from '@clack/prompts';
+import { parseArgs } from './utils/arg-parser.js';
+import { executeCommand } from './commands/index.js';
+import { versionCommand } from './commands/version.js';
+
+async function main() {
+  const args = process.argv.slice(2);
+  const { command, flags } = parseArgs(args);
+
+  // Handle version flag globally
+  if (flags.version || flags.v) {
+    await versionCommand(flags);
+    return;
+  }
+
+  // Show intro only for commands that need it (exclude simple info commands)
+  const simpleCommands = ['help', 'version', 'status', 'open'];
+  const shouldShowIntro = command && !simpleCommands.includes(command);
+
+  if (shouldShowIntro) {
+    intro('Barnacles');
+  }
+
+  try {
+    await executeCommand(command, flags);
+
+    if (shouldShowIntro) {
+      outro('Done!');
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    console.error(`Error: ${errorMessage}`);
+    process.exit(1);
+  }
+}
+
+main();

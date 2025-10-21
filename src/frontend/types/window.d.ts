@@ -14,6 +14,11 @@ declare global {
       updateWindowTitle: (title: string) => void;
       createNewWindow: () => Promise<{ success: boolean; windowId?: number; error?: string }>;
       quitApp: () => Promise<{ success: boolean; error?: string }>;
+      cli: {
+        isInstalled: () => Promise<boolean>;
+        install: () => Promise<{ success: boolean; error?: string }>;
+        uninstall: () => Promise<{ success: boolean; error?: string }>;
+      };
     };
   }
 }

@@ -2,6 +2,13 @@
 database.db
 dist
 
+# Compiled JavaScript files in source directories (should only be in dist/)
+src/**/*.js
+scripts/**/*.js
+*.js
+!*.config.js
+!vite.*.config.js
+
 # Logs
 logs
 *.log

@@ -63,4 +63,9 @@ contextBridge.exposeInMainWorld('electron', {
   updateWindowTitle: (title: string) => ipcRenderer.send('update-window-title', title),
   createNewWindow: () => ipcRenderer.invoke('create-new-window'),
   quitApp: () => ipcRenderer.invoke('quit-app'),
+  cli: {
+    isInstalled: () => ipcRenderer.invoke('cli:isInstalled'),
+    install: () => ipcRenderer.invoke('cli:install'),
+    uninstall: () => ipcRenderer.invoke('cli:uninstall'),
+  },
 });

@@ -8,6 +8,7 @@ import { initializeUpdater } from './updater';
 import { createWindow } from './window-manager';
 import { createTray, updateTrayMenu, destroyTray } from './tray-manager';
 import { settingsService } from '../backend/services/settings-service';
+import { installCli, uninstallCli, isCliInstalled } from './cli-manager';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (started) {
@@ -76,6 +77,31 @@ export const toggleTrayIcon = async (enabled: boolean): Promise<void> => {
   }
 };
 
+/**
+ * Toggle CLI installation based on settings
+ */
+export const toggleCliInstallation = async (enabled: boolean): Promise<void> => {
+  const currentlyInstalled = isCliInstalled();
+
+  if (enabled && !currentlyInstalled) {
+    // Should be installed but isn't - install it
+    const result = await installCli();
+    if (result.success) {
+      console.log('✅ CLI command installed');
+    } else {
+      console.error('❌ Failed to install CLI:', result.error);
+    }
+  } else if (!enabled && currentlyInstalled) {
+    // Shouldn't be installed but is - uninstall it
+    const result = await uninstallCli();
+    if (result.success) {
+      console.log('✅ CLI command uninstalled');
+    } else {
+      console.error('❌ Failed to uninstall CLI:', result.error);
+    }
+  }
+};
+
 const initialize = async (): Promise<void> => {
   try {
     // Start the API server
@@ -95,6 +121,13 @@ const initialize = async (): Promise<void> => {
     const showTrayIcon = await settingsService.getValue<boolean>('showTrayIcon');
     if (showTrayIcon) {
       createTray();
+    }
+
+    // Install CLI command if enabled in settings
+    const installCli = await settingsService.getValue<boolean>('installCliCommand');
+    if (installCli !== false) {
+      // Default to true if not set
+      await toggleCliInstallation(true);
     }
 
     // Create the main window with the actual API port for CSP
