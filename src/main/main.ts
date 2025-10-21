@@ -6,6 +6,8 @@ import { setupIPC } from './ipc';
 import { createMenu } from './menu';
 import { initializeUpdater } from './updater';
 import { createWindow } from './window-manager';
+import { createTray, updateTrayMenu, destroyTray } from './tray-manager';
+import { settingsService } from '../backend/services/settings-service';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (started) {
@@ -15,6 +17,9 @@ if (started) {
 // Track all windows
 const windows = new Set<BrowserWindow>();
 let apiPort: number | undefined;
+
+// Track if the app is quitting
+let isQuitting = false;
 
 // Enable right-click context menu with Inspect Element in development mode
 contextMenu({
@@ -28,11 +33,24 @@ export const createAppWindow = async (): Promise<BrowserWindow> => {
 
   // Rebuild menu to update window list
   createMenu();
+  updateTrayMenu();
+
+  // Modify close behavior to hide window instead of closing (only when tray is enabled)
+  newWindow.on('close', async event => {
+    if (!isQuitting) {
+      const showTrayIcon = await settingsService.getValue<boolean>('showTrayIcon');
+      if (showTrayIcon) {
+        event.preventDefault();
+        newWindow.hide();
+      }
+    }
+  });
 
   newWindow.on('closed', () => {
     windows.delete(newWindow);
     // Rebuild menu to update window list
     createMenu();
+    updateTrayMenu();
   });
 
   // Update menu when window focus changes
@@ -45,6 +63,17 @@ export const createAppWindow = async (): Promise<BrowserWindow> => {
   });
 
   return newWindow;
+};
+
+/**
+ * Toggle the system tray icon on/off
+ */
+export const toggleTrayIcon = async (enabled: boolean): Promise<void> => {
+  if (enabled) {
+    createTray();
+  } else {
+    destroyTray();
+  }
 };
 
 const initialize = async (): Promise<void> => {
@@ -62,6 +91,12 @@ const initialize = async (): Promise<void> => {
     // Create the application menu
     createMenu();
 
+    // Create the system tray if enabled in settings
+    const showTrayIcon = await settingsService.getValue<boolean>('showTrayIcon');
+    if (showTrayIcon) {
+      createTray();
+    }
+
     // Create the main window with the actual API port for CSP
     await createAppWindow();
 
@@ -76,17 +111,35 @@ const initialize = async (): Promise<void> => {
 // App event handlers
 app.on('ready', initialize);
 
-app.on('window-all-closed', () => {
-  // On macOS, keep the app running even when all windows are closed
-  if (process.platform !== 'darwin') {
+app.on('before-quit', () => {
+  // Set quitting flag so windows can close properly
+  isQuitting = true;
+});
+
+app.on('window-all-closed', async () => {
+  // Only keep app running if tray icon is enabled
+  const showTrayIcon = await settingsService.getValue<boolean>('showTrayIcon');
+
+  // On macOS, keep app running by default; on other platforms, only if tray is enabled
+  if (process.platform !== 'darwin' && !showTrayIcon) {
     app.quit();
   }
 });
 
 app.on('activate', async () => {
-  // On macOS, re-create a window when the dock icon is clicked
-  if (BrowserWindow.getAllWindows().length === 0) {
-    await createAppWindow();
+  // On macOS, show or create a window when the dock icon is clicked
+  const visibleWindows = BrowserWindow.getAllWindows().filter(win => win.isVisible());
+
+  if (visibleWindows.length === 0) {
+    const allWindows = BrowserWindow.getAllWindows();
+    if (allWindows.length > 0) {
+      // Show the first hidden window
+      allWindows[0].show();
+      allWindows[0].focus();
+    } else {
+      // Create a new window if none exist
+      await createAppWindow();
+    }
   }
 });
 

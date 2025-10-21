@@ -591,9 +591,8 @@ export const useQueries = () => {
 
         return response.data;
       },
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({ queryKey: ['settings'] });
-      },
+      // Don't invalidate - let components manage their own state
+      // Invalidating causes infinite loops with auto-save watchers
     });
   };
 

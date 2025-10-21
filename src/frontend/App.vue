@@ -40,9 +40,7 @@ onMounted(() => {
       @install="installUpdate"
       @dismiss="dismissUpdate"
     />
-    <div class="app-content">
-      <router-view />
-    </div>
+    <router-view />
   </div>
 </template>
 
@@ -51,12 +49,5 @@ onMounted(() => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.app-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding-top: 2.5rem; /* 40px - height of title bar */
 }
 </style>

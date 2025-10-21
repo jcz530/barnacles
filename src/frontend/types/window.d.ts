@@ -12,6 +12,8 @@ declare global {
         openExternal: (url: string) => Promise<void>;
       };
       updateWindowTitle: (title: string) => void;
+      createNewWindow: () => Promise<{ success: boolean; windowId?: number; error?: string }>;
+      quitApp: () => Promise<{ success: boolean; error?: string }>;
     };
   }
 }
