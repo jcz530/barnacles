@@ -1,15 +1,7 @@
-import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron';
+import { app, BrowserWindow, nativeImage, Tray } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createAppWindow } from './main';
-import {
-  getFavoriteProjects,
-  getRecentProjects,
-  openProjectInIDE,
-  openProjectTerminal,
-  showProjectInFinder,
-  showProjectInApp,
-} from './tray-project-service';
 import { createTrayPopup } from './tray-popup-manager';
 
 // ES module equivalent of __dirname
@@ -71,20 +63,12 @@ export const createTray = (): Tray => {
 };
 
 /**
- * Updates the tray context menu with current window state and projects
+ * Updates the tray (placeholder for future native menu implementation)
+ * Currently using custom popup UI instead of native context menu
  */
-export const updateTrayMenu = async (): Promise<void> => {
-  if (!tray) return;
-
-  // const windows = BrowserWindow.getAllWindows();
-  // const hasWindows = windows.length > 0;
-  // const isMac = process.platform === 'darwin';
-
-  // Fetch projects data
-  // const [favoriteProjects, recentProjects] = await Promise.all([
-  //   getFavoriteProjects(5),
-  //   getRecentProjects(5),
-  // ]);
+export const updateTrayMenu = (): void => {
+  // No-op: Custom popup UI is used instead of native menu
+  // This function is kept for potential future native menu implementation
 };
 
 /**

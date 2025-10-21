@@ -35,11 +35,14 @@ export const createAppWindow = async (): Promise<BrowserWindow> => {
   createMenu();
   updateTrayMenu();
 
-  // Modify close behavior to hide window instead of closing (except when quitting)
-  newWindow.on('close', event => {
+  // Modify close behavior to hide window instead of closing (only when tray is enabled)
+  newWindow.on('close', async event => {
     if (!isQuitting) {
-      event.preventDefault();
-      newWindow.hide();
+      const showTrayIcon = await settingsService.getValue<boolean>('showTrayIcon');
+      if (showTrayIcon) {
+        event.preventDefault();
+        newWindow.hide();
+      }
     }
   });
 
@@ -113,9 +116,14 @@ app.on('before-quit', () => {
   isQuitting = true;
 });
 
-app.on('window-all-closed', () => {
-  // Keep the app running in the background with tray icon
-  // Don't quit automatically on any platform
+app.on('window-all-closed', async () => {
+  // Only keep app running if tray icon is enabled
+  const showTrayIcon = await settingsService.getValue<boolean>('showTrayIcon');
+
+  // On macOS, keep app running by default; on other platforms, only if tray is enabled
+  if (process.platform !== 'darwin' && !showTrayIcon) {
+    app.quit();
+  }
 });
 
 app.on('activate', async () => {

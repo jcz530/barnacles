@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useQueries } from '../composables/useQueries';
-import { useCssVar } from '@vueuse/core';
 import TrayProjectItem from '../components/molecules/TrayProjectItem.vue';
 import LogoMark from '../assets/logo-mark.svg';
 import { Button } from '@/components/ui/button';
@@ -48,9 +47,15 @@ const openTerminal = async (projectId: string) => {
   }
 };
 
-const showInApp = () => {
-  // TODO: Implement showing project in main app
-  window.close();
+const showInApp = async () => {
+  try {
+    const result = await window.electron?.createNewWindow();
+    if (result?.success) {
+      window.close();
+    }
+  } catch (error) {
+    console.error('Failed to show in app:', error);
+  }
 };
 
 const createNewWindow = async () => {
@@ -69,15 +74,10 @@ const quitApp = async () => {
   }
 };
 
-const cssVarBackground = useCssVar('--background', document.documentElement);
-const cssVarPopover = useCssVar('--popover', document.documentElement);
-
-if (cssVarBackground.value) {
-  cssVarBackground.value = 'transparent';
-}
-if (cssVarPopover.value) {
-  cssVarPopover.value = 'transparent';
-}
+// Add tray-popup class to body on mount
+onMounted(() => {
+  document.body.classList.add('tray-popup');
+});
 </script>
 
 <template>
@@ -212,12 +212,19 @@ if (cssVarPopover.value) {
 </template>
 
 <style>
-/* Make body transparent for tray popup */
-body {
+/* Transparent theme for tray popup - scoped to .tray-popup class */
+body.tray-popup {
   background: transparent !important;
 }
-#app {
+
+body.tray-popup #app {
   background: transparent !important;
+}
+
+/* Override CSS variables only for tray popup */
+body.tray-popup {
+  --background: transparent;
+  --popover: transparent;
 }
 </style>
 
