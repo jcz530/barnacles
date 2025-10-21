@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { compactLogo } from '../utils/branding.js';
 import { Command } from '../core/Command.js';
 
@@ -14,24 +15,13 @@ export class VersionCommand extends Command {
 
   async execute(_flags: Record<string, string | boolean>): Promise<void> {
     try {
-      // In production, the CLI is installed as a package, so we can find package.json
-      // by looking relative to the node_modules or the project root
-      let packageJson;
-
-      // Try to find package.json from current working directory first (for local development)
-      try {
-        packageJson = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8'));
-        if (packageJson.name !== 'barnacles') {
-          throw new Error('Not the barnacles package.json');
-        }
-      } catch {
-        // Fallback: try relative to the script location (for installed package)
-        // When installed, dist/cli/index.js is 2 levels deep from package root
-        const scriptDir = new URL('.', import.meta.url).pathname;
-        packageJson = JSON.parse(
-          readFileSync(join(scriptDir, '..', '..', '..', 'package.json'), 'utf-8')
-        );
-      }
+      // Find package.json relative to the script location
+      // This works regardless of the current working directory
+      // The CLI is bundled into dist/cli/index.js, which is 2 levels deep from package root
+      const scriptPath = fileURLToPath(import.meta.url);
+      const scriptDir = dirname(scriptPath);
+      const packageJsonPath = join(scriptDir, '..', '..', 'package.json');
+      const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
 
       console.log(`${compactLogo} Barnacles v${packageJson.version}`);
     } catch (error) {
