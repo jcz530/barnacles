@@ -1,6 +1,18 @@
 import { compactLogo } from '../utils/branding.js';
-import { box, intro, log, note, outro } from '@clack/prompts';
+import { box, intro, outro, spinner } from '@clack/prompts';
 import { Command } from '../core/Command.js';
+import { RUNTIME_CONFIG } from '../../shared/constants';
+import { db, projects } from '../../shared/database';
+import { count } from 'drizzle-orm';
+import pc from 'picocolors';
+
+interface ProcessStatus {
+  id: string;
+  projectId: string;
+  command: string;
+  status: 'running' | 'stopped' | 'failed';
+  url?: string;
+}
 
 /**
  * Command to check the status of Barnacles
@@ -10,38 +22,64 @@ export class StatusCommand extends Command {
   readonly description = 'Check the status of Barnacles';
   readonly showIntro = false;
 
-  async execute(_flags: Record<string, string | boolean>): Promise<void> {
-    intro(`${compactLogo} Barnacles`);
-    log.message('Hello, World', { symbol: compactLogo });
-    // console.log(`${compactLogo} Barnacles is online ✓`);
-    log.message(`Barnacles is online ✓`);
-    log.info(`Barnacles is online ✓`);
-    log.warn(`Barnacles is online ✓`);
-    log.warning(`Barnacles is online ✓`);
-    log.success(`Barnacles is online ✓`);
-    log.error(`Barnacles is online ✓`);
-    log.step(`Barnacles is online ✓`);
-    box('hey', 'processes', { rounded: true });
-    // Database: connected, error
-    // Scanner: running, idle
-    // Projects: 120
-    // Processes
-    note('Online', 'Status');
-    const data = [
-      { name: 'Project A', status: 'Running', port: 3000 },
-      { name: 'Project B', status: 'Stopped', port: 3001 },
-    ];
-    console.table(data);
+  async execute(): Promise<void> {
+    intro(`${compactLogo} Barnacles Status`);
 
-    // const basket = await autocomplete({
-    //   message: 'Select your favorite fruits and vegetables:',
-    //   options: [
-    //     { value: 'apple', label: 'apple' },
-    //     { value: 'banana', label: 'banana' },
-    //     { value: 'cherry', label: 'cherry' },
-    //   ],
-    // });
+    const s = spinner();
+    s.start('Checking system status...');
 
-    outro('Barnacles Status');
+    const API_BASE_URL = RUNTIME_CONFIG.API_BASE_URL;
+    // Check app status
+    let appStatus = 'offline';
+    let dbStatus;
+    let projectCount = 0;
+    let runningProcesses = 0;
+
+    // Try to query database directly to verify connectivity and get project count
+    try {
+      const result = await db.select({ count: count() }).from(projects);
+      dbStatus = 'connected';
+      projectCount = result[0]?.count ?? 0;
+    } catch {
+      dbStatus = 'error';
+    }
+
+    try {
+      const healthResponse = await globalThis.fetch(`${API_BASE_URL}/health`);
+      if (healthResponse.ok) {
+        appStatus = 'running';
+        await healthResponse.json();
+
+        // Check for running processes
+        try {
+          const processesResponse = await globalThis.fetch(`${API_BASE_URL}/processes`);
+          if (processesResponse.ok) {
+            const processes: ProcessStatus[] = await processesResponse.json();
+            runningProcesses = processes.filter(p => p.status === 'running').length;
+          }
+        } catch {
+          // Process endpoint might not be available
+        }
+      }
+    } catch {
+      appStatus = 'offline';
+      dbStatus = 'disconnected';
+    }
+
+    // Display status information
+    const statusInfo = [
+      `App: ${appStatus === 'running' ? '✓ running' : '✗ offline'}`,
+      `Database: ${dbStatus === 'connected' ? '✓ connected' : dbStatus === 'error' ? '✗ error' : '✗ disconnected'}`,
+      `Projects: ${projectCount}`,
+      `Running Processes: ${runningProcesses}`,
+    ].join('\n');
+
+    box(statusInfo, 'Status');
+
+    s.stop('Status check complete');
+    // Show warning if app is offline
+    if (appStatus === 'offline') {
+      outro(pc.dim('Barnacles app is not running. Tip: open the app with `barnacles open`'));
+    }
   }
 }
