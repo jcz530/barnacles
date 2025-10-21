@@ -1,10 +1,15 @@
 import { app, BrowserWindow } from 'electron';
+import type { ProgressInfo, UpdateInfo } from 'electron-updater';
 import { autoUpdater } from 'electron-updater';
-import type { UpdateInfo, ProgressInfo } from 'electron-updater';
 
 // Configure auto-updater
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
+
+// TEMPORARY: Force dev update config for testing
+// if (!app.isPackaged) {
+//   autoUpdater.forceDevUpdateConfig = true;
+// }
 
 let updateCheckInProgress = false;
 
