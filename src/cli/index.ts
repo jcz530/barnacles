@@ -2,8 +2,7 @@
 
 import { intro, outro } from '@clack/prompts';
 import { parseArgs } from './utils/arg-parser.js';
-import { executeCommand } from './commands/index.js';
-import { versionCommand } from './commands/version.js';
+import { executeCommand, registry } from './commands';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -11,13 +10,19 @@ async function main() {
 
   // Handle version flag globally
   if (flags.version || flags.v) {
-    await versionCommand(flags);
+    const versionCommand = registry.find('version');
+    if (versionCommand) {
+      await versionCommand.run(flags);
+    }
     return;
   }
 
-  // Show intro only for commands that need it (exclude simple info commands)
-  const simpleCommands = ['help', 'version', 'status', 'open'];
-  const shouldShowIntro = command && !simpleCommands.includes(command);
+  // Show intro only for commands that need it
+  let shouldShowIntro = false;
+  if (command) {
+    const commandObj = registry.find(command);
+    shouldShowIntro = commandObj?.showIntro ?? false;
+  }
 
   if (shouldShowIntro) {
     intro('Barnacles');
@@ -36,4 +41,4 @@ async function main() {
   }
 }
 
-main();
+main().then();

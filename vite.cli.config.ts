@@ -10,7 +10,7 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['@clack/prompts', 'fs', 'path', 'child_process', 'url'],
+      external: ['@clack/prompts', 'picocolors', 'fs', 'path', 'child_process', 'url'],
     },
     target: 'node18',
     minify: false,
