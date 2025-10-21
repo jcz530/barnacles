@@ -3,6 +3,7 @@ import { OpenCommand } from './open.js';
 import { StatusCommand } from './status.js';
 import { HelpCommand } from './help.js';
 import { VersionCommand } from './version.js';
+import { ProjectsCommand } from './projects.js';
 
 /**
  * Global command registry
@@ -16,6 +17,7 @@ function registerCommands(): void {
   registry.register(new OpenCommand());
   registry.register(new VersionCommand());
   registry.register(new StatusCommand());
+  registry.register(new ProjectsCommand());
   registry.register(new HelpCommand());
 }
 
