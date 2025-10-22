@@ -82,7 +82,6 @@ const handleToggleFavorite = (e: Event) => {
               <div v-if="runningProcesses.length > 0" class="flex">
                 <ProcessIndicator
                   :process="runningProcesses[0]"
-                  :on-navigate-to-process="navigateToProcess"
                   compact
                   class="mt-0"
                 />
