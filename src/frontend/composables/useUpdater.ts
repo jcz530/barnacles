@@ -22,13 +22,12 @@ export function useUpdater() {
   onMounted(async () => {
     // Get current version
     try {
-      const version = await window.electronAPI.updateGetVersion();
-      updateState.value.currentVersion = version;
+      updateState.value.currentVersion = await window.electronAPI.updateGetVersion();
     } catch (error) {
       console.error('Failed to get current version:', error);
     }
 
-    // Set up event listeners
+    // Set up event listeners BEFORE checking for updates
     const removeChecking = window.electronAPI.onUpdateChecking(() => {
       updateState.value.status = 'checking';
       isCheckingForUpdates.value = true;
@@ -72,6 +71,12 @@ export function useUpdater() {
       isDownloading.value = false;
     });
     cleanupFunctions.push(removeError);
+
+    // Now that listeners are set up, check for updates automatically
+    // Wait a bit to ensure everything is fully initialized
+    setTimeout(() => {
+      checkForUpdates();
+    }, 3000);
   });
 
   // Clean up event listeners on unmount

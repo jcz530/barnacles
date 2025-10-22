@@ -6,11 +6,6 @@ import { autoUpdater } from 'electron-updater';
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
-// TEMPORARY: Force dev update config for testing
-// if (!app.isPackaged) {
-//   autoUpdater.forceDevUpdateConfig = true;
-// }
-
 let updateCheckInProgress = false;
 
 /**
@@ -82,10 +77,8 @@ export function initializeUpdater(): void {
     });
   });
 
-  // Check for updates on app startup (after a short delay)
-  setTimeout(() => {
-    checkForUpdates();
-  }, 5000);
+  // Don't check for updates automatically on startup
+  // The check will be triggered by the renderer process when it's ready
 }
 
 /**

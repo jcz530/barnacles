@@ -87,7 +87,7 @@ const showDismiss = computed(() => {
 });
 
 const cardClass = computed(() => {
-  const baseClass = 'fixed right-4 bottom-4 w-96 shadow-lg';
+  const baseClass = 'fixed right-4 bottom-4 w-96 shadow-lg z-50';
   if (props.updateState.status === 'error') {
     return `${baseClass} border-red-500`;
   }
