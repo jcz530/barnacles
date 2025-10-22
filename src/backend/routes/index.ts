@@ -7,16 +7,15 @@ import users from './users';
 
 // Read version from package.json
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 let appVersion = '0.0.0';
 try {
-  const packageJsonPath = join(__dirname, '../../../package.json');
+  const packageJsonPath = join(__dirname, '../../package.json');
   const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
   appVersion = packageJson.version;
 } catch (error) {

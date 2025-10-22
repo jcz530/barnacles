@@ -12,6 +12,7 @@ import ScanExcludedDirectoriesSetting from '../components/organisms/ScanExcluded
 import DefaultIDESetting from '../components/organisms/DefaultIDESetting.vue';
 import DefaultTerminalSetting from '../components/organisms/DefaultTerminalSetting.vue';
 import ShowTrayIconSetting from '../components/organisms/ShowTrayIconSetting.vue';
+import InstallCliCommandSetting from '../components/organisms/InstallCliCommandSetting.vue';
 
 const { setBreadcrumbs } = useBreadcrumbs();
 
@@ -69,6 +70,19 @@ onMounted(() => {
           <CardContent>
             <div class="space-y-6">
               <ShowTrayIconSetting />
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Developer Tools -->
+        <Card>
+          <CardHeader>
+            <CardTitle>Developer Tools</CardTitle>
+            <CardDescription>Configure command-line tools and integrations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div class="space-y-6">
+              <InstallCliCommandSetting />
             </div>
           </CardContent>
         </Card>

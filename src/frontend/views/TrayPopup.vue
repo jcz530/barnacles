@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useQueries } from '../composables/useQueries';
 import TrayProjectItem from '../components/molecules/TrayProjectItem.vue';
 import LogoMark from '../assets/logo-mark.svg';
@@ -8,9 +8,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreVertical, LogOut } from 'lucide-vue-next';
+import { LogOut, MoreVertical, Terminal, TerminalSquare } from 'lucide-vue-next';
 
 const { useProjectsQuery, useOpenProjectMutation, useOpenTerminalMutation } = useQueries();
 
@@ -74,9 +75,47 @@ const quitApp = async () => {
   }
 };
 
+// CLI installation state
+const isCliInstalled = ref(false);
+
+const checkCliInstallation = async () => {
+  try {
+    isCliInstalled.value = await window.electron?.cli.isInstalled();
+  } catch (error) {
+    console.error('Failed to check CLI installation:', error);
+  }
+};
+
+const installCli = async () => {
+  try {
+    const result = await window.electron?.cli.install();
+    if (result?.success) {
+      isCliInstalled.value = true;
+    } else {
+      console.error('Failed to install CLI:', result?.error);
+    }
+  } catch (error) {
+    console.error('Failed to install CLI:', error);
+  }
+};
+
+const uninstallCli = async () => {
+  try {
+    const result = await window.electron?.cli.uninstall();
+    if (result?.success) {
+      isCliInstalled.value = false;
+    } else {
+      console.error('Failed to uninstall CLI:', result?.error);
+    }
+  } catch (error) {
+    console.error('Failed to uninstall CLI:', error);
+  }
+};
+
 // Add tray-popup class to body on mount
 onMounted(() => {
   document.body.classList.add('tray-popup');
+  checkCliInstallation();
 });
 </script>
 
@@ -130,7 +169,16 @@ onMounted(() => {
                   <MoreVertical :size="14" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" class="w-48">
+              <DropdownMenuContent align="end" class="w-56">
+                <DropdownMenuItem v-if="!isCliInstalled" @click="installCli">
+                  <Terminal :size="16" class="mr-2" />
+                  <span>Install CLI Command</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem v-if="isCliInstalled" @click="uninstallCli">
+                  <TerminalSquare :size="16" class="mr-2" />
+                  <span>Uninstall CLI Command</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem @click="quitApp">
                   <LogOut :size="16" class="mr-2" />
                   <span>Quit Barnacles</span>
