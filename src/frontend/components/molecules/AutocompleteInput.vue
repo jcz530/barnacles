@@ -17,6 +17,7 @@ interface Props {
   modelValue?: string;
   suggestions: string[];
   placeholder?: string;
+  emptyMessage?: string;
 }
 
 interface Emits {
@@ -36,16 +37,17 @@ const filteredSuggestions = computed(() => {
     cmd.toLowerCase().includes(searchTerm.value.toLowerCase())
   );
 });
-useVModel(props, 'modelValue', emit);
+
+const model = useVModel(props, 'modelValue', emit);
 </script>
 
 <template>
-  <Combobox v-bind:model-value="modelValue" by="" class="w-full">
+  <Combobox v-model="model" by="" class="w-full">
     <ComboboxAnchor class="w-full">
       <ComboboxInput :display-value="val => val ?? ''" :placeholder="placeholder || 'Search...'" />
     </ComboboxAnchor>
     <ComboboxList>
-      <ComboboxEmpty> No framework found. </ComboboxEmpty>
+      <ComboboxEmpty> {{ emptyMessage || 'No matches found' }} </ComboboxEmpty>
       <ComboboxGroup class="max-h-60 overflow-y-scroll">
         <ComboboxItem
           v-for="suggestion in filteredSuggestions"
