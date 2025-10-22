@@ -14,9 +14,9 @@ const project = inject<ComputedRef<ProjectWithDetails | undefined>>('project');
 <template>
   <div class="grid gap-6 md:grid-cols-2">
     <ProjectInfoCard :project="project" />
-    <TechnologiesCard :technologies="project.technologies ?? []" />
+    <GitInformationCard :project="project" />
     <LanguageBreakdownCard :project="project" />
     <FileStatisticsCard :project="project" />
-    <GitInformationCard :project="project" />
+    <TechnologiesCard :technologies="project.technologies ?? []" />
   </div>
 </template>

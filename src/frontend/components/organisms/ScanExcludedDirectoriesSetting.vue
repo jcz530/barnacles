@@ -3,7 +3,8 @@ import { computed, ref, watch } from 'vue';
 import { useQueries } from '../../composables/useQueries';
 import Button from '../ui/button/Button.vue';
 import FolderAutocompleteInput from '../molecules/FolderAutocompleteInput.vue';
-import { X, Plus } from 'lucide-vue-next';
+import DirectoryTagList from '../molecules/DirectoryTagList.vue';
+import { Plus, RotateCcw } from 'lucide-vue-next';
 
 const { useSettingsQuery, useUpdateSettingMutation, useDefaultSettingQuery } = useQueries();
 
@@ -120,22 +121,11 @@ const isSaving = computed(() => updateSettingMutation.isPending.value);
     </p>
 
     <!-- List of excluded directories -->
-    <div class="mt-2 flex flex-wrap gap-2">
-      <div
-        v-for="(dir, index) in excludedDirectories"
-        :key="index"
-        class="bg-secondary flex items-center gap-1 rounded-md px-3 py-1 text-sm"
-      >
-        <span>{{ dir }}</span>
-        <button
-          @click="removeDirectory(index)"
-          class="hover:text-destructive ml-1 transition-colors"
-          :disabled="isSaving"
-        >
-          <X :size="14" />
-        </button>
-      </div>
-    </div>
+    <DirectoryTagList
+      :directories="excludedDirectories"
+      :disabled="isSaving"
+      @remove="removeDirectory"
+    />
 
     <!-- Add new directory -->
     <div class="mt-2 flex items-center gap-2">
@@ -161,20 +151,7 @@ const isSaving = computed(() => updateSettingMutation.isPending.value);
         :disabled="isDefaultValue || isSaving"
         class="flex items-center gap-2"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-          <path d="M3 3v5h5" />
-        </svg>
+        <RotateCcw />
         Reset to Default
       </Button>
       <span v-if="isSaving" class="text-muted-foreground text-sm">Saving...</span>
