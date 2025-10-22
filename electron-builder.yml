@@ -64,6 +64,9 @@ mac:
     - target: dmg
       arch:
         - arm64
+    - target: zip
+      arch:
+        - arm64
 
 afterSign: scripts/notarize.cjs
 
