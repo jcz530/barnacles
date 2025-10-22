@@ -19,7 +19,6 @@ useHotkeys();
       <SidebarInset>
         <header class="flex h-16 shrink-0 items-center gap-2">
           <div class="flex items-center gap-2 px-4">
-            <Separator orientation="vertical" class="mr-2 data-[orientation=vertical]:h-4" />
             <NavBreadcrumbs />
           </div>
         </header>
