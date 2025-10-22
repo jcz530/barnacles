@@ -25,10 +25,13 @@ export default [
       prettier: prettierPlugin,
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': ['error', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-      }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
       '@typescript-eslint/no-explicit-any': 'warn',
       'prettier/prettier': 'error',
     },
@@ -54,17 +57,27 @@ export default [
     rules: {
       'vue/multi-word-component-names': 'off',
       'vue/no-v-html': 'warn',
-      '@typescript-eslint/no-unused-vars': ['error', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-      }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
       'prettier/prettier': 'error',
     },
   },
 
   // Backend/Main process files - Node.js environment
   {
-    files: ['src/main/**/*.ts', 'src/backend/**/*.ts', 'src/shared/**/*.ts', 'scripts/**/*.ts', 'drizzle.config.ts'],
+    files: [
+      'src/main/**/*.ts',
+      'src/backend/**/*.ts',
+      'src/shared/**/*.ts',
+      'src/cli/**/*.ts',
+      'scripts/**/*.ts',
+      'drizzle.config.ts',
+    ],
     languageOptions: {
       globals: {
         __dirname: 'readonly',
@@ -113,12 +126,6 @@ export default [
 
   // Global ignores
   {
-    ignores: [
-      'node_modules/**',
-      'dist/**',
-      '.vite/**',
-      'out/**',
-      '**/*.d.ts',
-    ],
+    ignores: ['node_modules/**', 'dist/**', '.vite/**', 'out/**', '**/*.d.ts'],
   },
 ];

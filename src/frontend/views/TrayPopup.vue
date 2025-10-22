@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted} from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useQueries } from '../composables/useQueries';
 import TrayProjectItem from '../components/molecules/TrayProjectItem.vue';
 import LogoMark from '../assets/logo-mark.svg';
@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreVertical, LogOut, Terminal, TerminalSquare } from 'lucide-vue-next';
+import { LogOut, MoreVertical, Terminal, TerminalSquare } from 'lucide-vue-next';
 
 const { useProjectsQuery, useOpenProjectMutation, useOpenTerminalMutation } = useQueries();
 
