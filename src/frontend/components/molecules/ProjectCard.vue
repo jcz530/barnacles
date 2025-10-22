@@ -80,11 +80,7 @@ const handleToggleFavorite = (e: Event) => {
                 /><CardTitle class="text-lg">{{ project.name }}</CardTitle>
               </div>
               <div v-if="runningProcesses.length > 0" class="flex">
-                <ProcessIndicator
-                  :process="runningProcesses[0]"
-                  compact
-                  class="mt-0"
-                />
+                <ProcessIndicator :process="runningProcesses[0]" compact class="mt-0" />
               </div>
             </div>
             <CardDescription v-if="project.description" class="mt-1">
