@@ -2,14 +2,14 @@
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
 import type { SortingState } from '@tanstack/vue-table';
-import { Plus, Trash2, Save, RefreshCw, AlertCircle, Search, Copy, Check } from 'lucide-vue-next';
-import { onMounted, ref, computed } from 'vue';
+import { AlertCircle, Check, Copy, Plus, RefreshCw, Save, Search, Trash2 } from 'lucide-vue-next';
+import { computed, onMounted, ref } from 'vue';
 import Card from '../components/ui/card/Card.vue';
 import CardHeader from '../components/ui/card/CardHeader.vue';
 import CardTitle from '../components/ui/card/CardTitle.vue';
 import CardDescription from '../components/ui/card/CardDescription.vue';
 import CardContent from '../components/ui/card/CardContent.vue';
-import HostsTable from '../components/organisms/HostsTable.vue';
+import HostsTable from '../components/hosts/organisms/HostsTable.vue';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 

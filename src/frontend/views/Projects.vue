@@ -7,13 +7,13 @@ import { useMagicKeys, whenever } from '@vueuse/core';
 import type { ProjectWithDetails } from '../../shared/types/api';
 import SortControl from '../components/atoms/SortControl.vue';
 import ViewToggle from '../components/atoms/ViewToggle.vue';
-import ProjectSearchBar from '../components/molecules/ProjectSearchBar.vue';
-import TechnologyFilter from '../components/molecules/TechnologyFilter.vue';
+import ProjectSearchBar from '../components/projects/molecules/ProjectSearchBar.vue';
+import TechnologyFilter from '../components/projects/molecules/TechnologyFilter.vue';
 import DateFilter, {
-  type DatePreset,
   type DateFilterDirection,
+  type DatePreset,
 } from '../components/molecules/DateFilter.vue';
-import ProjectsTable from '../components/organisms/ProjectsTable.vue';
+import ProjectsTable from '../components/projects/organisms/ProjectsTable.vue';
 import { Button } from '../components/ui/button';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useFuzzySearch } from '../composables/useFuzzySearch';
