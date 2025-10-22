@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useFormatters } from '@/composables/useFormatters';
 import { Calendar, Folder, GitBranch, HardDrive, Star } from 'lucide-vue-next';
-import { computed } from 'vue';
 import type { ProjectWithDetails } from '../../../shared/types/api';
 import { useRunningProcesses } from '../../composables/useRunningProcesses';
 import ProcessIndicator from '../atoms/ProcessIndicator.vue';
@@ -27,20 +26,6 @@ const runningProcesses = useRunningProcesses(
   () => props.processStatuses
 );
 
-const isProcessRunning = computed(() => runningProcesses.value.length > 0);
-
-const runningProcessCount = computed(() => runningProcesses.value.length);
-
-const processUrls = computed(() => {
-  return runningProcesses.value
-    .filter(p => p.url || p.detectedUrl)
-    .map(p => p.url || p.detectedUrl!);
-});
-
-const handleOpenUrl = (e: Event, url: string) => {
-  e.stopPropagation();
-  window.electron?.shell.openExternal(url);
-};
 const { formatSize, formatDate } = useFormatters();
 
 const handleOpen = () => {
@@ -64,7 +49,7 @@ const handleToggleFavorite = (e: Event) => {
           variant="ghost"
           size="icon"
           class="h-8 w-8 p-0"
-          :class="project.isFavorite ? 'text-yellow-500' : 'text-slate-300'"
+          :class="project.isFavorite ? 'text-yellow-500' : 'text-slate-400'"
           @click="handleToggleFavorite"
         >
           <Star class="h-4 w-4" :fill="project.isFavorite ? 'currentColor' : 'none'" />
@@ -102,38 +87,6 @@ const handleToggleFavorite = (e: Event) => {
                   class="mt-0"
                 />
               </div>
-              <!-- Running process badge -->
-              <!-- <div
-                v-if="isProcessRunning"
-                class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700"
-              >
-                <span class="relative flex h-2 w-2">
-                  <span
-                    class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
-                  ></span>
-                  <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-                </span>
-                {{ runningProcessCount }} running
-              </div> -->
-              <!-- URL badges -->
-              <!-- <div v-if="processUrls.length > 0" class="flex flex-wrap gap-1.5">
-                <button
-                  v-for="(url, index) in processUrls"
-                  :key="index"
-                  @click="e => handleOpenUrl(e, url)"
-                  class="inline-flex items-center gap-1 rounded bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 transition-colors hover:bg-sky-100"
-                >
-                  <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                    />
-                  </svg>
-                  {{ url }}
-                </button>
-              </div> -->
             </div>
             <CardDescription v-if="project.description" class="mt-1">
               {{ project.description }}
