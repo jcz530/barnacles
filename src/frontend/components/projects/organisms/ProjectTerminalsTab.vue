@@ -43,9 +43,13 @@ const runningProcesses = computed(() => {
   return processes.value?.filter(p => p.status === 'running') || [];
 });
 
-// Convert processes to the format needed for display
+const stoppedProcesses = computed(() => {
+  return processes.value?.filter(p => p.status === 'stopped' || p.status === 'failed') || [];
+});
+
+// Convert processes to the format needed for display - show all processes
 const processItems = computed(() => {
-  return runningProcesses.value;
+  return processes.value || [];
 });
 
 // Auto-select first item when available
@@ -184,21 +188,46 @@ autoSelectProcess();
 
         <div v-else-if="processItems.length === 0" class="py-8 text-center">
           <TerminalIcon class="mx-auto h-10 w-10 text-slate-400" />
-          <p class="mt-2 text-sm text-slate-600">No active processes</p>
+          <p class="mt-2 text-sm text-slate-600">No processes</p>
           <p class="mt-1 text-xs text-slate-500">Run a script to start a process</p>
         </div>
 
-        <div v-else class="space-y-2">
-          <!-- Processes -->
-          <ProcessCard
-            v-for="process in processItems"
-            :key="process.processId"
-            :process="process"
-            :is-selected="selectedProcess === process.processId"
-            :show-project-link="false"
-            @select="selectedProcess = process.processId"
-            @kill="handleKillProcess"
-          />
+        <div v-else class="space-y-4">
+          <!-- Running Processes -->
+          <div v-if="runningProcesses.length > 0">
+            <h4 class="mb-2 text-xs font-medium tracking-wide text-slate-500 uppercase">
+              Running ({{ runningProcesses.length }})
+            </h4>
+            <div class="space-y-2">
+              <ProcessCard
+                v-for="process in runningProcesses"
+                :key="process.processId"
+                :process="process"
+                :is-selected="selectedProcess === process.processId"
+                :show-project-link="false"
+                @select="selectedProcess = process.processId"
+                @kill="handleKillProcess"
+              />
+            </div>
+          </div>
+
+          <!-- Stopped Processes -->
+          <div v-if="stoppedProcesses.length > 0">
+            <h4 class="mb-2 text-xs font-medium tracking-wide text-slate-500 uppercase">
+              Stopped ({{ stoppedProcesses.length }})
+            </h4>
+            <div class="space-y-2">
+              <ProcessCard
+                v-for="process in stoppedProcesses"
+                :key="process.processId"
+                :process="process"
+                :is-selected="selectedProcess === process.processId"
+                :show-project-link="false"
+                @select="selectedProcess = process.processId"
+                @kill="handleKillProcess"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>

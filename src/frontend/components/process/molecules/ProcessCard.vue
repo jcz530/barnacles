@@ -58,7 +58,7 @@ const { data: project } = useProjectQuery(props.process.projectId, {
     :class="[
       'cursor-pointer rounded-lg border p-3 transition-all',
       isStopped && 'opacity-60',
-      isSelected ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-white hover:border-slate-300',
+      isSelected ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-none hover:border-slate-300',
     ]"
     @click="handleSelect"
   >
