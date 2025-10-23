@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Trash2 } from 'lucide-vue-next';
 import { Button } from '../../ui/button';
 import { useQueries } from '@/composables/useQueries';
 
@@ -27,7 +28,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   select: [process: Process];
   kill: [processId: string];
-  navigateToProject: [projectId: string];
+  delete: [processId: string];
 }>();
 
 const handleSelect = () => {
@@ -39,11 +40,9 @@ const handleKill = (event: MouseEvent) => {
   emit('kill', props.process.processId);
 };
 
-const handleNavigateToProject = (event: MouseEvent) => {
+const handleDelete = (event: MouseEvent) => {
   event.stopPropagation();
-  if (props.process.projectId) {
-    emit('navigateToProject', props.process.projectId);
-  }
+  emit('delete', props.process.processId);
 };
 
 const isStopped = props.process.status === 'stopped' || props.process.status === 'failed';
@@ -58,7 +57,9 @@ const { data: project } = useProjectQuery(props.process.projectId, {
     :class="[
       'cursor-pointer rounded-lg border p-3 transition-all',
       isStopped && 'opacity-60',
-      isSelected ? 'border-sky-500 bg-sky-50' : 'border-slate-200 bg-none hover:border-slate-300',
+      isSelected
+        ? 'border-2 border-b-4 border-sky-500 shadow'
+        : 'border-slate-200 bg-none hover:border-slate-300',
     ]"
     @click="handleSelect"
   >
@@ -67,13 +68,13 @@ const { data: project } = useProjectQuery(props.process.projectId, {
         <p class="truncate text-sm font-medium">
           {{ process.title || process.name || process.command || 'Process' }}
         </p>
-        <p
+        <router-link
           v-if="showProjectLink && project && project.name"
           class="mt-1 cursor-pointer truncate text-xs text-slate-500 hover:text-sky-600"
-          @click="handleNavigateToProject"
+          :to="{ name: 'ProjectTerminals', params: { id: process.projectId } }"
         >
           {{ project.name }}
-        </p>
+        </router-link>
         <p
           v-if="process.cwd && process.status === 'running'"
           class="mt-1 truncate text-xs text-slate-400"
@@ -84,15 +85,19 @@ const { data: project } = useProjectQuery(props.process.projectId, {
           {{ process.status === 'failed' ? 'Failed' : 'Stopped' }}
         </p>
       </div>
-      <Button
-        v-if="process.status === 'running'"
-        variant="ghost"
-        size="sm"
-        class="ml-2 h-6 w-6 flex-shrink-0 p-0"
-        @click="handleKill"
-      >
-        ×
-      </Button>
+      <div v-if="process.status === 'running'" class="ml-2 flex-shrink-0">
+        <Button variant="ghost" size="sm" class="h-6 w-6 p-0" @click="handleKill"> × </Button>
+      </div>
+      <div v-if="isStopped" class="ml-2 flex-shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="h-6 w-6 p-0 text-slate-500 hover:text-red-600"
+          @click="handleDelete"
+        >
+          <Trash2 title="Clear" class="h-3.5 w-3.5" />
+        </Button>
+      </div>
     </div>
   </div>
 </template>

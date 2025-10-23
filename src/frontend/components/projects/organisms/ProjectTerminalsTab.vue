@@ -89,6 +89,34 @@ const handleKillProcess = async (processId: string) => {
   }
 };
 
+const handleDeleteProcess = async (processId: string) => {
+  try {
+    await killProcessMutation.mutateAsync(processId);
+
+    if (selectedProcess.value === processId) {
+      selectedProcess.value = null;
+    }
+  } catch (error) {
+    console.error('Failed to delete process:', error);
+  }
+};
+
+const handleClearAllStopped = async () => {
+  try {
+    const promises = stoppedProcesses.value.map(p => killProcessMutation.mutateAsync(p.processId));
+    await Promise.all(promises);
+
+    if (
+      selectedProcess.value &&
+      stoppedProcesses.value.some(p => p.processId === selectedProcess.value)
+    ) {
+      selectedProcess.value = null;
+    }
+  } catch (error) {
+    console.error('Failed to clear stopped processes:', error);
+  }
+};
+
 const runScript = (scriptName: string, type: 'npm' | 'composer' = 'npm') => {
   const command = type === 'npm' ? `npm run ${scriptName}` : `composer run-script ${scriptName}`;
   handleCreateProcess(command, command);
@@ -213,9 +241,17 @@ autoSelectProcess();
 
           <!-- Stopped Processes -->
           <div v-if="stoppedProcesses.length > 0">
-            <h4 class="mb-2 text-xs font-medium tracking-wide text-slate-500 uppercase">
-              Stopped ({{ stoppedProcesses.length }})
-            </h4>
+            <div class="mb-2 flex items-center justify-between">
+              <h4 class="text-xs font-medium tracking-wide text-slate-500 uppercase">
+                Stopped ({{ stoppedProcesses.length }})
+              </h4>
+              <button
+                class="text-xs text-slate-400 transition-colors hover:text-red-600"
+                @click="handleClearAllStopped"
+              >
+                Clear All
+              </button>
+            </div>
             <div class="space-y-2">
               <ProcessCard
                 v-for="process in stoppedProcesses"
@@ -225,6 +261,7 @@ autoSelectProcess();
                 :show-project-link="false"
                 @select="selectedProcess = process.processId"
                 @kill="handleKillProcess"
+                @delete="handleDeleteProcess"
               />
             </div>
           </div>

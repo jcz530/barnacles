@@ -17,10 +17,6 @@ const killProcessMutation = useKillProcessMutation();
 
 const selectedProcess = ref<string | null>(null);
 
-const navigateToProject = (projectId: string) => {
-  router.push({ name: 'ProjectTerminals', params: { id: projectId } });
-};
-
 // Fetch process output for selected process
 const { data: processOutput } = useProcessOutputByIdQuery(
   computed(() => selectedProcess.value || ''),
@@ -110,7 +106,6 @@ const selectProcess = (process: any) => {
                 :is-selected="selectedProcess === process.processId"
                 @select="selectProcess"
                 @kill="handleKillProcess"
-                @navigate-to-project="navigateToProject"
               />
             </div>
           </div>
@@ -128,7 +123,6 @@ const selectProcess = (process: any) => {
                 :is-selected="selectedProcess === process.processId"
                 @select="selectProcess"
                 @kill="handleKillProcess"
-                @navigate-to-project="navigateToProject"
               />
             </div>
           </div>
