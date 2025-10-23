@@ -106,8 +106,8 @@ autoSelectProcess();
       <!-- Scripts Section -->
       <div
         v-if="
-          (packageJsonScripts?.value && Object.keys(packageJsonScripts.value).length > 0) ||
-          (composerJsonScripts?.value && Object.keys(composerJsonScripts.value).length > 0)
+          (packageJsonScripts && Object.keys(packageJsonScripts).length > 0) ||
+          (composerJsonScripts && Object.keys(composerJsonScripts).length > 0)
         "
         class="border-b border-slate-200"
       >
@@ -122,10 +122,7 @@ autoSelectProcess();
 
         <div v-if="scriptsExpanded" class="p-2">
           <!-- NPM Scripts -->
-          <div
-            v-if="packageJsonScripts?.value && Object.keys(packageJsonScripts.value).length > 0"
-            class="mb-2"
-          >
+          <div v-if="packageJsonScripts && Object.keys(packageJsonScripts).length > 0" class="mb-2">
             <div
               class="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 hover:bg-slate-100"
               @click="npmScriptsExpanded = !npmScriptsExpanded"
@@ -137,7 +134,7 @@ autoSelectProcess();
 
             <div v-if="npmScriptsExpanded" class="mt-1 space-y-1">
               <button
-                v-for="(command, name) in packageJsonScripts?.value"
+                v-for="(command, name) in packageJsonScripts"
                 :key="name"
                 class="flex w-full items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
                 @click="() => runScript(String(name), 'npm')"
@@ -152,9 +149,7 @@ autoSelectProcess();
           </div>
 
           <!-- Composer Scripts -->
-          <div
-            v-if="composerJsonScripts?.value && Object.keys(composerJsonScripts.value).length > 0"
-          >
+          <div v-if="composerJsonScripts && Object.keys(composerJsonScripts).length > 0">
             <div
               class="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 hover:bg-slate-100"
               @click="composerScriptsExpanded = !composerScriptsExpanded"
@@ -166,7 +161,7 @@ autoSelectProcess();
 
             <div v-if="composerScriptsExpanded" class="mt-1 space-y-1">
               <button
-                v-for="(command, name) in composerJsonScripts?.value"
+                v-for="(command, name) in composerJsonScripts"
                 :key="name"
                 class="flex w-full items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
                 @click="() => runScript(String(name), 'composer')"
