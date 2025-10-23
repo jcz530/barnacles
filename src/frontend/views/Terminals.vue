@@ -2,7 +2,7 @@
 import { Terminal as TerminalIcon } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import ProcessOutput from '../components/organisms/ProcessOutput.vue';
+import ProcessOutput from '../components/process/organisms/ProcessOutput.vue';
 import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/skeleton';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';

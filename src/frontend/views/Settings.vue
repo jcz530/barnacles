@@ -6,13 +6,13 @@ import CardHeader from '../components/ui/card/CardHeader.vue';
 import CardTitle from '../components/ui/card/CardTitle.vue';
 import CardDescription from '../components/ui/card/CardDescription.vue';
 import CardContent from '../components/ui/card/CardContent.vue';
-import ScanMaxDepthSetting from '../components/organisms/ScanMaxDepthSetting.vue';
-import ScanIncludedDirectoriesSetting from '../components/organisms/ScanIncludedDirectoriesSetting.vue';
-import ScanExcludedDirectoriesSetting from '../components/organisms/ScanExcludedDirectoriesSetting.vue';
-import DefaultIDESetting from '../components/organisms/DefaultIDESetting.vue';
-import DefaultTerminalSetting from '../components/organisms/DefaultTerminalSetting.vue';
-import ShowTrayIconSetting from '../components/organisms/ShowTrayIconSetting.vue';
-import InstallCliCommandSetting from '../components/organisms/InstallCliCommandSetting.vue';
+import ScanMaxDepthSetting from '../components/settings/organisms/ScanMaxDepthSetting.vue';
+import ScanIncludedDirectoriesSetting from '../components/settings/organisms/ScanIncludedDirectoriesSetting.vue';
+import ScanExcludedDirectoriesSetting from '../components/settings/organisms/ScanExcludedDirectoriesSetting.vue';
+import DefaultIDESetting from '../components/settings/organisms/DefaultIDESetting.vue';
+import DefaultTerminalSetting from '../components/settings/organisms/DefaultTerminalSetting.vue';
+import ShowTrayIconSetting from '../components/settings/organisms/ShowTrayIconSetting.vue';
+import InstallCliCommandSetting from '../components/settings/organisms/InstallCliCommandSetting.vue';
 
 const { setBreadcrumbs } = useBreadcrumbs();
 
