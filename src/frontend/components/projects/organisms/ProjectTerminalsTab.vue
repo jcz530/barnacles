@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronRight, Play, Terminal as TerminalIcon, X } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, Play, Terminal as TerminalIcon } from 'lucide-vue-next';
 import type { ComputedRef, Ref } from 'vue';
 import { computed, inject, ref } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
-import { Button } from '../../ui/button';
 import { Skeleton } from '../../ui/skeleton';
 import ProcessOutput from '../../process/organisms/ProcessOutput.vue';
+import ProcessCard from '../../process/molecules/ProcessCard.vue';
 
 const projectId = inject<ComputedRef<string>>('projectId');
 const projectPath = inject<ComputedRef<string | undefined>>('projectPath');
@@ -43,20 +43,15 @@ const runningProcesses = computed(() => {
   return processes.value?.filter(p => p.status === 'running') || [];
 });
 
-// All items are just processes now
-const allItems = computed(() => {
-  return runningProcesses.value.map(process => ({
-    id: process.processId,
-    title: process.title || process.name || process.command || 'Process',
-    status: process.status,
-    data: process,
-  }));
+// Convert processes to the format needed for display
+const processItems = computed(() => {
+  return runningProcesses.value;
 });
 
 // Auto-select first item when available
 const autoSelectProcess = () => {
-  if (allItems.value.length > 0 && !selectedProcess.value) {
-    selectedProcess.value = allItems.value[0].id;
+  if (processItems.value.length > 0 && !selectedProcess.value) {
+    selectedProcess.value = processItems.value[0].processId;
   }
 };
 
@@ -187,7 +182,7 @@ autoSelectProcess();
           <Skeleton v-for="i in 2" :key="i" class="h-20 w-full" />
         </div>
 
-        <div v-else-if="allItems.length === 0" class="py-8 text-center">
+        <div v-else-if="processItems.length === 0" class="py-8 text-center">
           <TerminalIcon class="mx-auto h-10 w-10 text-slate-400" />
           <p class="mt-2 text-sm text-slate-600">No active processes</p>
           <p class="mt-1 text-xs text-slate-500">Run a script to start a process</p>
@@ -195,39 +190,15 @@ autoSelectProcess();
 
         <div v-else class="space-y-2">
           <!-- Processes -->
-          <div
-            v-for="item in allItems"
-            :key="item.id"
-            :class="[
-              'cursor-pointer rounded-lg border p-3 transition-all',
-              selectedProcess === item.id
-                ? 'border-sky-500 bg-sky-50'
-                : 'border-slate-200 bg-white hover:border-slate-300',
-            ]"
-            @click="selectedProcess = item.id"
-          >
-            <div class="flex items-start justify-between">
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2">
-                  <Play class="h-4 w-4 text-emerald-500" />
-                  <div class="flex flex-col">
-                    <p class="truncate text-sm font-medium">{{ item.title }}</p>
-                    <p v-if="item.data.cwd" class="truncate text-xs text-slate-500">
-                      {{ item.data.cwd }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                class="h-6 w-6 flex-shrink-0 p-0"
-                @click.stop="() => handleKillProcess(item.id)"
-              >
-                <X class="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
+          <ProcessCard
+            v-for="process in processItems"
+            :key="process.processId"
+            :process="process"
+            :is-selected="selectedProcess === process.processId"
+            :show-project-link="false"
+            @select="selectedProcess = process.processId"
+            @kill="handleKillProcess"
+          />
         </div>
       </div>
     </div>

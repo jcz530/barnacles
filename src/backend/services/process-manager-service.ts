@@ -90,6 +90,11 @@ class ProcessManagerService {
         const existing = projectProcesses.get(process.id)!;
         statuses.push({
           processId: process.id,
+          projectId,
+          name: existing.name,
+          title: existing.title,
+          cwd: existing.cwd,
+          command: existing.command,
           status: existing.status,
           bashId: existing.bashId,
         });
@@ -178,12 +183,16 @@ class ProcessManagerService {
 
         statuses.push({
           processId: process.id,
+          projectId,
+          name: process.name,
           status: 'running',
           bashId,
         });
       } catch (error) {
         statuses.push({
           processId: process.id,
+          projectId,
+          name: process.name,
           status: 'failed',
           error: error instanceof Error ? error.message : 'Unknown error',
         });
@@ -278,7 +287,11 @@ class ProcessManagerService {
     for (const [processId, runningProcess] of projectProcesses.entries()) {
       statuses.push({
         processId,
+        projectId,
         name: runningProcess.name,
+        title: runningProcess.title,
+        cwd: runningProcess.cwd,
+        command: runningProcess.command,
         status: runningProcess.status,
         bashId: runningProcess.bashId,
         exitCode: runningProcess.exitCode,
@@ -424,7 +437,11 @@ class ProcessManagerService {
 
     return {
       processId,
+      projectId,
       name: title,
+      title,
+      cwd,
+      command: params.command,
       status: 'running',
       bashId,
     };
@@ -440,7 +457,11 @@ class ProcessManagerService {
       for (const [processId, runningProcess] of projectProcesses.entries()) {
         allProcesses.push({
           processId,
+          projectId,
           name: runningProcess.name,
+          title: runningProcess.title,
+          cwd: runningProcess.cwd,
+          command: runningProcess.command,
           status: runningProcess.status,
           bashId: runningProcess.bashId,
           exitCode: runningProcess.exitCode,
@@ -457,15 +478,7 @@ class ProcessManagerService {
   /**
    * Get a single process by ID across all projects
    */
-  getProcess(processId: string):
-    | (ProcessStatus & {
-        projectId: string;
-        title?: string;
-        cwd?: string;
-        command?: string;
-        createdAt?: Date;
-      })
-    | null {
+  getProcess(processId: string): (ProcessStatus & { createdAt?: Date }) | null {
     for (const [projectId, projectProcesses] of this.runningProcesses.entries()) {
       if (projectProcesses.has(processId)) {
         const runningProcess = projectProcesses.get(processId)!;

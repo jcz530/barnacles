@@ -2,29 +2,20 @@
 import { Terminal as TerminalIcon } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import ProcessCard from '../components/process/molecules/ProcessCard.vue';
 import ProcessOutput from '../components/process/organisms/ProcessOutput.vue';
-import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/skeleton';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useQueries } from '../composables/useQueries';
 
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
-const { useProcessesQuery, useKillProcessMutation, useProjectsQuery, useProcessOutputByIdQuery } =
-  useQueries();
+const { useProcessesQuery, useKillProcessMutation, useProcessOutputByIdQuery } = useQueries();
 
 const { data: processes, isLoading } = useProcessesQuery();
-const { data: projects } = useProjectsQuery();
 const killProcessMutation = useKillProcessMutation();
 
 const selectedProcess = ref<string | null>(null);
-
-// Helper to get project name by ID
-const getProjectName = (projectId?: string) => {
-  if (!projectId) return null;
-  const project = projects.value?.find(p => p.id === projectId);
-  return project?.name;
-};
 
 const navigateToProject = (projectId: string) => {
   router.push({ name: 'ProjectTerminals', params: { id: projectId } });
@@ -60,6 +51,7 @@ const handleKillProcess = async (processId: string) => {
   try {
     await killProcessMutation.mutateAsync(processId);
 
+    // If we killed the selected process, select another one
     // If we killed the selected process, select another one
     if (selectedProcess.value === processId) {
       const remaining = activeProcesses.value.filter(p => p.processId !== processId);
@@ -111,43 +103,15 @@ const selectProcess = (process: any) => {
               Running ({{ activeProcesses.length }})
             </h3>
             <div class="space-y-2">
-              <div
+              <ProcessCard
                 v-for="process in activeProcesses"
                 :key="process.processId"
-                :class="[
-                  'cursor-pointer rounded-lg border p-3 transition-all',
-                  selectedProcess === process.processId
-                    ? 'border-sky-500 bg-sky-50'
-                    : 'border-slate-200 bg-white hover:border-slate-300',
-                ]"
-                @click="selectProcess(process)"
-              >
-                <div class="flex items-start justify-between">
-                  <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-medium">
-                      {{ process.title || process.name || process.command || 'Process' }}
-                    </p>
-                    <p
-                      v-if="getProjectName(process.projectId)"
-                      class="mt-1 truncate text-xs text-slate-500 hover:text-sky-600"
-                      @click.stop="navigateToProject(process.projectId)"
-                    >
-                      {{ getProjectName(process.projectId) }}
-                    </p>
-                    <p v-if="process.cwd" class="mt-1 truncate text-xs text-slate-400">
-                      {{ process.cwd }}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="ml-2 h-6 w-6 flex-shrink-0 p-0"
-                    @click.stop="handleKillProcess(process.processId)"
-                  >
-                    ×
-                  </Button>
-                </div>
-              </div>
+                :process="process"
+                :is-selected="selectedProcess === process.processId"
+                @select="selectProcess"
+                @kill="handleKillProcess"
+                @navigate-to-project="navigateToProject"
+              />
             </div>
           </div>
 
@@ -157,34 +121,15 @@ const selectProcess = (process: any) => {
               Stopped ({{ stoppedProcesses.length }})
             </h3>
             <div class="space-y-2">
-              <div
+              <ProcessCard
                 v-for="process in stoppedProcesses"
                 :key="process.processId"
-                :class="[
-                  'cursor-pointer rounded-lg border p-3 opacity-60 transition-all',
-                  selectedProcess === process.processId
-                    ? 'border-sky-500 bg-sky-50'
-                    : 'border-slate-200 bg-white hover:border-slate-300',
-                ]"
-                @click="selectProcess(process)"
-              >
-                <div class="flex items-start justify-between">
-                  <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-medium">
-                      {{ process.title || process.name || process.command || 'Process' }}
-                    </p>
-                    <p
-                      v-if="getProjectName(process.projectId)"
-                      class="mt-1 truncate text-xs text-slate-500"
-                    >
-                      {{ getProjectName(process.projectId) }}
-                    </p>
-                    <p class="mt-1 text-xs text-slate-400">
-                      {{ process.status === 'failed' ? 'Failed' : 'Stopped' }}
-                    </p>
-                  </div>
-                </div>
-              </div>
+                :process="process"
+                :is-selected="selectedProcess === process.processId"
+                @select="selectProcess"
+                @kill="handleKillProcess"
+                @navigate-to-project="navigateToProject"
+              />
             </div>
           </div>
         </div>
