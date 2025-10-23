@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { Terminal as TerminalIcon } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import ProcessCard from '../components/process/molecules/ProcessCard.vue';
 import ProcessOutput from '../components/process/organisms/ProcessOutput.vue';
 import { Skeleton } from '../components/ui/skeleton';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useQueries } from '../composables/useQueries';
+import { useProcessManagement } from '../composables/useProcessManagement';
 
-const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
 const { useProcessesQuery, useKillProcessMutation, useProcessOutputByIdQuery } = useQueries();
 
@@ -26,12 +25,16 @@ const { data: processOutput } = useProcessOutputByIdQuery(
   }
 );
 
-const activeProcesses = computed(() => {
-  return processes.value?.filter(p => p.status === 'running') || [];
-});
-
-const stoppedProcesses = computed(() => {
-  return processes.value?.filter(p => p.status === 'stopped' || p.status === 'failed') || [];
+const {
+  runningProcesses: activeProcesses,
+  stoppedProcesses,
+  handleKillProcess,
+  handleDeleteProcess,
+  handleClearAllStopped,
+} = useProcessManagement({
+  processes,
+  selectedProcess,
+  killProcessMutation,
 });
 
 onMounted(() => {
@@ -42,21 +45,6 @@ onMounted(() => {
     selectedProcess.value = activeProcesses.value[0].processId;
   }
 });
-
-const handleKillProcess = async (processId: string) => {
-  try {
-    await killProcessMutation.mutateAsync(processId);
-
-    // If we killed the selected process, select another one
-    // If we killed the selected process, select another one
-    if (selectedProcess.value === processId) {
-      const remaining = activeProcesses.value.filter(p => p.processId !== processId);
-      selectedProcess.value = remaining.length > 0 ? remaining[0].processId : null;
-    }
-  } catch (error) {
-    console.error('Failed to kill process:', error);
-  }
-};
 
 const selectProcess = (process: any) => {
   selectedProcess.value = process.processId;
@@ -112,9 +100,17 @@ const selectProcess = (process: any) => {
 
           <!-- Stopped Processes -->
           <div v-if="stoppedProcesses.length > 0">
-            <h3 class="mb-2 text-sm font-semibold text-slate-700">
-              Stopped ({{ stoppedProcesses.length }})
-            </h3>
+            <div class="mb-2 flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-slate-700">
+                Stopped ({{ stoppedProcesses.length }})
+              </h3>
+              <button
+                class="text-xs text-slate-400 transition-colors hover:text-red-400"
+                @click="handleClearAllStopped"
+              >
+                Clear All
+              </button>
+            </div>
             <div class="space-y-2">
               <ProcessCard
                 v-for="process in stoppedProcesses"
@@ -123,6 +119,7 @@ const selectProcess = (process: any) => {
                 :is-selected="selectedProcess === process.processId"
                 @select="selectProcess"
                 @kill="handleKillProcess"
+                @delete="handleDeleteProcess"
               />
             </div>
           </div>

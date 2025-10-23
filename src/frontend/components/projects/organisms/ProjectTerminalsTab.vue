@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Play, Terminal as TerminalIcon } from 'lucid
 import type { ComputedRef, Ref } from 'vue';
 import { computed, inject, ref } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
+import { useProcessManagement } from '../../../composables/useProcessManagement';
 import { Skeleton } from '../../ui/skeleton';
 import ProcessOutput from '../../process/organisms/ProcessOutput.vue';
 import ProcessCard from '../../process/molecules/ProcessCard.vue';
@@ -39,12 +40,16 @@ const { data: processOutput } = useProcessOutputByIdQuery(
   }
 );
 
-const runningProcesses = computed(() => {
-  return processes.value?.filter(p => p.status === 'running') || [];
-});
-
-const stoppedProcesses = computed(() => {
-  return processes.value?.filter(p => p.status === 'stopped' || p.status === 'failed') || [];
+const {
+  runningProcesses,
+  stoppedProcesses,
+  handleKillProcess,
+  handleDeleteProcess,
+  handleClearAllStopped,
+} = useProcessManagement({
+  processes,
+  selectedProcess,
+  killProcessMutation,
 });
 
 // Convert processes to the format needed for display - show all processes
@@ -73,47 +78,6 @@ const handleCreateProcess = async (command?: string, title?: string) => {
     }
   } catch (error) {
     console.error('Failed to create process:', error);
-  }
-};
-
-const handleKillProcess = async (processId: string) => {
-  try {
-    await killProcessMutation.mutateAsync(processId);
-
-    if (selectedProcess.value === processId) {
-      const remaining = runningProcesses.value.filter(p => p.processId !== processId);
-      selectedProcess.value = remaining.length > 0 ? remaining[0].processId : null;
-    }
-  } catch (error) {
-    console.error('Failed to kill process:', error);
-  }
-};
-
-const handleDeleteProcess = async (processId: string) => {
-  try {
-    await killProcessMutation.mutateAsync(processId);
-
-    if (selectedProcess.value === processId) {
-      selectedProcess.value = null;
-    }
-  } catch (error) {
-    console.error('Failed to delete process:', error);
-  }
-};
-
-const handleClearAllStopped = async () => {
-  try {
-    const promises = stoppedProcesses.value.map(p => killProcessMutation.mutateAsync(p.processId));
-    await Promise.all(promises);
-
-    if (
-      selectedProcess.value &&
-      stoppedProcesses.value.some(p => p.processId === selectedProcess.value)
-    ) {
-      selectedProcess.value = null;
-    }
-  } catch (error) {
-    console.error('Failed to clear stopped processes:', error);
   }
 };
 
@@ -246,7 +210,7 @@ autoSelectProcess();
                 Stopped ({{ stoppedProcesses.length }})
               </h4>
               <button
-                class="text-xs text-slate-400 transition-colors hover:text-red-600"
+                class="text-xs text-slate-400 transition-colors hover:text-red-400"
                 @click="handleClearAllStopped"
               >
                 Clear All
