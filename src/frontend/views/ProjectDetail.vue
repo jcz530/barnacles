@@ -43,7 +43,7 @@ const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
 provide('project', project);
 provide('projectId', projectId);
 provide(
-  'projectPath ',
+  'projectPath',
   computed(() => project.value?.path)
 );
 provide('packageScripts', packageScripts);
