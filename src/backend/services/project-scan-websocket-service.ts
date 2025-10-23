@@ -2,6 +2,7 @@ import { Server as HttpServer, IncomingMessage } from 'http';
 import { WebSocket, WebSocketServer } from 'ws';
 import { projectScannerService } from './project-scanner-service';
 import { projectService } from './project-service';
+import { settingsService } from './settings-service';
 import { getDefaultScanDirectories } from '../utils/default-scan-directories';
 
 export interface ScanProgress {
@@ -102,7 +103,7 @@ export class ProjectScanWebSocketService {
   private async handleScanRequest(
     ws: WebSocket,
     directories?: string[],
-    maxDepth: number = 2
+    maxDepth?: number
   ): Promise<void> {
     const scanId = Date.now().toString();
 
@@ -118,6 +119,14 @@ export class ProjectScanWebSocketService {
     this.activeScans.set(scanId, { cancelled: false, totalDiscovered: 0 });
 
     try {
+      // Get maxDepth from settings if not provided
+      const settingMaxDepth = await settingsService.getValue<number>('scanMaxDepth');
+      const finalMaxDepth = maxDepth ?? settingMaxDepth ?? 2;
+
+      console.log('🔍 WebSocket Scan - maxDepth from client:', maxDepth);
+      console.log('🔍 WebSocket Scan - maxDepth from settings:', settingMaxDepth);
+      console.log('🔍 WebSocket Scan - final maxDepth used:', finalMaxDepth);
+
       // Default directories if none provided
       const dirsToScan = directories || (await getDefaultScanDirectories());
 
@@ -132,7 +141,7 @@ export class ProjectScanWebSocketService {
       // Scan directories and emit projects as they're discovered
       await this.scanDirectoriesIncremental(
         dirsToScan,
-        maxDepth,
+        finalMaxDepth,
         async projectInfo => {
           // Check if scan was cancelled
           const scanState = this.activeScans.get(scanId);

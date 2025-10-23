@@ -1,9 +1,9 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../shared/database';
 import {
+  projectLanguageStats,
   projects,
   projectStats,
-  projectLanguageStats,
   projectTechnologies,
   technologies,
 } from '../../shared/database/schema';
@@ -478,7 +478,7 @@ class ProjectService {
    */
   async scanAndSaveProjects(
     directories: string[],
-    maxDepth: number = 2
+    maxDepth: number = 3
   ): Promise<ProjectWithDetails[]> {
     const scannedProjects = await projectScannerService.scanDirectories(directories, maxDepth);
 
