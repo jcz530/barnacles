@@ -127,7 +127,7 @@ autoSelectProcess();
               <button
                 v-for="(command, name) in packageJsonScripts"
                 :key="name"
-                class="flex w-full items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
+                class="flex w-full cursor-pointer items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
                 @click="() => runScript(String(name), 'npm')"
               >
                 <Play class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-600" />
