@@ -5,6 +5,8 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import '@xterm/xterm/css/xterm.css';
 
+/* global ResizeObserver, HTMLDivElement */
+
 const props = defineProps<{
   output: string;
 }>();
@@ -23,8 +25,9 @@ const initTerminal = () => {
     disableStdin: true,
     fontSize: 13,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+    scrollback: 10000,
     theme: {
-      background: '#1e1e1e',
+      background: '#00000000',
       foreground: '#d4d4d4',
       cursor: '#1e1e1e', // Hide cursor
       black: '#000000',
@@ -54,12 +57,12 @@ const initTerminal = () => {
   // Open terminal in the container
   terminal.open(terminalRef.value);
 
-  // Fit terminal to container
-  fitAddon.fit();
+  // Fit terminal to container and write initial output
+  fitAddon?.fit();
 
-  // Write initial output
+  // Write initial output after terminal is properly sized
   if (props.output) {
-    terminal.write(props.output);
+    terminal?.write(props.output);
     lastOutput = props.output;
   }
 

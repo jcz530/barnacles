@@ -3,8 +3,6 @@ import path from 'path';
 import type { StartProcess } from '../../shared/types/process';
 import { processManagerService } from '../services/process-manager-service';
 import { projectService } from '../services/project-service';
-import { settingsService } from '../services/settings-service';
-import { getDefaultScanDirectories } from '../utils/default-scan-directories';
 
 const projects = new Hono();
 
@@ -34,44 +32,6 @@ projects.get('/', async c => {
     return c.json(
       {
         error: 'Failed to fetch projects',
-      },
-      500
-    );
-  }
-});
-
-/**
- * POST /api/projects/scan
- * Scan directories for projects and save to database
- */
-projects.post('/scan', async c => {
-  try {
-    let body;
-    try {
-      body = await c.req.json();
-    } catch {
-      // No body provided or invalid JSON
-      body = {};
-    }
-
-    // Get maxDepth from settings, fallback to body param, then default to 3
-    const settingMaxDepth = await settingsService.getValue<number>('scanMaxDepth');
-    const { directories, maxDepth = settingMaxDepth ?? 3 } = body;
-
-    // If no directories provided, use common development directories
-    const dirsToScan = directories || (await getDefaultScanDirectories());
-
-    const scannedProjects = await projectService.scanAndSaveProjects(dirsToScan, maxDepth);
-
-    return c.json({
-      data: scannedProjects,
-      message: `Scanned and saved ${scannedProjects.length} projects`,
-    });
-  } catch (error) {
-    console.error('Error scanning projects:', error);
-    return c.json(
-      {
-        error: 'Failed to scan projects',
       },
       500
     );

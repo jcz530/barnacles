@@ -9,7 +9,11 @@ export interface StartProcess {
 
 export interface ProcessStatus {
   processId: string;
+  projectId?: string; // Project ID this process belongs to
   name?: string; // Process name from StartProcess
+  title?: string; // Title for ad-hoc processes
+  cwd?: string; // Working directory for ad-hoc processes
+  command?: string; // Original command for ad-hoc processes
   status: 'running' | 'stopped' | 'failed';
   bashId?: string; // ID of the background bash session
   exitCode?: number;

@@ -7,7 +7,7 @@ directories:
   output: dist
   buildResources: build
 
-# Only install production dependencies
+# Don't rebuild native modules - already built for Electron
 npmRebuild: false
 buildDependenciesFromSource: false
 nodeGypRebuild: false
@@ -33,9 +33,9 @@ files:
 
 # Include/exclude node modules patterns
 # Note: Only unpack native modules that need direct file system access
-# Disabled asarUnpack to avoid issues with missing optional dependencies
-# asarUnpack:
-#   - '**/node_modules/@libsql/**'
+asarUnpack:
+  - '**/node_modules/@libsql/**'
+  - '**/node_modules/node-pty/**'
 
 # Include migrations as extra resources
 extraResources:

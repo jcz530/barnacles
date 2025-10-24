@@ -57,6 +57,7 @@ export default [
     rules: {
       'vue/multi-word-component-names': 'off',
       'vue/no-v-html': 'warn',
+      'vue/no-ref-as-operand': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',
         {

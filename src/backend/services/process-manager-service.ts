@@ -1,13 +1,11 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import type { IPty } from 'node-pty';
+import * as pty from 'node-pty';
 import type { ProcessStatus, ProjectProcessStatus, StartProcess } from '../../shared/types/process';
-
-const execAsync = promisify(exec);
 
 interface RunningProcess {
   name: string;
   bashId: string;
-  process: ReturnType<typeof exec>;
+  process: IPty;
   status: 'running' | 'stopped' | 'failed';
   exitCode?: number;
   error?: string;
@@ -90,6 +88,11 @@ class ProcessManagerService {
         const existing = projectProcesses.get(process.id)!;
         statuses.push({
           processId: process.id,
+          projectId,
+          name: existing.name,
+          title: existing.title,
+          cwd: existing.cwd,
+          command: existing.command,
           status: existing.status,
           bashId: existing.bashId,
         });
@@ -103,10 +106,17 @@ class ProcessManagerService {
         // Determine working directory
         const cwd = process.workingDir ? `${projectPath}/${process.workingDir}` : projectPath;
 
-        // Start the process
-        const childProcess = exec(commandString, {
+        // Start the process using node-pty for proper terminal emulation
+        // Use login shell (-l) to load user's PATH (npm, node, etc.)
+        const ptyProcess = pty.spawn('/bin/bash', ['-l', '-c', commandString], {
+          name: 'xterm-256color',
+          cols: 120,
+          rows: 30,
           cwd,
-          shell: '/bin/bash',
+          env: {
+            TERM: 'xterm-256color',
+            FORCE_COLOR: '1',
+          } as Record<string, string>,
         });
 
         // Generate a bash ID (simulating background bash sessions)
@@ -115,17 +125,16 @@ class ProcessManagerService {
         const runningProcess: RunningProcess = {
           name: process.name,
           bashId,
-          process: childProcess,
+          process: ptyProcess,
           status: 'running',
           output: [],
           configuredUrl: process.url,
           createdAt: new Date(),
         };
 
-        // Capture stdout
-        childProcess.stdout?.on('data', (data: Buffer) => {
-          const text = data.toString();
-          runningProcess.output.push(text);
+        // Capture all output (stdout and stderr combined in PTY)
+        ptyProcess.onData((data: string) => {
+          runningProcess.output.push(data);
 
           // Keep only last 1000 lines to prevent memory issues
           if (runningProcess.output.length > 1000) {
@@ -134,27 +143,7 @@ class ProcessManagerService {
 
           // Try to detect URL if not already detected and no configured URL
           if (!runningProcess.detectedUrl && !runningProcess.configuredUrl) {
-            const detectedUrl = this.detectUrl(text);
-            if (detectedUrl) {
-              runningProcess.detectedUrl = detectedUrl;
-              console.log(`Detected URL for process ${process.name}: ${detectedUrl}`);
-            }
-          }
-        });
-
-        // Capture stderr
-        childProcess.stderr?.on('data', (data: Buffer) => {
-          const text = data.toString();
-          runningProcess.output.push(text);
-
-          // Keep only last 1000 lines
-          if (runningProcess.output.length > 1000) {
-            runningProcess.output = runningProcess.output.slice(-1000);
-          }
-
-          // Some servers output URLs to stderr
-          if (!runningProcess.detectedUrl && !runningProcess.configuredUrl) {
-            const detectedUrl = this.detectUrl(text);
+            const detectedUrl = this.detectUrl(data);
             if (detectedUrl) {
               runningProcess.detectedUrl = detectedUrl;
               console.log(`Detected URL for process ${process.name}: ${detectedUrl}`);
@@ -163,27 +152,25 @@ class ProcessManagerService {
         });
 
         // Handle process exit
-        childProcess.on('exit', code => {
-          runningProcess.status = code === 0 ? 'stopped' : 'failed';
-          runningProcess.exitCode = code ?? undefined;
-        });
-
-        // Handle process errors
-        childProcess.on('error', error => {
-          runningProcess.status = 'failed';
-          runningProcess.error = error.message;
+        ptyProcess.onExit(({ exitCode }) => {
+          runningProcess.status = exitCode === 0 ? 'stopped' : 'failed';
+          runningProcess.exitCode = exitCode;
         });
 
         projectProcesses.set(process.id, runningProcess);
 
         statuses.push({
           processId: process.id,
+          projectId,
+          name: process.name,
           status: 'running',
           bashId,
         });
       } catch (error) {
         statuses.push({
           processId: process.id,
+          projectId,
+          name: process.name,
           status: 'failed',
           error: error instanceof Error ? error.message : 'Unknown error',
         });
@@ -209,7 +196,7 @@ class ProcessManagerService {
     // Kill all processes
     for (const [processId, runningProcess] of projectProcesses.entries()) {
       try {
-        runningProcess.process.kill('SIGTERM');
+        runningProcess.process.kill();
         runningProcess.status = 'stopped';
       } catch (error) {
         console.error(`Failed to kill process ${processId}:`, error);
@@ -233,7 +220,7 @@ class ProcessManagerService {
     const runningProcess = projectProcesses.get(processId)!;
 
     try {
-      runningProcess.process.kill('SIGTERM');
+      runningProcess.process.kill();
       runningProcess.status = 'stopped';
     } catch (error) {
       console.error(`Failed to kill process ${processId}:`, error);
@@ -278,7 +265,11 @@ class ProcessManagerService {
     for (const [processId, runningProcess] of projectProcesses.entries()) {
       statuses.push({
         processId,
+        projectId,
         name: runningProcess.name,
+        title: runningProcess.title,
+        cwd: runningProcess.cwd,
+        command: runningProcess.command,
         status: runningProcess.status,
         bashId: runningProcess.bashId,
         exitCode: runningProcess.exitCode,
@@ -351,11 +342,23 @@ class ProcessManagerService {
     const cwd = params.cwd || process.cwd();
     const title = params.title || (params.command ? `Running: ${params.command}` : 'Process');
 
-    // Start the process
-    const childProcess = exec(command, {
-      cwd,
-      shell: '/bin/bash',
-    });
+    // Start the process using node-pty for proper terminal emulation
+    // Use login shell (-l) to load user's PATH (npm, node, etc.)
+    const ptyProcess = pty.spawn(
+      '/bin/bash',
+      params.command ? ['-l', '-c', params.command] : ['-l'],
+      {
+        name: 'xterm-256color',
+        cols: 120,
+        rows: 30,
+        cwd,
+        env: {
+          ...process.env,
+          TERM: 'xterm-256color',
+          FORCE_COLOR: '1',
+        } as Record<string, string>,
+      }
+    );
 
     const bashId = `${projectId}-${processId}-${Date.now()}`;
 
@@ -365,16 +368,15 @@ class ProcessManagerService {
       command: params.command,
       cwd,
       bashId,
-      process: childProcess,
+      process: ptyProcess,
       status: 'running',
       output: [],
       createdAt: new Date(),
     };
 
-    // Capture stdout
-    childProcess.stdout?.on('data', (data: Buffer) => {
-      const text = data.toString();
-      runningProcess.output.push(text);
+    // Capture all output (stdout and stderr combined in PTY)
+    ptyProcess.onData((data: string) => {
+      runningProcess.output.push(data);
 
       // Keep only last 1000 lines
       if (runningProcess.output.length > 1000) {
@@ -383,7 +385,7 @@ class ProcessManagerService {
 
       // Try to detect URL
       if (!runningProcess.detectedUrl) {
-        const detectedUrl = this.detectUrl(text);
+        const detectedUrl = this.detectUrl(data);
         if (detectedUrl) {
           runningProcess.detectedUrl = detectedUrl;
           console.log(`Detected URL for process ${title}: ${detectedUrl}`);
@@ -391,40 +393,21 @@ class ProcessManagerService {
       }
     });
 
-    // Capture stderr
-    childProcess.stderr?.on('data', (data: Buffer) => {
-      const text = data.toString();
-      runningProcess.output.push(text);
-
-      if (runningProcess.output.length > 1000) {
-        runningProcess.output = runningProcess.output.slice(-1000);
-      }
-
-      if (!runningProcess.detectedUrl) {
-        const detectedUrl = this.detectUrl(text);
-        if (detectedUrl) {
-          runningProcess.detectedUrl = detectedUrl;
-        }
-      }
-    });
-
     // Handle process exit
-    childProcess.on('exit', code => {
-      runningProcess.status = code === 0 ? 'stopped' : 'failed';
-      runningProcess.exitCode = code ?? undefined;
-    });
-
-    // Handle process errors
-    childProcess.on('error', error => {
-      runningProcess.status = 'failed';
-      runningProcess.error = error.message;
+    ptyProcess.onExit(({ exitCode }) => {
+      runningProcess.status = exitCode === 0 ? 'stopped' : 'failed';
+      runningProcess.exitCode = exitCode;
     });
 
     projectProcesses.set(processId, runningProcess);
 
     return {
       processId,
+      projectId,
       name: title,
+      title,
+      cwd,
+      command: params.command,
       status: 'running',
       bashId,
     };
@@ -440,7 +423,11 @@ class ProcessManagerService {
       for (const [processId, runningProcess] of projectProcesses.entries()) {
         allProcesses.push({
           processId,
+          projectId,
           name: runningProcess.name,
+          title: runningProcess.title,
+          cwd: runningProcess.cwd,
+          command: runningProcess.command,
           status: runningProcess.status,
           bashId: runningProcess.bashId,
           exitCode: runningProcess.exitCode,
@@ -457,15 +444,7 @@ class ProcessManagerService {
   /**
    * Get a single process by ID across all projects
    */
-  getProcess(processId: string):
-    | (ProcessStatus & {
-        projectId: string;
-        title?: string;
-        cwd?: string;
-        command?: string;
-        createdAt?: Date;
-      })
-    | null {
+  getProcess(processId: string): (ProcessStatus & { createdAt?: Date }) | null {
     for (const [projectId, projectProcesses] of this.runningProcesses.entries()) {
       if (projectProcesses.has(processId)) {
         const runningProcess = projectProcesses.get(processId)!;
@@ -498,7 +477,7 @@ class ProcessManagerService {
         const runningProcess = projectProcesses.get(processId)!;
 
         try {
-          runningProcess.process.kill('SIGTERM');
+          runningProcess.process.kill();
           runningProcess.status = 'stopped';
         } catch (error) {
           console.error(`Failed to kill process ${processId}:`, error);

@@ -488,7 +488,7 @@ class ProjectScannerService {
   /**
    * Scans multiple directories for projects
    */
-  async scanDirectories(basePaths: string[], maxDepth: number = 2): Promise<ProjectInfo[]> {
+  async scanDirectories(basePaths: string[], maxDepth: number = 3): Promise<ProjectInfo[]> {
     const projects: ProjectInfo[] = [];
     const scanned = new Set<string>();
 

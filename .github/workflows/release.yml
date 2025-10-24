@@ -41,6 +41,9 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Rebuild native dependencies for Electron
+        run: npm run rebuild
+
       - name: Prune dev dependencies (keep optional platform packages)
         run: npm prune --omit=dev
 

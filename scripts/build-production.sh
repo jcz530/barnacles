@@ -36,12 +36,18 @@ echo "Creating placeholder directories for missing libsql platform packages..."
 mkdir -p node_modules/@libsql/darwin-x64
 echo '{"name":"@libsql/darwin-x64","version":"0.0.0"}' > node_modules/@libsql/darwin-x64/package.json
 
+echo "Rebuilding native modules for Electron..."
+npx --yes electron-builder install-app-deps
+
 echo "Running electron-builder for platform: $PLATFORM"
 npx --yes electron-builder "$PLATFORM"
 
 echo "Restoring development dependencies..."
 rm -rf node_modules
 mv package-lock.json.bak package-lock.json
-# npm ci
-echo "⚠️ If you ran this locally, you'll need to reinstall your dependencies"
+npm ci
+
+echo "Rebuilding native modules for development..."
+npm run rebuild
+
 echo "✅ Build complete!"

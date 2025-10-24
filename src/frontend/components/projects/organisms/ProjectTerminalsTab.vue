@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ChevronDown, ChevronRight, Play, Terminal as TerminalIcon, X } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, Play, Terminal as TerminalIcon } from 'lucide-vue-next';
 import type { ComputedRef, Ref } from 'vue';
 import { computed, inject, ref } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
-import { Button } from '../../ui/button';
+import { useProcessManagement } from '../../../composables/useProcessManagement';
 import { Skeleton } from '../../ui/skeleton';
 import ProcessOutput from '../../process/organisms/ProcessOutput.vue';
+import ProcessCard from '../../process/molecules/ProcessCard.vue';
 
 const projectId = inject<ComputedRef<string>>('projectId');
 const projectPath = inject<ComputedRef<string | undefined>>('projectPath');
@@ -39,24 +40,27 @@ const { data: processOutput } = useProcessOutputByIdQuery(
   }
 );
 
-const runningProcesses = computed(() => {
-  return processes.value?.filter(p => p.status === 'running') || [];
+const {
+  runningProcesses,
+  stoppedProcesses,
+  handleKillProcess,
+  handleDeleteProcess,
+  handleClearAllStopped,
+} = useProcessManagement({
+  processes,
+  selectedProcess,
+  killProcessMutation,
 });
 
-// All items are just processes now
-const allItems = computed(() => {
-  return runningProcesses.value.map(process => ({
-    id: process.processId,
-    title: process.title || process.name || process.command || 'Process',
-    status: process.status,
-    data: process,
-  }));
+// Convert processes to the format needed for display - show all processes
+const processItems = computed(() => {
+  return processes.value || [];
 });
 
 // Auto-select first item when available
 const autoSelectProcess = () => {
-  if (allItems.value.length > 0 && !selectedProcess.value) {
-    selectedProcess.value = allItems.value[0].id;
+  if (processItems.value.length > 0 && !selectedProcess.value) {
+    selectedProcess.value = processItems.value[0].processId;
   }
 };
 
@@ -77,19 +81,6 @@ const handleCreateProcess = async (command?: string, title?: string) => {
   }
 };
 
-const handleKillProcess = async (processId: string) => {
-  try {
-    await killProcessMutation.mutateAsync(processId);
-
-    if (selectedProcess.value === processId) {
-      const remaining = runningProcesses.value.filter(p => p.processId !== processId);
-      selectedProcess.value = remaining.length > 0 ? remaining[0].processId : null;
-    }
-  } catch (error) {
-    console.error('Failed to kill process:', error);
-  }
-};
-
 const runScript = (scriptName: string, type: 'npm' | 'composer' = 'npm') => {
   const command = type === 'npm' ? `npm run ${scriptName}` : `composer run-script ${scriptName}`;
   handleCreateProcess(command, command);
@@ -106,8 +97,8 @@ autoSelectProcess();
       <!-- Scripts Section -->
       <div
         v-if="
-          (packageJsonScripts?.value && Object.keys(packageJsonScripts.value).length > 0) ||
-          (composerJsonScripts?.value && Object.keys(composerJsonScripts.value).length > 0)
+          (packageJsonScripts && Object.keys(packageJsonScripts).length > 0) ||
+          (composerJsonScripts && Object.keys(composerJsonScripts).length > 0)
         "
         class="border-b border-slate-200"
       >
@@ -122,10 +113,7 @@ autoSelectProcess();
 
         <div v-if="scriptsExpanded" class="p-2">
           <!-- NPM Scripts -->
-          <div
-            v-if="packageJsonScripts?.value && Object.keys(packageJsonScripts.value).length > 0"
-            class="mb-2"
-          >
+          <div v-if="packageJsonScripts && Object.keys(packageJsonScripts).length > 0" class="mb-2">
             <div
               class="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 hover:bg-slate-100"
               @click="npmScriptsExpanded = !npmScriptsExpanded"
@@ -137,9 +125,9 @@ autoSelectProcess();
 
             <div v-if="npmScriptsExpanded" class="mt-1 space-y-1">
               <button
-                v-for="(command, name) in packageJsonScripts?.value"
+                v-for="(command, name) in packageJsonScripts"
                 :key="name"
-                class="flex w-full items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
+                class="flex w-full cursor-pointer items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
                 @click="() => runScript(String(name), 'npm')"
               >
                 <Play class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-600" />
@@ -152,9 +140,7 @@ autoSelectProcess();
           </div>
 
           <!-- Composer Scripts -->
-          <div
-            v-if="composerJsonScripts?.value && Object.keys(composerJsonScripts.value).length > 0"
-          >
+          <div v-if="composerJsonScripts && Object.keys(composerJsonScripts).length > 0">
             <div
               class="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 hover:bg-slate-100"
               @click="composerScriptsExpanded = !composerScriptsExpanded"
@@ -166,7 +152,7 @@ autoSelectProcess();
 
             <div v-if="composerScriptsExpanded" class="mt-1 space-y-1">
               <button
-                v-for="(command, name) in composerJsonScripts?.value"
+                v-for="(command, name) in composerJsonScripts"
                 :key="name"
                 class="flex w-full items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
                 @click="() => runScript(String(name), 'composer')"
@@ -192,45 +178,55 @@ autoSelectProcess();
           <Skeleton v-for="i in 2" :key="i" class="h-20 w-full" />
         </div>
 
-        <div v-else-if="allItems.length === 0" class="py-8 text-center">
+        <div v-else-if="processItems.length === 0" class="py-8 text-center">
           <TerminalIcon class="mx-auto h-10 w-10 text-slate-400" />
-          <p class="mt-2 text-sm text-slate-600">No active processes</p>
+          <p class="mt-2 text-sm text-slate-600">No processes</p>
           <p class="mt-1 text-xs text-slate-500">Run a script to start a process</p>
         </div>
 
-        <div v-else class="space-y-2">
-          <!-- Processes -->
-          <div
-            v-for="item in allItems"
-            :key="item.id"
-            :class="[
-              'cursor-pointer rounded-lg border p-3 transition-all',
-              selectedProcess === item.id
-                ? 'border-sky-500 bg-sky-50'
-                : 'border-slate-200 bg-white hover:border-slate-300',
-            ]"
-            @click="selectedProcess = item.id"
-          >
-            <div class="flex items-start justify-between">
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2">
-                  <Play class="h-4 w-4 text-emerald-500" />
-                  <div class="flex flex-col">
-                    <p class="truncate text-sm font-medium">{{ item.title }}</p>
-                    <p v-if="item.data.cwd" class="truncate text-xs text-slate-500">
-                      {{ item.data.cwd }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                class="h-6 w-6 flex-shrink-0 p-0"
-                @click.stop="() => handleKillProcess(item.id)"
+        <div v-else class="space-y-4">
+          <!-- Running Processes -->
+          <div v-if="runningProcesses.length > 0">
+            <h4 class="mb-2 text-xs font-medium tracking-wide text-slate-500 uppercase">
+              Running ({{ runningProcesses.length }})
+            </h4>
+            <div class="space-y-2">
+              <ProcessCard
+                v-for="process in runningProcesses"
+                :key="process.processId"
+                :process="process"
+                :is-selected="selectedProcess === process.processId"
+                :show-project-link="false"
+                @select="selectedProcess = process.processId"
+                @kill="handleKillProcess"
+              />
+            </div>
+          </div>
+
+          <!-- Stopped Processes -->
+          <div v-if="stoppedProcesses.length > 0">
+            <div class="mb-2 flex items-center justify-between">
+              <h4 class="text-xs font-medium tracking-wide text-slate-500 uppercase">
+                Stopped ({{ stoppedProcesses.length }})
+              </h4>
+              <button
+                class="text-xs text-slate-400 transition-colors hover:text-red-400"
+                @click="handleClearAllStopped"
               >
-                <X class="h-3 w-3" />
-              </Button>
+                Clear All
+              </button>
+            </div>
+            <div class="space-y-2">
+              <ProcessCard
+                v-for="process in stoppedProcesses"
+                :key="process.processId"
+                :process="process"
+                :is-selected="selectedProcess === process.processId"
+                :show-project-link="false"
+                @select="selectedProcess = process.processId"
+                @kill="handleKillProcess"
+                @delete="handleDeleteProcess"
+              />
             </div>
           </div>
         </div>
@@ -238,7 +234,7 @@ autoSelectProcess();
     </div>
 
     <!-- Process display area -->
-    <div class="flex-1 bg-[#1e1e1e] p-4">
+    <div class="flex-1 rounded-lg bg-[#1d293d] p-4">
       <!-- Show process output -->
       <div v-if="selectedProcess && processOutput" class="h-full">
         <ProcessOutput :output="processOutput.output" />

@@ -146,29 +146,6 @@ export const useQueries = () => {
     });
   };
 
-  // Scan projects mutation
-  const useScanProjectsMutation = () => {
-    return useMutation({
-      mutationFn: async (options?: { directories?: string[]; maxDepth?: number }) => {
-        const response = await apiCall<ApiResponse<ProjectWithDetails[]>>(
-          'POST',
-          API_ROUTES.PROJECTS_SCAN,
-          options
-        );
-
-        if (!response) {
-          throw new Error('Failed to scan projects');
-        }
-
-        return response.data || [];
-      },
-      onSuccess: () => {
-        // Invalidate projects query to refetch
-        queryClient.invalidateQueries({ queryKey: ['projects'] });
-      },
-    });
-  };
-
   // Delete project mutation
   const useDeleteProjectMutation = () => {
     return useMutation({
@@ -1012,7 +989,6 @@ export const useQueries = () => {
     useProjectsQuery,
     useProjectQuery,
     useTechnologiesQuery,
-    useScanProjectsMutation,
     useDeleteProjectMutation,
     useRescanProjectMutation,
     useToggleFavoriteMutation,
