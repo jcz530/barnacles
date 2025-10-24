@@ -41,6 +41,7 @@
   "license": "MIT",
   "devDependencies": {
     "@electron/notarize": "^2.5.0",
+    "@electron/rebuild": "^3.7.2",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/vue-query": "^5.90.2",
@@ -97,6 +98,7 @@
     "electron-squirrel-startup": "^1.0.1",
     "electron-updater": "^6.6.2",
     "hono": "^4.9.8",
+    "node-pty": "^1.0.0",
     "vue-sonner": "^2.0.9",
     "ws": "^8.18.3"
   }

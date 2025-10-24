@@ -234,7 +234,7 @@ autoSelectProcess();
     </div>
 
     <!-- Process display area -->
-    <div class="flex-1 bg-[#1e1e1e] p-4">
+    <div class="flex-1 rounded-lg bg-[#1d293d] p-4">
       <!-- Show process output -->
       <div v-if="selectedProcess && processOutput" class="h-full">
         <ProcessOutput :output="processOutput.output" />

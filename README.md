@@ -55,6 +55,8 @@ src/
 
 - Node.js 18 or higher
 - npm or yarn
+- [node-pyt dependencies](https://www.npmjs.com/package/node-pty#dependencies)
+  - Mac: Xcode needs to be installed 
 
 ### Installation
 
@@ -71,13 +73,7 @@ cd barnacles
 npm install
 ```
 
-3. Initialize the database:
-
-```bash
-npm run db:migrate
-```
-
-4. Start the application:
+3. Start the application:
 
 ```bash
 npm run dev
