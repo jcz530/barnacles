@@ -107,7 +107,8 @@ class ProcessManagerService {
         const cwd = process.workingDir ? `${projectPath}/${process.workingDir}` : projectPath;
 
         // Start the process using node-pty for proper terminal emulation
-        const ptyProcess = pty.spawn('/bin/bash', ['-c', commandString], {
+        // Use login shell (-l) to load user's PATH (npm, node, etc.)
+        const ptyProcess = pty.spawn('/bin/bash', ['-l', '-c', commandString], {
           name: 'xterm-256color',
           cols: 120,
           rows: 30,
@@ -342,17 +343,22 @@ class ProcessManagerService {
     const title = params.title || (params.command ? `Running: ${params.command}` : 'Process');
 
     // Start the process using node-pty for proper terminal emulation
-    const ptyProcess = pty.spawn('/bin/bash', params.command ? ['-c', params.command] : [], {
-      name: 'xterm-256color',
-      cols: 120,
-      rows: 30,
-      cwd,
-      env: {
-        ...process.env,
-        TERM: 'xterm-256color',
-        FORCE_COLOR: '1',
-      } as Record<string, string>,
-    });
+    // Use login shell (-l) to load user's PATH (npm, node, etc.)
+    const ptyProcess = pty.spawn(
+      '/bin/bash',
+      params.command ? ['-l', '-c', params.command] : ['-l'],
+      {
+        name: 'xterm-256color',
+        cols: 120,
+        rows: 30,
+        cwd,
+        env: {
+          ...process.env,
+          TERM: 'xterm-256color',
+          FORCE_COLOR: '1',
+        } as Record<string, string>,
+      }
+    );
 
     const bashId = `${projectId}-${processId}-${Date.now()}`;
 

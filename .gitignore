@@ -42,6 +42,11 @@ coverage
 
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
+# node-gyp build artifacts
+build/*.gypi
+build/*.mk
+build/Makefile
+build/.deps
 
 # Dependency directories
 node_modules/

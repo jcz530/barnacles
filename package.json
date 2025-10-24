@@ -1,7 +1,7 @@
 {
   "name": "barnacles",
   "productName": "Barnacles",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "App for developers",
   "main": "dist/main/main.js",
   "type": "module",
@@ -31,7 +31,8 @@
     "format:check": "prettier --check \"src/**/*.{ts,vue,css}\"",
     "type-check": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "rebuild": "electron-builder install-app-deps"
   },
   "keywords": [],
   "author": {
@@ -41,7 +42,6 @@
   "license": "MIT",
   "devDependencies": {
     "@electron/notarize": "^2.5.0",
-    "@electron/rebuild": "^3.7.2",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/vue-query": "^5.90.2",
