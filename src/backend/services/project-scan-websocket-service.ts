@@ -1,4 +1,4 @@
-import { Server as HttpServer, IncomingMessage } from 'http';
+import { IncomingMessage, Server as HttpServer } from 'http';
 import { WebSocket, WebSocketServer } from 'ws';
 import { projectScannerService } from './project-scanner-service';
 import { projectService } from './project-service';
@@ -122,10 +122,6 @@ export class ProjectScanWebSocketService {
       // Get maxDepth from settings if not provided
       const settingMaxDepth = await settingsService.getValue<number>('scanMaxDepth');
       const finalMaxDepth = maxDepth ?? settingMaxDepth ?? 2;
-
-      console.log('🔍 WebSocket Scan - maxDepth from client:', maxDepth);
-      console.log('🔍 WebSocket Scan - maxDepth from settings:', settingMaxDepth);
-      console.log('🔍 WebSocket Scan - final maxDepth used:', finalMaxDepth);
 
       // Default directories if none provided
       const dirsToScan = directories || (await getDefaultScanDirectories());

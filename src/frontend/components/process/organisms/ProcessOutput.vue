@@ -58,8 +58,6 @@ const initTerminal = () => {
   terminal.open(terminalRef.value);
 
   // Fit terminal to container and write initial output
-  // Use setTimeout to ensure container is fully rendered
-  // on(() => {
   fitAddon?.fit();
 
   // Write initial output after terminal is properly sized
@@ -67,8 +65,6 @@ const initTerminal = () => {
     terminal?.write(props.output);
     lastOutput = props.output;
   }
-  console.log('output', props.output);
-  // });
 
   // Handle window resize
   const resizeObserver = new ResizeObserver(() => {
