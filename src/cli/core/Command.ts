@@ -24,6 +24,24 @@ export abstract class Command {
   readonly showIntro: boolean = false;
 
   /**
+   * Detailed help text for this command
+   */
+  readonly helpText?: string;
+
+  /**
+   * Usage examples for this command
+   */
+  readonly examples?: string[];
+
+  /**
+   * Available flags/options for this command
+   */
+  readonly options?: Array<{
+    flag: string;
+    description: string;
+  }>;
+
+  /**
    * Execute the command
    */
   abstract execute(flags: Record<string, string | boolean>): Promise<void>;

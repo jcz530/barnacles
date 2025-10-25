@@ -21,6 +21,9 @@ export class StatusCommand extends Command {
   readonly name = 'status';
   readonly description = 'Check the status of Barnacles';
   readonly showIntro = false;
+  readonly helpText =
+    'Displays the current status of the Barnacles application, database connection, and running processes.';
+  readonly examples = ['barnacles status', 'barnacles status --help'];
 
   async execute(): Promise<void> {
     intro(`${compactLogo} Barnacles Status`);

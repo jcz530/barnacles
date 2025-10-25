@@ -3,6 +3,7 @@
 import { intro, outro } from '@clack/prompts';
 import { parseArgs } from './utils/arg-parser.js';
 import { executeCommand, registry } from './commands';
+import { compactLogo, getTitle } from './utils/branding';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -25,7 +26,7 @@ async function main() {
   }
 
   if (shouldShowIntro) {
-    intro('Barnacles');
+    intro(`${compactLogo} ${getTitle()}`);
   }
 
   try {
