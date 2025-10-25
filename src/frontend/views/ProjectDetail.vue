@@ -53,7 +53,7 @@ provide('isLoading', isLoading);
 // Set breadcrumbs with reactive project name
 const breadcrumbs = computed(() => [
   { label: 'Projects', href: '/projects' },
-  { label: project.value?.name || 'Loading...', href: `/projects/${projectId}` },
+  { label: project.value?.name || 'Loading...', href: `/projects/${projectId.value}` },
 ]);
 
 onMounted(() => {

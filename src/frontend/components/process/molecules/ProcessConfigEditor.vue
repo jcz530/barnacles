@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus, Trash2, X } from 'lucide-vue-next';
+import { Plus, Trash2, Wrench, X, Zap } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import type { StartProcess } from '../../../../shared/types/process';
 import { useQueries } from '../../../composables/useQueries';
@@ -14,6 +14,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../../ui/sheet';
+import { Checkbox } from '../../ui/checkbox';
+import { Label } from '../../ui/label';
 import AutocompleteInput from '../../molecules/AutocompleteInput.vue';
 
 interface Props {
@@ -31,6 +33,8 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
 const processes = ref<StartProcess[]>([]);
+const configMode = ref<'quick' | 'advanced'>('quick');
+const selectedScripts = ref<string[]>([]);
 
 // Fetch package scripts, hosts, and project details for autocomplete
 const { useProjectPackageScriptsQuery, useProjectQuery, useHostsQuery } = useQueries();
@@ -117,14 +121,42 @@ const urlSuggestions = computed(() => {
   );
 });
 
+// Color palette for quick setup
+const colorPalette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+
+// Generate process config from script name
+const generateProcessFromScript = (scriptName: string): StartProcess => {
+  const colorIndex = selectedScripts.value.length % colorPalette.length;
+  const command =
+    detectedPackageManager.value === 'yarn'
+      ? `yarn ${scriptName}`
+      : detectedPackageManager.value === 'pnpm'
+        ? `pnpm ${scriptName}`
+        : `npm run ${scriptName}`;
+
+  return {
+    id: `process-${Date.now()}-${scriptName}`,
+    name: scriptName.charAt(0).toUpperCase() + scriptName.slice(1).replace(/-/g, ' '),
+    commands: [command],
+    color: colorPalette[colorIndex],
+  };
+};
+
 // Initialize processes when the sheet opens
 watch(
   () => props.isOpen,
   (isOpen: boolean) => {
     if (isOpen) {
+      // Determine mode based on whether we have existing processes
+      const hasExistingProcesses = props.initialProcesses && props.initialProcesses.length > 0;
+      configMode.value = hasExistingProcesses ? 'advanced' : 'quick';
+
       processes.value = props.initialProcesses
         ? JSON.parse(JSON.stringify(props.initialProcesses))
         : [];
+
+      // Reset selected scripts
+      selectedScripts.value = [];
     }
   }
 );
@@ -150,16 +182,55 @@ const removeCommand = (processIndex: number, commandIndex: number) => {
   processes.value[processIndex].commands.splice(commandIndex, 1);
 };
 
-const handleSave = () => {
-  // Filter out empty processes and commands
-  const validProcesses = processes.value
-    .filter(p => p.name && p.commands.some(c => c.trim()))
-    .map(p => ({
-      ...p,
-      commands: p.commands.filter(c => c.trim()),
-    }));
+const toggleScriptSelection = (scriptName: string) => {
+  const index = selectedScripts.value.indexOf(scriptName);
+  if (index > -1) {
+    selectedScripts.value.splice(index, 1);
+  } else {
+    selectedScripts.value.push(scriptName);
+  }
+};
 
-  emit('save', validProcesses);
+const switchToAdvanced = () => {
+  configMode.value = 'advanced';
+  // If no processes exist yet, add one
+  if (processes.value.length === 0) {
+    addProcess();
+  }
+};
+
+const switchToQuick = () => {
+  configMode.value = 'quick';
+  selectedScripts.value = [];
+};
+
+const canSave = computed(() => {
+  if (configMode.value === 'quick') {
+    return selectedScripts.value.length > 0;
+  }
+  return processes.value.some(p => p.name && p.commands.some(c => c.trim()));
+});
+
+const handleSave = () => {
+  let processesToSave: StartProcess[];
+
+  if (configMode.value === 'quick') {
+    // Generate processes from selected scripts
+    processesToSave = selectedScripts.value.map(scriptName =>
+      generateProcessFromScript(scriptName)
+    );
+    console.log('Quick mode - saving processes:', processesToSave);
+  } else {
+    // Use manually configured processes
+    processesToSave = processes.value
+      .filter(p => p.name && p.commands.some(c => c.trim()))
+      .map(p => ({
+        ...p,
+        commands: p.commands.filter(c => c.trim()),
+      }));
+  }
+
+  emit('save', processesToSave);
   emit('update:isOpen', false);
 };
 
@@ -170,24 +241,117 @@ const handleClose = () => {
 
 <template>
   <Sheet :open="isOpen" @update:open="emit('update:isOpen', $event)">
-    <SheetContent class="w-full overflow-y-auto sm:max-w-2xl">
+    <SheetContent class="w-full overflow-y-auto px-4 pt-10 sm:max-w-2xl">
       <SheetHeader>
         <SheetTitle>Configure Start Command</SheetTitle>
         <SheetDescription>
-          Define processes that will run when you start this project. Each process can have multiple
-          commands that run sequentially.
+          Define processes that will run when you start this project.
         </SheetDescription>
       </SheetHeader>
 
-      <div class="space-y-6 py-6">
-        <!-- Process List -->
-        <div v-if="processes.length === 0" class="py-8 text-center text-slate-500">
-          <p>No processes configured yet.</p>
-          <p class="text-sm">Click "Add Process" to get started.</p>
+      <!-- Mode Toggle -->
+      <div class="mt-0 flex gap-2 rounded-lg border bg-slate-100 p-1">
+        <Button
+          :variant="configMode === 'quick' ? 'default' : 'ghost'"
+          size="sm"
+          @click="switchToQuick"
+          class="flex-1"
+        >
+          <Zap class="mr-2 h-4 w-4" />
+          Quick Setup
+        </Button>
+        <Button
+          :variant="configMode === 'advanced' ? 'default' : 'ghost'"
+          size="sm"
+          @click="switchToAdvanced"
+          class="flex-1"
+        >
+          <Wrench class="mr-2 h-4 w-4" />
+          Advanced
+        </Button>
+      </div>
+
+      <div class="space-y-6">
+        <!-- Quick Setup Mode -->
+        <div v-if="configMode === 'quick'" class="space-y-4">
+          <div class="text-sm text-slate-600">
+            Select one or more scripts from your package.json to run when the project starts.
+          </div>
+
+          <div v-if="!packageScripts || Object.keys(packageScripts).length === 0">
+            <div class="rounded-lg border border-dashed p-8 text-center text-slate-500">
+              <p>No scripts found in package.json</p>
+              <p class="mt-2 text-sm">Switch to Advanced mode to configure custom commands.</p>
+            </div>
+          </div>
+
+          <div v-else class="space-y-0">
+            <Label
+              v-for="scriptName in Object.keys(packageScripts)"
+              :key="scriptName"
+              class="flex cursor-pointer items-center space-x-3 rounded-lg border px-4 py-2 hover:bg-slate-100"
+            >
+              <Checkbox
+                :id="`script-${scriptName}`"
+                :model-value="selectedScripts.includes(scriptName)"
+                @update:model-value="toggleScriptSelection(scriptName)"
+              />
+              <div class="flex-1 cursor-pointer">
+                <div class="font-medium">{{ scriptName }}</div>
+                <div class="text-xs text-slate-500">
+                  {{
+                    detectedPackageManager === 'yarn'
+                      ? 'yarn'
+                      : detectedPackageManager === 'pnpm'
+                        ? 'pnpm'
+                        : 'npm run'
+                  }}
+                  {{ scriptName }}
+                </div>
+              </div>
+            </Label>
+          </div>
+
+          <div v-if="selectedScripts.length > 0" class="rounded-lg bg-sky-400/25 px-4 py-2">
+            <div class="text-sm font-medium text-sky-900">
+              {{ selectedScripts.length }} script{{ selectedScripts.length === 1 ? '' : 's' }}
+              selected
+            </div>
+            <div class="mt-1 text-xs text-sky-700">
+              Each script will run as a separate process with its own terminal.
+            </div>
+          </div>
+
+          <div
+            v-if="
+              packageScripts &&
+              Object.keys(packageScripts).length > 0 &&
+              selectedScripts.length === 0
+            "
+            class="rounded-lg bg-amber-50 p-4"
+          >
+            <div class="text-sm text-amber-800">Select at least one script to continue.</div>
+          </div>
         </div>
 
-        <div v-for="(process, processIndex) in processes" :key="process.id" class="space-y-4">
-          <div class="space-y-4 rounded-lg border p-4">
+        <!-- Advanced Mode -->
+        <div v-if="configMode === 'advanced'" class="space-y-4">
+          <div class="text-sm text-slate-600">
+            Configure custom processes with full control over commands, working directories, and
+            URLs.
+          </div>
+
+          <!-- Process List -->
+          <div v-if="processes.length === 0" class="py-8 text-center text-slate-500">
+            <p>No processes configured yet.</p>
+            <p class="text-sm">Click "Add Process" to get started.</p>
+          </div>
+
+          <div
+            v-for="(process, processIndex) in processes"
+            :key="process.id"
+            class="space-y-4 rounded-lg border p-4"
+          >
             <!-- Process Header -->
             <div class="flex items-center gap-2">
               <div class="flex-1 space-y-2">
@@ -283,20 +447,20 @@ const handleClose = () => {
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Add Process Button -->
-        <Button variant="outline" @click="addProcess" class="w-full">
-          <Plus class="mr-2 h-4 w-4" />
-          Add Process
-        </Button>
+          <!-- Add Process Button -->
+          <Button variant="outline" @click="addProcess" class="w-full">
+            <Plus class="mr-2 h-4 w-4" />
+            Add Process
+          </Button>
+        </div>
       </div>
 
-      <SheetFooter>
-        <SheetClose as-child>
+      <SheetFooter class="mt-0 flex-row">
+        <SheetClose as-child class="">
           <Button variant="outline" @click="handleClose">Cancel</Button>
         </SheetClose>
-        <Button @click="handleSave">Save Configuration</Button>
+        <Button class="" @click="handleSave" :disabled="!canSave">Save Configuration</Button>
       </SheetFooter>
     </SheetContent>
   </Sheet>
