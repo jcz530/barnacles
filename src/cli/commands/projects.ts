@@ -4,7 +4,7 @@ import { Command } from '../core/Command.js';
 import type { ProjectWithDetails } from '../../backend/services/project-service.js';
 import { projectService } from '../../backend/services/project-service.js';
 import { formatTimeAgo } from '../utils/format-time.js';
-import { getActionOptions, getAction } from '../actions/index.js';
+import { getAction, getActionOptions } from '../actions';
 
 /**
  * Command to list and select projects
