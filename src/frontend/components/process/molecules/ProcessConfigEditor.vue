@@ -34,11 +34,19 @@ const emit = defineEmits<Emits>();
 
 const processes = ref<StartProcess[]>([]);
 const configMode = ref<'quick' | 'advanced'>('quick');
-const selectedScripts = ref<string[]>([]);
+const selectedScripts = ref<string[]>([]); // Format: "type:scriptName" e.g., "npm:dev" or "composer:install"
 
-// Fetch package scripts, hosts, and project details for autocomplete
-const { useProjectPackageScriptsQuery, useProjectQuery, useHostsQuery } = useQueries();
+// Fetch package scripts, composer scripts, hosts, and project details for autocomplete
+const {
+  useProjectPackageScriptsQuery,
+  useProjectComposerScriptsQuery,
+  useProjectQuery,
+  useHostsQuery,
+} = useQueries();
 const { data: packageScripts } = useProjectPackageScriptsQuery(props.projectId, {
+  enabled: true,
+});
+const { data: composerScripts } = useProjectComposerScriptsQuery(props.projectId, {
   enabled: true,
 });
 const { data: project } = useProjectQuery(props.projectId);
@@ -84,7 +92,7 @@ watch(
   { immediate: true }
 );
 
-// Generate command suggestions from detected package scripts only
+// Generate command suggestions from detected package scripts and composer scripts
 const commandSuggestions = computed(() => {
   const suggestions: string[] = [];
 
@@ -100,6 +108,12 @@ const commandSuggestions = computed(() => {
         default:
           suggestions.push(`npm run ${scriptName}`);
       }
+    });
+  }
+
+  if (composerScripts.value) {
+    Object.keys(composerScripts.value).forEach(scriptName => {
+      suggestions.push(`composer ${scriptName}`);
     });
   }
 
@@ -124,15 +138,23 @@ const urlSuggestions = computed(() => {
 // Color palette for quick setup
 const colorPalette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
 
-// Generate process config from script name
-const generateProcessFromScript = (scriptName: string): StartProcess => {
+// Generate process config from script key (format: "type:scriptName")
+const generateProcessFromScript = (scriptKey: string): StartProcess => {
+  const [type, scriptName] = scriptKey.split(':');
   const colorIndex = selectedScripts.value.length % colorPalette.length;
-  const command =
-    detectedPackageManager.value === 'yarn'
-      ? `yarn ${scriptName}`
-      : detectedPackageManager.value === 'pnpm'
-        ? `pnpm ${scriptName}`
-        : `npm run ${scriptName}`;
+
+  let command: string;
+  if (type === 'composer') {
+    command = `composer ${scriptName}`;
+  } else {
+    // npm/yarn/pnpm
+    command =
+      detectedPackageManager.value === 'yarn'
+        ? `yarn ${scriptName}`
+        : detectedPackageManager.value === 'pnpm'
+          ? `pnpm ${scriptName}`
+          : `npm run ${scriptName}`;
+  }
 
   return {
     id: `process-${Date.now()}-${scriptName}`,
@@ -182,12 +204,12 @@ const removeCommand = (processIndex: number, commandIndex: number) => {
   processes.value[processIndex].commands.splice(commandIndex, 1);
 };
 
-const toggleScriptSelection = (scriptName: string) => {
-  const index = selectedScripts.value.indexOf(scriptName);
+const toggleScriptSelection = (scriptKey: string) => {
+  const index = selectedScripts.value.indexOf(scriptKey);
   if (index > -1) {
     selectedScripts.value.splice(index, 1);
   } else {
-    selectedScripts.value.push(scriptName);
+    selectedScripts.value.push(scriptKey);
   }
 };
 
@@ -219,7 +241,6 @@ const handleSave = () => {
     processesToSave = selectedScripts.value.map(scriptName =>
       generateProcessFromScript(scriptName)
     );
-    console.log('Quick mode - saving processes:', processesToSave);
   } else {
     // Use manually configured processes
     processesToSave = processes.value
@@ -275,41 +296,88 @@ const handleClose = () => {
         <!-- Quick Setup Mode -->
         <div v-if="configMode === 'quick'" class="space-y-4">
           <div class="text-sm text-slate-600">
-            Select one or more scripts from your package.json to run when the project starts.
+            Select one or more scripts to run when the project starts.
           </div>
 
-          <div v-if="!packageScripts || Object.keys(packageScripts).length === 0">
+          <div
+            v-if="
+              (!packageScripts || Object.keys(packageScripts).length === 0) &&
+              (!composerScripts || Object.keys(composerScripts).length === 0)
+            "
+          >
             <div class="rounded-lg border border-dashed p-8 text-center text-slate-500">
-              <p>No scripts found in package.json</p>
+              <p>No scripts found</p>
               <p class="mt-2 text-sm">Switch to Advanced mode to configure custom commands.</p>
             </div>
           </div>
 
-          <div v-else class="space-y-0">
-            <Label
-              v-for="scriptName in Object.keys(packageScripts)"
-              :key="scriptName"
-              class="flex cursor-pointer items-center space-x-3 rounded-lg border px-4 py-2 hover:bg-slate-100"
-            >
-              <Checkbox
-                :id="`script-${scriptName}`"
-                :model-value="selectedScripts.includes(scriptName)"
-                @update:model-value="toggleScriptSelection(scriptName)"
-              />
-              <div class="flex-1 cursor-pointer">
-                <div class="font-medium">{{ scriptName }}</div>
-                <div class="text-xs text-slate-500">
-                  {{
-                    detectedPackageManager === 'yarn'
-                      ? 'yarn'
-                      : detectedPackageManager === 'pnpm'
-                        ? 'pnpm'
-                        : 'npm run'
-                  }}
-                  {{ scriptName }}
-                </div>
+          <div v-else class="space-y-4">
+            <!-- NPM/Yarn/PNPM Scripts Section -->
+            <div v-if="packageScripts && Object.keys(packageScripts).length > 0" class="space-y-2">
+              <div class="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                {{
+                  detectedPackageManager === 'yarn'
+                    ? 'Yarn'
+                    : detectedPackageManager === 'pnpm'
+                      ? 'PNPM'
+                      : 'NPM'
+                }}
+                Scripts
               </div>
-            </Label>
+              <div class="space-y-0">
+                <Label
+                  v-for="scriptName in Object.keys(packageScripts)"
+                  :key="`npm:${scriptName}`"
+                  class="flex cursor-pointer items-center space-x-3 rounded-lg border px-4 py-2 hover:bg-slate-100"
+                >
+                  <Checkbox
+                    :id="`script-npm-${scriptName}`"
+                    :model-value="selectedScripts.includes(`npm:${scriptName}`)"
+                    @update:model-value="toggleScriptSelection(`npm:${scriptName}`)"
+                  />
+                  <div class="flex-1 cursor-pointer">
+                    <div class="font-medium">{{ scriptName }}</div>
+                    <div class="text-xs text-slate-500">
+                      {{
+                        detectedPackageManager === 'yarn'
+                          ? 'yarn'
+                          : detectedPackageManager === 'pnpm'
+                            ? 'pnpm'
+                            : 'npm run'
+                      }}
+                      {{ scriptName }}
+                    </div>
+                  </div>
+                </Label>
+              </div>
+            </div>
+
+            <!-- Composer Scripts Section -->
+            <div
+              v-if="composerScripts && Object.keys(composerScripts).length > 0"
+              class="space-y-2"
+            >
+              <div class="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                Composer Scripts
+              </div>
+              <div class="space-y-0">
+                <Label
+                  v-for="scriptName in Object.keys(composerScripts)"
+                  :key="`composer:${scriptName}`"
+                  class="flex cursor-pointer items-center space-x-3 rounded-lg border px-4 py-2 hover:bg-slate-100"
+                >
+                  <Checkbox
+                    :id="`script-composer-${scriptName}`"
+                    :model-value="selectedScripts.includes(`composer:${scriptName}`)"
+                    @update:model-value="toggleScriptSelection(`composer:${scriptName}`)"
+                  />
+                  <div class="flex-1 cursor-pointer">
+                    <div class="font-medium">{{ scriptName }}</div>
+                    <div class="text-xs text-slate-500">composer {{ scriptName }}</div>
+                  </div>
+                </Label>
+              </div>
+            </div>
           </div>
 
           <div v-if="selectedScripts.length > 0" class="rounded-lg bg-sky-400/25 px-4 py-2">
