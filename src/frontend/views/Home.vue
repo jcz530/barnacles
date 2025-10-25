@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import dayjs from 'dayjs';
 import type { ProjectWithDetails } from '../../shared/types/api';
 import ProjectCard from '../components/projects/molecules/ProjectCard.vue';
 import { useQueries } from '@/composables/useQueries';
@@ -38,8 +39,8 @@ const recentProjects = computed(() => {
   return allProjects.value
     .filter(p => !p.isFavorite)
     .sort((a, b) => {
-      const aTime = a.lastModified ? new Date(a.lastModified).getTime() : 0;
-      const bTime = b.lastModified ? new Date(b.lastModified).getTime() : 0;
+      const aTime = a.lastModified ? dayjs(a.lastModified).valueOf() : 0;
+      const bTime = b.lastModified ? dayjs(b.lastModified).valueOf() : 0;
       return bTime - aTime;
     })
     .slice(0, 6);

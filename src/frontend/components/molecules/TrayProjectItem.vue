@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import DOMPurify from 'dompurify';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import { RUNTIME_CONFIG } from '../../../shared/constants';
 import type { ProjectWithDetails } from '../../../backend/services/project-service';
+
+// Configure dayjs
+dayjs.extend(relativeTime);
 
 interface Props {
   project: ProjectWithDetails;
@@ -51,20 +56,10 @@ const sanitizedGitBranch = computed(() => {
   return sanitizeText(branch);
 });
 
-// Format last modified date
+// Format last modified date using dayjs
 const formattedLastModified = computed(() => {
   if (!props.project.lastModified) return '';
-
-  const date = new Date(props.project.lastModified);
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diffInSeconds < 60) return 'Just now';
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return dayjs(props.project.lastModified).fromNow();
 });
 </script>
 
