@@ -104,6 +104,28 @@ export const toggleCliInstallation = async (enabled: boolean): Promise<void> => 
 
 const initialize = async (): Promise<void> => {
   try {
+    // Fix PATH on macOS - Electron doesn't inherit the full shell PATH
+    if (process.platform === 'darwin') {
+      try {
+        const { execSync } = await import('child_process');
+        const shell = process.env.SHELL || '/bin/bash';
+        // Get the PATH from the user's login shell
+        const fullPath = execSync(`${shell} -ilc 'echo $PATH'`, {
+          encoding: 'utf8',
+          timeout: 5000,
+        }).trim();
+
+        if (fullPath && fullPath !== process.env.PATH) {
+          console.log('[Environment] Fixing PATH environment variable');
+          console.log('[Environment] Old PATH:', process.env.PATH?.substring(0, 100));
+          console.log('[Environment] New PATH:', fullPath.substring(0, 100));
+          process.env.PATH = fullPath;
+        }
+      } catch (error) {
+        console.error('[Environment] Failed to fix PATH:', error);
+      }
+    }
+
     // Start the API server
     const serverInfo = await startServer();
     apiPort = serverInfo.port;

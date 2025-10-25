@@ -23,6 +23,43 @@ class ProcessManagerService {
   private runningProcesses: Map<string, Map<string, RunningProcess>> = new Map();
 
   /**
+   * Spawn a process with properly configured environment
+   * This ensures consistent environment setup across all process spawning
+   */
+  private spawnProcessWithEnvironment(command: string | undefined, cwd: string): IPty {
+    // Build environment with all parent env vars plus our overrides
+    const envVars = {
+      ...process.env,
+      TERM: 'xterm-256color',
+      FORCE_COLOR: '1',
+    } as Record<string, string>;
+
+    // Ensure critical environment variables are set
+    if (!envVars.HOME) {
+      envVars.HOME = process.env.HOME || require('os').homedir();
+    }
+    if (!envVars.USER) {
+      envVars.USER = process.env.USER || require('os').userInfo().username;
+    }
+    if (!envVars.SHELL) {
+      envVars.SHELL = process.env.SHELL || '/bin/bash';
+    }
+
+    // Start the process using node-pty for proper terminal emulation
+    // Use login shell (-l) to load user's PATH (npm, node, etc.)
+    // If command is provided, execute it; otherwise start an interactive shell
+    const args = command ? ['-l', '-c', command] : ['-l'];
+
+    return pty.spawn('/bin/bash', args, {
+      name: 'xterm-256color',
+      cols: 120,
+      rows: 30,
+      cwd,
+      env: envVars,
+    });
+  }
+
+  /**
    * Detect URLs from process output
    */
   private detectUrl(output: string): string | undefined {
@@ -82,12 +119,12 @@ class ProcessManagerService {
     const projectProcesses = this.runningProcesses.get(projectId)!;
     const statuses: ProcessStatus[] = [];
 
-    for (const process of processes) {
+    for (const processConfig of processes) {
       // Skip if already running
-      if (projectProcesses.has(process.id)) {
-        const existing = projectProcesses.get(process.id)!;
+      if (projectProcesses.has(processConfig.id)) {
+        const existing = projectProcesses.get(processConfig.id)!;
         statuses.push({
-          processId: process.id,
+          processId: processConfig.id,
           projectId,
           name: existing.name,
           title: existing.title,
@@ -101,34 +138,32 @@ class ProcessManagerService {
 
       try {
         // Join commands with && to stop on first failure
-        const commandString = process.commands.join(' && ');
+        const commandString = processConfig.commands.join(' && ');
 
         // Determine working directory
-        const cwd = process.workingDir ? `${projectPath}/${process.workingDir}` : projectPath;
+        const cwd = processConfig.workingDir
+          ? `${projectPath}/${processConfig.workingDir}`
+          : projectPath;
 
-        // Start the process using node-pty for proper terminal emulation
-        // Use login shell (-l) to load user's PATH (npm, node, etc.)
-        const ptyProcess = pty.spawn('/bin/bash', ['-l', '-c', commandString], {
-          name: 'xterm-256color',
-          cols: 120,
-          rows: 30,
+        console.log('[Process Start] Starting process:', {
+          processName: processConfig.name,
+          command: commandString,
           cwd,
-          env: {
-            TERM: 'xterm-256color',
-            FORCE_COLOR: '1',
-          } as Record<string, string>,
         });
 
+        // Use unified spawning method to ensure consistent environment setup
+        const ptyProcess = this.spawnProcessWithEnvironment(commandString, cwd);
+
         // Generate a bash ID (simulating background bash sessions)
-        const bashId = `${projectId}-${process.id}-${Date.now()}`;
+        const bashId = `${projectId}-${processConfig.id}-${Date.now()}`;
 
         const runningProcess: RunningProcess = {
-          name: process.name,
+          name: processConfig.name,
           bashId,
           process: ptyProcess,
           status: 'running',
           output: [],
-          configuredUrl: process.url,
+          configuredUrl: processConfig.url,
           createdAt: new Date(),
         };
 
@@ -146,7 +181,7 @@ class ProcessManagerService {
             const detectedUrl = this.detectUrl(data);
             if (detectedUrl) {
               runningProcess.detectedUrl = detectedUrl;
-              console.log(`Detected URL for process ${process.name}: ${detectedUrl}`);
+              console.log(`Detected URL for process ${processConfig.name}: ${detectedUrl}`);
             }
           }
         });
@@ -157,20 +192,26 @@ class ProcessManagerService {
           runningProcess.exitCode = exitCode;
         });
 
-        projectProcesses.set(process.id, runningProcess);
+        projectProcesses.set(processConfig.id, runningProcess);
 
         statuses.push({
-          processId: process.id,
+          processId: processConfig.id,
           projectId,
-          name: process.name,
+          name: processConfig.name,
           status: 'running',
           bashId,
         });
       } catch (error) {
+        console.error('[Process Start] Failed to start process:', {
+          processId: processConfig.id,
+          processName: processConfig.name,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
         statuses.push({
-          processId: process.id,
+          processId: processConfig.id,
           projectId,
-          name: process.name,
+          name: processConfig.name,
           status: 'failed',
           error: error instanceof Error ? error.message : 'Unknown error',
         });
@@ -337,28 +378,12 @@ class ProcessManagerService {
 
     const projectProcesses = this.runningProcesses.get(projectId)!;
 
-    // Determine the command to run
-    const command = params.command || process.env.SHELL || '/bin/bash';
+    // Determine the command to run and working directory
     const cwd = params.cwd || process.cwd();
     const title = params.title || (params.command ? `Running: ${params.command}` : 'Process');
 
-    // Start the process using node-pty for proper terminal emulation
-    // Use login shell (-l) to load user's PATH (npm, node, etc.)
-    const ptyProcess = pty.spawn(
-      '/bin/bash',
-      params.command ? ['-l', '-c', params.command] : ['-l'],
-      {
-        name: 'xterm-256color',
-        cols: 120,
-        rows: 30,
-        cwd,
-        env: {
-          ...process.env,
-          TERM: 'xterm-256color',
-          FORCE_COLOR: '1',
-        } as Record<string, string>,
-      }
-    );
+    // Use unified spawning method to ensure consistent environment setup
+    const ptyProcess = this.spawnProcessWithEnvironment(params.command, cwd);
 
     const bashId = `${projectId}-${processId}-${Date.now()}`;
 
