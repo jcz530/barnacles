@@ -17,7 +17,7 @@ useHotkeys();
       <TitleBar />
       <AppSidebar class="pt-10" />
       <SidebarInset>
-        <header class="flex h-16 shrink-0 items-center gap-2">
+        <header class="flex h-10 shrink-0 items-center gap-2">
           <div class="flex items-center gap-2 px-4">
             <NavBreadcrumbs />
           </div>

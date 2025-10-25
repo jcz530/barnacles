@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ArrowLeft } from 'lucide-vue-next';
 import { computed, onMounted, provide, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ProcessIndicator from '../components/atoms/ProcessIndicator.vue';
@@ -7,7 +6,7 @@ import ProjectIcon from '../components/projects/atoms/ProjectIcon.vue';
 import OpenInIDEButton from '../components/projects/molecules/OpenInIDEButton.vue';
 import OpenTerminalButton from '../components/projects/molecules/OpenTerminalButton.vue';
 import ProjectActionsDropdown from '../components/projects/molecules/ProjectActionsDropdown.vue';
-import { Button } from '../components/ui/button';
+import StartProcessButton from '../components/projects/molecules/StartProcessButton.vue';
 import { Skeleton } from '../components/ui/skeleton';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useQueries } from '../composables/useQueries';
@@ -104,15 +103,22 @@ const activeTab = computed(() => {
 <template>
   <div class="flex h-full flex-col">
     <!-- Header -->
-    <div class="p-6">
-      <div class="mb-4 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <Button variant="ghost" size="sm" @click="handleBack">
-            <ArrowLeft class="mr-2 h-4 w-4" />
-            Back to Projects
-          </Button>
-        </div>
+    <div class="py-4">
+      <div class="mb-4 flex items-center justify-end">
+        <!--        <div class="flex items-center gap-4">-->
+        <!--          <Button variant="ghost" size="sm" @click="handleBack">-->
+        <!--            <ArrowLeft class="mr-2 h-4 w-4" />-->
+        <!--            Back to Projects-->
+        <!--          </Button>-->
+        <!--        </div>-->
         <div class="flex gap-2">
+          <StartProcessButton
+            v-if="project"
+            :project-id="project.id"
+            :process-statuses="allProcessStatuses"
+            :is-loading="isLoading"
+          />
+
           <OpenInIDEButton
             v-if="project"
             :project-id="project.id"
@@ -149,7 +155,7 @@ const activeTab = computed(() => {
         <Skeleton class="h-8 w-64" />
         <Skeleton class="h-4 w-96" />
       </div>
-      <div v-else-if="project" class="flex items-start gap-4">
+      <div v-else-if="project" class="ml-6 flex items-start gap-4">
         <ProjectIcon
           :project-id="project.id"
           :project-name="project.name"

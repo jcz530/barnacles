@@ -121,9 +121,9 @@ p {
   --muted-foreground: var(--color-slate-300);
   --accent: oklch(0.968 0.007 247.896);
   --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --destructive: var(--color-red-400);
   --border: var(--color-slate-100);
+  --destructive-foreground: var(--color-red-400);
   --input: oklch(0.929 0.013 255.508);
   --ring: var(--color-slate-100);
   --chart-1: oklch(0.646 0.222 41.116);
