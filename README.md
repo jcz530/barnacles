@@ -99,7 +99,7 @@ The application will launch with:
 ## Development Commands
 
 | Command               | Description                                       |
-| --------------------- | ------------------------------------------------- |
+|-----------------------|---------------------------------------------------|
 | `npm run dev`         | Start the app in development mode with hot reload |
 | `npm run start`       | Start the app from built files (production-like)  |
 | `npm run build`       | Build all components for production               |

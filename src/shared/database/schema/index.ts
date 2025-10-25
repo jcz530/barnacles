@@ -30,7 +30,6 @@ export const projects = sqliteTable('projects', {
   archivedAt: integer('archived_at', { mode: 'timestamp' }),
   preferredIde: text('preferred_ide'),
   preferredTerminal: text('preferred_terminal'),
-  startProcesses: text('start_processes'), // JSON array of StartProcess definitions
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -114,6 +113,38 @@ export const projectLanguageStats = sqliteTable('project_language_stats', {
     .$defaultFn(() => new Date()),
 });
 
+export const projectProcesses = sqliteTable('project_processes', {
+  id: text('id').primaryKey(), // Use the same ID from StartProcess
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  workingDir: text('working_dir'), // relative to project root
+  color: text('color'),
+  url: text('url'), // optional URL where the process will be accessible
+  order: integer('order').notNull(), // to maintain order of processes
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export const projectProcessCommands = sqliteTable('project_process_commands', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  processId: text('process_id')
+    .notNull()
+    .references(() => projectProcesses.id, { onDelete: 'cascade' }),
+  command: text('command').notNull(),
+  order: integer('order').notNull(), // to maintain order of commands
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 // Relations
 export const projectsRelations = relations(projects, ({ many, one }) => ({
   technologies: many(projectTechnologies),
@@ -121,6 +152,7 @@ export const projectsRelations = relations(projects, ({ many, one }) => ({
     fields: [projects.id],
     references: [projectStats.projectId],
   }),
+  processes: many(projectProcesses),
 }));
 
 export const technologiesRelations = relations(technologies, ({ many }) => ({
@@ -154,6 +186,21 @@ export const projectLanguageStatsRelations = relations(projectLanguageStats, ({ 
   projectStats: one(projectStats, {
     fields: [projectLanguageStats.projectId],
     references: [projectStats.projectId],
+  }),
+}));
+
+export const projectProcessesRelations = relations(projectProcesses, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [projectProcesses.projectId],
+    references: [projects.id],
+  }),
+  commands: many(projectProcessCommands),
+}));
+
+export const projectProcessCommandsRelations = relations(projectProcessCommands, ({ one }) => ({
+  process: one(projectProcesses, {
+    fields: [projectProcessCommands.processId],
+    references: [projectProcesses.id],
   }),
 }));
 

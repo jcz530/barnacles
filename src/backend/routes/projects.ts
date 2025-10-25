@@ -733,7 +733,7 @@ projects.get('/:id/start-processes', async c => {
       );
     }
 
-    const processes = project.startProcesses ? JSON.parse(project.startProcesses) : [];
+    const processes = await projectService.getStartProcesses(id);
 
     return c.json({
       data: processes,
@@ -767,7 +767,9 @@ projects.post('/:id/start', async c => {
       );
     }
 
-    if (!project.startProcesses) {
+    const processes = await projectService.getStartProcesses(id);
+
+    if (processes.length === 0) {
       return c.json(
         {
           error: 'No start processes configured for this project',
@@ -776,7 +778,6 @@ projects.post('/:id/start', async c => {
       );
     }
 
-    const processes: StartProcess[] = JSON.parse(project.startProcesses);
     const status = await processManagerService.startProjectProcesses(id, project.path, processes);
 
     return c.json({

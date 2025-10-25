@@ -16,7 +16,7 @@ const breadcrumbs = context?.breadcrumbs;
 
 <template>
   <Breadcrumb>
-    <BreadcrumbList>
+    <BreadcrumbList class="text-xs">
       <BreadcrumbItem class="hidden md:block">
         <BreadcrumbLink as-child>
           <RouterLink to="/"> Dashboard </RouterLink>
