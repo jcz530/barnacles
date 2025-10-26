@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ChevronDown, ChevronRight, FolderOpen } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, FolderOpen, Copy } from 'lucide-vue-next';
 import { formatFileSize, getFileTypeInfo, getFolderIcon } from '@/utils/file-types';
 import type { FileNode } from '@/types/window';
 import {
@@ -47,6 +47,15 @@ const openInFinder = () => {
     window.electron?.shell.showItemInFolder(fullPath);
   } else {
     window.electron?.shell.openPath(fullPath);
+  }
+};
+
+const copyPath = async () => {
+  const fullPath = `${props.projectPath}/${props.node.path}`;
+  try {
+    await navigator.clipboard.writeText(fullPath);
+  } catch (error) {
+    console.error('Failed to copy path:', error);
   }
 };
 </script>
@@ -107,6 +116,10 @@ const openInFinder = () => {
       <ContextMenuItem @click="openInFinder">
         <FolderOpen class="h-4 w-4" />
         View in Finder
+      </ContextMenuItem>
+      <ContextMenuItem @click="copyPath">
+        <Copy class="h-4 w-4" />
+        Copy Path
       </ContextMenuItem>
     </ContextMenuContent>
   </ContextMenu>
