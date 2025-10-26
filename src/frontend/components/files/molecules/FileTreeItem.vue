@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ChevronDown, ChevronRight } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, FolderOpen } from 'lucide-vue-next';
 import { formatFileSize, getFileTypeInfo, getFolderIcon } from '@/utils/file-types';
 import type { FileNode } from '@/types/window';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 
 interface Props {
   node: FileNode;
+  projectPath: string;
   depth?: number;
   isExpanded?: boolean;
   isSelected?: boolean;
@@ -31,51 +38,76 @@ const handleClick = () => {
   }
   emit('select', props.node);
 };
+
+const openInFinder = () => {
+  const fullPath = `${props.projectPath}/${props.node.path}`;
+
+  // For files, reveal them in Finder. For directories, open them.
+  if (props.node.type === 'file') {
+    window.electron?.shell.showItemInFolder(fullPath);
+  } else {
+    window.electron?.shell.openPath(fullPath);
+  }
+};
 </script>
 
 <template>
-  <div
-    class="group flex cursor-pointer items-center gap-1 rounded-sm px-2 py-1 transition-colors hover:bg-slate-100"
-    :class="{
-      'bg-blue-50 hover:bg-blue-100': isSelected,
-    }"
-    :style="{ paddingLeft: `${depth * 12 + 8}px` }"
-    @click="handleClick"
-  >
-    <!-- Expand/collapse icon for directories -->
-    <div class="flex h-4 w-4 flex-shrink-0 items-center justify-center">
-      <ChevronDown v-if="node.type === 'directory' && isExpanded" class="h-4 w-4 text-slate-500" />
-      <ChevronRight
-        v-else-if="node.type === 'directory' && !isExpanded"
-        class="h-4 w-4 text-slate-500"
-      />
-    </div>
+  <ContextMenu>
+    <ContextMenuTrigger as-child>
+      <div
+        class="group flex cursor-pointer items-center gap-1 rounded-sm px-2 py-1 transition-colors hover:bg-slate-100"
+        :class="{
+          'bg-blue-50 hover:bg-blue-100': isSelected,
+        }"
+        :style="{ paddingLeft: `${depth * 12 + 8}px` }"
+        @click="handleClick"
+      >
+        <!-- Expand/collapse icon for directories -->
+        <div class="flex h-4 w-4 flex-shrink-0 items-center justify-center">
+          <ChevronDown
+            v-if="node.type === 'directory' && isExpanded"
+            class="h-4 w-4 text-slate-500"
+          />
+          <ChevronRight
+            v-else-if="node.type === 'directory' && !isExpanded"
+            class="h-4 w-4 text-slate-500"
+          />
+        </div>
 
-    <!-- File/folder icon -->
-    <component
-      :is="node.type === 'directory' ? folderIcon : fileTypeInfo.icon"
-      class="h-4 w-4 flex-shrink-0"
-      :class="{
-        'text-sky-500': node.type === 'directory',
-        'text-slate-500': node.type === 'file',
-      }"
-    />
+        <!-- File/folder icon -->
+        <component
+          :is="node.type === 'directory' ? folderIcon : fileTypeInfo.icon"
+          class="h-4 w-4 flex-shrink-0"
+          :class="{
+            'text-sky-500': node.type === 'directory',
+            'text-slate-500': node.type === 'file',
+          }"
+        />
 
-    <!-- File/folder name -->
-    <span
-      class="flex-1 truncate text-sm"
-      :class="{
-        'font-medium': node.type === 'directory',
-        'text-slate-900': isSelected,
-        'text-slate-700': !isSelected,
-      }"
-    >
-      {{ node.name }}
-    </span>
+        <!-- File/folder name -->
+        <span
+          class="flex-1 truncate text-sm"
+          :class="{
+            'font-medium': node.type === 'directory',
+            'text-slate-900': isSelected,
+            'text-slate-700': !isSelected,
+          }"
+        >
+          {{ node.name }}
+        </span>
 
-    <!-- File size (only for files) -->
-    <span v-if="node.type === 'file' && node.size" class="flex-shrink-0 text-xs text-slate-400">
-      {{ formatFileSize(node.size) }}
-    </span>
-  </div>
+        <!-- File size (only for files) -->
+        <span v-if="node.type === 'file' && node.size" class="flex-shrink-0 text-xs text-slate-400">
+          {{ formatFileSize(node.size) }}
+        </span>
+      </div>
+    </ContextMenuTrigger>
+
+    <ContextMenuContent>
+      <ContextMenuItem @click="openInFinder">
+        <FolderOpen class="h-4 w-4" />
+        View in Finder
+      </ContextMenuItem>
+    </ContextMenuContent>
+  </ContextMenu>
 </template>

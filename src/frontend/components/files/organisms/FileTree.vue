@@ -7,6 +7,7 @@ import { matchesCategory } from '@/utils/file-types';
 
 interface Props {
   nodes: FileNode[];
+  projectPath: string;
   selectedPath?: string | null;
   searchQuery?: string;
   categoryFilters?: FileCategory[];
@@ -87,6 +88,7 @@ const handleSelect = (node: FileNode) => {
 // Recursive component to render tree nodes
 const renderNode = (node: FileNode, depth: number) => ({
   node,
+  projectPath: props.projectPath,
   depth,
   isExpanded: expandedPaths.value.has(node.path),
   isSelected: props.selectedPath === node.path,

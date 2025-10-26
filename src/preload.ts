@@ -58,6 +58,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 contextBridge.exposeInMainWorld('electron', {
   shell: {
     openPath: (path: string) => ipcRenderer.invoke('shell:open-path', path),
+    showItemInFolder: (path: string) => ipcRenderer.invoke('shell:show-item-in-folder', path),
     openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url),
   },
   updateWindowTitle: (title: string) => ipcRenderer.send('update-window-title', title),

@@ -96,6 +96,7 @@ const selectedFilePath = computed(() => selectedFile.value?.path || null);
         <FileTree
           v-else
           :nodes="fileTree"
+          :project-path="projectPath"
           :selected-path="selectedFilePath"
           :search-query="searchQuery"
           :category-filters="categoryFilters"

@@ -27,6 +27,7 @@ declare global {
     electron: {
       shell: {
         openPath: (path: string) => Promise<string>;
+        showItemInFolder: (path: string) => Promise<void>;
         openExternal: (url: string) => Promise<void>;
       };
       updateWindowTitle: (title: string) => void;
