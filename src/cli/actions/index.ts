@@ -2,17 +2,20 @@ import type { ActionOption, ProjectAction } from './types.js';
 import { CopyPathAction } from './copy-path.js';
 import { OpenInFinderAction } from './open-in-finder.js';
 import { OpenInTerminalAction } from './open-in-terminal.js';
+import { StartAction } from './start.js';
+import { StopAction } from './stop.js';
 
 /**
  * Registry of all available project actions
  */
 export const PROJECT_ACTIONS: ProjectAction[] = [
+  new StartAction(),
+  new StopAction(),
   new OpenInTerminalAction(),
   new CopyPathAction(),
   new OpenInFinderAction(),
   // TODO: Add more actions here as they're implemented
   // new ScriptsAction(),
-  // new StartAction(),
   // new OpenInIDEAction(),
   // new GitRemoteAction(),
 ];

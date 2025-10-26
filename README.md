@@ -16,10 +16,12 @@ You can download the latest release for your platform from the [Releases](https:
 - **Technology Detection** - Identify technologies, frameworks, and languages used in each project
 - **Project Analytics** - View file counts, lines of code, language breakdowns, and project statistics
 - **Git Integration** - Track branch status, commits, and repository information
+- **Process Management** - Start, stop, and monitor project processes with saved configurations
 - **Integrated Terminals** - Launch terminals directly in project directories
 - **IDE Integration** - Quick access to open projects in your preferred IDE
 - **Search & Filter** - Fuzzy search and filter projects by technology
 - **Favorites** - Mark and quickly access your most-used projects
+- **Command Line Interface** - Manage projects and processes from the terminal ([CLI Documentation](src/cli/README.md))
 
 ## Technology Stack
 
@@ -33,18 +35,22 @@ You can download the latest release for your platform from the [Releases](https:
 
 ## Architecture
 
-The application uses a single-process architecture with three main components:
+The application uses a single-process architecture with four main components:
 
 ```
 src/
 ├── main/           # Electron main process (window management, lifecycle)
-├── backend/        # Hono API server on port 3001
+├── backend/        # Hono API server on port 51000-51010
 │   ├── routes/     # REST API endpoints
 │   └── services/   # Business logic (scanning, detection, terminals)
 ├── frontend/       # Vue.js application
 │   ├── components/ # UI components (atomic design pattern)
 │   ├── views/      # Page-level components
 │   └── composables/# Reusable Vue composition functions
+├── cli/            # Command-line interface
+│   ├── commands/   # CLI commands (projects, status, open)
+│   ├── actions/    # Project actions (start, stop, terminal)
+│   └── utils/      # CLI utilities and helpers
 ├── shared/         # Common types and utilities
 └── preload.ts      # IPC bridge script
 ```
@@ -82,7 +88,7 @@ npm run dev
 The application will launch with:
 
 - Electron window displaying the Barnacles UI
-- Hono API server running on `localhost:3001`
+- Hono API server running on `localhost:51000-51010` (automatically finds available port)
 - Hot reload enabled for development
 
 ### First-Time Setup
@@ -96,13 +102,44 @@ The application will launch with:
 
 3. Browse, search, and organize your projects!
 
+## Command Line Interface
+
+Barnacles includes a powerful CLI for managing projects from the terminal. The `barnacles` command is automatically available after installation.
+
+### Quick Examples
+
+```bash
+# Browse and manage projects interactively
+barnacles projects
+
+# Check Barnacles status
+barnacles status
+
+# Open the Barnacles app
+barnacles open
+
+# Get help
+barnacles --help
+```
+
+### Key Features
+
+- **Interactive Project Browser** - Select and manage projects with an intuitive terminal UI
+- **Process Management** - Start and stop project processes from the command line
+- **Auto-Launch** - Automatically launches the Barnacles app if it's not running
+- **Script Detection** - Automatically detects and suggests scripts from `package.json` and `composer.json`
+
+For complete CLI documentation, see [src/cli/README.md](src/cli/README.md).
+
 ## Development Commands
 
 | Command               | Description                                       |
 |-----------------------|---------------------------------------------------|
 | `npm run dev`         | Start the app in development mode with hot reload |
+| `npm run dev:cli`     | Build and run the CLI in development mode         |
 | `npm run start`       | Start the app from built files (production-like)  |
 | `npm run build`       | Build all components for production               |
+| `npm run build:cli`   | Build the CLI for production                      |
 | `npm run lint`        | Run ESLint on the source code                     |
 | `npm run lint:fix`    | Run ESLint and automatically fix issues           |
 | `npm run format`      | Format code with Prettier                         |
@@ -182,6 +219,11 @@ barnacles/
 │   │   ├── views/            # Page components
 │   │   ├── composables/      # Vue composition functions
 │   │   └── router/           # Vue Router configuration
+│   ├── cli/                  # Command-line interface
+│   │   ├── commands/         # CLI commands
+│   │   ├── actions/          # Project actions
+│   │   ├── utils/            # CLI utilities
+│   │   └── core/             # Base classes
 │   ├── main/                 # Electron main process
 │   ├── shared/               # Shared types and utilities
 │   └── preload.ts           # Electron preload script

@@ -15,6 +15,7 @@
     "dev:preload": "cross-env NODE_ENV=development vite build --config vite.preload.config.ts --watch",
     "dev:renderer": "cross-env NODE_ENV=development vite --config vite.renderer.config.mjs",
     "dev:electron": "cross-env NODE_ENV=development nodemon --watch dist/main --delay 1000ms --exec \"electron dist/main/main.js\"",
+    "dev:cli": "vite build --mode development --config vite.cli.config.ts && cross-env NODE_ENV=development node dist/cli/index.js",
     "build": "cross-env NODE_ENV=production npm run build:main && npm run build:preload && npm run build:renderer && npm run build:cli",
     "build:main": "cross-env NODE_ENV=production vite build --config vite.main.config.ts",
     "build:preload": "cross-env NODE_ENV=production vite build --config vite.preload.config.ts",

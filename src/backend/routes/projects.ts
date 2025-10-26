@@ -517,20 +517,11 @@ projects.get('/:id/package-scripts', async c => {
       );
     }
 
-    const packageJsonPath = path.join(project.path, 'package.json');
+    const scripts = await projectService.getPackageScripts(project.path);
 
-    try {
-      const fs = await import('fs/promises');
-      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'));
-
-      return c.json({
-        data: packageJson.scripts || {},
-      });
-    } catch {
-      return c.json({
-        data: {},
-      });
-    }
+    return c.json({
+      data: scripts,
+    });
   } catch (error) {
     console.error('Error fetching package scripts:', error);
     return c.json(
@@ -560,20 +551,11 @@ projects.get('/:id/composer-scripts', async c => {
       );
     }
 
-    const composerJsonPath = path.join(project.path, 'composer.json');
+    const scripts = await projectService.getComposerScripts(project.path);
 
-    try {
-      const fs = await import('fs/promises');
-      const composerJson = JSON.parse(await fs.readFile(composerJsonPath, 'utf-8'));
-
-      return c.json({
-        data: composerJson.scripts || {},
-      });
-    } catch {
-      return c.json({
-        data: {},
-      });
-    }
+    return c.json({
+      data: scripts,
+    });
   } catch (error) {
     console.error('Error fetching composer scripts:', error);
     return c.json(
