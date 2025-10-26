@@ -68,4 +68,10 @@ contextBridge.exposeInMainWorld('electron', {
     install: () => ipcRenderer.invoke('cli:install'),
     uninstall: () => ipcRenderer.invoke('cli:uninstall'),
   },
+  files: {
+    readDirectory: (dirPath: string) => ipcRenderer.invoke('files:read-directory', dirPath),
+    readFile: (filePath: string) => ipcRenderer.invoke('files:read-file', filePath),
+    searchContent: (dirPath: string, query: string) =>
+      ipcRenderer.invoke('files:search-content', dirPath, query),
+  },
 });

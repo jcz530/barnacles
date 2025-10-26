@@ -89,6 +89,7 @@ const navigateToProcess = () => {
 const tabs = [
   { name: 'ProjectOverview', label: 'Overview', value: 'overview' },
   { name: 'ProjectReadme', label: 'README.md', value: 'readme' },
+  { name: 'ProjectFiles', label: 'Files', value: 'files' },
   { name: 'ProjectTerminals', label: 'Processes', value: 'terminals' },
 ];
 

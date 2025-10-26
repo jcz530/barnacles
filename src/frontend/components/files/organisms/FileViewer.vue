@@ -1,0 +1,224 @@
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+import * as shiki from 'shiki';
+import { Skeleton } from '../../ui/skeleton';
+import { FileText } from 'lucide-vue-next';
+import { formatFileSize, getFileTypeInfo } from '../../../utils/file-types';
+
+interface Props {
+  filePath?: string | null;
+  projectPath: string;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  filePath: null,
+});
+
+const isLoading = ref(false);
+const fileContent = ref<string | null>(null);
+const fileType = ref<'text' | 'binary' | null>(null);
+const fileSize = ref<number>(0);
+const error = ref<string | null>(null);
+const highlighter = ref<shiki.Highlighter | null>(null);
+
+// Get file extension and type info
+const extension = computed(() => {
+  if (!props.filePath) return undefined;
+  const parts = props.filePath.split('.');
+  return parts.length > 1 ? parts[parts.length - 1] : undefined;
+});
+
+const fileTypeInfo = computed(() => getFileTypeInfo(extension.value));
+
+// Initialize Shiki highlighter
+onMounted(async () => {
+  try {
+    highlighter.value = await shiki.createHighlighter({
+      themes: ['github-light'],
+      langs: [
+        'javascript',
+        'typescript',
+        'python',
+        'html',
+        'css',
+        'json',
+        'markdown',
+        'bash',
+        'yaml',
+        'rust',
+        'go',
+        'java',
+        'php',
+        'ruby',
+        'vue',
+      ],
+    });
+  } catch (err) {
+    console.error('Failed to initialize syntax highlighter:', err);
+  }
+});
+
+// Load file content when filePath changes
+watch(
+  () => props.filePath,
+  async newPath => {
+    if (!newPath) {
+      fileContent.value = null;
+      fileType.value = null;
+      return;
+    }
+
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      const fullPath = `${props.projectPath}/${newPath}`;
+      const result = await window.electron.files.readFile(fullPath);
+
+      if (result.success && result.data) {
+        fileContent.value = result.data.content;
+        fileType.value = result.data.type;
+        fileSize.value = result.data.size;
+      } else {
+        error.value = result.error || 'Failed to read file';
+        fileContent.value = null;
+        fileType.value = null;
+      }
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error';
+      fileContent.value = null;
+      fileType.value = null;
+    } finally {
+      isLoading.value = false;
+    }
+  },
+  { immediate: true }
+);
+
+// Render markdown content
+const renderedMarkdown = computed(() => {
+  if (!fileContent.value || fileTypeInfo.value.category !== 'document' || extension.value !== 'md')
+    return null;
+
+  const rawHtml = marked(fileContent.value);
+  return DOMPurify.sanitize(rawHtml);
+});
+
+// Syntax highlighted code
+const highlightedCode = computed(() => {
+  if (
+    !fileContent.value ||
+    !highlighter.value ||
+    !fileTypeInfo.value.language ||
+    fileTypeInfo.value.category === 'document'
+  )
+    return null;
+
+  try {
+    return highlighter.value.codeToHtml(fileContent.value, {
+      lang: fileTypeInfo.value.language,
+      theme: 'github-light',
+    });
+  } catch (err) {
+    console.error('Syntax highlighting error:', err);
+    return null;
+  }
+});
+
+// Check if file is an image
+const isImage = computed(
+  () => fileTypeInfo.value.category === 'image' && fileType.value === 'binary'
+);
+
+// Get image source for base64 images
+const imageSrc = computed(() => {
+  if (!isImage.value || !fileContent.value) return null;
+
+  const mimeTypes: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    svg: 'image/svg+xml',
+    webp: 'image/webp',
+    bmp: 'image/bmp',
+  };
+
+  const mimeType = extension.value ? mimeTypes[extension.value.toLowerCase()] : 'image/png';
+  return `data:${mimeType};base64,${fileContent.value}`;
+});
+</script>
+
+<template>
+  <div class="flex h-full flex-col bg-slate-50">
+    <!-- Empty state -->
+    <div v-if="!filePath" class="flex h-full flex-col items-center justify-center text-slate-400">
+      <FileText class="mb-4 h-16 w-16" />
+      <p class="text-sm">Select a file to view its contents</p>
+    </div>
+
+    <!-- Loading state -->
+    <div v-else-if="isLoading" class="space-y-4 p-6">
+      <Skeleton class="h-8 w-64" />
+      <Skeleton class="h-4 w-full" />
+      <Skeleton class="h-4 w-full" />
+      <Skeleton class="h-4 w-3/4" />
+    </div>
+
+    <!-- Error state -->
+    <div v-else-if="error" class="p-6">
+      <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+        <p class="text-sm text-red-700">{{ error }}</p>
+      </div>
+    </div>
+
+    <!-- File content -->
+    <div v-else-if="fileContent" class="flex h-full flex-col overflow-hidden">
+      <!-- File info header -->
+      <div class="border-b border-slate-200 bg-slate-50 px-6 py-3">
+        <div class="flex items-center justify-between">
+          <h3 class="font-medium text-slate-900">{{ filePath }}</h3>
+          <span class="text-xs text-slate-500">{{ formatFileSize(fileSize) }}</span>
+        </div>
+      </div>
+
+      <!-- Content area -->
+      <div class="flex-1 overflow-auto">
+        <!-- Image preview -->
+        <div v-if="isImage && imageSrc" class="p-6">
+          <img :src="imageSrc" :alt="filePath" class="h-auto max-w-full rounded-lg shadow-sm" />
+        </div>
+
+        <!-- Markdown rendering -->
+        <div
+          v-else-if="renderedMarkdown"
+          class="prose prose-slate max-w-none p-6"
+          v-html="renderedMarkdown"
+        />
+
+        <!-- Syntax highlighted code -->
+        <div v-else-if="highlightedCode" class="overflow-x-auto text-sm" v-html="highlightedCode" />
+
+        <!-- Plain text fallback -->
+        <pre v-else class="p-6 font-mono text-sm break-words whitespace-pre-wrap text-slate-800">{{
+          fileContent
+        }}</pre>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+/* Override shiki styles for better integration */
+:deep(.shiki) {
+  padding: 1.5rem;
+  overflow-x: auto;
+}
+
+:deep(.shiki code) {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+</style>

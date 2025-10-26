@@ -1,5 +1,23 @@
 export {};
 
+export interface FileNode {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  size?: number;
+  children?: FileNode[];
+  extension?: string;
+}
+
+export interface SearchResult {
+  filePath: string;
+  fileName: string;
+  lineNumber: number;
+  lineContent: string;
+  matchStart: number;
+  matchEnd: number;
+}
+
 declare global {
   interface Window {
     electronAPI: {
@@ -18,6 +36,22 @@ declare global {
         isInstalled: () => Promise<boolean>;
         install: () => Promise<{ success: boolean; error?: string }>;
         uninstall: () => Promise<{ success: boolean; error?: string }>;
+      };
+      files: {
+        readDirectory: (
+          dirPath: string
+        ) => Promise<{ success: boolean; data?: FileNode[]; error?: string }>;
+        readFile: (
+          filePath: string
+        ) => Promise<{
+          success: boolean;
+          data?: { content: string; type: 'text' | 'binary'; size: number };
+          error?: string;
+        }>;
+        searchContent: (
+          dirPath: string,
+          query: string
+        ) => Promise<{ success: boolean; data?: SearchResult[]; error?: string }>;
       };
     };
   }
