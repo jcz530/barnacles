@@ -194,7 +194,7 @@ export const setupFileSystemBridge = (): void => {
   });
 
   // Handler for reading file contents
-  ipcMain.handle('files:read-file', async (_, filePath: string) => {
+  ipcMain.handle('files:read-file', async (_, filePath: string, forceText = false) => {
     try {
       // Validate path exists
       if (!existsSync(filePath)) {
@@ -206,7 +206,63 @@ export const setupFileSystemBridge = (): void => {
         throw new Error(`Path is not a file: ${filePath}`);
       }
 
-      // Try to read as text first
+      // If forcing text mode, read as text
+      if (forceText) {
+        try {
+          const content = await fs.readFile(filePath, 'utf-8');
+          return {
+            success: true,
+            data: {
+              content,
+              type: 'text',
+              size: stats.size,
+            },
+          };
+        } catch {
+          // If text reading fails, still try binary
+          const content = await fs.readFile(filePath);
+          return {
+            success: true,
+            data: {
+              content: content.toString('base64'),
+              type: 'binary',
+              size: stats.size,
+            },
+          };
+        }
+      }
+
+      // Image extensions that should always be read as binary (unless forceText)
+      const imageExtensions = new Set([
+        'jpg',
+        'jpeg',
+        'png',
+        'gif',
+        'svg',
+        'webp',
+        'bmp',
+        'ico',
+        'tiff',
+        'heic',
+      ]);
+
+      const ext = path.extname(filePath).toLowerCase().slice(1);
+      const isImage = imageExtensions.has(ext);
+
+      // Read images as binary to enable preview
+      if (isImage) {
+        const content = await fs.readFile(filePath);
+        return {
+          success: true,
+          data: {
+            content: content.toString('base64'),
+            type: 'binary',
+            size: stats.size,
+          },
+        };
+      }
+
+      // Try to read non-images as text first
       try {
         const content = await fs.readFile(filePath, 'utf-8');
         return {

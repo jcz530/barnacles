@@ -42,7 +42,8 @@ declare global {
           dirPath: string
         ) => Promise<{ success: boolean; data?: FileNode[]; error?: string }>;
         readFile: (
-          filePath: string
+          filePath: string,
+          forceText?: boolean
         ) => Promise<{
           success: boolean;
           data?: { content: string; type: 'text' | 'binary'; size: number };

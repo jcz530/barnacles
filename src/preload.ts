@@ -70,7 +70,8 @@ contextBridge.exposeInMainWorld('electron', {
   },
   files: {
     readDirectory: (dirPath: string) => ipcRenderer.invoke('files:read-directory', dirPath),
-    readFile: (filePath: string) => ipcRenderer.invoke('files:read-file', filePath),
+    readFile: (filePath: string, forceText?: boolean) =>
+      ipcRenderer.invoke('files:read-file', filePath, forceText),
     searchContent: (dirPath: string, query: string) =>
       ipcRenderer.invoke('files:search-content', dirPath, query),
   },

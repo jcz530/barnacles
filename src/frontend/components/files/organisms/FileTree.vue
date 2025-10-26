@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import FileTreeItem from '../molecules/FileTreeItem.vue';
-import type { FileNode } from '../../../types/window';
-import type { FileCategory } from '../../../utils/file-types';
-import { matchesCategory } from '../../../utils/file-types';
+import type { FileNode } from '@/types/window';
+import type { FileCategory } from '@/utils/file-types';
+import { matchesCategory } from '@/utils/file-types';
 
 interface Props {
   nodes: FileNode[];
@@ -38,19 +38,18 @@ function filterNodesRecursive(nodes: FileNode[]): FileNode[] {
       // Recursively filter children
       const filteredChildren = node.children ? filterNodesRecursive(node.children) : [];
 
-      // Include directory if it has matching children or matches search
-      const matchesSearch = props.searchQuery
-        ? node.name.toLowerCase().includes(props.searchQuery.toLowerCase())
-        : true;
-
-      if (filteredChildren.length > 0 || matchesSearch) {
+      // Only include directory if it has matching children
+      if (filteredChildren.length > 0) {
         filtered.push({
           ...node,
           children: filteredChildren,
         });
 
-        // Auto-expand directories when searching
-        if (props.searchQuery && filteredChildren.length > 0) {
+        // Auto-expand directories when searching or filtering
+        if (
+          (props.searchQuery || props.categoryFilters.length > 0) &&
+          filteredChildren.length > 0
+        ) {
           expandedPaths.value.add(node.path);
         }
       }

@@ -4,7 +4,8 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import * as shiki from 'shiki';
 import { Skeleton } from '../../ui/skeleton';
-import { FileText } from 'lucide-vue-next';
+import { Button } from '../../ui/button';
+import { FileText, Code, Image } from 'lucide-vue-next';
 import { formatFileSize, getFileTypeInfo } from '../../../utils/file-types';
 
 interface Props {
@@ -22,6 +23,7 @@ const fileType = ref<'text' | 'binary' | null>(null);
 const fileSize = ref<number>(0);
 const error = ref<string | null>(null);
 const highlighter = ref<shiki.Highlighter | null>(null);
+const viewAsText = ref(false); // Toggle for SVG view mode
 
 // Get file extension and type info
 const extension = computed(() => {
@@ -31,6 +33,9 @@ const extension = computed(() => {
 });
 
 const fileTypeInfo = computed(() => getFileTypeInfo(extension.value));
+
+// Check if current file is SVG
+const isSvgFile = computed(() => extension.value?.toLowerCase() === 'svg');
 
 // Initialize Shiki highlighter
 onMounted(async () => {
@@ -53,6 +58,7 @@ onMounted(async () => {
         'php',
         'ruby',
         'vue',
+        'xml',
       ],
     });
   } catch (err) {
@@ -60,42 +66,54 @@ onMounted(async () => {
   }
 });
 
+// Function to load file with optional forceText parameter
+const loadFile = async (forceText = false) => {
+  if (!props.filePath) {
+    fileContent.value = null;
+    fileType.value = null;
+    return;
+  }
+
+  isLoading.value = true;
+  error.value = null;
+
+  try {
+    const fullPath = `${props.projectPath}/${props.filePath}`;
+    const result = await window.electron.files.readFile(fullPath, forceText);
+
+    if (result.success && result.data) {
+      fileContent.value = result.data.content;
+      fileType.value = result.data.type;
+      fileSize.value = result.data.size;
+    } else {
+      error.value = result.error || 'Failed to read file';
+      fileContent.value = null;
+      fileType.value = null;
+    }
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Unknown error';
+    fileContent.value = null;
+    fileType.value = null;
+  } finally {
+    isLoading.value = false;
+  }
+};
+
 // Load file content when filePath changes
 watch(
   () => props.filePath,
-  async newPath => {
-    if (!newPath) {
-      fileContent.value = null;
-      fileType.value = null;
-      return;
-    }
-
-    isLoading.value = true;
-    error.value = null;
-
-    try {
-      const fullPath = `${props.projectPath}/${newPath}`;
-      const result = await window.electron.files.readFile(fullPath);
-
-      if (result.success && result.data) {
-        fileContent.value = result.data.content;
-        fileType.value = result.data.type;
-        fileSize.value = result.data.size;
-      } else {
-        error.value = result.error || 'Failed to read file';
-        fileContent.value = null;
-        fileType.value = null;
-      }
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error';
-      fileContent.value = null;
-      fileType.value = null;
-    } finally {
-      isLoading.value = false;
-    }
+  () => {
+    viewAsText.value = false; // Reset to image view when file changes
+    loadFile();
   },
   { immediate: true }
 );
+
+// Toggle between image and text view for SVG files
+const toggleViewMode = async () => {
+  viewAsText.value = !viewAsText.value;
+  await loadFile(viewAsText.value);
+};
 
 // Render markdown content
 const renderedMarkdown = computed(() => {
@@ -108,13 +126,25 @@ const renderedMarkdown = computed(() => {
 
 // Syntax highlighted code
 const highlightedCode = computed(() => {
-  if (
-    !fileContent.value ||
-    !highlighter.value ||
-    !fileTypeInfo.value.language ||
-    fileTypeInfo.value.category === 'document'
-  )
+  if (!fileContent.value || !highlighter.value) return null;
+
+  // For SVG files viewed as text, use XML syntax highlighting
+  if (isSvgFile.value && viewAsText.value && fileType.value === 'text') {
+    try {
+      return highlighter.value.codeToHtml(fileContent.value, {
+        lang: 'xml',
+        theme: 'github-light',
+      });
+    } catch (err) {
+      console.error('Syntax highlighting error:', err);
+      return null;
+    }
+  }
+
+  // For other files, use the detected language
+  if (!fileTypeInfo.value.language || fileTypeInfo.value.category === 'document') {
     return null;
+  }
 
   try {
     return highlighter.value.codeToHtml(fileContent.value, {
@@ -127,10 +157,11 @@ const highlightedCode = computed(() => {
   }
 });
 
-// Check if file is an image
-const isImage = computed(
-  () => fileTypeInfo.value.category === 'image' && fileType.value === 'binary'
-);
+// Check if file is an image (excluding SVG when viewed as text)
+const isImage = computed(() => {
+  if (isSvgFile.value && viewAsText.value) return false;
+  return fileTypeInfo.value.category === 'image' && fileType.value === 'binary';
+});
 
 // Get image source for base64 images
 const imageSrc = computed(() => {
@@ -180,7 +211,20 @@ const imageSrc = computed(() => {
       <div class="border-b border-slate-200 bg-slate-50 px-6 py-3">
         <div class="flex items-center justify-between">
           <h3 class="font-medium text-slate-900">{{ filePath }}</h3>
-          <span class="text-xs text-slate-500">{{ formatFileSize(fileSize) }}</span>
+          <div class="flex items-center gap-3">
+            <!-- SVG view toggle button -->
+            <Button
+              v-if="isSvgFile"
+              variant="outline"
+              size="sm"
+              @click="toggleViewMode"
+              class="gap-2"
+            >
+              <component :is="viewAsText ? Image : Code" class="h-4 w-4" />
+              {{ viewAsText ? 'View as Image' : 'View as Text' }}
+            </Button>
+            <span class="text-xs text-slate-500">{{ formatFileSize(fileSize) }}</span>
+          </div>
         </div>
       </div>
 
@@ -199,7 +243,7 @@ const imageSrc = computed(() => {
         />
 
         <!-- Syntax highlighted code -->
-        <div v-else-if="highlightedCode" class="overflow-x-auto text-sm" v-html="highlightedCode" />
+        <div v-else-if="highlightedCode" class="text-sm" v-html="highlightedCode" />
 
         <!-- Plain text fallback -->
         <pre v-else class="p-6 font-mono text-sm break-words whitespace-pre-wrap text-slate-800">{{
@@ -214,11 +258,15 @@ const imageSrc = computed(() => {
 /* Override shiki styles for better integration */
 :deep(.shiki) {
   padding: 1.5rem;
-  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 :deep(.shiki code) {
   font-size: 0.875rem;
   line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 </style>
