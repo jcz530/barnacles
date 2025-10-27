@@ -23,6 +23,7 @@ export type FilterValue = FileCategory | string;
 
 const props = defineProps<{
   selectedFilters: FilterValue[];
+  availableExtensions?: Set<string>;
 }>();
 
 const emit = defineEmits<{
@@ -31,15 +32,28 @@ const emit = defineEmits<{
 
 const searchQuery = ref('');
 const expandedCategories = ref<Set<FileCategory>>(new Set());
+const onlyShowExisting = ref(true); // Default: only show file types that exist in project
 
 const categories = getFileCategories();
 
 // Build nested structure with extensions
 const categoryTree = computed(() => {
-  return categories.map(cat => ({
-    ...cat,
-    extensions: getExtensionsByCategory(cat.value),
-  }));
+  return categories
+    .map(cat => {
+      const allExtensions = getExtensionsByCategory(cat.value);
+
+      // Filter extensions based on onlyShowExisting setting
+      const extensions =
+        onlyShowExisting.value && props.availableExtensions
+          ? allExtensions.filter(ext => props.availableExtensions!.has(ext.toLowerCase()))
+          : allExtensions;
+
+      return {
+        ...cat,
+        extensions,
+      };
+    })
+    .filter(cat => cat.extensions.length > 0); // Only include categories with extensions
 });
 
 // Filter categories and extensions based on search
@@ -178,6 +192,15 @@ const hasFilters = computed(() => props.selectedFilters.length > 0);
       <DropdownMenuLabel>Filter by File Type</DropdownMenuLabel>
       <DropdownMenuSeparator />
 
+      <!-- Only Show Existing Toggle -->
+      <div class="px-2 py-2">
+        <Label class="flex cursor-pointer items-center gap-2">
+          <Checkbox v-model="onlyShowExisting" class="h-3.5 w-3.5 shadow-none" />
+          <span class="text-sm text-slate-500">Only show types in project</span>
+        </Label>
+      </div>
+      <DropdownMenuSeparator />
+
       <!-- Search Input -->
       <div class="px-2 pl-4">
         <div class="relative">
@@ -219,7 +242,7 @@ const hasFilters = computed(() => props.selectedFilters.length > 0);
           <!-- Extension Children -->
           <div
             v-if="expandedCategories.has(category.value)"
-            class="mt-1 ml-6 space-y-0.5 border-l-2 border-slate-200 pl-2"
+            class="mt-1 ml-7 space-y-0.5 border-l-2 border-slate-200 pl-2"
           >
             <Label
               v-for="ext in category.extensions"

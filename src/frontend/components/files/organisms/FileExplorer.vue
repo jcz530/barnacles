@@ -60,6 +60,25 @@ const handleSelect = (node: FileNode) => {
 
 // Computed selected file path
 const selectedFilePath = computed(() => selectedFile.value?.path || null);
+
+// Extract all unique extensions that exist in the project
+const availableExtensions = computed(() => {
+  const extensions = new Set<string>();
+
+  const extractExtensions = (nodes: FileNode[]) => {
+    for (const node of nodes) {
+      if (node.type === 'file' && node.extension) {
+        extensions.add(node.extension.toLowerCase());
+      }
+      if (node.type === 'directory' && node.children) {
+        extractExtensions(node.children);
+      }
+    }
+  };
+
+  extractExtensions(fileTree.value);
+  return extensions;
+});
 </script>
 
 <template>
@@ -70,7 +89,11 @@ const selectedFilePath = computed(() => selectedFile.value?.path || null);
       <div class="space-y-2 border-b border-slate-200 p-3">
         <FileSearchInput v-model="searchQuery" />
         <div class="flex gap-2">
-          <FileTypeFilter :selected-filters="filters" @update:selected-filters="filters = $event" />
+          <FileTypeFilter
+            :selected-filters="filters"
+            :available-extensions="availableExtensions"
+            @update:selected-filters="filters = $event"
+          />
         </div>
       </div>
 

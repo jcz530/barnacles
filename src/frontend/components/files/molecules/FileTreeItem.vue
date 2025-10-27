@@ -74,6 +74,7 @@ const openInFinder = () => {
 const copyPath = async () => {
   const fullPath = `${props.projectPath}/${props.node.path}`;
   try {
+    // eslint-disable-next-line no-undef
     await navigator.clipboard.writeText(fullPath);
   } catch (error) {
     console.error('Failed to copy path:', error);
