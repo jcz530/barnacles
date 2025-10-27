@@ -189,7 +189,7 @@ const categoryColors: Record<string, string> = {
                     'border-primary/50 bg-accent/50': selectedAliases.has(alias.name),
                   }"
                 >
-                  <div class="flex items-start gap-3">
+                  <Label class="flex cursor-pointer items-start gap-3">
                     <Checkbox
                       :model-value="selectedAliases.has(alias.name)"
                       @update:model-value="() => toggleAlias(alias.name)"
@@ -207,7 +207,7 @@ const categoryColors: Record<string, string> = {
                       </div>
                       <p class="text-muted-foreground text-sm">{{ alias.description }}</p>
                     </div>
-                  </div>
+                  </Label>
                 </div>
               </div>
 
