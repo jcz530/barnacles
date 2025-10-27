@@ -11,12 +11,14 @@ interface Props {
   selectedPath?: string | null;
   searchQuery?: string;
   filters?: FilterValue[];
+  matchingFilePaths?: Set<string> | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   selectedPath: null,
   searchQuery: '',
   filters: () => [],
+  matchingFilePaths: null,
 });
 
 const emit = defineEmits<{
@@ -42,10 +44,9 @@ function getTotalFileCount(node: FileNode): number {
 // Calculate filtered file count for a node (recursive)
 function getFilteredFileCount(node: FileNode): number {
   if (node.type === 'file') {
-    // Check if this file matches the current filters
-    const matchesSearch = props.searchQuery
-      ? node.name.toLowerCase().includes(props.searchQuery.toLowerCase())
-      : true;
+    // Check if this file matches the current filters using fuzzy search from parent
+    const matchesSearch =
+      props.matchingFilePaths === null || props.matchingFilePaths?.has(node.path);
 
     const matchesFilter = () => {
       if (props.filters.length === 0) return true;
@@ -130,10 +131,9 @@ function filterNodesRecursive(nodes: FileNode[]): FileNode[] {
         }
       }
     } else {
-      // File node
-      const matchesSearch = props.searchQuery
-        ? node.name.toLowerCase().includes(props.searchQuery.toLowerCase())
-        : true;
+      // File node - use fuzzy search results from parent
+      const matchesSearch =
+        props.matchingFilePaths === null || props.matchingFilePaths?.has(node.path);
 
       // Check if file matches any of the filters
       const matchesFilter = () => {

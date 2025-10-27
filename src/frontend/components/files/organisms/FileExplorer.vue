@@ -9,6 +9,7 @@ import { Button } from '../../ui/button';
 import type { FileNode } from '@/types/window';
 import { type FileCategory, matchesCategory } from '@/utils/file-types';
 import { ListChevronsDownUp } from 'lucide-vue-next';
+import { useFuzzySearch } from '@/composables/useFuzzySearch';
 
 interface Props {
   projectPath: string;
@@ -84,6 +85,45 @@ const availableExtensions = computed(() => {
   return extensions;
 });
 
+// Flatten the file tree into a list of all file nodes for fuzzy searching
+const allFiles = computed(() => {
+  const files: FileNode[] = [];
+
+  const extractFiles = (nodes: FileNode[]) => {
+    for (const node of nodes) {
+      if (node.type === 'file') {
+        files.push(node);
+      } else if (node.type === 'directory' && node.children) {
+        extractFiles(node.children);
+      }
+    }
+  };
+
+  extractFiles(fileTree.value);
+  return files;
+});
+
+// Use fuzzy search on the flattened file list
+const { filteredItems: fuzzyMatchedFiles } = useFuzzySearch({
+  items: allFiles,
+  searchQuery: searchQuery,
+  fuseOptions: {
+    keys: ['name'],
+    threshold: 0.4, // Lower = more strict, higher = more fuzzy
+    ignoreLocation: true, // Don't care where in the string the match is
+  },
+});
+
+// Create a Set of matching file paths for quick lookup
+const matchingFilePaths = computed(() => {
+  // If no search query, all files match
+  if (!searchQuery.value || searchQuery.value.trim() === '') {
+    return null; // null means "match all"
+  }
+
+  return new Set(fuzzyMatchedFiles.value.map(file => file.path));
+});
+
 // Calculate total file count
 const totalFileCount = computed(() => {
   const countFiles = (nodes: FileNode[]): number => {
@@ -107,10 +147,9 @@ const filteredFileCount = computed(() => {
     let count = 0;
     for (const node of nodes) {
       if (node.type === 'file') {
-        // Check if file matches search query
-        const matchesSearch = searchQuery.value
-          ? node.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-          : true;
+        // Check if file matches search query using fuzzy search results
+        const matchesSearch =
+          matchingFilePaths.value === null || matchingFilePaths.value.has(node.path);
 
         // Check if file matches filters
         const matchesFilter = () => {
@@ -223,6 +262,7 @@ const handleCollapseAll = () => {
           :selected-path="selectedFilePath"
           :search-query="searchQuery"
           :filters="filters"
+          :matching-file-paths="matchingFilePaths"
           @select="handleSelect"
         />
       </div>
