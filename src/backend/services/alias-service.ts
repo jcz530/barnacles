@@ -22,8 +22,8 @@ export async function detectShell(): Promise<ShellInfo> {
   const homeDir = os.homedir();
   const configPath = path.join(homeDir, '.config', 'barnacles', 'aliases');
 
-  // Detect shell from SHELL environment variable
-  const shellEnv = process.env.SHELL || '';
+  // Detect shell from user's default shell
+  const shellEnv = os.userInfo().shell || '';
   let shell: ShellInfo['shell'] = 'unknown';
   let profilePaths: string[] = [];
 
