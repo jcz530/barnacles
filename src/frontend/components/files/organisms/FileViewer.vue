@@ -6,7 +6,7 @@ import DOMPurify from 'dompurify';
 import * as shiki from 'shiki';
 import { Skeleton } from '../../ui/skeleton';
 import { Button } from '../../ui/button';
-import { Code, FileText, Image } from 'lucide-vue-next';
+import { Code, Copy, FileText, Image } from 'lucide-vue-next';
 import { formatFileSize, getFileTypeInfo } from '../../../utils/file-types';
 import { RUNTIME_CONFIG } from '../../../../shared/constants';
 
@@ -28,6 +28,7 @@ const fileSize = ref<number>(0);
 const error = ref<string | null>(null);
 const highlighter = ref<shiki.Highlighter | null>(null);
 const viewAsText = ref(false); // Toggle for SVG view mode
+const copySuccess = ref(false); // Track copy success for visual feedback
 
 // Get file extension and type info
 const extension = computed(() => {
@@ -242,6 +243,37 @@ const imageSrc = computed(() => {
   const mimeType = extension.value ? mimeTypes[extension.value.toLowerCase()] : 'image/png';
   return `data:${mimeType};base64,${fileContent.value}`;
 });
+
+// Copy raw file content to clipboard
+const copyToClipboard = async () => {
+  if (!fileContent.value) return;
+
+  try {
+    let contentToCopy = fileContent.value;
+
+    // For SVG files viewed as images, fetch the text content instead of copying base64
+    if (isSvgFile.value && fileType.value === 'binary') {
+      const fullPath = `${props.projectPath}/${props.filePath}`;
+      const result = await window.electron.files.readFile(fullPath, true);
+
+      if (result.success && result.data) {
+        contentToCopy = result.data.content;
+      }
+    }
+
+    // eslint-disable-next-line no-undef
+    await navigator.clipboard.writeText(contentToCopy);
+    copySuccess.value = true;
+
+    // Reset success state after 2 seconds
+    // eslint-disable-next-line no-undef
+    setTimeout(() => {
+      copySuccess.value = false;
+    }, 2000);
+  } catch (err) {
+    console.error('Failed to copy to clipboard:', err);
+  }
+};
 </script>
 
 <template>
@@ -281,9 +313,21 @@ const imageSrc = computed(() => {
               size="sm"
               @click="toggleViewMode"
               class="gap-2"
+              :title="viewAsText ? 'View as Image' : 'View as Text'"
             >
               <component :is="viewAsText ? Image : Code" class="h-4 w-4" />
-              {{ viewAsText ? 'View as Image' : 'View as Text' }}
+            </Button>
+            <!-- Copy raw content button -->
+            <Button
+              variant="outline"
+              size="sm"
+              @click="copyToClipboard"
+              class="gap-2"
+              title="Copy raw file contents"
+              :class="{ 'border-green-200 bg-green-50 text-green-600': copySuccess }"
+            >
+              <Copy class="h-4 w-4" />
+              {{ copySuccess ? 'Copied!' : 'Raw' }}
             </Button>
             <span class="text-xs text-slate-500">{{ formatFileSize(fileSize) }}</span>
           </div>
