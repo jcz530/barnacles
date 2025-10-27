@@ -126,7 +126,7 @@ const isFilterSelected = (filter: FilterValue) => {
 };
 
 // Check if a category should be in indeterminate state
-const isCategoryIndeterminate = (category: FileCategory) => {
+const isCategoryIndeterminate = (category: FileCategory): boolean => {
   // If the category itself is selected, not indeterminate
   if (props.selectedFilters.includes(category)) {
     return false;
@@ -140,7 +140,7 @@ const isCategoryIndeterminate = (category: FileCategory) => {
 };
 
 // Check if a category checkbox should be checked
-const isCategoryChecked: 'indeterminate' | boolean = (category: FileCategory) => {
+const isCategoryChecked = (category: FileCategory): boolean | 'indeterminate' => {
   // Checked if the category itself is selected
   if (props.selectedFilters.includes(category)) {
     return true;
@@ -168,7 +168,7 @@ const hasFilters = computed(() => props.selectedFilters.length > 0);
         File Type
         <span
           v-if="hasFilters"
-          class="ml-2 rounded-full bg-slate-800 px-2 py-0.5 text-xs text-white"
+          class="ml-2 rounded-full bg-emerald-400/40 px-2 py-0.5 text-xs text-white"
         >
           {{ selectedFilters.length }}
         </span>
@@ -185,7 +185,7 @@ const hasFilters = computed(() => props.selectedFilters.length > 0);
           <Input
             v-model="searchQuery"
             placeholder="Search file types..."
-            class="h-9 pl-8 text-sm"
+            class="h-9 border-2 pl-8 text-sm shadow-none"
           />
         </div>
       </div>
@@ -207,7 +207,6 @@ const hasFilters = computed(() => props.selectedFilters.length > 0);
               <Label @click.stop class="ml-4">
                 <Checkbox
                   :model-value="isCategoryChecked(category.value)"
-                  :indeterminate="isCategoryIndeterminate(category.value)"
                   class="h-4 w-4 shadow-none"
                   @click.stop
                   @update:model-value="() => toggleCategory(category.value)"
@@ -229,7 +228,7 @@ const hasFilters = computed(() => props.selectedFilters.length > 0);
             >
               <Checkbox
                 :model-value="isFilterSelected(ext)"
-                class="h-3.5 w-3.5"
+                class="h-3.5 w-3.5 shadow-none"
                 @update:model-value="() => toggleExtension(ext, category.value)"
               />
               <span class="font-mono text-xs text-slate-600">.{{ ext }}</span>

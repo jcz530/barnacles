@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ChevronDown, ChevronRight, FolderOpen, Copy } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, Copy, FolderOpen } from 'lucide-vue-next';
 import { formatFileSize, getFileTypeInfo, getFolderIcon } from '@/utils/file-types';
 import type { FileNode } from '@/types/window';
 import {
@@ -16,12 +16,16 @@ interface Props {
   depth?: number;
   isExpanded?: boolean;
   isSelected?: boolean;
+  fileCount?: { total: number; filtered: number };
+  hasFilters?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   depth: 0,
   isExpanded: false,
   isSelected: false,
+  fileCount: undefined,
+  hasFilters: false,
 });
 
 const emit = defineEmits<{
@@ -31,6 +35,23 @@ const emit = defineEmits<{
 
 const fileTypeInfo = computed(() => getFileTypeInfo(props.node.extension));
 const folderIcon = computed(() => getFolderIcon(props.isExpanded));
+
+// Format file count display
+const fileCountText = computed(() => {
+  if (!props.fileCount || props.node.type !== 'directory') {
+    return null;
+  }
+
+  const { total, filtered } = props.fileCount;
+
+  // If filters are active and some files are filtered out, show "filtered/total"
+  if (props.hasFilters && filtered !== total) {
+    return `${filtered}/${total}`;
+  }
+
+  // Otherwise just show total
+  return total.toString();
+});
 
 const handleClick = () => {
   if (props.node.type === 'directory') {
@@ -64,9 +85,9 @@ const copyPath = async () => {
   <ContextMenu>
     <ContextMenuTrigger as-child>
       <div
-        class="group flex cursor-pointer items-center gap-1 rounded-sm px-2 py-1 transition-colors hover:bg-slate-100"
+        class="group flex cursor-pointer items-center gap-1 rounded-sm px-2 py-1 transition-colors hover:bg-slate-200"
         :class="{
-          'bg-blue-50 hover:bg-blue-100': isSelected,
+          'bg-sky-400/20': isSelected,
         }"
         :style="{ paddingLeft: `${depth * 12 + 8}px` }"
         @click="handleClick"
@@ -103,6 +124,19 @@ const copyPath = async () => {
           }"
         >
           {{ node.name }}
+        </span>
+
+        <!-- File count (for directories) -->
+        <span
+          :title="`${fileCount?.total} files`"
+          v-if="node.type === 'directory' && fileCountText"
+          class="flex-shrink-0 text-xs"
+          :class="{
+            'text-slate-400': !hasFilters || fileCount?.filtered === fileCount?.total,
+            'font-medium text-sky-600': hasFilters && fileCount?.filtered !== fileCount?.total,
+          }"
+        >
+          {{ fileCountText }}
         </span>
 
         <!-- File size (only for files) -->

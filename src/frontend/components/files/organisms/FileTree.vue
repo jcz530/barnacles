@@ -2,21 +2,21 @@
 import { computed, ref } from 'vue';
 import FileTreeItem from '../molecules/FileTreeItem.vue';
 import type { FileNode } from '@/types/window';
-import type { FileCategory } from '@/utils/file-types';
-import { matchesCategory } from '@/utils/file-types';
+import type { FilterValue } from '../molecules/FileTypeFilter.vue';
+import { matchesCategory, type FileCategory } from '@/utils/file-types';
 
 interface Props {
   nodes: FileNode[];
   projectPath: string;
   selectedPath?: string | null;
   searchQuery?: string;
-  categoryFilters?: FileCategory[];
+  filters?: FilterValue[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
   selectedPath: null,
   searchQuery: '',
-  categoryFilters: () => [],
+  filters: () => [],
 });
 
 const emit = defineEmits<{
@@ -25,6 +25,84 @@ const emit = defineEmits<{
 
 // Track which directories are expanded
 const expandedPaths = ref<Set<string>>(new Set());
+
+// Calculate total file count for a node (recursive)
+function getTotalFileCount(node: FileNode): number {
+  if (node.type === 'file') {
+    return 1;
+  }
+
+  if (node.type === 'directory' && node.children) {
+    return node.children.reduce((count, child) => count + getTotalFileCount(child), 0);
+  }
+
+  return 0;
+}
+
+// Calculate filtered file count for a node (recursive)
+function getFilteredFileCount(node: FileNode): number {
+  if (node.type === 'file') {
+    // Check if this file matches the current filters
+    const matchesSearch = props.searchQuery
+      ? node.name.toLowerCase().includes(props.searchQuery.toLowerCase())
+      : true;
+
+    const matchesFilter = () => {
+      if (props.filters.length === 0) return true;
+
+      const ext = node.extension?.toLowerCase();
+
+      return props.filters.some(filter => {
+        const categories: FileCategory[] = [
+          'image',
+          'video',
+          'audio',
+          'document',
+          'code',
+          'data',
+          'archive',
+          'other',
+        ];
+
+        if (categories.includes(filter as FileCategory)) {
+          return matchesCategory(ext, filter as FileCategory);
+        }
+
+        return ext === filter.toLowerCase();
+      });
+    };
+
+    return matchesSearch && matchesFilter() ? 1 : 0;
+  }
+
+  if (node.type === 'directory' && node.children) {
+    return node.children.reduce((count, child) => count + getFilteredFileCount(child), 0);
+  }
+
+  return 0;
+}
+
+// Map to store file counts for each directory
+const fileCounts = computed(() => {
+  const counts = new Map<string, { total: number; filtered: number }>();
+
+  const calculateCounts = (nodes: FileNode[]) => {
+    for (const node of nodes) {
+      if (node.type === 'directory') {
+        const total = getTotalFileCount(node);
+        const filtered = getFilteredFileCount(node);
+        counts.set(node.path, { total, filtered });
+
+        if (node.children) {
+          calculateCounts(node.children);
+        }
+      }
+    }
+  };
+
+  calculateCounts(props.nodes);
+  return counts;
+});
 
 // Filter nodes based on search query and category filters
 const filteredNodes = computed(() => {
@@ -47,10 +125,7 @@ function filterNodesRecursive(nodes: FileNode[]): FileNode[] {
         });
 
         // Auto-expand directories when searching or filtering
-        if (
-          (props.searchQuery || props.categoryFilters.length > 0) &&
-          filteredChildren.length > 0
-        ) {
+        if ((props.searchQuery || props.filters.length > 0) && filteredChildren.length > 0) {
           expandedPaths.value.add(node.path);
         }
       }
@@ -60,11 +135,35 @@ function filterNodesRecursive(nodes: FileNode[]): FileNode[] {
         ? node.name.toLowerCase().includes(props.searchQuery.toLowerCase())
         : true;
 
-      const inCategory =
-        props.categoryFilters.length === 0 ||
-        props.categoryFilters.some(category => matchesCategory(node.extension, category));
+      // Check if file matches any of the filters
+      const matchesFilter = () => {
+        if (props.filters.length === 0) return true;
 
-      if (matchesSearch && inCategory) {
+        const ext = node.extension?.toLowerCase();
+
+        return props.filters.some(filter => {
+          // Check if filter is a category
+          const categories: FileCategory[] = [
+            'image',
+            'video',
+            'audio',
+            'document',
+            'code',
+            'data',
+            'archive',
+            'other',
+          ];
+
+          if (categories.includes(filter as FileCategory)) {
+            return matchesCategory(ext, filter as FileCategory);
+          }
+
+          // Otherwise it's a specific extension
+          return ext === filter.toLowerCase();
+        });
+      };
+
+      if (matchesSearch && matchesFilter()) {
         filtered.push(node);
       }
     }
@@ -85,14 +184,25 @@ const handleSelect = (node: FileNode) => {
   emit('select', node);
 };
 
-// Recursive component to render tree nodes
-const renderNode = (node: FileNode, depth: number) => ({
-  node,
-  projectPath: props.projectPath,
-  depth,
-  isExpanded: expandedPaths.value.has(node.path),
-  isSelected: props.selectedPath === node.path,
+// Check if any filters are active
+const hasActiveFilters = computed(() => {
+  return props.searchQuery.trim().length > 0 || props.filters.length > 0;
 });
+
+// Recursive component to render tree nodes
+const renderNode = (node: FileNode, depth: number) => {
+  const counts = node.type === 'directory' ? fileCounts.value.get(node.path) : undefined;
+
+  return {
+    node,
+    projectPath: props.projectPath,
+    depth,
+    isExpanded: expandedPaths.value.has(node.path),
+    isSelected: props.selectedPath === node.path,
+    fileCount: counts,
+    hasFilters: hasActiveFilters.value,
+  };
+};
 </script>
 
 <template>
