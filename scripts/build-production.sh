@@ -13,6 +13,9 @@ PLATFORM="${1:---mac}"
 echo "Building application..."
 npm run build
 
+echo "Setting CLI executable permissions..."
+chmod +x dist/cli/index.js
+
 echo "Backing up package-lock.json..."
 cp package-lock.json package-lock.json.bak
 
