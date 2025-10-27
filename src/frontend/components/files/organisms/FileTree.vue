@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import FileTreeNode from '../molecules/FileTreeNode.vue';
 import type { FileNode } from '@/types/window';
 import type { FilterValue } from '../molecules/FileTypeFilter.vue';
-import { matchesCategory, type FileCategory } from '@/utils/file-types';
+import { type FileCategory, matchesCategory } from '@/utils/file-types';
 
 interface Props {
   nodes: FileNode[];
@@ -187,6 +187,16 @@ const handleSelect = (node: FileNode) => {
 // Check if any filters are active
 const hasActiveFilters = computed(() => {
   return props.searchQuery.trim().length > 0 || props.filters.length > 0;
+});
+
+// Collapse all expanded directories
+const collapseAll = () => {
+  expandedPaths.value.clear();
+};
+
+// Expose methods to parent component
+defineExpose({
+  collapseAll,
 });
 </script>
 

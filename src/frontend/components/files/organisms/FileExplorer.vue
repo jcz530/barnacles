@@ -5,8 +5,10 @@ import FileViewer from './FileViewer.vue';
 import FileSearchInput from '../molecules/FileSearchInput.vue';
 import FileTypeFilter, { type FilterValue } from '../molecules/FileTypeFilter.vue';
 import { Skeleton } from '../../ui/skeleton';
-import type { FileNode } from '../../../types/window';
-import { type FileCategory, matchesCategory } from '../../../utils/file-types';
+import { Button } from '../../ui/button';
+import type { FileNode } from '@/types/window';
+import { type FileCategory, matchesCategory } from '@/utils/file-types';
+import { ListChevronsDownUp } from 'lucide-vue-next';
 
 interface Props {
   projectPath: string;
@@ -20,6 +22,7 @@ const fileTree = ref<FileNode[]>([]);
 const selectedFile = ref<FileNode | null>(null);
 const searchQuery = ref('');
 const filters = ref<FilterValue[]>([]);
+const fileTreeRef = ref<InstanceType<typeof FileTree> | null>(null);
 
 // Load directory tree on mount
 const loadFileTree = async () => {
@@ -150,6 +153,11 @@ const filteredFileCount = computed(() => {
 const hasActiveFilters = computed(() => {
   return searchQuery.value.trim().length > 0 || filters.value.length > 0;
 });
+
+// Collapse all directories in the tree
+const handleCollapseAll = () => {
+  fileTreeRef.value?.collapseAll();
+};
 </script>
 
 <template>
@@ -168,8 +176,8 @@ const hasActiveFilters = computed(() => {
         </div>
       </div>
 
-      <!-- File count -->
-      <div class="border-b border-slate-200 px-3 pb-1">
+      <!-- File count and actions -->
+      <div class="flex items-center justify-between border-b border-slate-200 px-3 pb-1">
         <span class="text-xs text-slate-600">
           <template v-if="hasActiveFilters">
             <span class="font-medium text-sky-600">{{ filteredFileCount }}</span>
@@ -181,6 +189,15 @@ const hasActiveFilters = computed(() => {
             <span class="ml-1">files</span>
           </template>
         </span>
+        <Button
+          title="Collapse All"
+          variant="ghost"
+          size="icon"
+          class="h-6 px-2 text-xs hover:bg-slate-200/50 hover:text-sky-600"
+          @click="handleCollapseAll"
+        >
+          <ListChevronsDownUp />
+        </Button>
       </div>
 
       <!-- File tree -->
@@ -200,6 +217,7 @@ const hasActiveFilters = computed(() => {
         <!-- File tree -->
         <FileTree
           v-else
+          ref="fileTreeRef"
           :nodes="fileTree"
           :project-path="projectPath"
           :selected-path="selectedFilePath"
