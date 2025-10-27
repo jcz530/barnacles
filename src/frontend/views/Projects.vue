@@ -4,6 +4,7 @@ import { RefreshCw, Scan, Star } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMagicKeys, whenever } from '@vueuse/core';
+import dayjs from 'dayjs';
 import type { ProjectWithDetails } from '../../shared/types/api';
 import SortControl from '../components/atoms/SortControl.vue';
 import ViewToggle from '../components/atoms/ViewToggle.vue';
@@ -98,39 +99,38 @@ const projects = computed(() => {
 
   // Filter by date preset
   if (datePreset.value !== 'all') {
-    const now = new Date();
-    let cutoffDate: Date;
+    let cutoffDate: dayjs.Dayjs;
 
     switch (datePreset.value) {
       case 'today':
-        cutoffDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        cutoffDate = dayjs().startOf('day');
         break;
       case 'week':
-        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        cutoffDate = dayjs().subtract(7, 'day');
         break;
       case 'month':
-        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        cutoffDate = dayjs().subtract(30, 'day');
         break;
       case 'quarter':
-        cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        cutoffDate = dayjs().subtract(90, 'day');
         break;
       case 'year':
-        cutoffDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        cutoffDate = dayjs().subtract(365, 'day');
         break;
       default:
-        cutoffDate = new Date(0);
+        cutoffDate = dayjs(0);
     }
 
     items = items.filter(project => {
       if (!project.lastModified) return false;
-      const projectDate = new Date(project.lastModified);
+      const projectDate = dayjs(project.lastModified);
 
       // Apply filter based on direction
       if (dateDirection.value === 'within') {
-        return projectDate >= cutoffDate;
+        return projectDate.isAfter(cutoffDate) || projectDate.isSame(cutoffDate);
       } else {
         // 'older' - show projects modified before the cutoff date
-        return projectDate < cutoffDate;
+        return projectDate.isBefore(cutoffDate);
       }
     });
   }
@@ -145,8 +145,8 @@ const projects = computed(() => {
         bVal = b.name.toLowerCase();
         break;
       case 'lastModified':
-        aVal = a.lastModified ? new Date(a.lastModified).getTime() : 0;
-        bVal = b.lastModified ? new Date(b.lastModified).getTime() : 0;
+        aVal = a.lastModified ? dayjs(a.lastModified).valueOf() : 0;
+        bVal = b.lastModified ? dayjs(b.lastModified).valueOf() : 0;
         break;
       case 'size':
         aVal = a.size || 0;

@@ -4,6 +4,9 @@ import { StatusCommand } from './status.js';
 import { HelpCommand } from './help.js';
 import { VersionCommand } from './version.js';
 import { ProjectsCommand } from './projects.js';
+import { displayCommandHelp } from '../utils/command-help.js';
+import { compactLogo, getTitle } from '../utils/branding';
+import { intro, log, outro } from '@clack/prompts';
 
 /**
  * Global command registry
@@ -31,8 +34,8 @@ export async function executeCommand(
   commandName: string | null,
   flags: Record<string, string | boolean>
 ): Promise<void> {
-  // If no command or help flag, show help
-  if (!commandName || commandName === 'help' || flags.help || flags.h) {
+  // If no command or global help flag, show general help
+  if (!commandName || commandName === 'help') {
     const helpCommand = registry.find('help');
     if (helpCommand) {
       await helpCommand.run(flags);
@@ -44,9 +47,16 @@ export async function executeCommand(
   const command = registry.find(commandName);
 
   if (!command) {
-    console.error(`Unknown command: ${commandName}`);
-    console.log('Run "barnacles help" to see available commands.');
+    intro(`${compactLogo} ${getTitle()}`);
+    log.error(`Unknown command: ${commandName}`);
+    outro('Run "barnacles help" to see available commands.');
     process.exit(1);
+  }
+
+  // If command-specific help flag, show command help
+  if (flags.help || flags.h) {
+    displayCommandHelp(command);
+    return;
   }
 
   await command.run(flags);

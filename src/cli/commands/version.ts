@@ -16,7 +16,6 @@ export class VersionCommand extends Command {
   async execute(_flags: Record<string, string | boolean>): Promise<void> {
     try {
       // Find package.json relative to the script location
-      // This works regardless of the current working directory
       // The CLI is bundled into dist/cli/index.js, which is 2 levels deep from package root
       const scriptPath = fileURLToPath(import.meta.url);
       const scriptDir = dirname(scriptPath);

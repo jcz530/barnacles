@@ -1,3 +1,11 @@
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+
+// Configure dayjs plugins
+dayjs.extend(relativeTime);
+dayjs.extend(localizedFormat);
+
 export const useFormatters = () => {
   const formatSize = (bytes: number | null | undefined): string => {
     if (!bytes) return '0 B';
@@ -16,39 +24,17 @@ export const useFormatters = () => {
 
   const formatDate = (date: Date | null | undefined): string => {
     if (!date) return 'Unknown';
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return dayjs(date).format('MMMM D, YYYY, h:mm A');
   };
 
   const formatShortDate = (date: Date | null | undefined): string => {
     if (!date) return 'Unknown';
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    return dayjs(date).format('MMM D, YYYY');
   };
 
   const formatRelativeDate = (date: Date | null | undefined): string => {
     if (!date) return 'Unknown';
-
-    const d = new Date(date);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
-
-    return `${Math.floor(diffDays / 365)} years ago`;
+    return dayjs(date).fromNow();
   };
 
   return {

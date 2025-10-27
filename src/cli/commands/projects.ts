@@ -4,7 +4,7 @@ import { Command } from '../core/Command.js';
 import type { ProjectWithDetails } from '../../backend/services/project-service.js';
 import { projectService } from '../../backend/services/project-service.js';
 import { formatTimeAgo } from '../utils/format-time.js';
-import { getActionOptions, getAction } from '../actions/index.js';
+import { getAction, getActionOptions } from '../actions';
 
 /**
  * Command to list and select projects
@@ -14,6 +14,15 @@ export class ProjectsCommand extends Command {
   readonly description = 'Browse and select projects';
   readonly aliases = ['p'];
   readonly showIntro = true;
+  readonly helpText =
+    'Interactively browse all projects tracked by Barnacles and perform actions on them.';
+  readonly examples = ['barnacles projects', 'barnacles p', 'barnacles projects --help'];
+  readonly options = [
+    {
+      flag: '--help, -h',
+      description: 'Show this help message',
+    },
+  ];
 
   async execute(_flags: Record<string, string | boolean>): Promise<void> {
     // Fetch projects from the service

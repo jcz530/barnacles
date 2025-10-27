@@ -1,18 +1,10 @@
 import { compactLogo } from '../utils/branding.js';
 import { box, intro, outro, spinner } from '@clack/prompts';
 import { Command } from '../core/Command.js';
-import { RUNTIME_CONFIG } from '../../shared/constants';
 import { db, projects } from '../../shared/database';
 import { count } from 'drizzle-orm';
 import pc from 'picocolors';
-
-interface ProcessStatus {
-  id: string;
-  projectId: string;
-  command: string;
-  status: 'running' | 'stopped' | 'failed';
-  url?: string;
-}
+import { getBackendUrl } from '../utils/app-manager.js';
 
 /**
  * Command to check the status of Barnacles
@@ -21,6 +13,9 @@ export class StatusCommand extends Command {
   readonly name = 'status';
   readonly description = 'Check the status of Barnacles';
   readonly showIntro = false;
+  readonly helpText =
+    'Displays the current status of the Barnacles application, database connection, and running processes.';
+  readonly examples = ['barnacles status', 'barnacles status --help'];
 
   async execute(): Promise<void> {
     intro(`${compactLogo} Barnacles Status`);
@@ -28,9 +23,9 @@ export class StatusCommand extends Command {
     const s = spinner();
     s.start('Checking system status...');
 
-    const API_BASE_URL = RUNTIME_CONFIG.API_BASE_URL;
-    // Check app status
-    let appStatus = 'offline';
+    // Check app status using reusable utility
+    const backendUrl = await getBackendUrl();
+    const appStatus = backendUrl ? 'running' : 'offline';
     let dbStatus;
     let projectCount = 0;
     let runningProcesses = 0;
@@ -44,25 +39,35 @@ export class StatusCommand extends Command {
       dbStatus = 'error';
     }
 
-    try {
-      const healthResponse = await globalThis.fetch(`${API_BASE_URL}/health`);
-      if (healthResponse.ok) {
-        appStatus = 'running';
-        await healthResponse.json();
-
-        // Check for running processes
-        try {
-          const processesResponse = await globalThis.fetch(`${API_BASE_URL}/processes`);
-          if (processesResponse.ok) {
-            const processes: ProcessStatus[] = await processesResponse.json();
-            runningProcesses = processes.filter(p => p.status === 'running').length;
+    // If backend is running, check for running processes
+    if (backendUrl) {
+      try {
+        const processesResponse = await globalThis.fetch(
+          `${backendUrl}/api/projects/process-status`
+        );
+        if (processesResponse.ok) {
+          const result = await processesResponse.json();
+          // Count running processes across all projects
+          if (result.data && Array.isArray(result.data)) {
+            runningProcesses = result.data.reduce(
+              (
+                total: number,
+                projectStatus: {
+                  processes?: Array<{ status: string }>;
+                }
+              ) => {
+                return (
+                  total + (projectStatus.processes?.filter(p => p.status === 'running').length || 0)
+                );
+              },
+              0
+            );
           }
-        } catch {
-          // Process endpoint might not be available
         }
+      } catch {
+        // Process endpoint might not be available
       }
-    } catch {
-      appStatus = 'offline';
+    } else {
       dbStatus = 'disconnected';
     }
 

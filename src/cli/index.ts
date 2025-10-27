@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
-import { intro, outro } from '@clack/prompts';
+import { intro, isCancel, outro } from '@clack/prompts';
 import { parseArgs } from './utils/arg-parser.js';
 import { executeCommand, registry } from './commands';
+import { compactLogo, getTitle } from './utils/branding';
+import { selectCommand } from './utils/command-selector.js';
 
 async function main() {
   const args = process.argv.slice(2);
@@ -17,21 +19,37 @@ async function main() {
     return;
   }
 
+  let selectedCommand = command;
+
+  // If no command provided, show interactive selector
+  if (!selectedCommand) {
+    intro(`${compactLogo} ${getTitle()}`);
+    const result = await selectCommand(registry);
+
+    if (isCancel(result)) {
+      outro('Cancelled');
+      process.exit(0);
+    }
+
+    selectedCommand = String(result);
+  }
+
   // Show intro only for commands that need it
   let shouldShowIntro = false;
-  if (command) {
-    const commandObj = registry.find(command);
+  if (selectedCommand) {
+    const commandObj = registry.find(selectedCommand);
     shouldShowIntro = commandObj?.showIntro ?? false;
   }
 
-  if (shouldShowIntro) {
-    intro('Barnacles');
+  if (shouldShowIntro && command) {
+    // Only show intro if command was provided as argument (not selected interactively)
+    intro(`${compactLogo} ${getTitle()}`);
   }
 
   try {
-    await executeCommand(command, flags);
+    await executeCommand(selectedCommand, flags);
 
-    if (shouldShowIntro) {
+    if (shouldShowIntro || !command) {
       outro('Done!');
     }
   } catch (error) {
