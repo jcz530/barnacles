@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import type { ComputedRef } from 'vue';
+import { computed, inject, onMounted, ref, watch } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import * as shiki from 'shiki';
 import { Skeleton } from '../../ui/skeleton';
 import { Button } from '../../ui/button';
-import { FileText, Code, Image } from 'lucide-vue-next';
+import { Code, FileText, Image } from 'lucide-vue-next';
 import { formatFileSize, getFileTypeInfo } from '../../../utils/file-types';
+import { RUNTIME_CONFIG } from '../../../../shared/constants';
 
 interface Props {
   filePath?: string | null;
@@ -16,6 +18,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   filePath: null,
 });
+
+const projectId = inject<ComputedRef<string>>('projectId');
 
 const isLoading = ref(false);
 const fileContent = ref<string | null>(null);
@@ -115,12 +119,70 @@ const toggleViewMode = async () => {
   await loadFile(viewAsText.value);
 };
 
-// Render markdown content
-const renderedMarkdown = computed(() => {
+/**
+ * Transforms relative image paths in markdown to use the API endpoint
+ * so they load correctly in the Electron renderer
+ */
+const transformedMarkdown = computed(() => {
   if (!fileContent.value || fileTypeInfo.value.category !== 'document' || extension.value !== 'md')
     return null;
 
-  const rawHtml = marked(fileContent.value);
+  if (!projectId) return fileContent.value;
+
+  // Get the directory of the current markdown file
+  const fileDir = props.filePath?.includes('/')
+    ? props.filePath.substring(0, props.filePath.lastIndexOf('/'))
+    : '';
+
+  // Replace relative image paths with API URLs
+  // Matches: ![alt](./path), ![alt](../path), ![alt](path/to/file)
+  // But NOT: ![alt](http://...), ![alt](https://...), ![alt](data:...)
+  return fileContent.value.replace(
+    /!\[([^\]]*)\]\(([^)]+)\)/g,
+    (_match, alt: string, imagePath: string) => {
+      // Skip absolute URLs
+      if (
+        imagePath.startsWith('http://') ||
+        imagePath.startsWith('https://') ||
+        imagePath.startsWith('data:')
+      ) {
+        return _match;
+      }
+
+      // Resolve relative path
+      let resolvedPath = imagePath;
+      if (imagePath.startsWith('./')) {
+        // Same directory as markdown file
+        resolvedPath = fileDir ? `${fileDir}/${imagePath.slice(2)}` : imagePath.slice(2);
+      } else if (imagePath.startsWith('../')) {
+        // Parent directory - need to resolve properly
+        const parts = fileDir.split('/').filter(Boolean);
+        const imageParts = imagePath.split('/');
+
+        // Remove leading ../ and corresponding parent dirs
+        while (imageParts[0] === '..' && parts.length > 0) {
+          imageParts.shift();
+          parts.pop();
+        }
+
+        resolvedPath = [...parts, ...imageParts].join('/');
+      } else if (!imagePath.startsWith('/')) {
+        // Relative to current file directory
+        resolvedPath = fileDir ? `${fileDir}/${imagePath}` : imagePath;
+      }
+
+      // Construct API URL to serve the file using runtime config with query parameter
+      const apiUrl = `${RUNTIME_CONFIG.API_BASE_URL}/api/projects/${projectId.value}/file?path=${encodeURIComponent(resolvedPath)}`;
+      return `![${alt}](${apiUrl})`;
+    }
+  );
+});
+
+// Render markdown content
+const renderedMarkdown = computed(() => {
+  if (!transformedMarkdown.value) return null;
+
+  const rawHtml = marked(transformedMarkdown.value) as string;
   return DOMPurify.sanitize(rawHtml);
 });
 
@@ -183,7 +245,7 @@ const imageSrc = computed(() => {
 </script>
 
 <template>
-  <div class="flex h-full flex-col bg-slate-50">
+  <div class="flex h-full flex-col bg-slate-200/50">
     <!-- Empty state -->
     <div v-if="!filePath" class="flex h-full flex-col items-center justify-center text-slate-400">
       <FileText class="mb-4 h-16 w-16" />

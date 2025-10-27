@@ -65,7 +65,7 @@ const selectedFilePath = computed(() => selectedFile.value?.path || null);
 <template>
   <div class="flex h-full">
     <!-- Sidebar: File tree -->
-    <div class="flex w-80 flex-col border-r border-slate-200 bg-slate-100">
+    <div class="flex w-80 flex-col rounded-l-lg border-r border-slate-200 bg-slate-100">
       <!-- Search and filter controls -->
       <div class="space-y-2 border-b border-slate-200 p-3">
         <FileSearchInput v-model="searchQuery" />
