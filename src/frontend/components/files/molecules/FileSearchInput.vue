@@ -31,7 +31,7 @@ defineExpose({
     <button
       v-if="modelValue"
       @click="clearSearch"
-      class="absolute top-1/2 right-3 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+      class="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer rounded-full p-0.5 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
     >
       <X class="h-4 w-4" />
     </button>
