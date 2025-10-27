@@ -108,3 +108,55 @@ export interface Setting {
   type: 'string' | 'number' | 'boolean' | 'json';
   updatedAt: Date;
 }
+
+export interface Alias {
+  id: string;
+  name: string;
+  command: string;
+  description?: string | null;
+  color?: string | null;
+  showCommand: boolean;
+  category: 'git' | 'docker' | 'system' | 'custom';
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AliasTheme {
+  id: string;
+  name: string;
+  isActive: boolean;
+  gitColor: string;
+  dockerColor: string;
+  systemColor: string;
+  customColor: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ShellInfo {
+  shell: 'bash' | 'zsh' | 'fish' | 'unknown';
+  profilePaths: string[];
+  configPath: string; // ~/.config/barnacles/aliases
+}
+
+export interface DetectedAlias {
+  name: string;
+  command: string;
+  sourcePath: string; // which file it was found in
+  lineNumber: number;
+  hasConflict: boolean; // conflicts with existing alias in DB
+}
+
+export interface PresetPack {
+  id: string;
+  name: string;
+  description: string;
+  category: 'git' | 'docker' | 'system';
+  icon?: string;
+  aliases: Array<{
+    name: string;
+    command: string;
+    description: string;
+  }>;
+}

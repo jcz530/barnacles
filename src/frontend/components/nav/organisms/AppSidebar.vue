@@ -19,7 +19,7 @@ import { useApi } from '@/composables/useApi';
 import { useConfigs } from '@/composables/useConfigs';
 import { useQueries } from '@/composables/useQueries';
 import { useQuery } from '@tanstack/vue-query';
-import { Cog, FolderGit2, Network, SquareTerminal } from 'lucide-vue-next';
+import { Cog, FolderGit2, Network, SquareTerminal, Terminal } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { API_ROUTES } from '../../../../shared/constants';
@@ -116,6 +116,12 @@ const data = computed(() => ({
       url: '/hosts',
       icon: Network,
       isActive: route.path.startsWith('/hosts'),
+    },
+    {
+      title: 'Aliases',
+      url: '/aliases',
+      icon: Terminal,
+      isActive: route.path.startsWith('/aliases'),
     },
     {
       title: 'Settings',

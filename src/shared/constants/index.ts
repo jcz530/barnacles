@@ -49,4 +49,13 @@ export const API_ROUTES = {
   SYSTEM_HOSTS: '/api/system/hosts',
   SYSTEM_HOSTS_PATH: '/api/system/hosts/path',
   SYSTEM_DIRECTORIES_SEARCH: '/api/system/directories/search',
+  ALIASES: '/api/aliases',
+  ALIASES_CONFIG_PATH: '/api/aliases/config-path',
+  ALIASES_SYNC: '/api/aliases/sync',
+  ALIASES_DETECT: '/api/aliases/detect',
+  ALIASES_IMPORT: '/api/aliases/import',
+  ALIASES_PRESETS: '/api/aliases/presets',
+  ALIASES_PRESETS_INSTALL: '/api/aliases/presets/install',
+  ALIASES_THEMES: '/api/aliases/themes',
+  ALIAS_BY_ID: (id: string) => `/api/aliases/${id}`,
 } as const;
