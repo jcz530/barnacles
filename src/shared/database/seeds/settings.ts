@@ -10,7 +10,6 @@ export async function seedSettings() {
       key: 'autoOpenProcessUrls',
       value: 'true',
       type: 'boolean',
-      description: 'Automatically open URLs in browser when processes start',
     },
   ];
 
@@ -23,7 +22,6 @@ export async function seedSettings() {
         key: setting.key,
         value: setting.value,
         type: setting.type as 'string' | 'number' | 'boolean' | 'json',
-        description: setting.description,
       });
       console.log(`  ✓ Created setting: ${setting.key}`);
     } else {

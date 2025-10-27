@@ -58,7 +58,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 contextBridge.exposeInMainWorld('electron', {
   shell: {
     openPath: (path: string) => ipcRenderer.invoke('shell:open-path', path),
+    showItemInFolder: (path: string) => ipcRenderer.invoke('shell:show-item-in-folder', path),
     openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url),
+  },
+  clipboard: {
+    writeFile: (path: string) => ipcRenderer.invoke('clipboard:write-file', path),
   },
   updateWindowTitle: (title: string) => ipcRenderer.send('update-window-title', title),
   createNewWindow: () => ipcRenderer.invoke('create-new-window'),
@@ -67,5 +71,12 @@ contextBridge.exposeInMainWorld('electron', {
     isInstalled: () => ipcRenderer.invoke('cli:isInstalled'),
     install: () => ipcRenderer.invoke('cli:install'),
     uninstall: () => ipcRenderer.invoke('cli:uninstall'),
+  },
+  files: {
+    readDirectory: (dirPath: string) => ipcRenderer.invoke('files:read-directory', dirPath),
+    readFile: (filePath: string, forceText?: boolean) =>
+      ipcRenderer.invoke('files:read-file', filePath, forceText),
+    searchContent: (dirPath: string, query: string) =>
+      ipcRenderer.invoke('files:search-content', dirPath, query),
   },
 });

@@ -6,6 +6,11 @@ export const setupShellBridge = (): void => {
     return await shell.openPath(path);
   });
 
+  // Handler for showing items in Finder/Explorer
+  ipcMain.handle('shell:show-item-in-folder', async (_, path: string) => {
+    shell.showItemInFolder(path);
+  });
+
   // Handler for opening external URLs
   ipcMain.handle('shell:open-external', async (_, url: string) => {
     await shell.openExternal(url);

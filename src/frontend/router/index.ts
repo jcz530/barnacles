@@ -3,6 +3,7 @@ import DefaultLayout from '../layouts/DefaultLayout.vue';
 import ProjectOverviewTab from '../components/projects/organisms/ProjectOverviewTab.vue';
 import ProjectReadmeTab from '../components/projects/organisms/ProjectReadmeTab.vue';
 import ProjectTerminalsTab from '../components/projects/organisms/ProjectTerminalsTab.vue';
+import ProjectFilesTab from '../components/projects/organisms/ProjectFilesTab.vue';
 import Home from '../views/Home.vue';
 import Hosts from '../views/Hosts.vue';
 import ProjectDetail from '../views/ProjectDetail.vue';
@@ -48,6 +49,11 @@ const routes: RouteRecordRaw[] = [
             path: 'readme',
             name: 'ProjectReadme',
             component: ProjectReadmeTab,
+          },
+          {
+            path: 'files',
+            name: 'ProjectFiles',
+            component: ProjectFilesTab,
           },
           {
             path: 'terminals',
