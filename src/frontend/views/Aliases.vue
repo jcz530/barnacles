@@ -436,9 +436,14 @@ const goToPresetPacks = () => {
             </div>
 
             <!-- Action Buttons -->
-            <div v-if="hasUnsavedChanges" class="flex justify-end gap-2 border-t pt-4">
-              <Button @click="discardChanges" variant="outline">Discard Changes</Button>
-              <Button @click="saveChanges" :disabled="!isFormValid || syncMutation.isPending.value">
+            <div class="flex justify-end gap-2 border-t pt-4">
+              <Button @click="discardChanges" :disabled="!hasUnsavedChanges" variant="outline"
+                >Discard Changes</Button
+              >
+              <Button
+                @click="saveChanges"
+                :disabled="!hasUnsavedChanges || !isFormValid || syncMutation.isPending.value"
+              >
                 <Save class="mr-2 h-4 w-4" />
                 {{ syncMutation.isPending.value ? 'Saving...' : 'Save & Sync' }}
               </Button>
