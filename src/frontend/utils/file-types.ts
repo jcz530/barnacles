@@ -211,6 +211,35 @@ export function getFileCategories(): Array<{ value: FileCategory; label: string 
 }
 
 /**
+ * Get extensions for a specific category
+ */
+export function getExtensionsByCategory(category: FileCategory): string[] {
+  switch (category) {
+    case 'image':
+      return Array.from(IMAGE_EXTENSIONS).sort();
+    case 'video':
+      return Array.from(VIDEO_EXTENSIONS).sort();
+    case 'audio':
+      return Array.from(AUDIO_EXTENSIONS).sort();
+    case 'document':
+      return Array.from(DOCUMENT_EXTENSIONS).sort();
+    case 'data':
+      return Array.from(DATA_EXTENSIONS).sort();
+    case 'archive':
+      return Array.from(ARCHIVE_EXTENSIONS).sort();
+    case 'code':
+      return Object.keys(LANGUAGE_MAP)
+        .filter(ext => {
+          const info = getFileTypeInfo(ext);
+          return info.category === 'code';
+        })
+        .sort();
+    default:
+      return [];
+  }
+}
+
+/**
  * Format file size to human readable format
  */
 export function formatFileSize(bytes?: number): string {

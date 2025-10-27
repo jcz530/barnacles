@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,40 +8,156 @@ import {
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
 import { Button } from '../../ui/button';
-import { Filter } from 'lucide-vue-next';
-import { type FileCategory, getFileCategories } from '../../../utils/file-types';
+import { ChevronDown, ChevronRight, Filter, Search } from 'lucide-vue-next';
+import {
+  type FileCategory,
+  getExtensionsByCategory,
+  getFileCategories,
+} from '../../../utils/file-types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+
+// Filter value can be either a category or a specific extension
+export type FilterValue = FileCategory | string;
 
 const props = defineProps<{
-  selectedCategories: FileCategory[];
+  selectedFilters: FilterValue[];
 }>();
 
 const emit = defineEmits<{
-  'update:selectedCategories': [value: FileCategory[]];
+  'update:selectedFilters': [value: FilterValue[]];
 }>();
+
+const searchQuery = ref('');
+const expandedCategories = ref<Set<FileCategory>>(new Set());
 
 const categories = getFileCategories();
 
-const toggleCategory = (category: FileCategory) => {
-  console.log('togle cate: ', category);
-  const current = [...props.selectedCategories];
-  const index = current.indexOf(category);
+// Build nested structure with extensions
+const categoryTree = computed(() => {
+  return categories.map(cat => ({
+    ...cat,
+    extensions: getExtensionsByCategory(cat.value),
+  }));
+});
 
-  if (index > -1) {
-    current.splice(index, 1);
-  } else {
-    current.push(category);
+// Filter categories and extensions based on search
+const filteredTree = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return categoryTree.value;
   }
 
-  emit('update:selectedCategories', current);
+  const query = searchQuery.value.toLowerCase();
+  return categoryTree.value
+    .map(cat => {
+      const matchesCategory = cat.label.toLowerCase().includes(query);
+      const matchingExtensions = cat.extensions.filter(ext => ext.toLowerCase().includes(query));
+
+      if (matchesCategory || matchingExtensions.length > 0) {
+        return {
+          ...cat,
+          extensions: matchesCategory ? cat.extensions : matchingExtensions,
+        };
+      }
+      return null;
+    })
+    .filter((cat): cat is NonNullable<typeof cat> => cat !== null);
+});
+
+const toggleCategory = (category: FileCategory) => {
+  const current = [...props.selectedFilters];
+  const index = current.indexOf(category);
+  const extensions = getExtensionsByCategory(category);
+
+  if (index > -1) {
+    // Unchecking category - remove it
+    current.splice(index, 1);
+  } else {
+    // Checking category - add it and remove any individual extensions from this category
+    current.push(category);
+    // Remove any individual extensions that belong to this category
+    extensions.forEach(ext => {
+      const extIndex = current.indexOf(ext);
+      if (extIndex > -1) {
+        current.splice(extIndex, 1);
+      }
+    });
+  }
+
+  emit('update:selectedFilters', current);
+};
+
+const toggleExtension = (extension: string, category: FileCategory) => {
+  const current = [...props.selectedFilters];
+  const extIndex = current.indexOf(extension);
+  const catIndex = current.indexOf(category);
+
+  // Remove parent category if it exists
+  if (catIndex > -1) {
+    current.splice(catIndex, 1);
+  }
+
+  if (extIndex > -1) {
+    // Unchecking extension
+    current.splice(extIndex, 1);
+  } else {
+    // Checking extension
+    current.push(extension);
+  }
+
+  emit('update:selectedFilters', current);
+};
+
+const toggleCategoryExpanded = (category: FileCategory) => {
+  if (expandedCategories.value.has(category)) {
+    expandedCategories.value.delete(category);
+  } else {
+    expandedCategories.value.add(category);
+  }
 };
 
 const clearFilters = () => {
-  emit('update:selectedCategories', []);
+  emit('update:selectedFilters', []);
 };
 
-const hasFilters = computed(() => props.selectedCategories.length > 0);
+const isFilterSelected = (filter: FilterValue) => {
+  return props.selectedFilters.includes(filter);
+};
+
+// Check if a category should be in indeterminate state
+const isCategoryIndeterminate = (category: FileCategory) => {
+  // If the category itself is selected, not indeterminate
+  if (props.selectedFilters.includes(category)) {
+    return false;
+  }
+
+  const extensions = getExtensionsByCategory(category);
+  const selectedExtensions = extensions.filter(ext => props.selectedFilters.includes(ext));
+
+  // Indeterminate if some (but not all) extensions are selected
+  return selectedExtensions.length > 0 && selectedExtensions.length < extensions.length;
+};
+
+// Check if a category checkbox should be checked
+const isCategoryChecked: 'indeterminate' | boolean = (category: FileCategory) => {
+  // Checked if the category itself is selected
+  if (props.selectedFilters.includes(category)) {
+    return true;
+  }
+  if (isCategoryIndeterminate(category)) {
+    return 'indeterminate';
+  }
+
+  // Also checked if ALL extensions are selected
+  const extensions = getExtensionsByCategory(category);
+  if (extensions.length === 0) return false;
+
+  const selectedExtensions = extensions.filter(ext => props.selectedFilters.includes(ext));
+  return selectedExtensions.length === extensions.length;
+};
+
+const hasFilters = computed(() => props.selectedFilters.length > 0);
 </script>
 
 <template>
@@ -54,28 +170,79 @@ const hasFilters = computed(() => props.selectedCategories.length > 0);
           v-if="hasFilters"
           class="ml-2 rounded-full bg-slate-800 px-2 py-0.5 text-xs text-white"
         >
-          {{ selectedCategories.length }}
+          {{ selectedFilters.length }}
         </span>
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent class="w-56">
+    <DropdownMenuContent class="w-64">
       <DropdownMenuLabel>Filter by File Type</DropdownMenuLabel>
       <DropdownMenuSeparator />
-      <div class="max-h-80 overflow-y-auto">
-        <Label
-          v-for="category in categories"
-          :key="category.value"
-          class="relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none hover:bg-slate-100"
-        >
-          <Checkbox
-            type="checkbox"
-            model:value="selectedCategories.includes(category.value)"
-            class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
-            @update:model-value="() => toggleCategory(category.value)"
+
+      <!-- Search Input -->
+      <div class="px-2 pl-4">
+        <div class="relative">
+          <Search class="absolute top-2.5 left-2 h-4 w-4 text-slate-400" />
+          <Input
+            v-model="searchQuery"
+            placeholder="Search file types..."
+            class="h-9 pl-8 text-sm"
           />
-          <span>{{ category.label }}</span>
-        </Label>
+        </div>
       </div>
+      <DropdownMenuSeparator />
+
+      <!-- Category Tree -->
+      <div class="max-h-80 overflow-y-auto">
+        <div v-for="category in filteredTree" :key="category.value" class="mb-1">
+          <!-- Category Header -->
+          <div class="flex items-center">
+            <div
+              @click="toggleCategoryExpanded(category.value)"
+              class="flex h-8 flex-1 items-center gap-1 rounded-sm px-2 text-sm hover:bg-slate-100"
+            >
+              <component
+                :is="expandedCategories.has(category.value) ? ChevronDown : ChevronRight"
+                class="h-4 w-4 text-slate-500"
+              />
+              <Label @click.stop class="ml-4">
+                <Checkbox
+                  :model-value="isCategoryChecked(category.value)"
+                  :indeterminate="isCategoryIndeterminate(category.value)"
+                  class="h-4 w-4 shadow-none"
+                  @click.stop
+                  @update:model-value="() => toggleCategory(category.value)"
+                />
+                <span class="font-medium">{{ category.label }}</span>
+              </Label>
+            </div>
+          </div>
+
+          <!-- Extension Children -->
+          <div
+            v-if="expandedCategories.has(category.value)"
+            class="mt-1 ml-6 space-y-0.5 border-l-2 border-slate-200 pl-2"
+          >
+            <Label
+              v-for="ext in category.extensions"
+              :key="`${category.value}-${ext}`"
+              class="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1 text-sm hover:bg-slate-100"
+            >
+              <Checkbox
+                :model-value="isFilterSelected(ext)"
+                class="h-3.5 w-3.5"
+                @update:model-value="() => toggleExtension(ext, category.value)"
+              />
+              <span class="font-mono text-xs text-slate-600">.{{ ext }}</span>
+            </Label>
+          </div>
+        </div>
+
+        <!-- No results message -->
+        <div v-if="filteredTree.length === 0" class="px-2 py-4 text-center text-sm text-slate-500">
+          No file types found
+        </div>
+      </div>
+
       <DropdownMenuSeparator v-if="hasFilters" />
       <button
         v-if="hasFilters"

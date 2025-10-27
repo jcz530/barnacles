@@ -3,10 +3,9 @@ import { computed, ref, watch } from 'vue';
 import FileTree from './FileTree.vue';
 import FileViewer from './FileViewer.vue';
 import FileSearchInput from '../molecules/FileSearchInput.vue';
-import FileTypeFilter from '../molecules/FileTypeFilter.vue';
+import FileTypeFilter, { type FilterValue } from '../molecules/FileTypeFilter.vue';
 import { Skeleton } from '../../ui/skeleton';
 import type { FileNode } from '../../../types/window';
-import type { FileCategory } from '../../../utils/file-types';
 
 interface Props {
   projectPath: string;
@@ -19,7 +18,7 @@ const error = ref<string | null>(null);
 const fileTree = ref<FileNode[]>([]);
 const selectedFile = ref<FileNode | null>(null);
 const searchQuery = ref('');
-const categoryFilters = ref<FileCategory[]>([]);
+const filters = ref<FilterValue[]>([]);
 
 // Load directory tree on mount
 const loadFileTree = async () => {
@@ -71,10 +70,7 @@ const selectedFilePath = computed(() => selectedFile.value?.path || null);
       <div class="space-y-2 border-b border-slate-200 p-3">
         <FileSearchInput v-model="searchQuery" />
         <div class="flex gap-2">
-          <FileTypeFilter
-            :selected-categories="categoryFilters"
-            @update:selected-categories="categoryFilters = $event"
-          />
+          <FileTypeFilter :selected-filters="filters" @update:selected-filters="filters = $event" />
         </div>
       </div>
 
@@ -99,7 +95,7 @@ const selectedFilePath = computed(() => selectedFile.value?.path || null);
           :project-path="projectPath"
           :selected-path="selectedFilePath"
           :search-query="searchQuery"
-          :category-filters="categoryFilters"
+          :filters="filters"
           @select="handleSelect"
         />
       </div>
