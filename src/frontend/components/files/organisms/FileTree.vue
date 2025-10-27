@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import FileTreeItem from '../molecules/FileTreeItem.vue';
+import FileTreeNode from '../molecules/FileTreeNode.vue';
 import type { FileNode } from '@/types/window';
 import type { FilterValue } from '../molecules/FileTypeFilter.vue';
 import { matchesCategory, type FileCategory } from '@/utils/file-types';
@@ -188,21 +188,6 @@ const handleSelect = (node: FileNode) => {
 const hasActiveFilters = computed(() => {
   return props.searchQuery.trim().length > 0 || props.filters.length > 0;
 });
-
-// Recursive component to render tree nodes
-const renderNode = (node: FileNode, depth: number) => {
-  const counts = node.type === 'directory' ? fileCounts.value.get(node.path) : undefined;
-
-  return {
-    node,
-    projectPath: props.projectPath,
-    depth,
-    isExpanded: expandedPaths.value.has(node.path),
-    isSelected: props.selectedPath === node.path,
-    fileCount: counts,
-    hasFilters: hasActiveFilters.value,
-  };
-};
 </script>
 
 <template>
@@ -211,49 +196,21 @@ const renderNode = (node: FileNode, depth: number) => {
       No files found
     </div>
 
-    <template v-for="node in filteredNodes" :key="node.path">
-      <FileTreeItem v-bind="renderNode(node, 0)" @toggle="toggleExpand" @select="handleSelect" />
-
-      <!-- Recursively render children if directory is expanded -->
-      <template v-if="node.type === 'directory' && expandedPaths.has(node.path) && node.children">
-        <template v-for="child in node.children" :key="child.path">
-          <FileTreeItem
-            v-bind="renderNode(child, 1)"
-            @toggle="toggleExpand"
-            @select="handleSelect"
-          />
-
-          <!-- Level 2 -->
-          <template
-            v-if="child.type === 'directory' && expandedPaths.has(child.path) && child.children"
-          >
-            <template v-for="grandchild in child.children" :key="grandchild.path">
-              <FileTreeItem
-                v-bind="renderNode(grandchild, 2)"
-                @toggle="toggleExpand"
-                @select="handleSelect"
-              />
-
-              <!-- Level 3 and deeper (flatten beyond this for simplicity) -->
-              <template
-                v-if="
-                  grandchild.type === 'directory' &&
-                  expandedPaths.has(grandchild.path) &&
-                  grandchild.children
-                "
-              >
-                <template v-for="deepChild in grandchild.children" :key="deepChild.path">
-                  <FileTreeItem
-                    v-bind="renderNode(deepChild, 3)"
-                    @toggle="toggleExpand"
-                    @select="handleSelect"
-                  />
-                </template>
-              </template>
-            </template>
-          </template>
-        </template>
-      </template>
-    </template>
+    <FileTreeNode
+      v-for="node in filteredNodes"
+      :key="node.path"
+      :node="node"
+      :project-path="projectPath"
+      :depth="0"
+      :is-expanded="expandedPaths.has(node.path)"
+      :is-selected="selectedPath === node.path"
+      :selected-path="selectedPath"
+      :expanded-paths="expandedPaths"
+      :file-counts="fileCounts"
+      :file-count="node.type === 'directory' ? fileCounts.get(node.path) : undefined"
+      :has-filters="hasActiveFilters"
+      @toggle="toggleExpand"
+      @select="handleSelect"
+    />
   </div>
 </template>
