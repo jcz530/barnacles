@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ChevronDown, ChevronRight, Copy, FolderOpen } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, Copy, FolderOpen, FileCheck } from 'lucide-vue-next';
 import { formatFileSize, getFileTypeInfo, getFolderIcon } from '@/utils/file-types';
 import type { FileNode } from '@/types/window';
 import {
@@ -80,6 +80,23 @@ const copyPath = async () => {
     console.error('Failed to copy path:', error);
   }
 };
+
+const copyFile = async () => {
+  // Only allow copying files, not directories
+  if (props.node.type !== 'file') {
+    return;
+  }
+
+  const fullPath = `${props.projectPath}/${props.node.path}`;
+  try {
+    const result = await window.electron?.clipboard.writeFile(fullPath);
+    if (!result?.success) {
+      console.error('Failed to copy file:', result?.error);
+    }
+  } catch (error) {
+    console.error('Failed to copy file:', error);
+  }
+};
 </script>
 
 <template>
@@ -151,6 +168,10 @@ const copyPath = async () => {
       <ContextMenuItem @click="openInFinder">
         <FolderOpen class="h-4 w-4" />
         View in Finder
+      </ContextMenuItem>
+      <ContextMenuItem v-if="node.type === 'file'" @click="copyFile">
+        <FileCheck class="h-4 w-4" />
+        Copy File
       </ContextMenuItem>
       <ContextMenuItem @click="copyPath">
         <Copy class="h-4 w-4" />

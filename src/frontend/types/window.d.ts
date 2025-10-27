@@ -30,6 +30,9 @@ declare global {
         showItemInFolder: (path: string) => Promise<void>;
         openExternal: (url: string) => Promise<void>;
       };
+      clipboard: {
+        writeFile: (path: string) => Promise<{ success: boolean; error?: string }>;
+      };
       updateWindowTitle: (title: string) => void;
       createNewWindow: () => Promise<{ success: boolean; windowId?: number; error?: string }>;
       quitApp: () => Promise<{ success: boolean; error?: string }>;
