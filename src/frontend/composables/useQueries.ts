@@ -1022,6 +1022,7 @@ export const useQueries = () => {
         return response.data;
       },
       enabled: options?.enabled ?? true,
+      refetchOnMount: 'always',
     });
   };
 

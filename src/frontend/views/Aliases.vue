@@ -44,7 +44,9 @@ onMounted(() => {
 const { data: aliasesData, isLoading, refetch } = useAliasesQuery({ enabled: true });
 
 // Query for fetching config path
-const { data: configInfo } = useAliasesConfigPathQuery({ enabled: true });
+const { data: configInfo, refetch: refetchConfigInfo } = useAliasesConfigPathQuery({
+  enabled: true,
+});
 
 // Local state for editing
 const editedAliases = ref<Alias[]>([]);
@@ -240,7 +242,7 @@ const discardChanges = () => {
 const refreshData = async () => {
   editedAliases.value = [];
   newAliases.value = [];
-  await refetch();
+  await Promise.all([refetch(), refetchConfigInfo()]);
 };
 
 // Validate alias name
