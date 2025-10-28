@@ -58,6 +58,14 @@ declare global {
           query: string
         ) => Promise<{ success: boolean; data?: SearchResult[]; error?: string }>;
         selectFolder: () => Promise<{ success: boolean; data?: string; canceled?: boolean; error?: string }>;
+        moveFiles: (
+          filePaths: string[],
+          targetFolder: string
+        ) => Promise<{
+          success: boolean;
+          results?: Array<{ file: string; success: boolean; error?: string }>;
+          error?: string;
+        }>;
       };
     };
   }

@@ -79,5 +79,7 @@ contextBridge.exposeInMainWorld('electron', {
     searchContent: (dirPath: string, query: string) =>
       ipcRenderer.invoke('files:search-content', dirPath, query),
     selectFolder: () => ipcRenderer.invoke('files:select-folder'),
+    moveFiles: (filePaths: string[], targetFolder: string) =>
+      ipcRenderer.invoke('files:move-files', filePaths, targetFolder),
   },
 });

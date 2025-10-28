@@ -354,4 +354,84 @@ export const setupFileSystemBridge = (): void => {
       };
     }
   });
+
+  // Handler for moving files to a folder
+  ipcMain.handle('files:move-files', async (_, filePaths: string[], targetFolder: string) => {
+    try {
+      // Expand tilde in target folder path
+      const expandedTargetFolder = expandTilde(targetFolder);
+
+      // Validate target folder exists
+      if (!existsSync(expandedTargetFolder)) {
+        throw new Error(`Target folder does not exist: ${expandedTargetFolder}`);
+      }
+
+      const stats = statSync(expandedTargetFolder);
+      if (!stats.isDirectory()) {
+        throw new Error(`Target path is not a directory: ${expandedTargetFolder}`);
+      }
+
+      const results: Array<{ file: string; success: boolean; error?: string }> = [];
+
+      for (const filePath of filePaths) {
+        try {
+          // Expand tilde in source file path
+          const expandedFilePath = expandTilde(filePath);
+
+          // Validate source file exists
+          if (!existsSync(expandedFilePath)) {
+            results.push({
+              file: filePath,
+              success: false,
+              error: 'File does not exist',
+            });
+            continue;
+          }
+
+          // Get the file name
+          const fileName = path.basename(expandedFilePath);
+          const targetPath = path.join(expandedTargetFolder, fileName);
+
+          // Check if file already exists at target
+          if (existsSync(targetPath)) {
+            results.push({
+              file: filePath,
+              success: false,
+              error: 'File already exists in target folder',
+            });
+            continue;
+          }
+
+          // Move the file using fs.rename (same as mv)
+          await fs.rename(expandedFilePath, targetPath);
+
+          results.push({
+            file: filePath,
+            success: true,
+          });
+        } catch (error) {
+          results.push({
+            file: filePath,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
+      }
+
+      // Check if all moves were successful
+      const allSuccess = results.every(r => r.success);
+
+      return {
+        success: allSuccess,
+        results,
+        error: allSuccess ? undefined : 'Some files failed to move',
+      };
+    } catch (error) {
+      console.error('Error moving files:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  });
 };

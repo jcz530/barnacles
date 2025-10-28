@@ -7,6 +7,7 @@ import OpenInIDEButton from '../components/projects/molecules/OpenInIDEButton.vu
 import OpenTerminalButton from '../components/projects/molecules/OpenTerminalButton.vue';
 import ProjectActionsDropdown from '../components/projects/molecules/ProjectActionsDropdown.vue';
 import StartProcessButton from '../components/projects/molecules/StartProcessButton.vue';
+import FileDropZone from '../components/files/organisms/FileDropZone.vue';
 import { Skeleton } from '../components/ui/skeleton';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useQueries } from '../composables/useQueries';
@@ -22,6 +23,7 @@ const {
   useProjectPackageScriptsQuery,
   useProjectComposerScriptsQuery,
   useProcessStatusQuery,
+  useRelatedFoldersQuery,
 } = useQueries();
 
 const projectId = computed(() => route.params.id as string);
@@ -31,6 +33,7 @@ const { data: detectedIDEs } = useDetectedIDEsQuery();
 const { data: detectedTerminals } = useDetectedTerminalsQuery();
 const { data: packageScripts } = useProjectPackageScriptsQuery(projectId);
 const { data: composerScripts } = useProjectComposerScriptsQuery(projectId);
+const { data: relatedFolders } = useRelatedFoldersQuery(projectId, { enabled: true });
 
 // Get all process statuses (no project filter)
 const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
@@ -76,10 +79,6 @@ watch(
 // Get running processes for this project
 const runningProcesses = useRunningProcesses(projectId, allProcessStatuses);
 
-const handleBack = () => {
-  router.push('/projects');
-};
-
 const navigateToProcess = () => {
   // Switch to the terminals tab
   router.push({ name: 'ProjectTerminals', params: { id: projectId.value } });
@@ -103,111 +102,113 @@ const activeTab = computed(() => {
 </script>
 
 <template>
-  <div class="flex h-full flex-col">
-    <!-- Header -->
-    <div class="py-4">
-      <div class="mb-4 flex items-center justify-end">
-        <!--        <div class="flex items-center gap-4">-->
-        <!--          <Button variant="ghost" size="sm" @click="handleBack">-->
-        <!--            <ArrowLeft class="mr-2 h-4 w-4" />-->
-        <!--            Back to Projects-->
-        <!--          </Button>-->
-        <!--        </div>-->
-        <div class="flex gap-2">
-          <StartProcessButton
-            v-if="project"
-            :project-id="project.id"
-            :process-statuses="allProcessStatuses"
-            :is-loading="isLoading"
-          />
+  <FileDropZone :folders="relatedFolders || []">
+    <div class="flex h-full flex-col">
+      <!-- Header -->
+      <div class="py-4">
+        <div class="mb-4 flex items-center justify-end">
+          <!--        <div class="flex items-center gap-4">-->
+          <!--          <Button variant="ghost" size="sm" @click="handleBack">-->
+          <!--            <ArrowLeft class="mr-2 h-4 w-4" />-->
+          <!--            Back to Projects-->
+          <!--          </Button>-->
+          <!--        </div>-->
+          <div class="flex gap-2">
+            <StartProcessButton
+              v-if="project"
+              :project-id="project.id"
+              :process-statuses="allProcessStatuses"
+              :is-loading="isLoading"
+            />
 
-          <OpenInIDEButton
-            v-if="project"
-            :project-id="project.id"
-            :detected-i-d-es="detectedIDEs"
-            :preferred-ide-id="project.preferredIde"
-            :is-loading="isLoading"
-          />
+            <OpenInIDEButton
+              v-if="project"
+              :project-id="project.id"
+              :detected-i-d-es="detectedIDEs"
+              :preferred-ide-id="project.preferredIde"
+              :is-loading="isLoading"
+            />
 
-          <OpenTerminalButton
-            v-if="project"
-            :project-id="project.id"
-            :detected-terminals="detectedTerminals"
-            :preferred-terminal-id="project.preferredTerminal"
-            :is-loading="isLoading"
-          />
+            <OpenTerminalButton
+              v-if="project"
+              :project-id="project.id"
+              :detected-terminals="detectedTerminals"
+              :preferred-terminal-id="project.preferredTerminal"
+              :is-loading="isLoading"
+            />
 
-          <ProjectActionsDropdown
-            v-if="project"
-            :project-id="project.id"
-            :project-path="project.path"
-            :project-name="project.name"
-            :is-archived="!!project.archivedAt"
-            :is-favorite="project.isFavorite"
-            :git-remote-url="project.stats?.gitRemoteUrl"
-            :third-party-size="project.stats?.thirdPartySize"
-            :preferred-ide-id="project.preferredIde"
-            :preferred-terminal-id="project.preferredTerminal"
-            :process-statuses="allProcessStatuses"
-          />
-        </div>
-      </div>
-
-      <div v-if="isLoading" class="space-y-2">
-        <Skeleton class="h-8 w-64" />
-        <Skeleton class="h-4 w-96" />
-      </div>
-      <div v-else-if="project" class="ml-6 flex items-start gap-4">
-        <ProjectIcon
-          :project-id="project.id"
-          :project-name="project.name"
-          :has-icon="!!project.icon"
-          size="lg"
-        />
-        <div class="flex-1">
-          <div class="flex items-center gap-3">
-            <h1 class="text-3xl font-bold text-slate-800">{{ project.name }}</h1>
+            <ProjectActionsDropdown
+              v-if="project"
+              :project-id="project.id"
+              :project-path="project.path"
+              :project-name="project.name"
+              :is-archived="!!project.archivedAt"
+              :is-favorite="project.isFavorite"
+              :git-remote-url="project.stats?.gitRemoteUrl"
+              :third-party-size="project.stats?.thirdPartySize"
+              :preferred-ide-id="project.preferredIde"
+              :preferred-terminal-id="project.preferredTerminal"
+              :process-statuses="allProcessStatuses"
+            />
           </div>
-          <p v-if="project.description" class="mt-1 text-slate-600">{{ project.description }}</p>
-          <ProcessIndicator
-            v-if="runningProcesses.length > 0"
-            :process="runningProcesses[0]"
-            :on-navigate-to-process="navigateToProcess"
-            class="mt-2"
+        </div>
+
+        <div v-if="isLoading" class="space-y-2">
+          <Skeleton class="h-8 w-64" />
+          <Skeleton class="h-4 w-96" />
+        </div>
+        <div v-else-if="project" class="ml-6 flex items-start gap-4">
+          <ProjectIcon
+            :project-id="project.id"
+            :project-name="project.name"
+            :has-icon="!!project.icon"
+            size="lg"
           />
+          <div class="flex-1">
+            <div class="flex items-center gap-3">
+              <h1 class="text-3xl font-bold text-slate-800">{{ project.name }}</h1>
+            </div>
+            <p v-if="project.description" class="mt-1 text-slate-600">{{ project.description }}</p>
+            <ProcessIndicator
+              v-if="runningProcesses.length > 0"
+              :process="runningProcesses[0]"
+              :on-navigate-to-process="navigateToProcess"
+              class="mt-2"
+            />
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Content -->
-    <div class="flex-1 overflow-y-auto">
-      <div v-if="isLoading" class="grid gap-6 md:grid-cols-2">
-        <Skeleton v-for="i in 4" :key="i" class="h-48 w-full" />
-      </div>
+      <!-- Content -->
+      <div class="flex-1 overflow-y-auto">
+        <div v-if="isLoading" class="grid gap-6 md:grid-cols-2">
+          <Skeleton v-for="i in 4" :key="i" class="h-48 w-full" />
+        </div>
 
-      <div v-else-if="project" class="w-full">
-        <!-- Tab Navigation -->
-        <div
-          class="mb-6 inline-flex h-9 items-center justify-center rounded-lg bg-slate-100 p-1 text-slate-500"
-        >
-          <router-link
-            v-for="tab in tabs"
-            :key="tab.value"
-            :to="{ name: tab.name, params: { id: projectId } }"
-            class="inline-flex items-center justify-center rounded-md px-3 py-1 text-sm font-medium whitespace-nowrap ring-offset-white transition-all focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
-            :class="activeTab === tab.value ? 'text-slate-950 shadow' : 'hover:bg-slate-200/50'"
+        <div v-else-if="project" class="w-full">
+          <!-- Tab Navigation -->
+          <div
+            class="mb-6 inline-flex h-9 items-center justify-center rounded-lg bg-slate-100 p-1 text-slate-500"
           >
-            {{ tab.label }}
-          </router-link>
+            <router-link
+              v-for="tab in tabs"
+              :key="tab.value"
+              :to="{ name: tab.name, params: { id: projectId } }"
+              class="inline-flex items-center justify-center rounded-md px-3 py-1 text-sm font-medium whitespace-nowrap ring-offset-white transition-all focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+              :class="activeTab === tab.value ? 'text-slate-950 shadow' : 'hover:bg-slate-200/50'"
+            >
+              {{ tab.label }}
+            </router-link>
+          </div>
+
+          <!-- Tab Content via Router View -->
+          <router-view />
         </div>
 
-        <!-- Tab Content via Router View -->
-        <router-view />
-      </div>
-
-      <div v-else class="py-12 text-center">
-        <p class="text-slate-600">Project not found</p>
+        <div v-else class="py-12 text-center">
+          <p class="text-slate-600">Project not found</p>
+        </div>
       </div>
     </div>
-  </div>
+  </FileDropZone>
 </template>
