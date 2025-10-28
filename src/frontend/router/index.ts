@@ -5,6 +5,7 @@ import ProjectReadmeTab from '../components/projects/organisms/ProjectReadmeTab.
 import ProjectTerminalsTab from '../components/projects/organisms/ProjectTerminalsTab.vue';
 import ProjectFilesTab from '../components/projects/organisms/ProjectFilesTab.vue';
 import Aliases from '../views/Aliases.vue';
+import ConfigFilesPage from '../pages/ConfigFilesPage.vue';
 import Home from '../views/Home.vue';
 import Hosts from '../views/Hosts.vue';
 import PresetPacks from '../views/PresetPacks.vue';
@@ -88,6 +89,11 @@ const routes: RouteRecordRaw[] = [
         path: '/aliases/presets',
         name: 'PresetPacks',
         component: PresetPacks,
+      },
+      {
+        path: '/configs',
+        name: 'ConfigFiles',
+        component: ConfigFilesPage,
       },
       {
         path: '/update-test',

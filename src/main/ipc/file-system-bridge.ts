@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as os from 'os';
 import { existsSync, statSync } from 'fs';
 
 // Directories and files to exclude from the tree
@@ -41,6 +42,16 @@ export interface SearchResult {
   lineContent: string;
   matchStart: number;
   matchEnd: number;
+}
+
+/**
+ * Expands tilde (~) in paths to the user's home directory
+ */
+function expandTilde(filepath: string): string {
+  if (filepath.startsWith('~/') || filepath === '~') {
+    return path.join(os.homedir(), filepath.slice(2));
+  }
+  return filepath;
 }
 
 /**
@@ -172,17 +183,20 @@ export const setupFileSystemBridge = (): void => {
   // Handler for reading directory tree
   ipcMain.handle('files:read-directory', async (_, dirPath: string) => {
     try {
+      // Expand tilde in path
+      const expandedPath = expandTilde(dirPath);
+
       // Validate path exists
-      if (!existsSync(dirPath)) {
-        throw new Error(`Path does not exist: ${dirPath}`);
+      if (!existsSync(expandedPath)) {
+        throw new Error(`Path does not exist: ${expandedPath}`);
       }
 
-      const stats = statSync(dirPath);
+      const stats = statSync(expandedPath);
       if (!stats.isDirectory()) {
-        throw new Error(`Path is not a directory: ${dirPath}`);
+        throw new Error(`Path is not a directory: ${expandedPath}`);
       }
 
-      const tree = await readDirectoryTree(dirPath, dirPath);
+      const tree = await readDirectoryTree(expandedPath, expandedPath);
       return { success: true, data: tree };
     } catch (error) {
       console.error('Error reading directory:', error);
@@ -196,20 +210,23 @@ export const setupFileSystemBridge = (): void => {
   // Handler for reading file contents
   ipcMain.handle('files:read-file', async (_, filePath: string, forceText = false) => {
     try {
+      // Expand tilde in path
+      const expandedPath = expandTilde(filePath);
+
       // Validate path exists
-      if (!existsSync(filePath)) {
-        throw new Error(`File does not exist: ${filePath}`);
+      if (!existsSync(expandedPath)) {
+        throw new Error(`File does not exist: ${expandedPath}`);
       }
 
-      const stats = statSync(filePath);
+      const stats = statSync(expandedPath);
       if (!stats.isFile()) {
-        throw new Error(`Path is not a file: ${filePath}`);
+        throw new Error(`Path is not a file: ${expandedPath}`);
       }
 
       // If forcing text mode, read as text
       if (forceText) {
         try {
-          const content = await fs.readFile(filePath, 'utf-8');
+          const content = await fs.readFile(expandedPath, 'utf-8');
           return {
             success: true,
             data: {
@@ -220,7 +237,7 @@ export const setupFileSystemBridge = (): void => {
           };
         } catch {
           // If text reading fails, still try binary
-          const content = await fs.readFile(filePath);
+          const content = await fs.readFile(expandedPath);
           return {
             success: true,
             data: {
@@ -246,12 +263,12 @@ export const setupFileSystemBridge = (): void => {
         'heic',
       ]);
 
-      const ext = path.extname(filePath).toLowerCase().slice(1);
+      const ext = path.extname(expandedPath).toLowerCase().slice(1);
       const isImage = imageExtensions.has(ext);
 
       // Read images as binary to enable preview
       if (isImage) {
-        const content = await fs.readFile(filePath);
+        const content = await fs.readFile(expandedPath);
         return {
           success: true,
           data: {
@@ -264,7 +281,7 @@ export const setupFileSystemBridge = (): void => {
 
       // Try to read non-images as text first
       try {
-        const content = await fs.readFile(filePath, 'utf-8');
+        const content = await fs.readFile(expandedPath, 'utf-8');
         return {
           success: true,
           data: {
@@ -275,7 +292,7 @@ export const setupFileSystemBridge = (): void => {
         };
       } catch {
         // If text reading fails, read as binary
-        const content = await fs.readFile(filePath);
+        const content = await fs.readFile(expandedPath);
         return {
           success: true,
           data: {
@@ -301,7 +318,10 @@ export const setupFileSystemBridge = (): void => {
         return { success: true, data: [] };
       }
 
-      const results = await searchInFiles(dirPath, query.trim());
+      // Expand tilde in path
+      const expandedPath = expandTilde(dirPath);
+
+      const results = await searchInFiles(expandedPath, query.trim());
       return { success: true, data: results };
     } catch (error) {
       console.error('Error searching files:', error);

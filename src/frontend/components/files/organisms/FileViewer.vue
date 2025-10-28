@@ -83,7 +83,8 @@ const loadFile = async (forceText = false) => {
   error.value = null;
 
   try {
-    const fullPath = `${props.projectPath}/${props.filePath}`;
+    // Only join paths if projectPath is provided
+    const fullPath = props.projectPath ? `${props.projectPath}/${props.filePath}` : props.filePath;
     const result = await window.electron.files.readFile(fullPath, forceText);
 
     if (result.success && result.data) {
