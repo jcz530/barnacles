@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import aliases from './aliases';
 import processes from './processes';
 import projects from './projects';
 import settings from './settings';
@@ -53,6 +54,7 @@ api
   .route('/projects', projects)
   .route('/processes', processes)
   .route('/settings', settings)
-  .route('/system', system);
+  .route('/system', system)
+  .route('/aliases', aliases);
 
 export default api;

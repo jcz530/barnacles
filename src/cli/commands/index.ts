@@ -4,6 +4,7 @@ import { StatusCommand } from './status.js';
 import { HelpCommand } from './help.js';
 import { VersionCommand } from './version.js';
 import { ProjectsCommand } from './projects.js';
+import { AliasesCommand } from './aliases.js';
 import { displayCommandHelp } from '../utils/command-help.js';
 import { compactLogo, getTitle } from '../utils/branding';
 import { intro, log, outro } from '@clack/prompts';
@@ -21,6 +22,7 @@ function registerCommands(): void {
   registry.register(new VersionCommand());
   registry.register(new StatusCommand());
   registry.register(new ProjectsCommand());
+  registry.register(new AliasesCommand());
   registry.register(new HelpCommand());
 }
 

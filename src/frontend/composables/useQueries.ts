@@ -3,13 +3,18 @@ import type { MaybeRef } from 'vue';
 import { computed, unref } from 'vue';
 import { API_ROUTES } from '../../shared/constants';
 import type {
+  Alias,
+  AliasTheme,
   ApiResponse,
+  DetectedAlias,
   DetectedIDE,
   DetectedTerminal,
   HelloResponse,
   IDE,
+  PresetPack,
   ProjectWithDetails,
   Setting,
+  ShellInfo,
   Technology,
   Terminal,
   User,
@@ -982,6 +987,234 @@ export const useQueries = () => {
     });
   };
 
+  // Get all aliases
+  const useAliasesQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['aliases'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<Alias[]>>('GET', API_ROUTES.ALIASES);
+
+        if (!response) {
+          throw new Error('Failed to fetch aliases');
+        }
+
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+      refetchOnMount: 'always',
+    });
+  };
+
+  // Get aliases config path
+  const useAliasesConfigPathQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['aliases-config-path'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<ShellInfo>>(
+          'GET',
+          API_ROUTES.ALIASES_CONFIG_PATH
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch aliases config path');
+        }
+
+        return response.data;
+      },
+      enabled: options?.enabled ?? true,
+      refetchOnMount: 'always',
+    });
+  };
+
+  // Detect existing aliases from shell profiles
+  const useDetectAliasesQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['aliases-detect'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<DetectedAlias[]>>(
+          'GET',
+          API_ROUTES.ALIASES_DETECT
+        );
+
+        if (!response) {
+          throw new Error('Failed to detect aliases');
+        }
+
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? false,
+    });
+  };
+
+  // Get preset alias packs
+  const usePresetsQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['alias-presets'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<PresetPack[]>>(
+          'GET',
+          API_ROUTES.ALIASES_PRESETS
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch preset packs');
+        }
+
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
+  // Get alias themes
+  const useAliasThemesQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['alias-themes'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<AliasTheme[]>>('GET', API_ROUTES.ALIASES_THEMES);
+
+        if (!response) {
+          throw new Error('Failed to fetch alias themes');
+        }
+
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
+  // Create alias mutation
+  const useCreateAliasMutation = () => {
+    return useMutation({
+      mutationFn: async (data: {
+        name: string;
+        command: string;
+        description?: string;
+        color?: string;
+        showCommand?: boolean;
+        category?: string;
+        order?: number;
+      }) => {
+        const response = await apiCall<ApiResponse<Alias>>('POST', API_ROUTES.ALIASES, data);
+
+        if (!response) {
+          throw new Error('Failed to create alias');
+        }
+
+        return response.data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['aliases'] });
+      },
+    });
+  };
+
+  // Update alias mutation
+  const useUpdateAliasMutation = () => {
+    return useMutation({
+      mutationFn: async ({
+        id,
+        data,
+      }: {
+        id: string;
+        data: Partial<{
+          name: string;
+          command: string;
+          description: string;
+          color: string;
+          showCommand: boolean;
+          category: string;
+          order: number;
+        }>;
+      }) => {
+        const response = await apiCall<ApiResponse<Alias>>('PUT', API_ROUTES.ALIAS_BY_ID(id), data);
+
+        if (!response) {
+          throw new Error('Failed to update alias');
+        }
+
+        return response.data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['aliases'] });
+      },
+    });
+  };
+
+  // Delete alias mutation
+  const useDeleteAliasMutation = () => {
+    return useMutation({
+      mutationFn: async (id: string) => {
+        await apiCall('DELETE', API_ROUTES.ALIAS_BY_ID(id));
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['aliases'] });
+      },
+    });
+  };
+
+  // Sync aliases mutation
+  const useSyncAliasesMutation = () => {
+    return useMutation({
+      mutationFn: async () => {
+        const response = await apiCall<
+          ApiResponse<{ configPath: string; updatedProfiles: string[] }>
+        >('POST', API_ROUTES.ALIASES_SYNC);
+
+        if (!response) {
+          throw new Error('Failed to sync aliases');
+        }
+
+        return response.data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['aliases'] });
+      },
+    });
+  };
+
+  // Import aliases mutation
+  const useImportAliasesMutation = () => {
+    return useMutation({
+      mutationFn: async (aliases: Array<{ name: string; command: string; category?: string }>) => {
+        const response = await apiCall<ApiResponse<Alias[]>>('POST', API_ROUTES.ALIASES_IMPORT, {
+          aliases,
+        });
+
+        if (!response) {
+          throw new Error('Failed to import aliases');
+        }
+
+        return response.data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['aliases'] });
+      },
+    });
+  };
+
+  // Install preset pack mutation
+  const useInstallPresetMutation = () => {
+    return useMutation({
+      mutationFn: async ({ packId, aliasNames }: { packId: string; aliasNames: string[] }) => {
+        const response = await apiCall<ApiResponse<Alias[]>>(
+          'POST',
+          API_ROUTES.ALIASES_PRESETS_INSTALL,
+          { packId, aliasNames }
+        );
+
+        if (!response) {
+          throw new Error('Failed to install preset pack');
+        }
+
+        return response.data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['aliases'] });
+      },
+    });
+  };
+
   return {
     useHelloQuery,
     useUsersQuery,
@@ -1027,5 +1260,16 @@ export const useQueries = () => {
     useHostsQuery,
     useHostsPathQuery,
     useUpdateHostsMutation,
+    useAliasesQuery,
+    useAliasesConfigPathQuery,
+    useDetectAliasesQuery,
+    usePresetsQuery,
+    useAliasThemesQuery,
+    useCreateAliasMutation,
+    useUpdateAliasMutation,
+    useDeleteAliasMutation,
+    useSyncAliasesMutation,
+    useImportAliasesMutation,
+    useInstallPresetMutation,
   };
 };

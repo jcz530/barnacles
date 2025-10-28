@@ -214,3 +214,40 @@ export const settings = sqliteTable('settings', {
     .notNull()
     .$defaultFn(() => new Date()),
 });
+
+export const aliases = sqliteTable('aliases', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  name: text('name').notNull(),
+  command: text('command').notNull(),
+  description: text('description'),
+  color: text('color'), // ANSI color code or null to use theme
+  showCommand: integer('show_command', { mode: 'boolean' }).notNull().default(true),
+  category: text('category').notNull().default('custom'), // git, docker, system, custom
+  order: integer('order').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export const aliasThemes = sqliteTable('alias_themes', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  name: text('name').notNull().unique(),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(false),
+  gitColor: text('git_color').notNull().default('32'), // green
+  dockerColor: text('docker_color').notNull().default('34'), // blue
+  systemColor: text('system_color').notNull().default('33'), // yellow
+  customColor: text('custom_color').notNull().default('36'), // cyan
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});

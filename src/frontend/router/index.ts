@@ -4,8 +4,10 @@ import ProjectOverviewTab from '../components/projects/organisms/ProjectOverview
 import ProjectReadmeTab from '../components/projects/organisms/ProjectReadmeTab.vue';
 import ProjectTerminalsTab from '../components/projects/organisms/ProjectTerminalsTab.vue';
 import ProjectFilesTab from '../components/projects/organisms/ProjectFilesTab.vue';
+import Aliases from '../views/Aliases.vue';
 import Home from '../views/Home.vue';
 import Hosts from '../views/Hosts.vue';
+import PresetPacks from '../views/PresetPacks.vue';
 import ProjectDetail from '../views/ProjectDetail.vue';
 import Projects from '../views/Projects.vue';
 import Settings from '../views/Settings.vue';
@@ -76,6 +78,16 @@ const routes: RouteRecordRaw[] = [
         path: '/hosts',
         name: 'Hosts',
         component: Hosts,
+      },
+      {
+        path: '/aliases',
+        name: 'Aliases',
+        component: Aliases,
+      },
+      {
+        path: '/aliases/presets',
+        name: 'PresetPacks',
+        component: PresetPacks,
       },
       {
         path: '/update-test',
