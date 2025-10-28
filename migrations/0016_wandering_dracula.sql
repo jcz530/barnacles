@@ -17,7 +17,7 @@ CREATE TABLE `aliases` (
 	`command` text NOT NULL,
 	`description` text,
 	`color` text,
-	`show_command` integer DEFAULT false NOT NULL,
+	`show_command` integer DEFAULT true NOT NULL,
 	`category` text DEFAULT 'custom' NOT NULL,
 	`order` integer DEFAULT 0 NOT NULL,
 	`created_at` integer NOT NULL,
