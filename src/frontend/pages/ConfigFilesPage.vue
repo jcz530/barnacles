@@ -94,8 +94,7 @@ const loadConfigFiles = async () => {
   error.value = null;
 
   try {
-    const tree = await buildConfigFileTree();
-    fileTree.value = tree;
+    fileTree.value = await buildConfigFileTree();
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to load config files';
     fileTree.value = [];
@@ -115,7 +114,7 @@ const handleCollapseAll = () => {
 </script>
 
 <template>
-  <div class="flex h-[calc(100vh-8rem)] flex-col p-6">
+  <div class="mt-6 flex h-[calc(100vh-5rem)] flex-col">
     <div class="mb-4">
       <h1 class="text-2xl font-semibold text-slate-900">Config Files</h1>
       <p class="mt-1 text-sm text-slate-600">
