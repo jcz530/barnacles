@@ -35,7 +35,12 @@ const errorMessage = ref('');
 watch(
   () => props.open,
   isOpen => {
-    if (!isOpen) {
+    if (isOpen) {
+      // Auto-select if there's only one folder
+      if (props.folders.length === 1) {
+        selectedFolderId.value = props.folders[0].id;
+      }
+    } else {
       selectedFolderId.value = '';
       isMoving.value = false;
       errorMessage.value = '';

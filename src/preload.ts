@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import type { ApiMethod } from './shared/types/api';
 import type { UpdateInfo, DownloadProgress, UpdateError } from './shared/types/updater';
 
@@ -81,5 +81,6 @@ contextBridge.exposeInMainWorld('electron', {
     selectFolder: () => ipcRenderer.invoke('files:select-folder'),
     moveFiles: (filePaths: string[], targetFolder: string) =>
       ipcRenderer.invoke('files:move-files', filePaths, targetFolder),
+    getPathForFile: (file: File) => webUtils.getPathForFile(file),
   },
 });

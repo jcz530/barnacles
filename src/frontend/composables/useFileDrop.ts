@@ -9,31 +9,31 @@ interface UseFileDropOptions {
 export const useFileDrop = (targetRef: Ref<HTMLElement | null>, options: UseFileDropOptions) => {
   const { isOverDropZone } = useDropZone(targetRef, {
     onDrop: files => {
-      console.log('on drop', files);
       // Check if enabled
       const isEnabled =
         typeof options.enabled === 'object' && 'value' in options.enabled
           ? options.enabled.value
           : (options.enabled ?? true);
-      console.log('isEnabled', isEnabled);
+
       if (!isEnabled) return;
 
-      // Get file paths from dropped files
+      // Get file paths from dropped files using Electron's webUtils
       const filePaths: string[] = [];
 
       if (files) {
-        // In Electron, we can access the file paths directly
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
-          // The path property is available in Electron
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const path = (file as any).path;
-          if (path) {
-            filePaths.push(path);
+          try {
+            // Use Electron's webUtils.getPathForFile to get the actual file path
+            const path = window.electron.files.getPathForFile(file);
+            if (path) {
+              filePaths.push(path);
+            }
+          } catch (error) {
+            console.error('Failed to get path for file:', error);
           }
         }
       }
-      console.log('filePaths', filePaths);
 
       if (filePaths.length > 0) {
         options.onDrop(filePaths);

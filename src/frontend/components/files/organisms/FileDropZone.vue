@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useFileDrop } from '@/composables/useFileDrop';
 import MoveFilesToFolderDialog from '../../projects/organisms/MoveFilesToFolderDialog.vue';
 import { toast } from 'vue-sonner';
+import { FolderInput } from 'lucide-vue-next';
 
 interface Props {
   folders: Array<{ id: string; folderPath: string }>;
@@ -22,12 +23,9 @@ const hasRelatedFolders = computed(() => {
 });
 
 const handleFileDrop = (files: string[]) => {
-  console.log('handleFileDrop', files);
   if (!hasRelatedFolders.value) {
-    toast({
-      title: 'No related folders',
+    toast.error('No related folders', {
       description: 'Please add related folders first before moving files.',
-      variant: 'destructive',
     });
     return;
   }
@@ -38,7 +36,7 @@ const handleFileDrop = (files: string[]) => {
 
 const isEnabled = computed(() => props.enabled && hasRelatedFolders.value);
 
-const { isDragging, isOverDropZone } = useFileDrop(dropZoneRef, {
+const { isDragging } = useFileDrop(dropZoneRef, {
   onDrop: handleFileDrop,
   enabled: isEnabled,
 });
@@ -47,23 +45,20 @@ const handleMoveFiles = async (targetFolderId: string) => {
   const targetFolder = props.folders?.find(f => f.id === targetFolderId);
 
   if (!targetFolder) {
-    toast({
-      title: 'Error',
+    toast.error('Error', {
       description: 'Target folder not found.',
-      variant: 'destructive',
     });
     return;
   }
 
   try {
-    const result = await window.electron.files.moveFiles(
-      droppedFiles.value,
-      targetFolder.folderPath
-    );
+    // Ensure we're only passing string paths, not File objects
+    const filePaths = droppedFiles.value.map(f => String(f));
+
+    const result = await window.electron.files.moveFiles(filePaths, targetFolder.folderPath);
 
     if (result.success) {
-      toast({
-        title: 'Files moved successfully',
+      toast.success('Files moved successfully', {
         description: `Moved ${droppedFiles.value.length} file(s) to ${targetFolder.folderPath}`,
       });
       isMoveDialogOpen.value = false;
@@ -76,18 +71,15 @@ const handleMoveFiles = async (targetFolderId: string) => {
           ? `Failed to move ${failedFiles.length} file(s): ${failedFiles.map(f => f.error).join(', ')}`
           : result.error || 'Failed to move files';
 
-      toast({
-        title: 'Error moving files',
+      toast.error('Error moving files', {
         description: errorMsg,
-        variant: 'destructive',
       });
     }
   } catch (error) {
     console.error('Error moving files:', error);
-    toast({
-      title: 'Error',
-      description: error instanceof Error ? error.message : 'Failed to move files',
-      variant: 'destructive',
+    const errorMessage = error instanceof Error ? error.message : 'Failed to move files';
+    toast.error('Error moving files', {
+      description: errorMessage,
     });
   }
 };
@@ -99,11 +91,7 @@ const handleCloseDialog = () => {
 </script>
 
 <template>
-  <div
-    ref="dropZoneRef"
-    class="h-full w-full"
-    :class="isOverDropZone ? 'bg-red-400' : 'bg-emerald-400'"
-  >
+  <div ref="dropZoneRef" class="h-full w-full">
     <!-- Drop zone indicator overlay -->
     <div
       v-if="isDragging"
@@ -111,14 +99,7 @@ const handleCloseDialog = () => {
     >
       <div class="rounded-lg border-4 border-dashed border-sky-500 bg-slate-100 p-8 shadow-2xl">
         <div class="flex flex-col items-center gap-4">
-          <svg class="h-16 w-16 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            />
-          </svg>
+          <FolderInput class="h-16 w-16 text-sky-500" />
           <div class="text-center">
             <p class="text-xl font-semibold text-slate-900">Drop files here</p>
             <p class="mt-1 text-sm text-slate-600">

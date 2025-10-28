@@ -66,6 +66,7 @@ declare global {
           results?: Array<{ file: string; success: boolean; error?: string }>;
           error?: string;
         }>;
+        getPathForFile: (file: File) => string;
       };
     };
   }
