@@ -56,17 +56,21 @@ const sorting = ref<SortingState>([{ id: 'name', desc: false }]);
 
 // Track which fields have been modified
 const modifiedFields = computed(() => {
-  const modified: Record<string, { name: boolean; command: boolean; description: boolean }> = {};
+  const modified: Record<
+    string,
+    { name: boolean; command: boolean; description: boolean; showCommand: boolean }
+  > = {};
 
   if (!aliasesData.value) return modified;
 
-  editedAliases.value.forEach(editedAlias => {
+  editedAliases.value.forEach((editedAlias: Alias) => {
     const original = aliasesData.value?.find(a => a.id === editedAlias.id);
     if (original) {
       modified[editedAlias.id] = {
         name: editedAlias.name !== original.name,
         command: editedAlias.command !== original.command,
         description: editedAlias.description !== original.description,
+        showCommand: editedAlias.showCommand !== original.showCommand,
       };
     }
   });
@@ -117,8 +121,8 @@ const syncMutation = useSyncAliasesMutation();
 const addAlias = () => {
   const maxOrder = Math.max(
     0,
-    ...editedAliases.value.map(a => a.order),
-    ...newAliases.value.map(a => a.order)
+    ...editedAliases.value.map((a: Alias) => a.order),
+    ...newAliases.value.map((a: Alias) => a.order)
   );
   const newAlias: Alias = {
     id: `new-${Date.now()}`,
@@ -138,15 +142,15 @@ const addAlias = () => {
 // Remove alias entry
 const removeAlias = (id: string, isNew: boolean = false) => {
   if (isNew) {
-    newAliases.value = newAliases.value.filter(a => a.id !== id);
+    newAliases.value = newAliases.value.filter((a: Alias) => a.id !== id);
   } else {
-    editedAliases.value = editedAliases.value.filter(a => a.id !== id);
+    editedAliases.value = editedAliases.value.filter((a: Alias) => a.id !== id);
   }
 };
 
 // Update alias entry (existing aliases)
 const updateAlias = (id: string, field: keyof Alias, value: unknown) => {
-  const alias = editedAliases.value.find(a => a.id === id);
+  const alias = editedAliases.value.find((a: Alias) => a.id === id);
   if (alias) {
     (alias[field] as typeof value) = value;
   }
@@ -154,7 +158,7 @@ const updateAlias = (id: string, field: keyof Alias, value: unknown) => {
 
 // Update new alias entry
 const updateNewAlias = (id: string, field: keyof Alias, value: unknown) => {
-  const alias = newAliases.value.find(a => a.id === id);
+  const alias = newAliases.value.find((a: Alias) => a.id === id);
   if (alias) {
     (alias[field] as typeof value) = value;
   }
@@ -165,7 +169,7 @@ const saveChanges = async () => {
   try {
     // Delete removed aliases
     if (aliasesData.value) {
-      const currentIds = new Set(editedAliases.value.map(a => a.id));
+      const currentIds = new Set(editedAliases.value.map((a: Alias) => a.id));
       const removedAliases = aliasesData.value.filter(a => !currentIds.has(a.id));
       for (const alias of removedAliases) {
         await deleteMutation.mutateAsync(alias.id);
