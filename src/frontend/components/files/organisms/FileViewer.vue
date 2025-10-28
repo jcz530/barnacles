@@ -83,8 +83,14 @@ const loadFile = async (forceText = false) => {
   error.value = null;
 
   try {
-    // Only join paths if projectPath is provided
-    const fullPath = props.projectPath ? `${props.projectPath}/${props.filePath}` : props.filePath;
+    // Determine the full path:
+    // - If filePath is absolute (starts with /), use it directly
+    // - Otherwise, join with projectPath if available
+    const fullPath = props.filePath.startsWith('/')
+      ? props.filePath
+      : props.projectPath
+        ? `${props.projectPath}/${props.filePath}`
+        : props.filePath;
     const result = await window.electron.files.readFile(fullPath, forceText);
 
     if (result.success && result.data) {
@@ -254,7 +260,12 @@ const copyToClipboard = async () => {
 
     // For SVG files viewed as images, fetch the text content instead of copying base64
     if (isSvgFile.value && fileType.value === 'binary') {
-      const fullPath = `${props.projectPath}/${props.filePath}`;
+      // Use same logic as loadFile to construct the full path
+      const fullPath = props.filePath.startsWith('/')
+        ? props.filePath
+        : props.projectPath
+          ? `${props.projectPath}/${props.filePath}`
+          : props.filePath;
       const result = await window.electron.files.readFile(fullPath, true);
 
       if (result.success && result.data) {

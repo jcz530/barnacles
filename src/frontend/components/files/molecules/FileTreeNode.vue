@@ -13,14 +13,21 @@ interface Props {
   fileCounts: Map<string, { total: number; filtered: number }>;
   fileCount?: { total: number; filtered: number };
   hasFilters: boolean;
+  isRelatedFoldersMode?: boolean;
 }
 
-defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  isRelatedFoldersMode: false,
+});
 
 const emit = defineEmits<{
   toggle: [node: FileNode];
   select: [node: FileNode];
+  'remove-folder': [folderPath: string];
 }>();
+
+// Check if this node is a root folder in related folders mode
+const isRootFolder = props.depth === 0 && props.isRelatedFoldersMode;
 </script>
 
 <template>
@@ -34,8 +41,10 @@ const emit = defineEmits<{
       :is-selected="isSelected"
       :file-count="fileCount"
       :has-filters="hasFilters"
+      :is-root-folder="isRootFolder"
       @toggle="emit('toggle', node)"
       @select="emit('select', node)"
+      @remove-folder="emit('remove-folder', $event)"
     />
 
     <!-- Recursively render children if directory is expanded -->
@@ -53,8 +62,10 @@ const emit = defineEmits<{
         :file-counts="fileCounts"
         :file-count="child.type === 'directory' ? fileCounts.get(child.path) : undefined"
         :has-filters="hasFilters"
+        :is-related-folders-mode="isRelatedFoldersMode"
         @toggle="emit('toggle', $event)"
         @select="emit('select', $event)"
+        @remove-folder="emit('remove-folder', $event)"
       />
     </template>
   </div>

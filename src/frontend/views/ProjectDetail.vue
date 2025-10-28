@@ -90,6 +90,7 @@ const tabs = [
   { name: 'ProjectOverview', label: 'Overview', value: 'overview' },
   { name: 'ProjectReadme', label: 'README.md', value: 'readme' },
   { name: 'ProjectFiles', label: 'Files', value: 'files' },
+  { name: 'ProjectRelatedFiles', label: 'Related Files', value: 'related-files' },
   { name: 'ProjectTerminals', label: 'Processes', value: 'terminals' },
 ];
 
@@ -179,7 +180,7 @@ const activeTab = computed(() => {
     </div>
 
     <!-- Content -->
-    <div class="flex-1 overflow-y-auto p-6">
+    <div class="flex-1 overflow-y-auto">
       <div v-if="isLoading" class="grid gap-6 md:grid-cols-2">
         <Skeleton v-for="i in 4" :key="i" class="h-48 w-full" />
       </div>

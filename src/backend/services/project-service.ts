@@ -4,6 +4,7 @@ import {
   projectLanguageStats,
   projectProcessCommands,
   projectProcesses,
+  projectRelatedFolders,
   projects,
   projectStats,
   projectTechnologies,
@@ -16,6 +17,18 @@ import { terminalDetectorService } from './terminal-detector-service';
 import { findProjectIcon } from '../utils/icon-finder';
 import type { StartProcess } from '../../shared/types/process';
 import { createId } from '@paralleldrive/cuid2';
+import * as os from 'os';
+import * as path from 'path';
+
+/**
+ * Expands tilde (~) in paths to the user's home directory
+ */
+function expandTilde(filepath: string): string {
+  if (filepath.startsWith('~/') || filepath === '~') {
+    return path.join(os.homedir(), filepath.slice(2));
+  }
+  return filepath;
+}
 
 export interface Project {
   id: string;
@@ -63,6 +76,14 @@ export interface ProjectFilters {
   search?: string;
   technologies?: string[];
   includeArchived?: boolean;
+}
+
+export interface RelatedFolder {
+  id: string;
+  projectId: string;
+  folderPath: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 class ProjectService {
@@ -801,6 +822,80 @@ class ProjectService {
     await this.rescanProject(project.path);
 
     return { deletedSize };
+  }
+
+  /**
+   * Get all related folders for a project
+   */
+  async getRelatedFolders(projectId: string): Promise<RelatedFolder[]> {
+    const folders = await db
+      .select()
+      .from(projectRelatedFolders)
+      .where(eq(projectRelatedFolders.projectId, projectId))
+      .orderBy(projectRelatedFolders.createdAt);
+
+    return folders;
+  }
+
+  /**
+   * Add a related folder to a project
+   */
+  async addRelatedFolder(
+    projectId: string,
+    folderPath: string
+  ): Promise<{ success: boolean; error?: string; folder?: RelatedFolder }> {
+    // Expand tilde in path
+    const expandedPath = expandTilde(folderPath);
+
+    // Validate that the folder exists
+    const fs = await import('fs/promises');
+    try {
+      const stats = await fs.stat(expandedPath);
+      if (!stats.isDirectory()) {
+        return { success: false, error: 'Path is not a directory' };
+      }
+    } catch {
+      return { success: false, error: 'Folder does not exist or is not accessible' };
+    }
+
+    // Check for duplicates (using expanded path)
+    const existing = await db
+      .select()
+      .from(projectRelatedFolders)
+      .where(
+        and(
+          eq(projectRelatedFolders.projectId, projectId),
+          eq(projectRelatedFolders.folderPath, expandedPath)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      return { success: false, error: 'This folder has already been added' };
+    }
+
+    // Add the folder (using expanded path)
+    const now = new Date();
+    const folder: RelatedFolder = {
+      id: createId(),
+      projectId,
+      folderPath: expandedPath,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await db.insert(projectRelatedFolders).values(folder);
+
+    return { success: true, folder };
+  }
+
+  /**
+   * Remove a related folder from a project
+   */
+  async removeRelatedFolder(folderId: string): Promise<{ success: boolean; error?: string }> {
+    await db.delete(projectRelatedFolders).where(eq(projectRelatedFolders.id, folderId));
+
+    return { success: true };
   }
 }
 

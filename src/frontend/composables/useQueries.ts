@@ -151,6 +151,64 @@ export const useQueries = () => {
     });
   };
 
+  // Related folders query
+  const useRelatedFoldersQuery = (projectId: MaybeRef<string>, options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['projects', unref(projectId), 'related-folders'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<any[]>>(
+          'GET',
+          `${API_ROUTES.PROJECTS}/${unref(projectId)}/related-folders`
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch related folders');
+        }
+
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
+  // Add related folder mutation
+  const useAddRelatedFolderMutation = () => {
+    return useMutation({
+      mutationFn: async ({ projectId, folderPath }: { projectId: string; folderPath: string }) => {
+        const response = await apiCall<ApiResponse<any>>(
+          'POST',
+          `${API_ROUTES.PROJECTS}/${projectId}/related-folders`,
+          { folderPath }
+        );
+
+        if (!response) {
+          throw new Error('Failed to add related folder');
+        }
+
+        return response.data;
+      },
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries({
+          queryKey: ['projects', variables.projectId, 'related-folders'],
+        });
+      },
+    });
+  };
+
+  // Remove related folder mutation
+  const useRemoveRelatedFolderMutation = () => {
+    return useMutation({
+      mutationFn: async ({ projectId, folderId }: { projectId: string; folderId: string }) => {
+        await apiCall('DELETE', `${API_ROUTES.PROJECTS}/${projectId}/related-folders/${folderId}`);
+      },
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries({
+          queryKey: ['projects', variables.projectId, 'related-folders'],
+        });
+      },
+    });
+  };
+
   // Delete project mutation
   const useDeleteProjectMutation = () => {
     return useMutation({
@@ -1222,6 +1280,9 @@ export const useQueries = () => {
     useProjectsQuery,
     useProjectQuery,
     useTechnologiesQuery,
+    useRelatedFoldersQuery,
+    useAddRelatedFolderMutation,
+    useRemoveRelatedFolderMutation,
     useDeleteProjectMutation,
     useRescanProjectMutation,
     useToggleFavoriteMutation,

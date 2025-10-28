@@ -12,6 +12,7 @@ interface Props {
   searchQuery?: string;
   filters?: FilterValue[];
   matchingFilePaths?: Set<string> | null;
+  isRelatedFoldersMode?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -19,11 +20,17 @@ const props = withDefaults(defineProps<Props>(), {
   searchQuery: '',
   filters: () => [],
   matchingFilePaths: null,
+  isRelatedFoldersMode: false,
 });
 
 const emit = defineEmits<{
   select: [node: FileNode];
+  'remove-folder': [folderPath: string];
 }>();
+
+const handleRemoveFolder = (folderPath: string) => {
+  emit('remove-folder', folderPath);
+};
 
 // Track which directories are expanded
 const expandedPaths = ref<Set<string>>(new Set());
@@ -219,8 +226,10 @@ defineExpose({
       :file-counts="fileCounts"
       :file-count="node.type === 'directory' ? fileCounts.get(node.path) : undefined"
       :has-filters="hasActiveFilters"
+      :is-related-folders-mode="isRelatedFoldersMode"
       @toggle="toggleExpand"
       @select="handleSelect"
+      @remove-folder="handleRemoveFolder"
     />
   </div>
 </template>

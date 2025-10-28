@@ -78,5 +78,6 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.invoke('files:read-file', filePath, forceText),
     searchContent: (dirPath: string, query: string) =>
       ipcRenderer.invoke('files:search-content', dirPath, query),
+    selectFolder: () => ipcRenderer.invoke('files:select-folder'),
   },
 });

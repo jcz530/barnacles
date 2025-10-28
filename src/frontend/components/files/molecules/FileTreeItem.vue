@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ChevronDown, ChevronRight, Copy, FolderOpen, FileCheck } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, Copy, FolderOpen, FileCheck, Trash2 } from 'lucide-vue-next';
 import { formatFileSize, getFileTypeInfo, getFolderIcon } from '@/utils/file-types';
 import type { FileNode } from '@/types/window';
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 
@@ -18,6 +19,7 @@ interface Props {
   isSelected?: boolean;
   fileCount?: { total: number; filtered: number };
   hasFilters?: boolean;
+  isRootFolder?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -26,11 +28,13 @@ const props = withDefaults(defineProps<Props>(), {
   isSelected: false,
   fileCount: undefined,
   hasFilters: false,
+  isRootFolder: false,
 });
 
 const emit = defineEmits<{
   toggle: [node: FileNode];
   select: [node: FileNode];
+  'remove-folder': [folderPath: string];
 }>();
 
 const fileTypeInfo = computed(() => getFileTypeInfo(props.node.extension));
@@ -60,8 +64,17 @@ const handleClick = () => {
   emit('select', props.node);
 };
 
+// Helper to get the full path of the node
+// If the node path is absolute (starts with /), use it directly
+// Otherwise, join with projectPath
+const getFullPath = () => {
+  return props.node.path.startsWith('/')
+    ? props.node.path
+    : `${props.projectPath}/${props.node.path}`;
+};
+
 const openInFinder = () => {
-  const fullPath = `${props.projectPath}/${props.node.path}`;
+  const fullPath = getFullPath();
 
   // For files, reveal them in Finder. For directories, open them.
   if (props.node.type === 'file') {
@@ -72,7 +85,7 @@ const openInFinder = () => {
 };
 
 const copyPath = async () => {
-  const fullPath = `${props.projectPath}/${props.node.path}`;
+  const fullPath = getFullPath();
   try {
     // eslint-disable-next-line no-undef
     await navigator.clipboard.writeText(fullPath);
@@ -87,7 +100,7 @@ const copyFile = async () => {
     return;
   }
 
-  const fullPath = `${props.projectPath}/${props.node.path}`;
+  const fullPath = getFullPath();
   try {
     const result = await window.electron?.clipboard.writeFile(fullPath);
     if (!result?.success) {
@@ -96,6 +109,11 @@ const copyFile = async () => {
   } catch (error) {
     console.error('Failed to copy file:', error);
   }
+};
+
+const handleRemoveFolder = () => {
+  const fullPath = getFullPath();
+  emit('remove-folder', fullPath);
 };
 </script>
 
@@ -177,6 +195,13 @@ const copyFile = async () => {
         <Copy class="h-4 w-4" />
         Copy Path
       </ContextMenuItem>
+      <template v-if="isRootFolder">
+        <ContextMenuSeparator />
+        <ContextMenuItem @click="handleRemoveFolder" class="text-red-600">
+          <Trash2 class="h-4 w-4" />
+          Remove from Related Folders
+        </ContextMenuItem>
+      </template>
     </ContextMenuContent>
   </ContextMenu>
 </template>
