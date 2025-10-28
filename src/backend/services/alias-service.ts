@@ -102,9 +102,120 @@ export async function detectAliasesFromProfiles(): Promise<DetectedAlias[]> {
 }
 
 /**
+ * Parse aliases from the barnacles config file
+ */
+async function parseAliasesFromConfigFile(): Promise<
+  Array<{ name: string; command: string; description: string | null; category: string }>
+> {
+  const shellInfo = await detectShell();
+  const parsedAliases: Array<{
+    name: string;
+    command: string;
+    description: string | null;
+    category: string;
+  }> = [];
+
+  try {
+    const content = await fs.readFile(shellInfo.configPath, 'utf-8');
+    const lines = content.split('\n');
+    let currentCategory = 'custom';
+    let currentDescription: string | null = null;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Skip header and empty lines
+      if (!line || line.startsWith('#!/') || line.startsWith('# Barnacles') || line === '#') {
+        continue;
+      }
+
+      // Detect category from section headers (e.g., "# Git Aliases")
+      if (line.match(/^# (Git|Docker|System|Custom) Aliases$/)) {
+        const match = line.match(/^# (Git|Docker|System|Custom) Aliases$/);
+        if (match) {
+          currentCategory = match[1].toLowerCase();
+        }
+        continue;
+      }
+
+      // Capture description comments
+      if (line.startsWith('#') && !line.includes('>>>') && !line.includes('<<<')) {
+        currentDescription = line.substring(1).trim();
+        continue;
+      }
+
+      // Match alias definitions
+      const aliasMatch = line.match(/^alias\s+([a-zA-Z0-9_-]+)='(.+)'$/);
+      if (aliasMatch) {
+        const [, name, fullCommand] = aliasMatch;
+
+        // Extract the actual command (strip echo statements if present)
+        let command = fullCommand;
+        const echoMatch = fullCommand.match(/echo -e ".*?" && (.+)$/);
+        if (echoMatch) {
+          command = echoMatch[1];
+        }
+
+        parsedAliases.push({
+          name,
+          command,
+          description: currentDescription,
+          category: currentCategory,
+        });
+
+        // Reset description for next alias
+        currentDescription = null;
+      }
+    }
+  } catch {
+    // File doesn't exist or can't be read, return empty array
+    console.log('Config file does not exist or cannot be read:', shellInfo.configPath);
+  }
+
+  return parsedAliases;
+}
+
+/**
+ * Sync aliases from config file to database if database is empty
+ */
+async function syncFromConfigFileIfEmpty(): Promise<void> {
+  const existingAliases = await db.select().from(aliases);
+
+  // Only sync if database is empty
+  if (existingAliases.length === 0) {
+    console.log('Database is empty, checking for config file...');
+    const parsedAliases = await parseAliasesFromConfigFile();
+
+    if (parsedAliases.length > 0) {
+      console.log(`Found ${parsedAliases.length} aliases in config file, syncing to database...`);
+
+      for (let i = 0; i < parsedAliases.length; i++) {
+        const alias = parsedAliases[i];
+        await createAlias({
+          name: alias.name,
+          command: alias.command,
+          description: alias.description,
+          color: null,
+          showCommand: true,
+          category: alias.category as Alias['category'],
+          order: i,
+        });
+      }
+
+      console.log(
+        `✅ Successfully synced ${parsedAliases.length} aliases from config file to database`
+      );
+    }
+  }
+}
+
+/**
  * Get all aliases from the database
  */
 export async function getAllAliases(): Promise<Alias[]> {
+  // Check if we need to sync from config file first
+  await syncFromConfigFileIfEmpty();
+
   const results = await db.select().from(aliases).orderBy(asc(aliases.order), asc(aliases.name));
   return results.map(row => ({
     ...row,
