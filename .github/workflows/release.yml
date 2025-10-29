@@ -38,8 +38,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Setup Python for native modules
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Build application
         run: npm run build
+
+      - name: Rebuild native modules for Electron
+        run: npm run rebuild
+        env:
+          PYTHON: python3
 
       - name: Prune dev dependencies (keep optional platform packages)
         run: npm prune --omit=dev
