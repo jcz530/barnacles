@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import FileTree from './FileTree.vue';
 import FileViewer from './FileViewer.vue';
 import FileSearchInput from '../molecules/FileSearchInput.vue';
@@ -7,14 +7,18 @@ import FileTypeFilter, { type FilterValue } from '../molecules/FileTypeFilter.vu
 import { Skeleton } from '../../ui/skeleton';
 import { Button } from '../../ui/button';
 import type { FileNode } from '@/types/window';
-import { ListChevronsDownUp } from 'lucide-vue-next';
+import { ListChevronsDownUp, ArrowDownAZ, Clock } from 'lucide-vue-next';
 import { useFileTree } from '@/composables/useFileTree';
 
 interface Props {
-  projectPath: string;
+  projectPath?: string;
+  rootFolders?: Array<{ id: string; folderPath: string }>;
+  sortBy?: 'alphabetical' | 'lastModified';
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  sortBy: 'alphabetical',
+});
 
 const isLoading = ref(false);
 const error = ref<string | null>(null);
@@ -34,18 +38,98 @@ const {
   hasActiveFilters,
 } = useFileTree({ fileTree, searchQuery, filters });
 
+// Emit events for sort changes and folder removal
+const emit = defineEmits<{
+  'update:sortBy': [value: 'alphabetical' | 'lastModified'];
+  'remove-folder': [folderId: string];
+}>();
+
+// Check if we're in related folders mode
+const isRelatedFoldersMode = computed(() => {
+  return props.rootFolders && props.rootFolders.length > 0;
+});
+
+// Handle folder removal request
+const handleRemoveFolder = (folderPath: string) => {
+  // Find the folder ID by path
+  const folder = props.rootFolders?.find(f => f.folderPath === folderPath);
+  if (folder) {
+    emit('remove-folder', folder.id);
+  }
+};
+
+const currentSortBy = ref<'alphabetical' | 'lastModified'>(props.sortBy);
+
+// Toggle sort mode
+const toggleSort = () => {
+  currentSortBy.value = currentSortBy.value === 'alphabetical' ? 'lastModified' : 'alphabetical';
+  emit('update:sortBy', currentSortBy.value);
+};
+
+// Sort icon component
+const sortIcon = computed(() => {
+  return currentSortBy.value === 'alphabetical' ? ArrowDownAZ : Clock;
+});
+
+const sortTooltip = computed(() => {
+  return currentSortBy.value === 'alphabetical' ? 'Sort by name (A-Z)' : 'Sort by last modified';
+});
+
+// Helper function to convert relative paths to absolute paths
+const makePathsAbsolute = (nodes: FileNode[], basePath: string): FileNode[] => {
+  return nodes.map(node => {
+    // If path is already absolute, don't modify it
+    const absolutePath = node.path.startsWith('/') ? node.path : `${basePath}/${node.path}`;
+
+    return {
+      ...node,
+      path: absolutePath,
+      children: node.children ? makePathsAbsolute(node.children, basePath) : undefined,
+    };
+  });
+};
+
 // Load directory tree on mount
 const loadFileTree = async () => {
   isLoading.value = true;
   error.value = null;
 
   try {
-    const result = await window.electron.files.readDirectory(props.projectPath);
+    // If we have multiple root folders, load each one
+    if (props.rootFolders && props.rootFolders.length > 0) {
+      const folderTrees = await Promise.all(
+        props.rootFolders.map(async folder => {
+          const result = await window.electron.files.readDirectory(folder.folderPath);
+          if (result.success && result.data) {
+            // Convert relative paths to absolute paths
+            const childrenWithAbsolutePaths = makePathsAbsolute(result.data, folder.folderPath);
 
-    if (result.success && result.data) {
-      fileTree.value = result.data;
+            // Create a root node for this folder
+            const folderName = folder.folderPath.split('/').pop() || folder.folderPath;
+            return {
+              name: folderName,
+              path: folder.folderPath,
+              type: 'directory' as const,
+              children: childrenWithAbsolutePaths,
+            };
+          }
+          return null;
+        })
+      );
+
+      // Filter out any failed loads and set the tree
+      fileTree.value = folderTrees.filter(Boolean) as FileNode[];
+    } else if (props.projectPath) {
+      // Single project path mode (original behavior)
+      const result = await window.electron.files.readDirectory(props.projectPath);
+
+      if (result.success && result.data) {
+        fileTree.value = result.data;
+      } else {
+        error.value = result.error || 'Failed to load file tree';
+        fileTree.value = [];
+      }
     } else {
-      error.value = result.error || 'Failed to load file tree';
       fileTree.value = [];
     }
   } catch (err) {
@@ -56,13 +140,13 @@ const loadFileTree = async () => {
   }
 };
 
-// Load file tree when component mounts
+// Load file tree when component mounts or props change
 watch(
-  () => props.projectPath,
+  () => [props.projectPath, props.rootFolders],
   () => {
     loadFileTree();
   },
-  { immediate: true }
+  { immediate: true, deep: true }
 );
 
 // Collapse all directories in the tree
@@ -100,15 +184,27 @@ const handleCollapseAll = () => {
             <span class="ml-1">files</span>
           </template>
         </span>
-        <Button
-          title="Collapse All"
-          variant="ghost"
-          size="icon"
-          class="h-6 px-2 text-xs hover:bg-slate-200/50 hover:text-sky-600"
-          @click="handleCollapseAll"
-        >
-          <ListChevronsDownUp />
-        </Button>
+        <div class="flex gap-1">
+          <Button
+            v-if="rootFolders && rootFolders.length > 0"
+            :title="sortTooltip"
+            variant="ghost"
+            size="icon"
+            class="h-6 px-2 text-xs hover:bg-slate-200/50 hover:text-sky-600"
+            @click="toggleSort"
+          >
+            <component :is="sortIcon" :size="16" />
+          </Button>
+          <Button
+            title="Collapse All"
+            variant="ghost"
+            size="icon"
+            class="h-6 px-2 text-xs hover:bg-slate-200/50 hover:text-sky-600"
+            @click="handleCollapseAll"
+          >
+            <ListChevronsDownUp :size="16" />
+          </Button>
+        </div>
       </div>
 
       <!-- File tree -->
@@ -130,19 +226,21 @@ const handleCollapseAll = () => {
           v-else
           ref="fileTreeRef"
           :nodes="fileTree"
-          :project-path="projectPath"
+          :project-path="projectPath || ''"
           :selected-path="selectedFilePath"
           :search-query="searchQuery"
           :filters="filters"
           :matching-file-paths="matchingFilePaths"
+          :is-related-folders-mode="isRelatedFoldersMode"
           @select="handleSelect"
+          @remove-folder="handleRemoveFolder"
         />
       </div>
     </div>
 
     <!-- Main content: File viewer -->
     <div class="flex-1">
-      <FileViewer :file-path="selectedFilePath" :project-path="projectPath" />
+      <FileViewer :file-path="selectedFilePath" :project-path="projectPath || ''" />
     </div>
   </div>
 </template>

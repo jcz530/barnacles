@@ -57,6 +57,7 @@ declare global {
           dirPath: string,
           query: string
         ) => Promise<{ success: boolean; data?: SearchResult[]; error?: string }>;
+        selectFolder: () => Promise<{ success: boolean; data?: string; canceled?: boolean; error?: string }>;
       };
     };
   }

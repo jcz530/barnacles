@@ -4,6 +4,7 @@ import ProjectOverviewTab from '../components/projects/organisms/ProjectOverview
 import ProjectReadmeTab from '../components/projects/organisms/ProjectReadmeTab.vue';
 import ProjectTerminalsTab from '../components/projects/organisms/ProjectTerminalsTab.vue';
 import ProjectFilesTab from '../components/projects/organisms/ProjectFilesTab.vue';
+import ProjectRelatedFilesTab from '../components/projects/organisms/ProjectRelatedFilesTab.vue';
 import Aliases from '../views/Aliases.vue';
 import ConfigFilesPage from '../pages/ConfigFilesPage.vue';
 import Home from '../views/Home.vue';
@@ -62,6 +63,11 @@ const routes: RouteRecordRaw[] = [
             path: 'terminals',
             name: 'ProjectTerminals',
             component: ProjectTerminalsTab,
+          },
+          {
+            path: 'related-files',
+            name: 'ProjectRelatedFiles',
+            component: ProjectRelatedFilesTab,
           },
         ],
       },

@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { dialog, ipcMain } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
@@ -325,6 +325,29 @@ export const setupFileSystemBridge = (): void => {
       return { success: true, data: results };
     } catch (error) {
       console.error('Error searching files:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  });
+
+  // Handler for showing native folder selection dialog
+  ipcMain.handle('files:select-folder', async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory'],
+        title: 'Select Folder',
+        buttonLabel: 'Select',
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, canceled: true };
+      }
+
+      return { success: true, data: result.filePaths[0] };
+    } catch (error) {
+      console.error('Error showing folder dialog:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
