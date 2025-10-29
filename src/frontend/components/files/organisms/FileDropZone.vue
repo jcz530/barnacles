@@ -1,26 +1,86 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useFileDrop } from '@/composables/useFileDrop';
 import MoveFilesToFolderDialog from '../../projects/organisms/MoveFilesToFolderDialog.vue';
 import { toast } from 'vue-sonner';
 import { FolderInput } from 'lucide-vue-next';
+import type { FolderTreeNode } from '@/types/folder-tree';
 
 interface Props {
   folders: Array<{ id: string; folderPath: string }>;
   enabled?: boolean;
 }
 
+interface Emits {
+  filesMovedSuccessfully: [];
+}
+
 const props = withDefaults(defineProps<Props>(), {
   enabled: true,
 });
 
+const emit = defineEmits<Emits>();
+
 const dropZoneRef = ref<HTMLElement>();
 const droppedFiles = ref<string[]>([]);
 const isMoveDialogOpen = ref(false);
+const folderTrees = ref<FolderTreeNode[]>([]);
+const isLoadingFolders = ref(false);
 
 const hasRelatedFolders = computed(() => {
   return props.folders && props.folders.length > 0;
 });
+
+// Load folder trees when folders change
+watch(
+  () => props.folders,
+  async newFolders => {
+    if (!newFolders || newFolders.length === 0) {
+      folderTrees.value = [];
+      return;
+    }
+
+    isLoadingFolders.value = true;
+    try {
+      const trees = await Promise.all(
+        newFolders.map(async folder => {
+          try {
+            const result = await window.electron.files.readDirectory(folder.folderPath);
+            if (result.success && result.data) {
+              return {
+                id: folder.id,
+                name: folder.folderPath.split('/').pop() || folder.folderPath,
+                path: folder.folderPath,
+                type: 'directory' as const,
+                children: result.data,
+              };
+            }
+            return {
+              id: folder.id,
+              name: folder.folderPath.split('/').pop() || folder.folderPath,
+              path: folder.folderPath,
+              type: 'directory' as const,
+              children: [],
+            };
+          } catch (error) {
+            console.error(`Failed to load folder tree for ${folder.folderPath}:`, error);
+            return {
+              id: folder.id,
+              name: folder.folderPath.split('/').pop() || folder.folderPath,
+              path: folder.folderPath,
+              type: 'directory' as const,
+              children: [],
+            };
+          }
+        })
+      );
+      folderTrees.value = trees;
+    } finally {
+      isLoadingFolders.value = false;
+    }
+  },
+  { immediate: true }
+);
 
 const handleFileDrop = (files: string[]) => {
   if (!hasRelatedFolders.value) {
@@ -41,10 +101,8 @@ const { isDragging } = useFileDrop(dropZoneRef, {
   enabled: isEnabled,
 });
 
-const handleMoveFiles = async (targetFolderId: string) => {
-  const targetFolder = props.folders?.find(f => f.id === targetFolderId);
-
-  if (!targetFolder) {
+const handleMoveFiles = async (targetFolderPath: string) => {
+  if (!targetFolderPath) {
     toast.error('Error', {
       description: 'Target folder not found.',
     });
@@ -55,14 +113,17 @@ const handleMoveFiles = async (targetFolderId: string) => {
     // Ensure we're only passing string paths, not File objects
     const filePaths = droppedFiles.value.map(f => String(f));
 
-    const result = await window.electron.files.moveFiles(filePaths, targetFolder.folderPath);
+    const result = await window.electron.files.moveFiles(filePaths, targetFolderPath);
 
     if (result.success) {
       toast.success('Files moved successfully', {
-        description: `Moved ${droppedFiles.value.length} file(s) to ${targetFolder.folderPath}`,
+        description: `Moved ${droppedFiles.value.length} file(s) to ${targetFolderPath}`,
       });
       isMoveDialogOpen.value = false;
       droppedFiles.value = [];
+
+      // Emit event to notify parent that files were moved
+      emit('filesMovedSuccessfully');
     } else {
       // Show detailed error for failed files
       const failedFiles = result.results?.filter(r => !r.success) || [];
@@ -119,7 +180,8 @@ const handleCloseDialog = () => {
     <MoveFilesToFolderDialog
       :open="isMoveDialogOpen"
       :files="droppedFiles"
-      :folders="folders"
+      :folder-trees="folderTrees"
+      :loading="isLoadingFolders"
       @close="handleCloseDialog"
       @move="handleMoveFiles"
     />

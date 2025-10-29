@@ -33,7 +33,9 @@ const { data: detectedIDEs } = useDetectedIDEsQuery();
 const { data: detectedTerminals } = useDetectedTerminalsQuery();
 const { data: packageScripts } = useProjectPackageScriptsQuery(projectId);
 const { data: composerScripts } = useProjectComposerScriptsQuery(projectId);
-const { data: relatedFolders } = useRelatedFoldersQuery(projectId, { enabled: true });
+const { data: relatedFolders, refetch: refetchRelatedFolders } = useRelatedFoldersQuery(projectId, {
+  enabled: true,
+});
 
 // Get all process statuses (no project filter)
 const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
@@ -99,10 +101,18 @@ const activeTab = computed(() => {
   const tab = tabs.find(t => t.name === routeName);
   return tab?.value || 'overview';
 });
+
+// Handle files moved event - refresh the related folders query to update file trees
+const handleFilesMovedSuccessfully = () => {
+  refetchRelatedFolders();
+};
 </script>
 
 <template>
-  <FileDropZone :folders="relatedFolders || []">
+  <FileDropZone
+    :folders="relatedFolders || []"
+    @files-moved-successfully="handleFilesMovedSuccessfully"
+  >
     <div class="flex h-full flex-col">
       <!-- Header -->
       <div class="py-4">

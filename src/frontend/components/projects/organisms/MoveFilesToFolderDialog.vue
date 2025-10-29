@@ -9,25 +9,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../ui/dialog';
-import { RadioGroup, RadioGroupItem } from '../../ui/radio-group';
-import { Label } from '../../ui/label';
-import { FolderOpen, FileText } from 'lucide-vue-next';
+import { RadioGroup } from '../../ui/radio-group';
+import { FileText, Loader2 } from 'lucide-vue-next';
+import FolderTreeItem from '../../files/molecules/FolderTreeItem.vue';
+import type { FolderTreeNode } from '@/types/folder-tree';
 
 interface Props {
   open: boolean;
   files: string[]; // Array of file paths
-  folders: Array<{ id: string; folderPath: string }>;
+  folderTrees: FolderTreeNode[];
+  loading?: boolean;
 }
 
 interface Emits {
   close: [];
-  move: [targetFolderId: string];
+  move: [targetFolderPath: string];
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  loading: false,
+});
 const emit = defineEmits<Emits>();
 
-const selectedFolderId = ref('');
+const selectedFolderPath = ref('');
 const isMoving = ref(false);
 const errorMessage = ref('');
 
@@ -36,12 +40,15 @@ watch(
   () => props.open,
   isOpen => {
     if (isOpen) {
-      // Auto-select if there's only one folder
-      if (props.folders.length === 1) {
-        selectedFolderId.value = props.folders[0].id;
+      // Auto-select if there's only one folder and no subfolders
+      if (
+        props.folderTrees.length === 1 &&
+        (!props.folderTrees[0].children || props.folderTrees[0].children.length === 0)
+      ) {
+        selectedFolderPath.value = props.folderTrees[0].path;
       }
     } else {
-      selectedFolderId.value = '';
+      selectedFolderPath.value = '';
       isMoving.value = false;
       errorMessage.value = '';
     }
@@ -56,7 +63,7 @@ const fileNames = computed(() => {
 });
 
 const handleMove = async () => {
-  if (!selectedFolderId.value) {
+  if (!selectedFolderPath.value) {
     errorMessage.value = 'Please select a folder';
     return;
   }
@@ -65,11 +72,15 @@ const handleMove = async () => {
   isMoving.value = true;
 
   try {
-    emit('move', selectedFolderId.value);
+    emit('move', selectedFolderPath.value);
   } catch (error: any) {
     errorMessage.value = error?.message || 'Failed to move files';
     isMoving.value = false;
   }
+};
+
+const handleSelectFolder = (path: string) => {
+  selectedFolderPath.value = path;
 };
 
 const handleClose = () => {
@@ -108,21 +119,35 @@ const handleClose = () => {
         <!-- Folder selection -->
         <div class="space-y-2">
           <label class="text-sm font-medium">Select destination folder:</label>
-          <RadioGroup v-model="selectedFolderId" class="space-y-2">
+          <div v-if="loading" class="flex items-center justify-center py-8 text-slate-500">
+            <Loader2 :size="24" class="animate-spin" />
+            <span class="ml-2">Loading folders...</span>
+          </div>
+          <div
+            v-else-if="folderTrees.length === 0"
+            class="rounded-md border border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-600"
+          >
+            No related folders available
+          </div>
+          <RadioGroup v-else v-model="selectedFolderPath" class="space-y-1">
             <div
-              v-for="folder in folders"
-              :key="folder.id"
-              class="flex items-center space-x-2 rounded-md border border-slate-200 p-3 transition-colors hover:bg-slate-50"
-              :class="{ 'border-sky-500 bg-sky-50': selectedFolderId === folder.id }"
+              v-for="tree in folderTrees"
+              :key="tree.id"
+              class="rounded-md border border-slate-200 p-2"
             >
-              <RadioGroupItem :id="folder.id" :value="folder.id" />
-              <Label
-                :for="folder.id"
-                class="flex flex-1 cursor-pointer items-center gap-2 text-sm font-normal"
-              >
-                <FolderOpen :size="16" class="text-sky-500" />
-                <span class="truncate">{{ folder.folderPath }}</span>
-              </Label>
+              <!-- Root folder -->
+              <FolderTreeItem
+                :node="{
+                  name: tree.name,
+                  path: tree.path,
+                  type: 'directory',
+                  children: tree.children,
+                }"
+                :level="0"
+                :selected-path="selectedFolderPath"
+                :parent-path="tree.path.substring(0, tree.path.lastIndexOf('/'))"
+                @select="handleSelectFolder"
+              />
             </div>
           </RadioGroup>
         </div>
@@ -135,7 +160,7 @@ const handleClose = () => {
 
       <DialogFooter>
         <Button variant="outline" @click="handleClose" :disabled="isMoving"> Cancel </Button>
-        <Button :disabled="!selectedFolderId || isMoving" @click="handleMove">
+        <Button :disabled="!selectedFolderPath || isMoving || loading" @click="handleMove">
           {{ isMoving ? 'Moving...' : 'Move Files' }}
         </Button>
       </DialogFooter>
