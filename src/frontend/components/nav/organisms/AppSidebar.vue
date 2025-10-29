@@ -1,11 +1,5 @@
 <script setup lang="ts">
 import type { SidebarProps } from '@/components/ui/sidebar';
-
-import LogoMark from '@/assets/logo-mark.svg';
-import NavMain from '@/components/nav/molecules/NavMain.vue';
-import NavSecondary from '@/components/nav/molecules/NavSecondary.vue';
-import NavUser from '@/components/nav/molecules/NavUser.vue';
-import ThemeToggle from '@/components/nav/molecules/ThemeToggle.vue';
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +9,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+
+import LogoMark from '@/assets/logo-mark.svg';
+import NavMain from '@/components/nav/molecules/NavMain.vue';
+import NavSecondary from '@/components/nav/molecules/NavSecondary.vue';
+import NavUser from '@/components/nav/molecules/NavUser.vue';
+import ThemeToggle from '@/components/nav/molecules/ThemeToggle.vue';
 import { useApi } from '@/composables/useApi';
 import { useConfigs } from '@/composables/useConfigs';
 import { useQueries } from '@/composables/useQueries';
@@ -42,6 +42,17 @@ const { data: currentUser } = useQuery({
 // Fetch projects and processes for counts
 const { data: projects } = queries.useProjectsQuery({ enabled: true });
 const { data: processes } = queries.useProcessesQuery();
+const favorites = computed(() =>
+  (projects.value ?? [])
+    .filter(project => project.isFavorite)
+    .slice(0, 4)
+    .map(project => {
+      return {
+        title: project.name,
+        url: { name: 'ProjectOverview', params: { id: project.id } },
+      };
+    })
+);
 
 const data = computed(() => ({
   user: currentUser.value || {
@@ -63,6 +74,7 @@ const data = computed(() => ({
       icon: FolderGit2,
       count: projects.value?.length ?? 0,
       isActive: route.path.startsWith('/projects'),
+      items: favorites.value,
     },
     {
       title: 'Processes',
@@ -72,37 +84,10 @@ const data = computed(() => ({
       isActive: route.path.startsWith('/terminals'),
     },
     // {
-    //   title: 'Users',
-    //   url: '/users',
-    //   icon: Bot,
-    // },
-    // {
-    //   title: 'API',
-    //   url: '/api',
-    //   icon: BookOpen,
-    // },
-    // {
-    //   title: 'Settings',
-    //   url: '#',
-    //   icon: Settings2,
-    //   items: [
-    //     {
-    //       title: 'General',
-    //       url: '#',
-    //     },
-    //     {
-    //       title: 'Team',
-    //       url: '#',
-    //     },
-    //     {
-    //       title: 'Billing',
-    //       url: '#',
-    //     },
-    //     {
-    //       title: 'Limits',
-    //       url: '#',
-    //     },
-    //   ],
+    //   title: 'Utilities',
+    //   url: '/utilities',
+    //   icon: Sparkles,
+    //   isActive: route.path.startsWith('/utilities'),
     // },
   ],
   navSecondary: [
@@ -140,7 +125,7 @@ const data = computed(() => ({
   //   {
   //     name: 'Other Section',
   //     url: '#',
-  //     icon: Frame,
+  //     icon: Sparkles,
   //   },
   // ],
 }));
@@ -169,7 +154,7 @@ const data = computed(() => ({
     </SidebarHeader>
     <SidebarContent>
       <NavMain :items="data.navMain" />
-      <!-- <NavProjects :projects="data.projects" /> -->
+      <!--      <NavProjects :projects="data.projects" />-->
       <NavSecondary :items="data.navSecondary" class="mt-auto" />
     </SidebarContent>
     <SidebarFooter>
