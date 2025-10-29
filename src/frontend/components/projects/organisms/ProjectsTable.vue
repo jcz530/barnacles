@@ -119,7 +119,10 @@ const table = useVueTable({
     </div>
     <div v-else>
       <!-- Card View -->
-      <div v-if="viewMode === 'card'" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div
+        v-if="viewMode === 'card'"
+        class="grid grid-cols-1 gap-4 px-4 md:grid-cols-2 lg:grid-cols-3"
+      >
         <ProjectCard
           v-for="project in projects"
           :key="project.id"
@@ -131,7 +134,7 @@ const table = useVueTable({
         />
       </div>
       <!-- Table View -->
-      <div v-else class="overflow-x-auto rounded-lg border border-slate-200">
+      <div v-else class="overflow-x-auto rounded-lg">
         <table class="w-full border-collapse">
           <TableHeader :header-groups="table.getHeaderGroups()" />
           <tbody>

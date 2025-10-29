@@ -22,7 +22,7 @@ defineProps<{
     count?: number;
     items?: {
       title: string;
-      url: string;
+      url: string | { name: string; params: Record<string, unknown> };
     }[];
   }[];
 }>();

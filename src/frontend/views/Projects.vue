@@ -356,7 +356,7 @@ whenever(keys['Ctrl+K'], () => {
     </div>
 
     <!-- Projects Table/Grid -->
-    <div class="flex-1 overflow-y-auto p-6">
+    <div class="flex-1 overflow-y-auto pt-4">
       <ProjectsTable
         :projects="projects"
         :is-loading="projectsLoading"

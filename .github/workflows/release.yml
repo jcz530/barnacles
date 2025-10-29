@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-latest
+          - os: macos-14
             arch: arm64
           # - os: ubuntu-latest
           #   arch: x64
@@ -41,9 +41,6 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Rebuild native dependencies for Electron
-        run: npm run rebuild
-
       - name: Prune dev dependencies (keep optional platform packages)
         run: npm prune --omit=dev
 
@@ -51,7 +48,7 @@ jobs:
         run: npm install --no-save @electron/notarize
 
       - name: Import Code-Signing Certificates (macOS)
-        if: matrix.os == 'macos-latest'
+        if: startsWith(matrix.os, 'macos')
         uses: apple-actions/import-codesign-certs@v3
         with:
           p12-file-base64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
@@ -64,7 +61,7 @@ jobs:
           echo '{"name":"@libsql/darwin-x64","version":"0.0.0"}' > node_modules/@libsql/darwin-x64/package.json
 
       - name: Package application (macOS)
-        if: matrix.os == 'macos-latest'
+        if: startsWith(matrix.os, 'macos')
         run: npx --yes electron-builder --mac --${{ matrix.arch }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
