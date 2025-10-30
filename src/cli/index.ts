@@ -8,7 +8,7 @@ import { selectCommand } from './utils/command-selector.js';
 
 async function main() {
   const args = process.argv.slice(2);
-  const { command, flags } = parseArgs(args);
+  const { command, flags, positional } = parseArgs(args);
 
   // Handle version flag globally
   if (flags.version || flags.v) {
@@ -47,7 +47,7 @@ async function main() {
   }
 
   try {
-    await executeCommand(selectedCommand, flags);
+    await executeCommand(selectedCommand, flags, positional);
 
     if (shouldShowIntro || !command) {
       outro('Done!');
