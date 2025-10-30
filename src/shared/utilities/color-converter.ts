@@ -16,6 +16,13 @@ export interface ColorFormats {
 }
 
 /**
+ * Round a number to a specified number of decimal places
+ */
+function roundTo(value: number, decimals: number): number {
+  return Math.round(value * Math.pow(10, decimals)) / Math.pow(10, decimals);
+}
+
+/**
  * Parse various color input formats and convert to all formats
  */
 export function convertColor(input: string, alpha: number = 1): ColorFormats | null {
@@ -39,14 +46,34 @@ export function convertColor(input: string, alpha: number = 1): ColorFormats | n
 
   if (!rgbColor || !hslColor || !lchColor || !oklchColor) return null;
 
-  // Format as strings
+  // Format as strings with proper decimal precision
   const hex = formatHex(rgbColor);
-  const rgb = formatRgb({ ...rgbColor, alpha: undefined }); // RGB without alpha
-  const rgba = formatRgb(rgbColor); // RGBA with alpha
-  const hsl = formatCss({ ...hslColor, alpha: undefined });
-  const hsla = formatCss(hslColor);
-  const lch = formatCss({ ...lchColor, alpha: undefined });
-  const oklch = formatCss(oklchColor);
+
+  // RGB: integers 0-255
+  const rgb = `rgb(${Math.round(rgbColor.r * 255)}, ${Math.round(rgbColor.g * 255)}, ${Math.round(rgbColor.b * 255)})`;
+  const rgba =
+    alpha !== 1
+      ? `rgba(${Math.round(rgbColor.r * 255)}, ${Math.round(rgbColor.g * 255)}, ${Math.round(rgbColor.b * 255)}, ${alpha})`
+      : rgb;
+
+  // HSL: hue=0 decimals, s/l=1 decimal
+  const h = hslColor.h !== undefined ? Math.round(hslColor.h) : 0;
+  const s = roundTo((hslColor.s ?? 0) * 100, 1);
+  const l = roundTo((hslColor.l ?? 0) * 100, 1);
+  const hsl = `hsl(${h}, ${s}%, ${l}%)`;
+  const hsla = alpha !== 1 ? `hsla(${h}, ${s}%, ${l}%, ${alpha})` : hsl;
+
+  // LCH: l=1 decimal, c=1 decimal, h=1 decimal
+  const lchL = roundTo(lchColor.l ?? 0, 1);
+  const lchC = roundTo(lchColor.c ?? 0, 1);
+  const lchH = lchColor.h !== undefined ? roundTo(lchColor.h, 1) : 0;
+  const lch = `lch(${lchL} ${lchC} ${lchH})`;
+
+  // OKLCH: l=2 decimals, c=3 decimals, h=1 decimal
+  const oklchL = roundTo(oklchColor.l, 2);
+  const oklchC = roundTo(oklchColor.c, 3);
+  const oklchH = oklchColor.h !== undefined ? roundTo(oklchColor.h, 1) : 0;
+  const oklch = `oklch(${oklchL} ${oklchC} ${oklchH})`;
 
   return {
     hex,

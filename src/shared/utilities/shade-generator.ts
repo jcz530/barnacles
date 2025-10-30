@@ -12,6 +12,12 @@ export interface ShadeConfig {
   count?: number;
   /** Algorithm preset */
   algorithm?: 'tailwind' | 'vibrant' | 'natural';
+  /** Lightness curve easing (0 = linear, 1 = eased, default: 0.5) */
+  lightnessCurve?: number;
+  /** Chroma intensity multiplier (0.5 = less saturated, 1.5 = more saturated, default: 1) */
+  chromaIntensity?: number;
+  /** Force base color position (0-10, default: auto-detect) */
+  basePosition?: number;
 }
 
 export interface Shade {
@@ -87,21 +93,33 @@ function getChromaAdjustment(shadeIndex: number, totalShades: number, algorithm:
 }
 
 /**
- * Generate lightness values with non-linear distribution
- * More granularity in darker shades
+ * Generate lightness values with configurable curve
+ * @param count Number of shades to generate
+ * @param curve Easing amount (0 = linear, 1 = fully eased, default: 0.5)
  */
-function generateLightnessScale(count: number): number[] {
+function generateLightnessScale(count: number, curve: number = 0.5): number[] {
   const lightnesses: number[] = [];
 
   for (let i = 0; i < count; i++) {
     const position = i / (count - 1); // 0 to 1
 
-    // Non-linear easing for better distribution
-    // More steps in darker range
-    const eased = position < 0.5 ? 2 * position * position : 1 - Math.pow(-2 * position + 2, 2) / 2;
+    // Interpolate between linear and eased distribution
+    let adjustedPosition: number;
+
+    if (curve === 0) {
+      // Fully linear
+      adjustedPosition = position;
+    } else {
+      // Apply easing (more steps in darker range)
+      const eased =
+        position < 0.5 ? 2 * position * position : 1 - Math.pow(-2 * position + 2, 2) / 2;
+
+      // Blend between linear and eased based on curve parameter
+      adjustedPosition = position * (1 - curve) + eased * curve;
+    }
 
     // Map to lightness range (95 to 10)
-    const lightness = 95 - eased * 85;
+    const lightness = 95 - adjustedPosition * 85;
 
     lightnesses.push(lightness);
   }
@@ -132,23 +150,33 @@ function findBaseShadeIndex(baseOklch: Oklch, lightnessScale: number[]): number 
  * Generate a color palette from a base color
  */
 export function generateShades(config: ShadeConfig): GeneratedPalette | null {
-  const { baseColor, count = 11, algorithm = 'tailwind' } = config;
+  const {
+    baseColor,
+    count = 11,
+    algorithm = 'tailwind',
+    lightnessCurve = 0.5,
+    chromaIntensity = 1,
+    basePosition,
+  } = config;
 
   // Parse base color to OKLCH
   const baseOklch = toOklch(baseColor);
   if (!baseOklch) return null;
 
-  // Generate lightness scale
-  const lightnessScale = generateLightnessScale(count);
+  // Generate lightness scale with custom curve
+  const lightnessScale = generateLightnessScale(count, lightnessCurve);
 
-  // Find where base color should sit
-  const baseShadeIndex = findBaseShadeIndex(baseOklch, lightnessScale);
+  // Determine base shade index
+  const baseShadeIndex =
+    basePosition !== undefined
+      ? Math.max(0, Math.min(count - 1, basePosition))
+      : findBaseShadeIndex(baseOklch, lightnessScale);
 
   // Generate shades
   const shades: Shade[] = lightnessScale.map((targetLightness, index) => {
-    // Calculate chroma adjustment
+    // Calculate chroma adjustment with intensity multiplier
     const chromaAdjustment = getChromaAdjustment(index, count, algorithm);
-    const adjustedChroma = Math.max(0, baseOklch.c * (1 + chromaAdjustment));
+    const adjustedChroma = Math.max(0, baseOklch.c * (1 + chromaAdjustment) * chromaIntensity);
 
     // Create OKLCH color (lightness 0-1 scale in OKLCH)
     const shadeOklch: Oklch = {

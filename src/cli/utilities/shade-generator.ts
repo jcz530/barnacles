@@ -1,6 +1,6 @@
-import { generateShades, checkShadeContrast } from '../../shared/utilities/shade-generator.js';
-import { exportPalette, type ExportFormat } from '../../shared/utilities/palette-exporter.js';
-import { intro, isCancel, log, outro, text, select } from '@clack/prompts';
+import { checkShadeContrast, generateShades } from '../../shared/utilities/shade-generator.js';
+import { type ExportFormat, exportPalette } from '../../shared/utilities/palette-exporter.js';
+import { intro, isCancel, log, outro, select, text } from '@clack/prompts';
 import { compactLogo } from '../utils/branding.js';
 import pc from 'picocolors';
 
@@ -8,8 +8,17 @@ import pc from 'picocolors';
  * Display a single shade with color preview in terminal
  */
 function displayShade(name: string, hex: string, isBase: boolean = false): void {
-  // Create a colored block using the shade's color
-  const colorBlock = pc.bgHex(hex)('    ');
+  // Create a colored block - picocolors doesn't support custom hex backgrounds
+  // so we'll use ANSI escape codes directly
+  const rgbMatch = hex.match(/^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+  let colorBlock = '    ';
+  if (rgbMatch) {
+    const r = parseInt(rgbMatch[1], 16);
+    const g = parseInt(rgbMatch[2], 16);
+    const b = parseInt(rgbMatch[3], 16);
+    colorBlock = `\x1b[48;2;${r};${g};${b}m    \x1b[0m`;
+  }
+
   const contrast = checkShadeContrast(hex);
 
   // Text contrast indicators
@@ -171,7 +180,8 @@ export const shadeGeneratorCli = {
           message: 'Would you like to export this palette?',
           options: [
             { value: 'no', label: 'No, continue' },
-            { value: 'tailwind', label: 'Export as Tailwind Config' },
+            { value: 'tailwind3', label: 'Export as Tailwind v3 Config' },
+            { value: 'tailwind4', label: 'Export as Tailwind v4 (CSS)' },
             { value: 'css', label: 'Export as CSS Variables' },
             { value: 'scss', label: 'Export as SCSS Variables' },
             { value: 'json', label: 'Export as JSON' },
