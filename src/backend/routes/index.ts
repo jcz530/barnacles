@@ -5,6 +5,7 @@ import projects from './projects';
 import settings from './settings';
 import system from './system';
 import users from './users';
+import utilities from './utilities';
 
 // Read version from package.json
 import { readFileSync } from 'fs';
@@ -55,6 +56,7 @@ api
   .route('/processes', processes)
   .route('/settings', settings)
   .route('/system', system)
-  .route('/aliases', aliases);
+  .route('/aliases', aliases)
+  .route('/utilities', utilities);
 
 export default api;

@@ -16,6 +16,7 @@ import Settings from '../views/Settings.vue';
 import Terminals from '../views/Terminals.vue';
 import UpdateTest from '../views/UpdateTest.vue';
 import TrayPopup from '../views/TrayPopup.vue';
+import Utilities from '../views/Utilities.vue';
 
 const routes: RouteRecordRaw[] = [
   // Tray popup route (no layout)
@@ -100,6 +101,16 @@ const routes: RouteRecordRaw[] = [
         path: '/configs',
         name: 'ConfigFiles',
         component: ConfigFilesPage,
+      },
+      {
+        path: '/utilities',
+        name: 'Utilities',
+        component: Utilities,
+      },
+      {
+        path: '/utilities/:utilityId',
+        name: 'UtilityDetail',
+        component: () => import('../views/utilities/UtilityDetailWrapper.vue'),
       },
       {
         path: '/update-test',
