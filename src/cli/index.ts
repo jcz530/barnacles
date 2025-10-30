@@ -3,7 +3,7 @@
 import { intro, isCancel, outro } from '@clack/prompts';
 import { parseArgs } from './utils/arg-parser.js';
 import { executeCommand, registry } from './commands';
-import { compactLogo, getTitle } from './utils/branding';
+import { compactLogo, getTitle, printHeader } from './utils/branding';
 import { selectCommand } from './utils/command-selector.js';
 
 async function main() {
@@ -23,7 +23,7 @@ async function main() {
 
   // If no command provided, show interactive selector
   if (!selectedCommand) {
-    intro(`${compactLogo} ${getTitle()}`);
+    printHeader();
     const result = await selectCommand(registry);
 
     if (isCancel(result)) {
