@@ -1,9 +1,9 @@
 /**
- * High-quality color shade generator using LCH color space
+ * High-quality color shade generator using OKLCH color space
  * Generates perceptually uniform color palettes for design systems
  */
 
-import { converter, formatHex, formatRgb, parse, type Lch, type Rgb } from 'culori';
+import { converter, formatHex, formatRgb, parse, type Oklch, type Rgb } from 'culori';
 
 export interface ShadeConfig {
   /** Base color in any CSS format */
@@ -21,8 +21,8 @@ export interface Shade {
   hex: string;
   /** RGB color value */
   rgb: string;
-  /** LCH values */
-  lch: { l: number; c: number; h: number };
+  /** OKLCH values */
+  oklch: { l: number; c: number; h: number };
   /** Lightness percentage (0-100) */
   lightness: number;
 }
@@ -42,12 +42,12 @@ export interface GeneratedPalette {
 const TAILWIND_SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 
 /**
- * Convert any CSS color to LCH
+ * Convert any CSS color to OKLCH
  */
-function toLch(color: string): Lch | undefined {
+function toOklch(color: string): Oklch | undefined {
   const parsed = parse(color);
   if (!parsed) return undefined;
-  return converter('lch')(parsed);
+  return converter('oklch')(parsed);
 }
 
 /**
@@ -112,12 +112,13 @@ function generateLightnessScale(count: number): number[] {
 /**
  * Find which shade index is closest to the base color's lightness
  */
-function findBaseShadeIndex(baseLch: Lch, lightnessScale: number[]): number {
+function findBaseShadeIndex(baseOklch: Oklch, lightnessScale: number[]): number {
   let closestIndex = 0;
   let minDiff = Infinity;
 
   lightnessScale.forEach((l, index) => {
-    const diff = Math.abs(l - baseLch.l);
+    // OKLCH lightness is 0-1, scale is 0-100
+    const diff = Math.abs(l - baseOklch.l * 100);
     if (diff < minDiff) {
       minDiff = diff;
       closestIndex = index;
@@ -133,32 +134,32 @@ function findBaseShadeIndex(baseLch: Lch, lightnessScale: number[]): number {
 export function generateShades(config: ShadeConfig): GeneratedPalette | null {
   const { baseColor, count = 11, algorithm = 'tailwind' } = config;
 
-  // Parse base color
-  const baseLch = toLch(baseColor);
-  if (!baseLch) return null;
+  // Parse base color to OKLCH
+  const baseOklch = toOklch(baseColor);
+  if (!baseOklch) return null;
 
   // Generate lightness scale
   const lightnessScale = generateLightnessScale(count);
 
   // Find where base color should sit
-  const baseShadeIndex = findBaseShadeIndex(baseLch, lightnessScale);
+  const baseShadeIndex = findBaseShadeIndex(baseOklch, lightnessScale);
 
   // Generate shades
   const shades: Shade[] = lightnessScale.map((targetLightness, index) => {
     // Calculate chroma adjustment
     const chromaAdjustment = getChromaAdjustment(index, count, algorithm);
-    const adjustedChroma = Math.max(0, baseLch.c * (1 + chromaAdjustment));
+    const adjustedChroma = Math.max(0, baseOklch.c * (1 + chromaAdjustment));
 
-    // Create LCH color
-    const shadeLch: Lch = {
-      mode: 'lch',
-      l: targetLightness,
+    // Create OKLCH color (lightness 0-1 scale in OKLCH)
+    const shadeOklch: Oklch = {
+      mode: 'oklch',
+      l: targetLightness / 100, // Convert from 0-100 to 0-1
       c: adjustedChroma,
-      h: baseLch.h ?? 0,
+      h: baseOklch.h ?? 0,
     };
 
     // Convert to RGB and hex
-    const shadeRgb = converter('rgb')(shadeLch);
+    const shadeRgb = converter('rgb')(shadeOklch);
     const hex = formatHex(shadeRgb);
     const rgbString = formatRgb(shadeRgb);
 
@@ -166,10 +167,10 @@ export function generateShades(config: ShadeConfig): GeneratedPalette | null {
       name: String(TAILWIND_SHADES[index] ?? index * 100),
       hex,
       rgb: rgbString,
-      lch: {
-        l: Math.round(shadeLch.l * 10) / 10,
-        c: Math.round(shadeLch.c * 10) / 10,
-        h: Math.round((shadeLch.h ?? 0) * 10) / 10,
+      oklch: {
+        l: Math.round(shadeOklch.l * 1000) / 1000,
+        c: Math.round(shadeOklch.c * 1000) / 1000,
+        h: Math.round((shadeOklch.h ?? 0) * 10) / 10,
       },
       lightness: Math.round(targetLightness),
     };

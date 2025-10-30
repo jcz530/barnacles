@@ -128,7 +128,7 @@ const exportFormatOptions = [
       <div class="mb-6">
         <h2 class="text-2xl font-semibold">Shade Generator</h2>
         <p class="text-muted-foreground mt-1">
-          Generate perceptually uniform color palettes for design systems
+          Generate perceptually uniform color palettes using OKLCH for design systems
         </p>
       </div>
 
@@ -202,6 +202,18 @@ const exportFormatOptions = [
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <!-- Horizontal Color Bar -->
+            <div class="border-border mb-6 flex h-16 overflow-hidden rounded-lg border-2 shadow-sm">
+              <div
+                v-for="shade in palette.shades"
+                :key="shade.name"
+                class="flex-1 transition-all hover:flex-[1.2]"
+                :style="{ backgroundColor: shade.hex }"
+                :title="`${shade.name}: ${shade.hex}`"
+              />
+            </div>
+
+            <!-- Individual Shade Details -->
             <div class="space-y-2">
               <div
                 v-for="shade in palette.shades"
@@ -212,7 +224,7 @@ const exportFormatOptions = [
                 <div
                   class="border-border h-12 w-12 flex-shrink-0 rounded-md border-2 shadow-sm"
                   :style="{ backgroundColor: shade.hex }"
-                  :title="`L: ${shade.lch.l}, C: ${shade.lch.c}, H: ${shade.lch.h}`"
+                  :title="`OKLCH(${shade.oklch.l}, ${shade.oklch.c}, ${shade.oklch.h})`"
                 />
 
                 <!-- Shade Info -->

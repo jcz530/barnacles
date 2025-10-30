@@ -4,14 +4,14 @@ const registration: UtilityRegistration = {
   metadata: {
     id: 'shade-generator',
     name: 'Shade Generator',
-    description: 'Generate perceptually uniform color palettes for design systems like Tailwind',
+    description: 'Generate perceptually uniform color palettes using OKLCH for design systems',
     icon: 'Palette',
     route: '/utilities/shade-generator',
     component: () => import('./ShadeGeneratorView.vue'),
     cli: true,
     api: false,
     category: 'CSS & Design',
-    tags: ['color', 'palette', 'tailwind', 'design-system', 'shades', 'lch'],
+    tags: ['color', 'palette', 'tailwind', 'design-system', 'shades', 'oklch'],
   },
 };
 

@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import type { Component } from 'vue';
 import { computed, markRaw, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
-import { utilityRegistry, discoverUtilities } from '@/utilities';
-import type { Component } from 'vue';
+import { discoverUtilities, utilityRegistry } from '@/utilities';
 
 const route = useRoute();
 const router = useRouter();
@@ -37,7 +37,7 @@ onMounted(async () => {
     utilityComponent.value = markRaw(componentModule.default || componentModule);
 
     // Set breadcrumbs
-    setBreadcrumbs([{ label: 'Utilities', to: '/utilities' }, { label: utilityName.value }]);
+    setBreadcrumbs([{ label: 'Utilities', href: '/utilities' }, { label: utilityName.value }]);
   } catch (err) {
     console.error('Failed to load utility:', err);
     error.value = 'Failed to load utility';

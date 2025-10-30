@@ -5,14 +5,14 @@ const registration: UtilityRegistration = {
   metadata: {
     id: 'color-converter',
     name: 'CSS Color Converter',
-    description: 'Convert between HEX, RGB, RGBA, HSL, and HSLA color formats',
+    description: 'Convert between HEX, RGB, HSL, LCH, OKLCH and other color formats',
     icon: 'Palette',
     route: '/utilities/color-converter',
     component: () => import('./ColorConverterView.vue'),
     cli: true,
     api: false,
     category: 'CSS & Design',
-    tags: ['color', 'css', 'hex', 'rgb', 'hsl', 'converter'],
+    tags: ['color', 'css', 'hex', 'rgb', 'hsl', 'lch', 'oklch', 'converter'],
   },
   cliHandler: {
     async execute(args: string[]) {

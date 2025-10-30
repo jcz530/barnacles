@@ -11,25 +11,27 @@ function displayConversion(colorInput: string): boolean {
 
   if (!result) {
     log.error('Invalid color format');
-    log.info('Supported formats: HEX (#3b82f6), RGB (rgb(59, 130, 246)), HSL (hsl(217, 91%, 60%))');
+    log.info('Supported formats: HEX, RGB, HSL, LCH, OKLCH');
     return false;
   }
 
   console.log('\n' + pc.bold('Color Conversions:'));
-  console.log(pc.dim('─'.repeat(50)));
-  console.log(pc.bold('HEX:  ') + pc.cyan(result.hex));
-  console.log(pc.bold('RGB:  ') + pc.cyan(result.rgb));
-  console.log(pc.bold('RGBA: ') + pc.cyan(result.rgba));
-  console.log(pc.bold('HSL:  ') + pc.cyan(result.hsl));
-  console.log(pc.bold('HSLA: ') + pc.cyan(result.hsla));
-  console.log(pc.dim('─'.repeat(50)) + '\n');
+  console.log(pc.dim('─'.repeat(60)));
+  console.log(pc.bold('HEX:   ') + pc.cyan(result.hex));
+  console.log(pc.bold('RGB:   ') + pc.cyan(result.rgb));
+  console.log(pc.bold('RGBA:  ') + pc.cyan(result.rgba));
+  console.log(pc.bold('HSL:   ') + pc.cyan(result.hsl));
+  console.log(pc.bold('HSLA:  ') + pc.cyan(result.hsla));
+  console.log(pc.bold('LCH:   ') + pc.cyan(result.lch));
+  console.log(pc.bold('OKLCH: ') + pc.cyan(result.oklch) + pc.dim(' (modern)'));
+  console.log(pc.dim('─'.repeat(60)) + '\n');
   return true;
 }
 
 export const colorConverterCli = {
   id: 'color-converter',
   name: 'CSS Color Converter',
-  description: 'Convert between HEX, RGB, RGBA, HSL, and HSLA color formats',
+  description: 'Convert between HEX, RGB, HSL, LCH, OKLCH and other color formats',
   handler: {
     async execute(args: string[]) {
       const colorInput = args[0];

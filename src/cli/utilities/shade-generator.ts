@@ -86,7 +86,7 @@ function displayExport(
 export const shadeGeneratorCli = {
   id: 'shade-generator',
   name: 'Shade Generator',
-  description: 'Generate perceptually uniform color palettes for design systems',
+  description: 'Generate perceptually uniform color palettes using OKLCH for design systems',
   handler: {
     async execute(args: string[]) {
       const colorInput = args[0];
@@ -206,7 +206,7 @@ export const shadeGeneratorCli = {
         console.log(''); // Add spacing
       }
     },
-    helpText: 'Generate color shade palettes using perceptually uniform LCH color space',
+    helpText: 'Generate color shade palettes using perceptually uniform OKLCH color space',
     examples: [
       'barnacles utilities shade-generator "#3b82f6"',
       'barnacles utilities shade-generator "rgb(59, 130, 246)"',

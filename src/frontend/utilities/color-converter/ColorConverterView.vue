@@ -72,6 +72,8 @@ const colorFormats = computed(() => {
     { label: 'RGBA', key: 'rgba', value: convertedColors.value.rgba },
     { label: 'HSL', key: 'hsl', value: convertedColors.value.hsl },
     { label: 'HSLA', key: 'hsla', value: convertedColors.value.hsla },
+    { label: 'LCH', key: 'lch', value: convertedColors.value.lch },
+    { label: 'OKLCH', key: 'oklch', value: convertedColors.value.oklch },
   ];
 });
 </script>
@@ -82,7 +84,7 @@ const colorFormats = computed(() => {
       <div class="mb-6">
         <h2 class="text-2xl font-semibold">CSS Color Converter</h2>
         <p class="text-muted-foreground mt-1">
-          Convert between different CSS color formats (HEX, RGB, HSL)
+          Convert between different CSS color formats including modern LCH and OKLCH
         </p>
       </div>
 
@@ -115,7 +117,7 @@ const colorFormats = computed(() => {
               </div>
               <p v-if="error" class="text-destructive text-sm">{{ error }}</p>
               <p v-else class="text-muted-foreground text-sm">
-                Supports HEX, RGB, RGBA, HSL, and HSLA formats
+                Supports HEX, RGB, HSL, LCH, OKLCH and more
               </p>
             </div>
 

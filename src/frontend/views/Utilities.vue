@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
-import { getAllUtilities, discoverUtilities } from '@/utilities';
+import { discoverUtilities, getAllUtilities } from '@/utilities';
 import UtilitiesGrid from '@/components/utilities/organisms/UtilitiesGrid.vue';
 import type { UtilityMetadata } from '@/utilities/types';
 
