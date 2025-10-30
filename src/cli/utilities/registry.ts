@@ -41,5 +41,10 @@ export function registerCliUtilities(): void {
     cliUtilityRegistry.register(module.colorConverterCli);
   });
 
+  // Import and register shade-generator
+  import('./shade-generator.js').then(module => {
+    cliUtilityRegistry.register(module.shadeGeneratorCli);
+  });
+
   // Future utilities can be registered here
 }
