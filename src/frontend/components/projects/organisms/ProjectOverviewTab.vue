@@ -12,7 +12,7 @@ const project = inject<ComputedRef<ProjectWithDetails | undefined>>('project');
 </script>
 
 <template>
-  <div class="grid gap-6 md:grid-cols-2">
+  <div class="grid gap-6 px-1 md:grid-cols-2">
     <ProjectInfoCard :project="project" />
     <GitInformationCard :project="project" />
     <LanguageBreakdownCard :project="project" />

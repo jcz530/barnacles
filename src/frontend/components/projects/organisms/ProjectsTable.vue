@@ -140,7 +140,7 @@ const table = useVueTable({
           <tbody>
             <template v-for="row in table.getRowModel().rows" :key="row.id">
               <tr
-                class="project-row group cursor-pointer border-slate-100 transition-colors hover:bg-slate-200"
+                class="project-row group cursor-pointer transition-colors"
                 :data-project-id="row.original.id"
                 @click="handleOpen(row.original)"
               >
@@ -260,7 +260,7 @@ const table = useVueTable({
               <!-- Technologies Row -->
               <tr
                 v-if="row.original.technologies.length > 0"
-                class="tech-row cursor-pointer border-b border-slate-100 transition-colors hover:bg-slate-50"
+                class="tech-row cursor-pointer border-b border-pink-400/20 transition-colors hover:bg-slate-50"
                 :data-project-id="row.original.id"
                 @click="handleOpen(row.original)"
               >
@@ -270,7 +270,7 @@ const table = useVueTable({
                     <span
                       v-for="tech in row.original.technologies"
                       :key="tech.id"
-                      class="inline-flex items-center gap-1 rounded-full border border-none px-2 py-0.5 text-xs font-medium text-slate-500"
+                      class="inline-flex items-center gap-1 rounded-full border-none px-2 py-0.5 text-xs font-medium text-slate-500"
                       :style="{
                         // borderColor: tech.color || '#cbd5e1',
                         // color: tech.color || '#475569',

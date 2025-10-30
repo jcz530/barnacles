@@ -1,7 +1,7 @@
 <script setup lang="ts" generic="TData">
 import type { HeaderGroup } from '@tanstack/vue-table';
 import { FlexRender } from '@tanstack/vue-table';
-import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-vue-next';
+import { ChevronDown, ChevronsUpDown, ChevronUp } from 'lucide-vue-next';
 
 defineProps<{
   headerGroups: HeaderGroup<TData>[];
@@ -14,9 +14,9 @@ defineProps<{
       <th
         v-for="header in headerGroup.headers"
         :key="header.id"
-        class="border-b-2 px-4 py-2 text-left font-semibold"
+        class="border-b-2 border-pink-400/20 px-4 py-2 text-left font-semibold"
         :class="{
-          'cursor-pointer select-none hover:bg-slate-50': header.column.getCanSort(),
+          'hover:bg-primary-500/20 cursor-pointer rounded select-none': header.column.getCanSort(),
         }"
         @click="header.column.getToggleSortingHandler()?.($event)"
       >
