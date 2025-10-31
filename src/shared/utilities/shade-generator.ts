@@ -18,6 +18,8 @@ export interface ShadeConfig {
   chromaIntensity?: number;
   /** Force base color position (0-10, default: auto-detect) */
   basePosition?: number;
+  /** Minimum lightness for darkest shade (10-25, default: 15) */
+  minLightness?: number;
 }
 
 export interface Shade {
@@ -96,9 +98,18 @@ function getChromaAdjustment(shadeIndex: number, totalShades: number, algorithm:
  * Generate lightness values with configurable curve
  * @param count Number of shades to generate
  * @param curve Easing amount (0 = linear, 1 = fully eased, default: 0.5)
+ * @param minLightness Minimum lightness for darkest shade (10-25, default: 15)
  */
-function generateLightnessScale(count: number, curve: number = 0.5): number[] {
+function generateLightnessScale(
+  count: number,
+  curve: number = 0.5,
+  minLightness: number = 15
+): number[] {
   const lightnesses: number[] = [];
+
+  // Configurable range for better dark shade differentiation
+  const maxLightness = 96;
+  const range = maxLightness - minLightness;
 
   for (let i = 0; i < count; i++) {
     const position = i / (count - 1); // 0 to 1
@@ -110,16 +121,19 @@ function generateLightnessScale(count: number, curve: number = 0.5): number[] {
       // Fully linear
       adjustedPosition = position;
     } else {
-      // Apply easing (more steps in darker range)
+      // Apply improved easing curve that provides better separation in darks
+      // Using a cubic ease-in-out for smoother distribution
       const eased =
-        position < 0.5 ? 2 * position * position : 1 - Math.pow(-2 * position + 2, 2) / 2;
+        position < 0.5
+          ? 4 * position * position * position
+          : 1 - Math.pow(-2 * position + 2, 3) / 2;
 
       // Blend between linear and eased based on curve parameter
       adjustedPosition = position * (1 - curve) + eased * curve;
     }
 
-    // Map to lightness range (95 to 10)
-    const lightness = 95 - adjustedPosition * 85;
+    // Map to improved lightness range
+    const lightness = maxLightness - adjustedPosition * range;
 
     lightnesses.push(lightness);
   }
@@ -157,14 +171,15 @@ export function generateShades(config: ShadeConfig): GeneratedPalette | null {
     lightnessCurve = 0.5,
     chromaIntensity = 1,
     basePosition,
+    minLightness = 15,
   } = config;
 
   // Parse base color to OKLCH
   const baseOklch = toOklch(baseColor);
   if (!baseOklch) return null;
 
-  // Generate lightness scale with custom curve
-  const lightnessScale = generateLightnessScale(count, lightnessCurve);
+  // Generate lightness scale with custom curve and minimum lightness
+  const lightnessScale = generateLightnessScale(count, lightnessCurve, minLightness);
 
   // Determine base shade index
   const baseShadeIndex =

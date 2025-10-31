@@ -38,6 +38,7 @@ const colorFormat = ref<ColorFormat>('hex'); // Format for export
 // Fine-tuning controls
 const lightnessCurve = ref([0.5]); // 0 = linear, 1 = fully eased
 const chromaIntensity = ref([1]); // 0.5 = less saturated, 1.5 = more saturated
+const minLightness = ref([15]); // 10 = very dark, 25 = lighter darks
 const basePosition = ref<number | undefined>(undefined); // undefined = auto-detect
 const showAdvanced = ref(false);
 
@@ -88,7 +89,7 @@ watch(baseColorFormat, (newFormat, oldFormat) => {
 
 // Generate palette when inputs change
 watch(
-  [colorInput, algorithm, lightnessCurve, chromaIntensity, basePosition],
+  [colorInput, algorithm, lightnessCurve, chromaIntensity, minLightness, basePosition],
   () => {
     try {
       const result = generateShades({
@@ -96,6 +97,7 @@ watch(
         algorithm: algorithm.value,
         lightnessCurve: lightnessCurve.value[0],
         chromaIntensity: chromaIntensity.value[0],
+        minLightness: minLightness.value[0],
         basePosition: basePosition.value,
       });
 
@@ -170,11 +172,13 @@ function downloadPalette() {
   a.href = url;
 
   // Determine file extension based on format
-  let extension = exportFormat.value;
+  let extension = 'txt';
   if (exportFormat.value === 'tailwind3') {
     extension = 'js';
-  } else if (exportFormat.value === 'tailwind4') {
+  } else if (exportFormat.value === 'tailwind4' || exportFormat.value === 'scss') {
     extension = 'css';
+  } else if (exportFormat.value === 'json') {
+    extension = 'json';
   }
 
   a.download = `${colorName.value}-palette.${extension}`;
@@ -249,10 +253,11 @@ function downloadPaletteImage() {
 }
 
 const algorithmOptions = [
-  { value: 'tailwind', label: 'Tailwind', description: 'Balanced, Tailwind-style palette' },
+  { value: 'tailwind', label: 'Balanced', description: 'Tailwind-style palette' },
   { value: 'vibrant', label: 'Vibrant', description: 'High saturation throughout' },
   { value: 'natural', label: 'Natural', description: 'Desaturated extremes' },
 ];
+const selectedAlgorith = computed(() => algorithmOptions.find(a => a.value === algorithm.value));
 
 const exportFormatOptions = [
   { value: 'tailwind3', label: 'Tailwind v3 Config' },
@@ -280,9 +285,9 @@ const colorFormatOptions = [
         </p>
       </div>
 
-      <div class="space-y-6">
+      <div class="space-y-3">
         <!-- Input Controls -->
-        <Card>
+        <Card class="max-w-xl border-none shadow-none">
           <CardHeader>
             <CardTitle>Configuration</CardTitle>
             <CardDescription>Configure your base color and algorithm</CardDescription>
@@ -295,10 +300,10 @@ const colorFormatOptions = [
                 <input
                   v-model="colorPickerValue"
                   type="color"
-                  class="border-input h-10 w-14 cursor-pointer rounded-md border"
+                  class="border-input h-10 w-14 cursor-pointer rounded-md border shadow-sm"
                   title="Pick a color"
                 />
-                <div class="flex flex-1 items-center rounded-md shadow">
+                <div class="flex max-w-md flex-1 items-center rounded-md shadow-sm">
                   <Input
                     id="color-input"
                     v-model="colorInput"
@@ -327,7 +332,7 @@ const colorFormatOptions = [
               <p v-if="error" class="text-destructive text-sm">{{ error }}</p>
             </div>
 
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div class="grid max-w-md grid-cols-1 gap-4 md:grid-cols-2">
               <!-- Color Name -->
               <div class="space-y-2">
                 <Label for="color-name">Color Name</Label>
@@ -339,7 +344,12 @@ const colorFormatOptions = [
                 <Label for="algorithm">Algorithm</Label>
                 <Select v-model="algorithm">
                   <SelectTrigger id="algorithm">
-                    <SelectValue placeholder="Select algorithm" />
+                    <SelectValue placeholder="Select algorithm">
+                      {{ selectedAlgorith?.label ?? 'Select algorithm' }}
+                      {{
+                        selectedAlgorith?.description ? ` · ${selectedAlgorith?.description}` : ''
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem
@@ -417,6 +427,26 @@ const colorFormatOptions = [
                   </p>
                 </div>
 
+                <!-- Dark Shade Lightness -->
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <Label for="min-lightness">Dark Shade Lightness</Label>
+                    <span class="text-muted-foreground text-sm">{{ minLightness[0] }}</span>
+                  </div>
+                  <Slider
+                    id="min-lightness"
+                    v-model="minLightness"
+                    :min="10"
+                    :max="25"
+                    :step="1"
+                    class="w-full"
+                  />
+                  <p class="text-muted-foreground text-xs">
+                    Minimum lightness for darkest shade. Higher = more differentiation in dark
+                    shades.
+                  </p>
+                </div>
+
                 <!-- Reset Button -->
                 <Button
                   variant="outline"
@@ -426,6 +456,7 @@ const colorFormatOptions = [
                     () => {
                       lightnessCurve = [0.5];
                       chromaIntensity = [1];
+                      minLightness = [15];
                       basePosition = undefined;
                     }
                   "
@@ -436,9 +467,9 @@ const colorFormatOptions = [
             </Collapsible>
           </CardContent>
         </Card>
-
+        <hr class="mx-6 border-pink-400/20" />
         <!-- Palette Preview -->
-        <Card v-if="palette">
+        <Card class="border-none shadow-none" v-if="palette">
           <CardHeader>
             <CardTitle>Generated Palette</CardTitle>
             <CardDescription>
@@ -518,9 +549,9 @@ const colorFormatOptions = [
             </div>
           </CardContent>
         </Card>
-
+        <hr class="mx-6 border-pink-400/20" />
         <!-- Export Panel -->
-        <Card v-if="palette">
+        <Card class="border-none shadow-none" v-if="palette">
           <CardHeader>
             <div class="flex items-center justify-between">
               <div>

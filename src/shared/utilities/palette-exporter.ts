@@ -3,7 +3,7 @@
  */
 
 import type { GeneratedPalette } from './shade-generator';
-import { formatCss, formatHex, formatRgb, converter, parse } from 'culori';
+import { converter, formatCss, formatHex, formatRgb, parse } from 'culori';
 
 export type ExportFormat = 'css' | 'tailwind3' | 'tailwind4' | 'scss' | 'json';
 export type ColorFormat = 'hex' | 'rgb' | 'hsl' | 'oklch';
