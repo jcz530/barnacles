@@ -44,29 +44,35 @@ export abstract class Command {
   /**
    * Execute the command
    */
-  abstract execute(flags: Record<string, string | boolean>): Promise<void>;
+  abstract execute(flags: Record<string, string | boolean>, positional?: string[]): Promise<void>;
 
   /**
    * Hook that runs before execute
    */
-  protected async beforeExecute(_flags: Record<string, string | boolean>): Promise<void> {
+  protected async beforeExecute(
+    _flags: Record<string, string | boolean>,
+    _positional?: string[]
+  ): Promise<void> {
     // Override in subclasses if needed
   }
 
   /**
    * Hook that runs after execute
    */
-  protected async afterExecute(_flags: Record<string, string | boolean>): Promise<void> {
+  protected async afterExecute(
+    _flags: Record<string, string | boolean>,
+    _positional?: string[]
+  ): Promise<void> {
     // Override in subclasses if needed
   }
 
   /**
    * Run the command with lifecycle hooks
    */
-  async run(flags: Record<string, string | boolean>): Promise<void> {
-    await this.beforeExecute(flags);
-    await this.execute(flags);
-    await this.afterExecute(flags);
+  async run(flags: Record<string, string | boolean>, positional: string[] = []): Promise<void> {
+    await this.beforeExecute(flags, positional);
+    await this.execute(flags, positional);
+    await this.afterExecute(flags, positional);
   }
 
   /**

@@ -3,12 +3,12 @@
 import { intro, isCancel, outro } from '@clack/prompts';
 import { parseArgs } from './utils/arg-parser.js';
 import { executeCommand, registry } from './commands';
-import { compactLogo, getTitle } from './utils/branding';
+import { compactLogo, getTitle, printHeader } from './utils/branding';
 import { selectCommand } from './utils/command-selector.js';
 
 async function main() {
   const args = process.argv.slice(2);
-  const { command, flags } = parseArgs(args);
+  const { command, flags, positional } = parseArgs(args);
 
   // Handle version flag globally
   if (flags.version || flags.v) {
@@ -23,7 +23,7 @@ async function main() {
 
   // If no command provided, show interactive selector
   if (!selectedCommand) {
-    intro(`${compactLogo} ${getTitle()}`);
+    printHeader();
     const result = await selectCommand(registry);
 
     if (isCancel(result)) {
@@ -47,7 +47,7 @@ async function main() {
   }
 
   try {
-    await executeCommand(selectedCommand, flags);
+    await executeCommand(selectedCommand, flags, positional);
 
     if (shouldShowIntro || !command) {
       outro('Done!');
