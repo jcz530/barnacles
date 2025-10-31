@@ -1,5 +1,11 @@
 import ExifReader from 'exifreader';
 
+/**
+ * Maximum file size for EXIF processing (50MB)
+ * This prevents memory exhaustion when loading large files
+ */
+export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+
 export interface ExifTag {
   description: string;
   value: string | number | number[];

@@ -2,7 +2,9 @@
 import { ref, computed } from 'vue';
 import { useDropZone } from '@vueuse/core';
 import { Upload, ImageIcon } from 'lucide-vue-next';
+import { toast } from 'vue-sonner';
 import { Button } from '@/components/ui/button';
+import { MAX_FILE_SIZE } from '../../../shared/utilities/exif-reader';
 
 const emit = defineEmits<{
   fileSelected: [file: File];
@@ -25,14 +27,29 @@ const isValidImageFile = (file: File): boolean => {
   return validTypes.includes(file.type);
 };
 
+const isValidFileSize = (file: File): boolean => {
+  if (file.size > MAX_FILE_SIZE) {
+    const maxSizeMB = Math.round(MAX_FILE_SIZE / 1024 / 1024);
+    const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
+    toast.error(`File too large: ${fileSizeMB}MB (max ${maxSizeMB}MB)`);
+    return false;
+  }
+  return true;
+};
+
 // Use VueUse's useDropZone for drag-and-drop
 const { isOverDropZone } = useDropZone(dropZoneRef, {
   onDrop: files => {
     if (files && files.length > 0) {
       const file = files[0];
-      if (isValidImageFile(file)) {
-        emit('fileSelected', file);
+      if (!isValidImageFile(file)) {
+        toast.error('Invalid file type. Please select a supported image format.');
+        return;
       }
+      if (!isValidFileSize(file)) {
+        return;
+      }
+      emit('fileSelected', file);
     }
   },
 });
@@ -42,9 +59,14 @@ const handleFileInput = (e: Event) => {
   const files = target.files;
   if (files && files.length > 0) {
     const file = files[0];
-    if (isValidImageFile(file)) {
-      emit('fileSelected', file);
+    if (!isValidImageFile(file)) {
+      toast.error('Invalid file type. Please select a supported image format.');
+      return;
     }
+    if (!isValidFileSize(file)) {
+      return;
+    }
+    emit('fileSelected', file);
   }
 };
 

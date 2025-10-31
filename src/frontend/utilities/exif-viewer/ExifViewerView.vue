@@ -12,6 +12,7 @@ import {
   parseExifData,
   exportExifAsJson,
   stripExifData,
+  MAX_FILE_SIZE,
   type ParsedExifData,
 } from '../../../shared/utilities/exif-reader';
 
@@ -21,6 +22,14 @@ const isLoading = ref(false);
 const activeTab = ref('view');
 
 const handleFileSelected = async (file: File) => {
+  // Validate file size before processing
+  if (file.size > MAX_FILE_SIZE) {
+    const maxSizeMB = Math.round(MAX_FILE_SIZE / 1024 / 1024);
+    const fileSizeMB = (file.size / 1024 / 1024).toFixed(1);
+    toast.error(`File too large: ${fileSizeMB}MB (max ${maxSizeMB}MB)`);
+    return;
+  }
+
   selectedFile.value = file;
   isLoading.value = true;
   exifData.value = null;
@@ -66,6 +75,14 @@ const exportAsJson = () => {
 
 const handleStripExif = async () => {
   if (!selectedFile.value) return;
+
+  // Validate file size before processing
+  if (selectedFile.value.size > MAX_FILE_SIZE) {
+    const maxSizeMB = Math.round(MAX_FILE_SIZE / 1024 / 1024);
+    const fileSizeMB = (selectedFile.value.size / 1024 / 1024).toFixed(1);
+    toast.error(`File too large: ${fileSizeMB}MB (max ${maxSizeMB}MB)`);
+    return;
+  }
 
   try {
     const arrayBuffer = await selectedFile.value.arrayBuffer();
