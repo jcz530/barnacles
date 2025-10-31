@@ -46,5 +46,10 @@ export function registerCliUtilities(): void {
     cliUtilityRegistry.register(module.shadeGeneratorCli);
   });
 
+  // Import and register exif-viewer
+  import('./exif-viewer.js').then(module => {
+    cliUtilityRegistry.register(module.exifViewerCli);
+  });
+
   // Future utilities can be registered here
 }
