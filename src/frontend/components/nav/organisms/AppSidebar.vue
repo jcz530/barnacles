@@ -19,7 +19,15 @@ import { useApi } from '@/composables/useApi';
 import { useConfigs } from '@/composables/useConfigs';
 import { useQueries } from '@/composables/useQueries';
 import { useQuery } from '@tanstack/vue-query';
-import { Cog, FileText, FolderGit2, Network, SquareTerminal, Terminal } from 'lucide-vue-next';
+import {
+  Cog,
+  FileText,
+  FolderGit2,
+  Network,
+  Sparkles,
+  SquareTerminal,
+  Terminal,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { API_ROUTES } from '../../../../shared/constants';
@@ -83,12 +91,12 @@ const data = computed(() => ({
       count: processes.value?.length ?? 0,
       isActive: route.path.startsWith('/terminals'),
     },
-    // {
-    //   title: 'Utilities',
-    //   url: '/utilities',
-    //   icon: Sparkles,
-    //   isActive: route.path.startsWith('/utilities'),
-    // },
+    {
+      title: 'Utilities',
+      url: '/utilities',
+      icon: Sparkles,
+      isActive: route.path.startsWith('/utilities'),
+    },
   ],
   navSecondary: [
     // {
