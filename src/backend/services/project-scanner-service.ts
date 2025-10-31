@@ -187,9 +187,8 @@ class ProjectScannerService {
   /**
    * Loads and parses .gitignore file
    */
-  private async loadGitignore(projectPath: string): Promise<ReturnType<typeof ignore> | null> {
+  private async loadGitignore(gitignorePath: string): Promise<ReturnType<typeof ignore> | null> {
     try {
-      const gitignorePath = path.join(projectPath, '.gitignore');
       const content = await fs.readFile(gitignorePath, 'utf-8');
       const ig = ignore();
       ig.add(content);
@@ -197,6 +196,37 @@ class ProjectScannerService {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Checks if a path should be ignored based on all applicable .gitignore files
+   */
+  private shouldIgnore(
+    fullPath: string,
+    isDirectory: boolean,
+    gitignoreCache: Map<string, ReturnType<typeof ignore>>
+  ): boolean {
+    // Check each .gitignore in the hierarchy from root to the file's directory
+    for (const [gitignoreDir, filter] of gitignoreCache.entries()) {
+      // Calculate relative path from this .gitignore's directory
+      const relativeToGitignore = path.relative(gitignoreDir, fullPath);
+      const normalizedRelative = relativeToGitignore.split(path.sep).join('/');
+
+      // Only check if this file is under this .gitignore's directory
+      if (!normalizedRelative.startsWith('..')) {
+        if (isDirectory) {
+          if (filter.ignores(normalizedRelative) || filter.ignores(normalizedRelative + '/')) {
+            return true;
+          }
+        } else {
+          if (filter.ignores(normalizedRelative)) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -307,8 +337,15 @@ class ProjectScannerService {
     const extensionCounts: { [ext: string]: number } = {};
     const extensionLines: { [ext: string]: number } = {};
 
-    // Load .gitignore if it exists
-    const gitignoreFilter = await this.loadGitignore(projectPath);
+    // Cache for all .gitignore files encountered during the scan
+    const gitignoreCache = new Map<string, ReturnType<typeof ignore>>();
+
+    // Load root .gitignore if it exists
+    const rootGitignorePath = path.join(projectPath, '.gitignore');
+    const rootFilter = await this.loadGitignore(rootGitignorePath);
+    if (rootFilter) {
+      gitignoreCache.set(projectPath, rootFilter);
+    }
 
     // Load excluded directories from settings
     const excludedDirs = await settingsService.getValue<string[]>('scanExcludedDirectories');
@@ -328,6 +365,12 @@ class ProjectScannerService {
     const ignoreFiles = ['.DS_Store', 'Thumbs.db', 'desktop.ini', '.localized'];
 
     async function scanDir(dirPath: string): Promise<void> {
+      // Check for .gitignore in this directory and add to cache
+      const gitignorePath = path.join(dirPath, '.gitignore');
+      const filter = await projectScannerService.loadGitignore(gitignorePath);
+      if (filter && !gitignoreCache.has(dirPath)) {
+        gitignoreCache.set(dirPath, filter);
+      }
       try {
         const entries = await fs.readdir(dirPath, { withFileTypes: true });
 
@@ -342,12 +385,9 @@ class ProjectScannerService {
 
           const fullPath = path.join(dirPath, entry.name);
 
-          // Check if file/dir is ignored by .gitignore
-          if (gitignoreFilter) {
-            const relativePath = path.relative(projectPath, fullPath);
-            if (gitignoreFilter.ignores(relativePath)) {
-              continue;
-            }
+          // Check if file/dir is ignored by any .gitignore in the hierarchy
+          if (projectScannerService.shouldIgnore(fullPath, entry.isDirectory(), gitignoreCache)) {
+            continue;
           }
 
           if (entry.isDirectory()) {
