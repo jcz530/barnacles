@@ -11,9 +11,12 @@ const EXCLUDED_DIRS = new Set([
   '.data',
   '.git',
   '.idea',
+  '.mypy_cache',
   '.next',
   '.nuxt',
   '.run',
+  '.venv/bin',
+  '.venv/lib',
   '.vscode',
   '.wrangler',
   'Thumbs.db',
@@ -55,6 +58,44 @@ function expandTilde(filepath: string): string {
 }
 
 /**
+ * Check if a path should be excluded based on exact name match or subdirectory pattern
+ */
+function isExcluded(entryName: string, relativePath: string): boolean {
+  const normalizedPath = relativePath.split(path.sep).join('/');
+
+  for (const excluded of EXCLUDED_DIRS) {
+    const pattern = excluded.replace(/\/+$/, ''); // Remove trailing slashes
+    if (!pattern) continue;
+
+    // Name pattern (no "/"): match exact directory/file name
+    // Example: "node_modules" matches any directory named "node_modules"
+    if (!pattern.includes('/') && entryName === pattern) {
+      return true;
+    }
+
+    // Path pattern (contains "/"): match as a substring in the path hierarchy
+    // Example: ".venv/lib" matches "backend/.venv/lib/python3.11/..."
+    if (pattern.includes('/')) {
+      const pathSegments = normalizedPath.split('/');
+      const patternSegments = pattern.split('/');
+
+      // Slide through path segments looking for pattern match
+      for (let i = 0; i <= pathSegments.length - patternSegments.length; i++) {
+        const slice = pathSegments.slice(i, i + patternSegments.length).join('/');
+        if (slice === pattern) {
+          const remaining = pathSegments.slice(i).join('/');
+          if (remaining === pattern || remaining.startsWith(pattern + '/')) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
  * Recursively read a directory and build a tree structure
  */
 async function readDirectoryTree(dirPath: string, relativeTo: string): Promise<FileNode[]> {
@@ -63,13 +104,13 @@ async function readDirectoryTree(dirPath: string, relativeTo: string): Promise<F
     const nodes: FileNode[] = [];
 
     for (const entry of entries) {
-      // Skip excluded directories and files
-      if (EXCLUDED_DIRS.has(entry.name)) {
-        continue;
-      }
-
       const fullPath = path.join(dirPath, entry.name);
       const relativePath = path.relative(relativeTo, fullPath);
+
+      // Skip excluded directories and files
+      if (isExcluded(entry.name, relativePath)) {
+        continue;
+      }
 
       if (entry.isDirectory()) {
         // Recursively read subdirectories
@@ -119,7 +160,7 @@ async function searchInFiles(
   const results: SearchResult[] = [];
   const searchQuery = query.toLowerCase();
 
-  async function searchDir(currentPath: string): Promise<void> {
+  async function searchDir(currentPath: string, rootPath: string): Promise<void> {
     if (results.length >= maxResults) return;
 
     try {
@@ -128,15 +169,16 @@ async function searchInFiles(
       for (const entry of entries) {
         if (results.length >= maxResults) break;
 
+        const fullPath = path.join(currentPath, entry.name);
+        const relativePath = path.relative(rootPath, fullPath);
+
         // Skip excluded directories
-        if (EXCLUDED_DIRS.has(entry.name)) {
+        if (isExcluded(entry.name, relativePath)) {
           continue;
         }
 
-        const fullPath = path.join(currentPath, entry.name);
-
         if (entry.isDirectory()) {
-          await searchDir(fullPath);
+          await searchDir(fullPath, rootPath);
         } else if (entry.isFile()) {
           // Only search text files (skip large files and binaries)
           const stats = await fs.stat(fullPath);
@@ -164,7 +206,7 @@ async function searchInFiles(
                 });
               }
             }
-          } catch (err) {
+          } catch {
             // Skip files that can't be read as text (likely binary)
             continue;
           }
@@ -175,7 +217,7 @@ async function searchInFiles(
     }
   }
 
-  await searchDir(dirPath);
+  await searchDir(dirPath, dirPath);
   return results;
 }
 
