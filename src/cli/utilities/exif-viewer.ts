@@ -1,9 +1,24 @@
-import { parseExifData, exportExifAsJson } from '../../shared/utilities/exif-reader.js';
+import {
+  parseExifData,
+  exportExifAsJson,
+  stripExifData,
+} from '../../shared/utilities/exif-reader.js';
 import { intro, isCancel, log, outro, text, select } from '@clack/prompts';
 import { compactLogo } from '../utils/branding.js';
 import pc from 'picocolors';
 import fs from 'fs/promises';
 import path from 'path';
+
+/**
+ * Format bytes to human-readable string
+ */
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
 
 /**
  * Display EXIF data in a formatted table
@@ -101,9 +116,34 @@ async function processImageFile(
           : `${path.basename(resolvedPath, path.extname(resolvedPath))}_exif.json`;
       await exportToJson(exifData, outputPath);
     } else if (flags.strip) {
-      // Strip EXIF data (not yet implemented)
-      log.warn('EXIF stripping is not yet implemented');
-      log.info('This feature will allow you to remove EXIF data from images');
+      // Strip EXIF data
+      const result = await stripExifData(buffer.buffer, 'image/jpeg');
+
+      if (!result.success) {
+        log.error(result.error || 'Failed to strip EXIF data');
+        return false;
+      }
+
+      // Save stripped image
+      const outputPath =
+        typeof flags.strip === 'string'
+          ? flags.strip
+          : `${path.basename(resolvedPath, path.extname(resolvedPath))}_no_exif${path.extname(resolvedPath)}`;
+
+      await fs.writeFile(outputPath, Buffer.from(result.buffer));
+      log.success(`EXIF data stripped and saved to ${pc.cyan(outputPath)}`);
+
+      // Show file size comparison
+      const originalSize = buffer.length;
+      const strippedSize = result.buffer.byteLength;
+      const savedBytes = originalSize - strippedSize;
+      const savedPercent = ((savedBytes / originalSize) * 100).toFixed(1);
+
+      console.log(
+        pc.dim(
+          `\nOriginal: ${formatBytes(originalSize)} → Stripped: ${formatBytes(strippedSize)} (saved ${formatBytes(savedBytes)}, ${savedPercent}%)`
+        )
+      );
     } else {
       // Default: display all EXIF data
       displayExifData(exifData);
@@ -196,6 +236,7 @@ export const exifViewerCli = {
       'barnacles utilities exif-viewer photo.jpg --gps',
       'barnacles utilities exif-viewer photo.jpg --export metadata.json',
       'barnacles utilities exif-viewer photo.jpg --strip',
+      'barnacles utilities exif-viewer photo.jpg --strip output.jpg',
     ],
   },
 };

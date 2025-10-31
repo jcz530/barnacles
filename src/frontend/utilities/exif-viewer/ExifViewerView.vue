@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   parseExifData,
   exportExifAsJson,
+  stripExifData,
   type ParsedExifData,
 } from '../../../shared/utilities/exif-reader';
 
@@ -63,29 +64,32 @@ const exportAsJson = () => {
   }
 };
 
-const stripExifData = async () => {
+const handleStripExif = async () => {
   if (!selectedFile.value) return;
 
   try {
-    // For now, we'll create a simple stripped version
-    // In a full implementation, this would use piexifjs to actually strip EXIF
-    toast.info('EXIF stripping is not yet fully implemented');
+    const arrayBuffer = await selectedFile.value.arrayBuffer();
+    const result = await stripExifData(arrayBuffer, selectedFile.value.type);
 
-    // Placeholder for future implementation:
-    // const arrayBuffer = await selectedFile.value.arrayBuffer();
-    // const strippedBuffer = await stripExifData(arrayBuffer, selectedFile.value.type);
-    // if (strippedBuffer) {
-    //   const blob = new Blob([strippedBuffer], { type: selectedFile.value.type });
-    //   const url = URL.createObjectURL(blob);
-    //   const a = document.createElement('a');
-    //   a.href = url;
-    //   a.download = `${selectedFile.value.name.replace(/\.[^/.]+$/, '')}_no_exif.jpg`;
-    //   document.body.appendChild(a);
-    //   a.click();
-    //   document.body.removeChild(a);
-    //   URL.revokeObjectURL(url);
-    //   toast.success('EXIF data stripped from image');
-    // }
+    if (!result.success) {
+      toast.error(result.error || 'Failed to strip EXIF data');
+      return;
+    }
+
+    // Create a blob from the stripped buffer
+    const blob = new Blob([result.buffer], { type: selectedFile.value.type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const originalName = selectedFile.value.name.replace(/\.[^/.]+$/, '');
+    const extension = selectedFile.value.name.split('.').pop();
+    a.download = `${originalName}_no_exif.${extension}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast.success('EXIF data stripped and image downloaded');
   } catch (error) {
     console.error('Error stripping EXIF data:', error);
     toast.error('Failed to strip EXIF data');
@@ -162,7 +166,7 @@ watch(selectedFile, newFile => {
                         Remove EXIF metadata from your image to protect privacy and reduce file
                         size.
                       </p>
-                      <Button @click="stripExifData" variant="destructive" class="w-full">
+                      <Button @click="handleStripExif" variant="destructive" class="w-full">
                         <Trash2 class="mr-2 h-4 w-4" />
                         Strip All EXIF Data
                       </Button>
