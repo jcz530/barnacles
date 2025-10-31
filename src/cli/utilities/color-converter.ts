@@ -4,6 +4,19 @@ import { compactLogo } from '../utils/branding.js';
 import pc from 'picocolors';
 
 /**
+ * Create a color preview block using ANSI escape codes
+ */
+function createColorBlock(hex: string): string {
+  const rgbMatch = hex.match(/^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+  if (!rgbMatch) return '    ';
+
+  const r = parseInt(rgbMatch[1], 16);
+  const g = parseInt(rgbMatch[2], 16);
+  const b = parseInt(rgbMatch[3], 16);
+  return `\x1b[48;2;${r};${g};${b}m    \x1b[0m`;
+}
+
+/**
  * Display color conversion results
  */
 function displayConversion(colorInput: string): boolean {
@@ -15,15 +28,17 @@ function displayConversion(colorInput: string): boolean {
     return false;
   }
 
+  const colorBlock = createColorBlock(result.hex);
+
   console.log('\n' + pc.bold('Color Conversions:'));
   console.log(pc.dim('─'.repeat(60)));
-  console.log(pc.bold('HEX:   ') + pc.cyan(result.hex));
-  console.log(pc.bold('RGB:   ') + pc.cyan(result.rgb));
-  console.log(pc.bold('RGBA:  ') + pc.cyan(result.rgba));
-  console.log(pc.bold('HSL:   ') + pc.cyan(result.hsl));
-  console.log(pc.bold('HSLA:  ') + pc.cyan(result.hsla));
-  console.log(pc.bold('LCH:   ') + pc.cyan(result.lch));
-  console.log(pc.bold('OKLCH: ') + pc.cyan(result.oklch) + pc.dim(' (modern)'));
+  console.log(`${colorBlock}  ${pc.bold('HEX:   ')}${pc.cyan(result.hex)}`);
+  console.log(`${colorBlock}  ${pc.bold('RGB:   ')}${pc.cyan(result.rgb)}`);
+  console.log(`${colorBlock}  ${pc.bold('RGBA:  ')}${pc.cyan(result.rgba)}`);
+  console.log(`${colorBlock}  ${pc.bold('HSL:   ')}${pc.cyan(result.hsl)}`);
+  console.log(`${colorBlock}  ${pc.bold('HSLA:  ')}${pc.cyan(result.hsla)}`);
+  console.log(`${colorBlock}  ${pc.bold('LCH:   ')}${pc.cyan(result.lch)}`);
+  console.log(`${colorBlock}  ${pc.bold('OKLCH: ')}${pc.cyan(result.oklch)}${pc.dim(' (modern)')}`);
   console.log(pc.dim('─'.repeat(60)) + '\n');
   return true;
 }
