@@ -287,12 +287,12 @@ const colorFormatOptions = [
 
       <div class="space-y-3">
         <!-- Input Controls -->
-        <Card class="max-w-xl border-none shadow-none">
+        <Card class="border-none shadow-none">
           <CardHeader>
             <CardTitle>Configuration</CardTitle>
             <CardDescription>Configure your base color and algorithm</CardDescription>
           </CardHeader>
-          <CardContent class="space-y-4">
+          <CardContent class="max-w-xl space-y-4">
             <!-- Base Color -->
             <div class="space-y-2">
               <Label for="color-input">Base Color</Label>
