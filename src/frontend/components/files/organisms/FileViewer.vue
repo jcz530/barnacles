@@ -9,6 +9,7 @@ import { Button } from '../../ui/button';
 import { Code, Copy, FileText, Image } from 'lucide-vue-next';
 import { formatFileSize, getFileTypeInfo } from '../../../utils/file-types';
 import { RUNTIME_CONFIG } from '../../../../shared/constants';
+import { useDark } from '@vueuse/core';
 
 interface Props {
   filePath?: string | null;
@@ -41,12 +42,17 @@ const fileTypeInfo = computed(() => getFileTypeInfo(extension.value));
 
 // Check if current file is SVG
 const isSvgFile = computed(() => extension.value?.toLowerCase() === 'svg');
-
+const isDark = useDark({
+  selector: 'html',
+  attribute: 'class',
+  valueDark: 'dark',
+  valueLight: 'light',
+});
 // Initialize Shiki highlighter
 onMounted(async () => {
   try {
     highlighter.value = await shiki.createHighlighter({
-      themes: ['github-light'],
+      themes: [isDark ? 'github-dark' : 'github-light'],
       langs: [
         'javascript',
         'typescript',

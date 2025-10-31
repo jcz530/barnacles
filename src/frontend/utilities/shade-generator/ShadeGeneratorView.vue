@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,8 @@ import {
   exportPalette,
 } from '../../../shared/utilities/palette-exporter';
 import { convertColor } from '../../../shared/utilities/color-converter';
+import * as shiki from 'shiki';
+import { useDark } from '@vueuse/core';
 
 const colorInput = ref('#3b82f6');
 const colorPickerValue = ref('#3b82f6');
@@ -46,6 +48,25 @@ const palette = ref<GeneratedPalette | null>(null);
 const error = ref<string | null>(null);
 const copiedShade = ref<string | null>(null);
 const copiedExport = ref(false);
+const highlighter = ref<shiki.Highlighter | null>(null);
+const isDark = useDark({
+  selector: 'html',
+  attribute: 'class',
+  valueDark: 'dark',
+  valueLight: 'light',
+});
+
+// Initialize Shiki highlighter
+onMounted(async () => {
+  try {
+    highlighter.value = await shiki.createHighlighter({
+      themes: [isDark ? 'github-dark' : 'github-light'],
+      langs: ['javascript', 'typescript', 'css', 'scss', 'json'],
+    });
+  } catch (err) {
+    console.error('Failed to initialize syntax highlighter:', err);
+  }
+});
 
 // Sync color picker with text input
 watch(colorInput, newValue => {
@@ -119,6 +140,33 @@ watch(
 const exportCode = computed(() => {
   if (!palette.value) return '';
   return exportPalette(palette.value, exportFormat.value, colorName.value, colorFormat.value);
+});
+
+// Syntax highlighted export code
+const highlightedExportCode = computed(() => {
+  if (!exportCode.value || !highlighter.value) return null;
+
+  // Determine language based on export format
+  let lang = 'javascript';
+  if (exportFormat.value === 'tailwind3') {
+    lang = 'javascript';
+  } else if (exportFormat.value === 'tailwind4' || exportFormat.value === 'css') {
+    lang = 'css';
+  } else if (exportFormat.value === 'scss') {
+    lang = 'scss';
+  } else if (exportFormat.value === 'json') {
+    lang = 'json';
+  }
+
+  try {
+    return highlighter.value.codeToHtml(exportCode.value, {
+      lang,
+      theme: 'github-light',
+    });
+  } catch (err) {
+    console.error('Syntax highlighting error:', err);
+    return null;
+  }
 });
 
 // Convert a hex color to the currently selected base color format
@@ -616,7 +664,12 @@ const colorFormatOptions = [
             </div>
 
             <!-- Code Preview -->
-            <div class="bg-muted overflow-x-auto rounded-lg p-4">
+            <div
+              v-if="highlightedExportCode"
+              class="overflow-x-auto rounded-lg"
+              v-html="highlightedExportCode"
+            />
+            <div v-else class="bg-muted overflow-x-auto rounded-lg p-4">
               <pre class="text-sm"><code>{{ exportCode }}</code></pre>
             </div>
           </CardContent>
@@ -625,3 +678,20 @@ const colorFormatOptions = [
     </section>
   </div>
 </template>
+
+<style scoped>
+/* Override shiki styles for better integration */
+:deep(.shiki) {
+  padding: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+:deep(.shiki code) {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+</style>
