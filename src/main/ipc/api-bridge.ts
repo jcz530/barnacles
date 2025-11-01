@@ -33,10 +33,20 @@ export const setupAPIBridge = (): void => {
         const data = await response.json();
 
         if (!response.ok) {
-          // Throw error with message from response or status text
-          throw new Error(
+          // Create an error with the full response data
+          const error = new Error(
             data.error || data.message || `HTTP ${response.status}: ${response.statusText}`
-          );
+          ) as Error & {
+            response?: { status: number; data: any };
+          };
+
+          // Attach response details so frontend can access them
+          error.response = {
+            status: response.status,
+            data,
+          };
+
+          throw error;
         }
 
         return data;

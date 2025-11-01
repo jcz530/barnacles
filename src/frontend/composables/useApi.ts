@@ -19,7 +19,8 @@ export const useApi = () => {
       return response;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Unknown error';
-      return null;
+      // Re-throw the error so TanStack Query can handle it properly
+      throw err;
     } finally {
       loading.value = false;
     }

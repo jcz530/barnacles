@@ -12,6 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
+import { toastDanger } from '../../ui/sonner';
+import { handlePermissionError } from '../../../utils/error-handlers';
 
 interface Props {
   projectId: string;
@@ -48,9 +50,17 @@ const preferredIDE = computed(() => {
 const handleOpenInIDE = async () => {
   try {
     await openProjectMutation.mutateAsync({ projectId: props.projectId });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to open project:', error);
-    alert('Failed to open project. Make sure the IDE is installed.');
+
+    const permissionMessage = handlePermissionError(error, 'IDE');
+    if (permissionMessage) {
+      alert(permissionMessage);
+    } else {
+      toastDanger('Failed to open project', {
+        description: 'Make sure the IDE is installed and try again.',
+      });
+    }
   }
 };
 
