@@ -67,12 +67,19 @@ const chartData = computed(() => {
           full-width
           fixed-gap
         >
-          <template #legend>
+          <template #legend="{ onHover }">
             <div class="flex flex-wrap justify-center gap-x-4 gap-y-2">
               <div
                 v-for="[techSlug, stats] in Object.entries(languageStats)"
                 :key="techSlug"
-                class="flex flex-col items-center"
+                class="flex cursor-pointer flex-col items-center transition-opacity"
+                @mouseenter="
+                  onHover(
+                    project.technologies.find(t => t.slug === techSlug)?.name ||
+                      techSlug.charAt(0).toUpperCase() + techSlug.slice(1)
+                  )
+                "
+                @mouseleave="onHover(null)"
               >
                 <div
                   class="h-3 w-3 rounded-full"

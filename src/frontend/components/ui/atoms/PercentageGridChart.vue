@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 interface DataSegment {
   color: string;
@@ -23,6 +23,8 @@ const props = withDefaults(defineProps<Props>(), {
   totalDots: 100,
   fixedGap: false,
 });
+
+const hoveredLabel = ref<string | null>(null);
 
 interface Circle {
   color: string;
@@ -163,7 +165,11 @@ const circleStyle = computed(() => {
       <div v-for="(circle, index) in circles" :key="index">
         <div
           :title="circle.label"
-          class="cursor-default rounded-full opacity-90 transition-colors"
+          class="cursor-default rounded-full opacity-90 transition-all duration-200"
+          :class="{
+            'z-10 scale-125': hoveredLabel && circle.label === hoveredLabel,
+            'opacity-50': hoveredLabel && circle.label !== hoveredLabel,
+          }"
           :style="{
             ...circleStyle,
             backgroundColor: circle.color,
@@ -173,7 +179,12 @@ const circleStyle = computed(() => {
     </div>
 
     <div v-if="$slots.legend" class="mt-4">
-      <slot name="legend" :data="data" />
+      <slot
+        name="legend"
+        :data="data"
+        :hovered-label="hoveredLabel"
+        :on-hover="(label: string | null) => (hoveredLabel = label)"
+      />
     </div>
   </div>
 </template>
