@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
+import { PermissionError } from '../../shared/errors/permission-error';
 
 const execAsync = promisify(exec);
 
@@ -293,7 +294,11 @@ class IdeDetectorService {
           // Use 'open' command with the app bundle
           await execAsync(`open -a "${ide.macAppName}" "${projectPath}"`);
           return;
-        } catch {
+        } catch (error) {
+          // Check if this is a permission error
+          if (PermissionError.isAppleEventsError(error)) {
+            throw PermissionError.createIDEPermissionError(ide.name);
+          }
           // Fall through to try the command
         }
       }
@@ -301,6 +306,11 @@ class IdeDetectorService {
       // Execute the command to open the project
       await execAsync(`${ide.command} "${projectPath}"`);
     } catch (error) {
+      // Check if this is a permission error
+      if (PermissionError.isAppleEventsError(error)) {
+        throw PermissionError.createIDEPermissionError(ide.name);
+      }
+
       throw new Error(`Failed to open project in ${ide.name}: ${error}`);
     }
   }
