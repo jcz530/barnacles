@@ -8,26 +8,23 @@ defineProps<{
 defineEmits<{
   'update:view': [view: 'table' | 'card'];
 }>();
+
+const buttonClasses = 'cursor-pointer px-4 py-2 text-sm font-medium hover:bg-slate-200';
+const activeClasses = 'text-primary-700 bg-slate-200';
 </script>
 
 <template>
   <div class="inline-flex rounded-md shadow-xs" role="group">
     <button
       type="button"
-      :class="[
-        'rounded-l-lg px-4 py-2 text-sm font-medium hover:bg-slate-100',
-        currentView === 'table' ? 'bg-slate-100' : 'bg-slate-50',
-      ]"
+      :class="['rounded-l-lg', buttonClasses, currentView === 'table' && activeClasses]"
       @click="$emit('update:view', 'table')"
     >
       <Table :size="16" />
     </button>
     <button
       type="button"
-      :class="[
-        'rounded-r-lg px-4 py-2 text-sm font-medium hover:bg-slate-100',
-        currentView === 'card' ? 'bg-slate-100' : 'bg-slate-50',
-      ]"
+      :class="['rounded-r-lg', buttonClasses, currentView === 'card' && activeClasses]"
       @click="$emit('update:view', 'card')"
     >
       <LayoutGrid :size="16" />
