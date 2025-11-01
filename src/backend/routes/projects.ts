@@ -275,6 +275,20 @@ projects.post('/:id/open', async c => {
     });
   } catch (error) {
     console.error('Error opening project:', error);
+
+    // Check if this is a permission error and return structured response
+    if (error instanceof Error && error.name === 'PermissionError') {
+      return c.json(
+        {
+          error: error.message,
+          code: (error as any).code,
+          targetApp: (error as any).targetApp,
+          instructions: (error as any).instructions,
+        },
+        403
+      );
+    }
+
     return c.json(
       {
         error: error instanceof Error ? error.message : 'Failed to open project in IDE',
@@ -371,6 +385,20 @@ projects.post('/:id/open-terminal', async c => {
     });
   } catch (error) {
     console.error('Error opening terminal:', error);
+
+    // Check if this is a permission error and return structured response
+    if (error instanceof Error && error.name === 'PermissionError') {
+      return c.json(
+        {
+          error: error.message,
+          code: (error as any).code,
+          targetApp: (error as any).targetApp,
+          instructions: (error as any).instructions,
+        },
+        403
+      );
+    }
+
     return c.json(
       {
         error: error instanceof Error ? error.message : 'Failed to open terminal',

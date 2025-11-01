@@ -1,6 +1,7 @@
 import { exec } from 'child_process';
 import os from 'os';
 import { promisify } from 'util';
+import { PermissionError } from '../../shared/errors/permission-error';
 
 const execAsync = promisify(exec);
 
@@ -207,6 +208,11 @@ class TerminalDetectorService {
         await execAsync(`cd "${path}" && ${terminal.command}`);
       }
     } catch (error) {
+      // Check if this is a macOS Apple Events permission error
+      if (PermissionError.isAppleEventsError(error)) {
+        throw PermissionError.createTerminalPermissionError(terminal.name);
+      }
+
       throw new Error(`Failed to open terminal at path: ${error}`);
     }
   }

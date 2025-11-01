@@ -358,17 +358,11 @@ export const useQueries = () => {
   const useOpenProjectMutation = () => {
     return useMutation({
       mutationFn: async ({ projectId, ideId }: { projectId: string; ideId?: string }) => {
-        const response = await apiCall<ApiResponse>(
+        return await apiCall<ApiResponse>(
           'POST',
           `${API_ROUTES.PROJECTS}/${projectId}/open`,
           ideId ? { ideId } : {}
         );
-
-        if (!response) {
-          throw new Error('Failed to open project');
-        }
-
-        return response;
       },
     });
   };
@@ -444,17 +438,11 @@ export const useQueries = () => {
   const useOpenTerminalMutation = () => {
     return useMutation({
       mutationFn: async ({ projectId, terminalId }: { projectId: string; terminalId?: string }) => {
-        const response = await apiCall<ApiResponse>(
+        return await apiCall<ApiResponse>(
           'POST',
           `${API_ROUTES.PROJECTS}/${projectId}/open-terminal`,
           terminalId ? { terminalId } : {}
         );
-
-        if (!response) {
-          throw new Error('Failed to open terminal');
-        }
-
-        return response;
       },
     });
   };
