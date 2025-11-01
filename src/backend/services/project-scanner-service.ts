@@ -429,6 +429,22 @@ class ProjectScannerService {
     // Calculate language stats based on file extensions
     const languageStats: LanguageStats = {};
 
+    // First pass: count total code files (files with extensions that match any technology detector)
+    const codeFileExtensions = new Set<string>();
+    for (const detector of TECHNOLOGY_DETECTORS) {
+      if (detector.fileExtensions && detector.fileExtensions.length > 0) {
+        for (const ext of detector.fileExtensions) {
+          codeFileExtensions.add(ext);
+        }
+      }
+    }
+
+    let totalCodeFiles = 0;
+    for (const ext of codeFileExtensions) {
+      totalCodeFiles += extensionCounts[ext] || 0;
+    }
+
+    // Second pass: calculate percentages based on total code files
     for (const detector of TECHNOLOGY_DETECTORS) {
       if (detector.fileExtensions && detector.fileExtensions.length > 0) {
         let count = 0;
@@ -441,7 +457,8 @@ class ProjectScannerService {
         if (count > 0) {
           languageStats[detector.slug] = {
             fileCount: count,
-            percentage: fileCount > 0 ? Math.round((count / fileCount) * 100 * 10) / 10 : 0,
+            percentage:
+              totalCodeFiles > 0 ? Math.round((count / totalCodeFiles) * 100 * 10) / 10 : 0,
             linesOfCode: lines,
           };
         }
