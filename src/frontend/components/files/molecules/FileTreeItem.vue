@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ChevronDown, ChevronRight, Copy, FolderOpen, FileCheck, Trash2 } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, Copy, FileCheck, FolderOpen, Trash2 } from 'lucide-vue-next';
 import { formatFileSize, getFileTypeInfo, getFolderIcon } from '@/utils/file-types';
 import type { FileNode } from '@/types/window';
 import {
@@ -123,7 +123,7 @@ const handleRemoveFolder = () => {
       <div
         class="group flex cursor-pointer items-center gap-1 rounded-sm px-2 py-1 transition-colors hover:bg-slate-200"
         :class="{
-          'bg-sky-400/20': isSelected,
+          'bg-primary-400/20': isSelected,
         }"
         :style="{ paddingLeft: `${depth * 12 + 8}px` }"
         @click="handleClick"
@@ -145,7 +145,7 @@ const handleRemoveFolder = () => {
           :is="node.type === 'directory' ? folderIcon : fileTypeInfo.icon"
           class="h-4 w-4 flex-shrink-0"
           :class="{
-            'text-sky-500': node.type === 'directory',
+            'text-primary-500': node.type === 'directory',
             'text-slate-500': node.type === 'file',
           }"
         />
@@ -169,7 +169,7 @@ const handleRemoveFolder = () => {
           class="flex-shrink-0 text-xs"
           :class="{
             'text-slate-400': !hasFilters || fileCount?.filtered === fileCount?.total,
-            'font-medium text-sky-600': hasFilters && fileCount?.filtered !== fileCount?.total,
+            'text-primary-600 font-medium': hasFilters && fileCount?.filtered !== fileCount?.total,
           }"
         >
           {{ fileCountText }}

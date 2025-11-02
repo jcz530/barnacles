@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { ChevronRight, ChevronDown, Folder, FolderOpen } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-vue-next';
 import { RadioGroupItem } from '../../ui/radio-group';
 import { Label } from '../../ui/label';
 import type { FileNode } from '@/types/folder-tree';
@@ -43,7 +43,7 @@ const handleSelect = () => {
   <div>
     <div
       class="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-slate-100"
-      :class="{ 'bg-sky-50 hover:bg-sky-100': isSelected }"
+      :class="{ 'bg-primary-50 hover:bg-primary-100': isSelected }"
       :style="{ paddingLeft: `${level * 16 + 8}px` }"
     >
       <!-- Expand/collapse button -->
@@ -67,8 +67,8 @@ const handleSelect = () => {
         class="flex flex-1 cursor-pointer items-center gap-2 text-sm font-normal"
         @click="handleSelect"
       >
-        <Folder v-if="!isExpanded" :size="16" class="text-sky-500" />
-        <FolderOpen v-else :size="16" class="text-sky-500" />
+        <Folder v-if="!isExpanded" :size="16" class="text-primary-500" />
+        <FolderOpen v-else :size="16" class="text-primary-500" />
         <span class="truncate">{{ node.name }}</span>
       </Label>
     </div>

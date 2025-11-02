@@ -380,12 +380,12 @@ const handleClose = () => {
             </div>
           </div>
 
-          <div v-if="selectedScripts.length > 0" class="rounded-lg bg-sky-400/25 px-4 py-2">
-            <div class="text-sm font-medium text-sky-900">
+          <div v-if="selectedScripts.length > 0" class="bg-primary-400/25 rounded-lg px-4 py-2">
+            <div class="text-primary-900 text-sm font-medium">
               {{ selectedScripts.length }} script{{ selectedScripts.length === 1 ? '' : 's' }}
               selected
             </div>
-            <div class="mt-1 text-xs text-sky-700">
+            <div class="text-primary-700 mt-1 text-xs">
               Each script will run as a separate process with its own terminal.
             </div>
           </div>

@@ -347,9 +347,11 @@ const copyPathToClipboard = async () => {
             </div>
 
             <!-- Permission Warning -->
-            <div class="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3">
-              <AlertCircle class="mt-0.5 h-5 w-5 text-sky-600" />
-              <div class="text-sm text-sky-800">
+            <div
+              class="bg-primary-50 border-primary-200 flex items-start gap-2 rounded-lg border p-3"
+            >
+              <AlertCircle class="text-primary-600 mt-0.5 h-5 w-5" />
+              <div class="text-primary-800 text-sm">
                 <p class="font-medium">Administrator privileges required</p>
                 <p class="mt-1">
                   Saving changes to the hosts file requires administrator/sudo privileges. You may

@@ -213,10 +213,10 @@ const categoryColors: Record<string, string> = {
 
               <!-- Info Message -->
               <div
-                class="mt-6 flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3"
+                class="bg-primary-50 border-primary-200 mt-6 flex items-start gap-2 rounded-lg border p-3"
               >
-                <Sparkles class="mt-0.5 h-5 w-5 text-sky-600" />
-                <div class="text-sm text-sky-800">
+                <Sparkles class="text-primary-600 mt-0.5 h-5 w-5" />
+                <div class="text-primary-800 text-sm">
                   <p class="font-medium">Ready to install</p>
                   <p class="mt-1">
                     Selected aliases will be added to your terminal configuration. You'll need to

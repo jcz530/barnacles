@@ -28,7 +28,7 @@ const openUrl = (url: string) => {
       <Button
         variant="link"
         @click="openUrl(process.url || process.detectedUrl || '')"
-        class="flex h-auto items-center gap-1 !px-0 !py-1 text-sky-600 hover:text-sky-700 hover:underline"
+        class="text-primary-600 hover:text-primary-700 flex h-auto items-center gap-1 !px-0 !py-1 hover:underline"
       >
         {{ process.url || process.detectedUrl }}
         <ExternalLink class="h-3 w-3" />

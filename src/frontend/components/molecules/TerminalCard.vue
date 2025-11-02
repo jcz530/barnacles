@@ -41,7 +41,7 @@ const handleProjectClick = (e: Event) => {
   <Card
     class="cursor-pointer transition-all hover:shadow-md"
     :class="{
-      'ring-2 ring-sky-500': isSelected,
+      'ring-primary-500 ring-2': isSelected,
       'opacity-60': terminal.status === 'exited',
     }"
     @click="handleSelect"
@@ -64,7 +64,7 @@ const handleProjectClick = (e: Event) => {
             <!-- Project link if available -->
             <div
               v-if="terminal.projectId && projectName && onProjectClick"
-              class="flex items-center gap-1 text-xs text-sky-600 hover:text-sky-700"
+              class="text-primary-600 hover:text-primary-700 flex items-center gap-1 text-xs"
               @click="handleProjectClick"
             >
               <span class="truncate">{{ projectName }}</span>

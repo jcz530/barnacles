@@ -141,7 +141,7 @@ const handleCollapseAll = () => {
         <div class="flex items-center justify-between border-b border-slate-200 px-3 pb-1">
           <span class="text-xs text-slate-600">
             <template v-if="hasActiveFilters">
-              <span class="font-medium text-sky-600">{{ filteredFileCount }}</span>
+              <span class="text-primary-600 font-medium">{{ filteredFileCount }}</span>
               <span class="text-slate-400">/{{ totalFileCount }}</span>
               <span class="ml-1">files</span>
             </template>
@@ -154,7 +154,7 @@ const handleCollapseAll = () => {
             title="Collapse All"
             variant="ghost"
             size="icon"
-            class="h-6 px-2 text-xs hover:bg-slate-200/50 hover:text-sky-600"
+            class="hover:text-primary-600 h-6 px-2 text-xs hover:bg-slate-200/50"
             @click="handleCollapseAll"
           >
             <ListChevronsDownUp />

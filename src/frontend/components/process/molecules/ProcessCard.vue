@@ -58,7 +58,7 @@ const { data: project } = useProjectQuery(props.process.projectId, {
       'cursor-pointer rounded-lg border p-3 transition-all',
       isStopped && 'opacity-60',
       isSelected
-        ? 'border-2 border-b-4 border-sky-500 shadow'
+        ? 'border-primary-500 border-2 border-b-4 shadow'
         : 'border-slate-200 bg-none hover:border-slate-300',
     ]"
     @click="handleSelect"
@@ -70,7 +70,7 @@ const { data: project } = useProjectQuery(props.process.projectId, {
         </p>
         <router-link
           v-if="showProjectLink && project && project.name"
-          class="mt-1 cursor-pointer truncate text-xs text-slate-500 hover:text-sky-600"
+          class="hover:text-primary-600 mt-1 cursor-pointer truncate text-xs text-slate-500"
           :to="{ name: 'ProjectTerminals', params: { id: process.projectId } }"
         >
           {{ project.name }}
