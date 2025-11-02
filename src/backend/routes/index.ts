@@ -4,6 +4,7 @@ import processes from './processes';
 import projects from './projects';
 import settings from './settings';
 import system from './system';
+import themes from './themes';
 import users from './users';
 import utilities from './utilities';
 
@@ -56,6 +57,7 @@ api
   .route('/processes', processes)
   .route('/settings', settings)
   .route('/system', system)
+  .route('/themes', themes)
   .route('/aliases', aliases)
   .route('/utilities', utilities);
 

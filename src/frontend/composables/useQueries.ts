@@ -19,6 +19,7 @@ import type {
   Terminal,
   User,
 } from '../../shared/types/api';
+import type { Theme } from '../../shared/types/theme';
 import { useApi } from './useApi';
 
 /* global URLSearchParams */
@@ -1261,6 +1262,147 @@ export const useQueries = () => {
     });
   };
 
+  // Get all themes query
+  const useThemesQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['themes'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<Theme[]>>('GET', API_ROUTES.THEMES);
+
+        if (!response) {
+          throw new Error('Failed to fetch themes');
+        }
+
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
+  // Get active theme query
+  const useActiveThemeQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['themes', 'active'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<Theme>>('GET', API_ROUTES.THEMES_ACTIVE);
+
+        if (!response) {
+          throw new Error('Failed to fetch active theme');
+        }
+
+        return response.data;
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
+  // Activate theme mutation
+  const useActivateThemeMutation = () => {
+    return useMutation({
+      mutationFn: async (themeId: string) => {
+        const response = await apiCall<ApiResponse<Theme>>(
+          'POST',
+          API_ROUTES.THEME_ACTIVATE(themeId)
+        );
+
+        if (!response) {
+          throw new Error('Failed to activate theme');
+        }
+
+        return response.data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['themes'] });
+        queryClient.invalidateQueries({ queryKey: ['themes', 'active'] });
+      },
+    });
+  };
+
+  // Create theme mutation
+  const useCreateThemeMutation = () => {
+    return useMutation({
+      mutationFn: async (theme: Partial<Theme>) => {
+        const response = await apiCall<ApiResponse<Theme>>('POST', API_ROUTES.THEMES, theme);
+
+        if (!response) {
+          throw new Error('Failed to create theme');
+        }
+
+        return response.data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['themes'] });
+      },
+    });
+  };
+
+  // Update theme mutation
+  const useUpdateThemeMutation = () => {
+    return useMutation({
+      mutationFn: async ({ id, theme }: { id: string; theme: Partial<Theme> }) => {
+        const response = await apiCall<ApiResponse<Theme>>(
+          'PUT',
+          API_ROUTES.THEME_BY_ID(id),
+          theme
+        );
+
+        if (!response) {
+          throw new Error('Failed to update theme');
+        }
+
+        return response.data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['themes'] });
+        queryClient.invalidateQueries({ queryKey: ['themes', 'active'] });
+      },
+    });
+  };
+
+  // Delete theme mutation
+  const useDeleteThemeMutation = () => {
+    return useMutation({
+      mutationFn: async (themeId: string) => {
+        const response = await apiCall<ApiResponse<void>>(
+          'DELETE',
+          API_ROUTES.THEME_BY_ID(themeId)
+        );
+
+        if (!response) {
+          throw new Error('Failed to delete theme');
+        }
+
+        return response.data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['themes'] });
+        queryClient.invalidateQueries({ queryKey: ['themes', 'active'] });
+      },
+    });
+  };
+
+  // Duplicate theme mutation
+  const useDuplicateThemeMutation = () => {
+    return useMutation({
+      mutationFn: async ({ id, name }: { id: string; name?: string }) => {
+        const response = await apiCall<ApiResponse<Theme>>(
+          'POST',
+          API_ROUTES.THEME_DUPLICATE(id),
+          name ? { name } : {}
+        );
+
+        if (!response) {
+          throw new Error('Failed to duplicate theme');
+        }
+
+        return response.data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['themes'] });
+      },
+    });
+  };
+
   return {
     useHelloQuery,
     useUsersQuery,
@@ -1320,5 +1462,12 @@ export const useQueries = () => {
     useSyncAliasesMutation,
     useImportAliasesMutation,
     useInstallPresetMutation,
+    useThemesQuery,
+    useActiveThemeQuery,
+    useActivateThemeMutation,
+    useCreateThemeMutation,
+    useUpdateThemeMutation,
+    useDeleteThemeMutation,
+    useDuplicateThemeMutation,
   };
 };

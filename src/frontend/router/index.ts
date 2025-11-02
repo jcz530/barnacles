@@ -14,6 +14,8 @@ import ProjectDetail from '../views/ProjectDetail.vue';
 import Projects from '../views/Projects.vue';
 import Settings from '../views/Settings.vue';
 import Terminals from '../views/Terminals.vue';
+import Themes from '../views/Themes.vue';
+import ThemeEditor from '../views/ThemeEditor.vue';
 import UpdateTest from '../views/UpdateTest.vue';
 import TrayPopup from '../views/TrayPopup.vue';
 import Utilities from '../views/Utilities.vue';
@@ -81,6 +83,21 @@ const routes: RouteRecordRaw[] = [
         path: '/settings',
         name: 'Settings',
         component: Settings,
+      },
+      {
+        path: '/themes',
+        name: 'Themes',
+        component: Themes,
+      },
+      {
+        path: '/themes/:id/edit',
+        name: 'ThemeEdit',
+        component: ThemeEditor,
+      },
+      {
+        path: '/themes/new',
+        name: 'ThemeNew',
+        component: ThemeEditor,
       },
       {
         path: '/hosts',

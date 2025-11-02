@@ -58,4 +58,11 @@ export const API_ROUTES = {
   ALIASES_PRESETS_INSTALL: '/api/aliases/presets/install',
   ALIASES_THEMES: '/api/aliases/themes',
   ALIAS_BY_ID: (id: string) => `/api/aliases/${id}`,
+  THEMES: '/api/themes',
+  THEMES_ACTIVE: '/api/themes/active',
+  THEME_BY_ID: (id: string) => `/api/themes/${id}`,
+  THEME_ACTIVATE: (id: string) => `/api/themes/${id}/activate`,
+  THEME_DUPLICATE: (id: string) => `/api/themes/${id}/duplicate`,
+  THEME_RESET: (id: string) => `/api/themes/${id}/reset`,
+  THEMES_INITIALIZE: '/api/themes/initialize',
 } as const;

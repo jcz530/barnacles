@@ -53,11 +53,11 @@ const getCategoryColor = (category: string) => {
       }"
     >
       <Button
-        variant="ghost"
+        variant="link"
         title="Toggle whether the command is echoed to your terminal before it runs"
         @click="emit('update:field', 'showCommand', !alias.showCommand)"
-        class="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors"
-        type="button"
+        class="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors hover:bg-none"
+        size="icon"
       >
         <Eye v-if="alias.showCommand" class="h-3 w-3" />
         <EyeOff v-else class="h-3 w-3 text-slate-400" />

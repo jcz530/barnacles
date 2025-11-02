@@ -275,3 +275,28 @@ export const aliasThemes = sqliteTable('alias_themes', {
     .notNull()
     .$defaultFn(() => new Date()),
 });
+
+export const themes = sqliteTable('themes', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  name: text('name').notNull().unique(),
+  isDefault: integer('is_default', { mode: 'boolean' }).notNull().default(false), // pre-defined themes cannot be deleted
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(false),
+  // Base colors stored as hex values - will be processed to generate full palettes
+  primaryColor: text('primary_color').notNull().default('#00c2e5'), // sky-500
+  slateColor: text('slate_color').notNull().default('#64748b'), // slate-500
+  // Design tokens
+  borderRadius: text('border_radius', { enum: ['none', 'sm', 'md', 'lg', 'xl'] })
+    .notNull()
+    .default('md'),
+  shadowIntensity: integer('shadow_intensity').notNull().default(3), // 0-6 (maps to shadow-2xs through shadow-2xl)
+  // Advanced customization - JSON object with CSS variable overrides
+  customCssVars: text('custom_css_vars'), // JSON stringified object like {"--accent": "#ff0000"}
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
