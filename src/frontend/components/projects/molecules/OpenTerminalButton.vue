@@ -12,6 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
+import { toastDanger } from '../../ui/sonner';
+import { handlePermissionError } from '../../../utils/error-handlers';
 
 interface Props {
   projectId: string;
@@ -49,9 +51,17 @@ const preferredTerminal = computed(() => {
 const handleOpenTerminal = async () => {
   try {
     await openTerminalMutation.mutateAsync({ projectId: props.projectId });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to open terminal:', error);
-    alert('Failed to open terminal. Make sure the terminal is installed.');
+
+    const permissionMessage = handlePermissionError(error, 'terminal');
+    if (permissionMessage) {
+      alert(permissionMessage);
+    } else {
+      toastDanger('Failed to open terminal', {
+        description: 'Make sure the terminal is installed and try again.',
+      });
+    }
   }
 };
 

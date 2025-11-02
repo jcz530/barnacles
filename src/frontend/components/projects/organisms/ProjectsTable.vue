@@ -80,7 +80,7 @@ const columns: ColumnDef<ProjectWithDetails, any>[] = [
     cell: props => props.row.original.stats,
   }),
   columnHelper.accessor('id', {
-    header: 'Actions',
+    header: '',
     enableSorting: false,
     cell: props => props.row.original,
   }),
@@ -201,10 +201,10 @@ const table = useVueTable({
 
                   <!-- Last Modified -->
                   <template v-else-if="cell.column.id === 'lastModified'">
-                    <div class="flex items-center gap-1.5">
+                    <div class="flex w-24 items-center gap-1.5">
                       <Calendar class="h-3.5 w-3.5 text-slate-600" />
                       <div class="flex flex-col">
-                        <span class="text-sm text-slate-900">{{
+                        <span class="text-xs text-slate-900">{{
                           formatShortDate(row.original.lastModified)
                         }}</span>
                         <span class="text-xs text-slate-500">{{
@@ -216,9 +216,9 @@ const table = useVueTable({
 
                   <!-- Size -->
                   <template v-else-if="cell.column.id === 'size'">
-                    <div class="flex items-center gap-1.5 text-slate-600">
+                    <div class="flex w-20 items-center gap-1.5 text-slate-600">
                       <HardDrive class="h-3.5 w-3.5" />
-                      <span>{{ formatSize(row.original.size) }}</span>
+                      <span class="text-xs">{{ formatSize(row.original.size) }}</span>
                     </div>
                   </template>
 
@@ -242,6 +242,7 @@ const table = useVueTable({
                   <!-- Actions -->
                   <template v-else-if="cell.column.id === 'id'">
                     <ProjectActionsDropdown
+                      class="w-8"
                       :project-id="row.original.id"
                       :project-path="row.original.path"
                       :project-name="row.original.name"
