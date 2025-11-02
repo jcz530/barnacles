@@ -515,7 +515,7 @@ const colorFormatOptions = [
             </Collapsible>
           </CardContent>
         </Card>
-        <hr class="mx-6 border-pink-400/20" />
+        <hr class="border-secondary-400/20 mx-6" />
         <!-- Palette Preview -->
         <Card class="border-none shadow-none" v-if="palette">
           <CardHeader>
@@ -597,7 +597,7 @@ const colorFormatOptions = [
             </div>
           </CardContent>
         </Card>
-        <hr class="mx-6 border-pink-400/20" />
+        <hr class="border-secondary-400/20 mx-6" />
         <!-- Export Panel -->
         <Card class="border-none shadow-none" v-if="palette">
           <CardHeader>

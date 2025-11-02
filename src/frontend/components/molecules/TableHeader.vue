@@ -14,7 +14,7 @@ defineProps<{
       <th
         v-for="header in headerGroup.headers"
         :key="header.id"
-        class="border-b-2 border-pink-400/20 px-4 py-2 text-left font-semibold"
+        class="border-secondary-400/20 border-b-2 px-4 py-2 text-left font-semibold"
         :class="{
           'hover:bg-primary-500/20 cursor-pointer rounded select-none': header.column.getCanSort(),
         }"
