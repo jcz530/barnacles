@@ -152,6 +152,21 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: import.meta.env.DEV ? createWebHistory() : createWebHashHistory(),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    // If the user navigated with back/forward buttons, restore saved position
+    if (savedPosition) {
+      return savedPosition;
+    }
+    // If navigating to a hash anchor, scroll to that anchor
+    if (to.hash) {
+      return {
+        el: to.hash,
+        behavior: 'smooth',
+      };
+    }
+    // Otherwise, always scroll to top
+    return { top: 0, left: 0 };
+  },
 });
 
 // Update document title and window title on route changes
