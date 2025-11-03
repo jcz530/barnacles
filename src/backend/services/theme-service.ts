@@ -1,8 +1,8 @@
 import { db } from '../../shared/database/connection';
 import { themes } from '../../shared/database/schema';
-import { eq, desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
-import type { Theme, CreateThemeInput, UpdateThemeInput } from '../../shared/types/theme';
+import type { CreateThemeInput, Theme, UpdateThemeInput } from '../../shared/types/theme';
 
 // Default themes - these will be seeded on first run
 const DEFAULT_THEMES: CreateThemeInput[] = [
@@ -231,33 +231,23 @@ class ThemeService {
       return null;
     }
 
-    // Prevent updating default themes' core properties (only allow customCssVars)
-    if (
-      existingTheme.isDefault &&
-      (input.name ||
-        input.primaryColor ||
-        input.secondaryColor ||
-        input.tertiaryColor ||
-        input.slateColor ||
-        input.successColor ||
-        input.dangerColor)
-    ) {
-      throw new Error('Cannot modify core properties of default themes');
-    }
-
     const now = new Date();
 
     const updateData: Record<string, unknown> = {
       updatedAt: now,
     };
 
-    if (input.name !== undefined) updateData.name = input.name;
-    if (input.primaryColor !== undefined) updateData.primaryColor = input.primaryColor;
-    if (input.secondaryColor !== undefined) updateData.secondaryColor = input.secondaryColor;
-    if (input.tertiaryColor !== undefined) updateData.tertiaryColor = input.tertiaryColor;
-    if (input.slateColor !== undefined) updateData.slateColor = input.slateColor;
-    if (input.successColor !== undefined) updateData.successColor = input.successColor;
-    if (input.dangerColor !== undefined) updateData.dangerColor = input.dangerColor;
+    // Prevent updating default themes' core properties (only allow customCssVars)
+    if (!existingTheme.isDefault) {
+      if (input.name !== undefined) updateData.name = input.name;
+      if (input.primaryColor !== undefined) updateData.primaryColor = input.primaryColor;
+      if (input.secondaryColor !== undefined) updateData.secondaryColor = input.secondaryColor;
+      if (input.tertiaryColor !== undefined) updateData.tertiaryColor = input.tertiaryColor;
+      if (input.slateColor !== undefined) updateData.slateColor = input.slateColor;
+      if (input.successColor !== undefined) updateData.successColor = input.successColor;
+      if (input.dangerColor !== undefined) updateData.dangerColor = input.dangerColor;
+    }
+
     if (input.fontUi !== undefined) updateData.fontUi = input.fontUi;
     if (input.fontHeading !== undefined) updateData.fontHeading = input.fontHeading;
     if (input.fontCode !== undefined) updateData.fontCode = input.fontCode;

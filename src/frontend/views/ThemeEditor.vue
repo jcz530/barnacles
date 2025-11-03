@@ -330,8 +330,14 @@ function handleCancel() {
                   v-model="primaryColor"
                   type="color"
                   class="h-10 w-16 cursor-pointer rounded border"
+                  :disabled="isDefaultTheme"
                 />
-                <Input v-model="primaryColor" placeholder="#00c2e5" class="flex-1" />
+                <Input
+                  v-model="primaryColor"
+                  placeholder="#00c2e5"
+                  class="flex-1"
+                  :disabled="isDefaultTheme"
+                />
               </div>
               <!-- Primary Shade Preview -->
               <div class="mt-2 flex gap-1">
@@ -357,8 +363,14 @@ function handleCancel() {
                   v-model="secondaryColor"
                   type="color"
                   class="h-10 w-16 cursor-pointer rounded border"
+                  :disabled="isDefaultTheme"
                 />
-                <Input v-model="secondaryColor" placeholder="#ec4899" class="flex-1" />
+                <Input
+                  v-model="secondaryColor"
+                  placeholder="#ec4899"
+                  class="flex-1"
+                  :disabled="isDefaultTheme"
+                />
               </div>
               <!-- Secondary Shade Preview -->
               <div class="mt-2 flex gap-1">
@@ -382,8 +394,14 @@ function handleCancel() {
                   v-model="tertiaryColor"
                   type="color"
                   class="h-10 w-16 cursor-pointer rounded border"
+                  :disabled="isDefaultTheme"
                 />
-                <Input v-model="tertiaryColor" placeholder="#8b5cf6" class="flex-1" />
+                <Input
+                  v-model="tertiaryColor"
+                  placeholder="#8b5cf6"
+                  class="flex-1"
+                  :disabled="isDefaultTheme"
+                />
               </div>
               <!-- Tertiary Shade Preview -->
               <div class="mt-2 flex gap-1">
@@ -407,8 +425,14 @@ function handleCancel() {
                   v-model="slateColor"
                   type="color"
                   class="h-10 w-16 cursor-pointer rounded border"
+                  :disabled="isDefaultTheme"
                 />
-                <Input v-model="slateColor" placeholder="#64748b" class="flex-1" />
+                <Input
+                  v-model="slateColor"
+                  placeholder="#64748b"
+                  class="flex-1"
+                  :disabled="isDefaultTheme"
+                />
               </div>
               <!-- Slate Shade Preview -->
               <div class="mt-2 flex gap-1">
@@ -434,8 +458,14 @@ function handleCancel() {
                   v-model="successColor"
                   type="color"
                   class="h-10 w-16 cursor-pointer rounded border"
+                  :disabled="isDefaultTheme"
                 />
-                <Input v-model="successColor" placeholder="#10b981" class="flex-1" />
+                <Input
+                  v-model="successColor"
+                  placeholder="#10b981"
+                  class="flex-1"
+                  :disabled="isDefaultTheme"
+                />
               </div>
               <!-- Success Shade Preview -->
               <div class="mt-2 flex gap-1">
@@ -461,8 +491,14 @@ function handleCancel() {
                   v-model="dangerColor"
                   type="color"
                   class="h-10 w-16 cursor-pointer rounded border"
+                  :disabled="isDefaultTheme"
                 />
-                <Input v-model="dangerColor" placeholder="#ef4444" class="flex-1" />
+                <Input
+                  v-model="dangerColor"
+                  placeholder="#ef4444"
+                  class="flex-1"
+                  :disabled="isDefaultTheme"
+                />
               </div>
               <!-- Danger Shade Preview -->
               <div class="mt-2 flex gap-1">
