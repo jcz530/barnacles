@@ -10,7 +10,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 
-import LogoMark from '@/assets/logo-mark.svg';
+import LogoMark from '@/components/nav/atoms/LogoMark.vue';
 import NavMain from '@/components/nav/molecules/NavMain.vue';
 import NavSecondary from '@/components/nav/molecules/NavSecondary.vue';
 import NavUser from '@/components/nav/molecules/NavUser.vue';
@@ -149,7 +149,7 @@ const data = computed(() => ({
               <div
                 class="text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
               >
-                <img :src="LogoMark" alt="Logo" class="size-8" />
+                <LogoMark :width="32" :height="32" />
               </div>
               <div class="ml-2 grid flex-1 text-left text-lg leading-tight text-slate-600">
                 <span class="truncate font-semibold">{{ config.appName }}</span>

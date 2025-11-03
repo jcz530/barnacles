@@ -19,6 +19,7 @@ import ThemeEditor from '../views/ThemeEditor.vue';
 import UpdateTest from '../views/UpdateTest.vue';
 import TrayPopup from '../views/TrayPopup.vue';
 import Utilities from '../views/Utilities.vue';
+import DesignSystem from '../views/DesignSystem.vue';
 
 const routes: RouteRecordRaw[] = [
   // Tray popup route (no layout)
@@ -134,6 +135,16 @@ const routes: RouteRecordRaw[] = [
         name: 'UpdateTest',
         component: UpdateTest,
       },
+      // Dev-only route for design system
+      ...(import.meta.env.DEV
+        ? [
+            {
+              path: '/design-system',
+              name: 'DesignSystem',
+              component: DesignSystem,
+            },
+          ]
+        : []),
     ],
   },
 ];

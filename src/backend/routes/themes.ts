@@ -95,7 +95,20 @@ themes.get('/:id', async c => {
 themes.post('/', async c => {
   try {
     const body = await c.req.json();
-    const { name, primaryColor, slateColor, borderRadius, shadowIntensity, customCssVars } = body;
+    const {
+      name,
+      primaryColor,
+      secondaryColor,
+      tertiaryColor,
+      slateColor,
+      successColor,
+      dangerColor,
+      fontUi,
+      fontHeading,
+      fontCode,
+      borderRadius,
+      customCssVars,
+    } = body;
 
     if (!name) {
       return c.json(
@@ -109,9 +122,15 @@ themes.post('/', async c => {
     const theme = await themeService.createTheme({
       name,
       primaryColor,
+      secondaryColor,
+      tertiaryColor,
       slateColor,
+      successColor,
+      dangerColor,
+      fontUi,
+      fontHeading,
+      fontCode,
       borderRadius,
-      shadowIntensity,
       customCssVars,
     });
 
@@ -141,14 +160,33 @@ themes.put('/:id', async c => {
   try {
     const id = c.req.param('id');
     const body = await c.req.json();
-    const { name, primaryColor, slateColor, borderRadius, shadowIntensity, customCssVars } = body;
+    const {
+      name,
+      primaryColor,
+      secondaryColor,
+      tertiaryColor,
+      slateColor,
+      successColor,
+      dangerColor,
+      fontUi,
+      fontHeading,
+      fontCode,
+      borderRadius,
+      customCssVars,
+    } = body;
 
     const theme = await themeService.updateTheme(id, {
       name,
       primaryColor,
+      secondaryColor,
+      tertiaryColor,
       slateColor,
+      successColor,
+      dangerColor,
+      fontUi,
+      fontHeading,
+      fontCode,
       borderRadius,
-      shadowIntensity,
       customCssVars,
     });
 

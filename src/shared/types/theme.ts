@@ -8,9 +8,15 @@ export interface Theme {
   isDefault: boolean;
   isActive: boolean;
   primaryColor: string;
+  secondaryColor: string;
+  tertiaryColor: string;
   slateColor: string;
+  successColor: string;
+  dangerColor: string;
+  fontUi: string | null;
+  fontHeading: string | null;
+  fontCode: string | null;
   borderRadius: 'none' | 'sm' | 'md' | 'lg' | 'xl';
-  shadowIntensity: number;
   customCssVars: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -19,17 +25,29 @@ export interface Theme {
 export interface CreateThemeInput {
   name: string;
   primaryColor?: string;
+  secondaryColor?: string;
+  tertiaryColor?: string;
   slateColor?: string;
+  successColor?: string;
+  dangerColor?: string;
+  fontUi?: string | null;
+  fontHeading?: string | null;
+  fontCode?: string | null;
   borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
-  shadowIntensity?: number;
   customCssVars?: Record<string, string> | null;
 }
 
 export interface UpdateThemeInput {
   name?: string;
   primaryColor?: string;
+  secondaryColor?: string;
+  tertiaryColor?: string;
   slateColor?: string;
+  successColor?: string;
+  dangerColor?: string;
+  fontUi?: string | null;
+  fontHeading?: string | null;
+  fontCode?: string | null;
   borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
-  shadowIntensity?: number;
   customCssVars?: Record<string, string> | null;
 }

@@ -1,18 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
 import { useTheme } from '@/composables/useTheme';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
-import { Check, Palette, Plus } from 'lucide-vue-next';
+import { Palette, Plus } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import Card from '@/components/ui/card/Card.vue';
 import CardHeader from '@/components/ui/card/CardHeader.vue';
 import CardTitle from '@/components/ui/card/CardTitle.vue';
 import CardDescription from '@/components/ui/card/CardDescription.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
+import ThemeCard from '@/components/settings/molecules/ThemeCard.vue';
 
-const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
 const { themes, activeTheme, activateTheme, isLoading } = useTheme();
 
@@ -20,7 +18,7 @@ const defaultThemes = computed(() => themes.value.filter(t => t.isDefault));
 const customThemes = computed(() => themes.value.filter(t => !t.isDefault));
 
 onMounted(() => {
-  setBreadcrumbs([{ label: 'Settings', to: '/settings' }, { label: 'Themes' }]);
+  setBreadcrumbs([{ label: 'Settings', href: '/settings' }, { label: 'Themes' }]);
 });
 
 async function handleActivateTheme(themeId: string) {
@@ -29,14 +27,6 @@ async function handleActivateTheme(themeId: string) {
   } catch (error) {
     console.error('Failed to activate theme:', error);
   }
-}
-
-function handleCreateTheme() {
-  router.push('/themes/new');
-}
-
-function handleEditTheme(themeId: string) {
-  router.push(`/themes/${themeId}/edit`);
 }
 </script>
 
@@ -49,10 +39,12 @@ function handleEditTheme(themeId: string) {
             <h2 class="text-2xl font-semibold">Themes</h2>
             <p class="text-muted-foreground mt-1">Choose a theme or create your own</p>
           </div>
-          <Button @click="handleCreateTheme">
-            <Plus class="mr-2 h-4 w-4" />
-            Create Theme
-          </Button>
+          <RouterLink :to="{ name: 'ThemeNew' }">
+            <Button variant="default" size="sm">
+              <Plus class="mr-2 h-4 w-4" />
+              Create Theme
+            </Button>
+          </RouterLink>
         </div>
       </div>
 
@@ -69,52 +61,13 @@ function handleEditTheme(themeId: string) {
           </CardHeader>
           <CardContent>
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <button
+              <ThemeCard
                 v-for="theme in defaultThemes"
                 :key="theme.id"
-                class="group hover:border-primary/50 hover:bg-accent/50 relative flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-all"
-                :class="{
-                  'border-primary bg-accent': activeTheme?.id === theme.id,
-                  'border-border': activeTheme?.id !== theme.id,
-                }"
-                @click="handleActivateTheme(theme.id)"
-              >
-                <!-- Color Preview -->
-                <div class="flex flex-shrink-0 gap-1.5">
-                  <div
-                    class="h-12 w-8 rounded border"
-                    :style="{ backgroundColor: theme.primaryColor }"
-                  />
-                  <div
-                    class="h-12 w-8 rounded border"
-                    :style="{ backgroundColor: theme.slateColor }"
-                  />
-                </div>
-
-                <!-- Theme Info -->
-                <div class="min-w-0 flex-1 text-left">
-                  <div class="mb-1.5 flex items-center gap-2">
-                    <span class="truncate text-base font-medium">{{ theme.name }}</span>
-                    <Check
-                      v-if="activeTheme?.id === theme.id"
-                      class="text-primary h-4 w-4 flex-shrink-0"
-                    />
-                  </div>
-                  <div class="text-muted-foreground mb-2 flex items-center gap-2 text-xs">
-                    <Badge variant="outline" class="px-1.5 py-0.5 text-[10px]">
-                      {{ theme.borderRadius }}
-                    </Badge>
-                    <span>•</span>
-                    <span>Shadow: {{ theme.shadowIntensity }}</span>
-                  </div>
-                  <button
-                    class="text-primary text-xs font-medium hover:underline"
-                    @click.stop="handleEditTheme(theme.id)"
-                  >
-                    Customize →
-                  </button>
-                </div>
-              </button>
+                :theme="theme"
+                :is-active="activeTheme?.id === theme.id"
+                @activate="handleActivateTheme"
+              />
             </div>
           </CardContent>
         </Card>
@@ -127,10 +80,12 @@ function handleEditTheme(themeId: string) {
                 <CardTitle>Custom Themes</CardTitle>
                 <CardDescription>Your personalized theme creations</CardDescription>
               </div>
-              <Button variant="outline" size="sm" @click="handleCreateTheme">
-                <Plus class="mr-1.5 h-4 w-4" />
-                New Theme
-              </Button>
+              <RouterLink :to="{ name: 'ThemeNew' }">
+                <Button variant="outline">
+                  <Plus class="mr-1.5 h-4 w-4" />
+                  New Theme
+                </Button>
+              </RouterLink>
             </div>
           </CardHeader>
           <CardContent>
@@ -140,59 +95,22 @@ function handleEditTheme(themeId: string) {
               <p class="text-muted-foreground mb-6 text-sm">
                 Create your first custom theme to match your style
               </p>
-              <Button @click="handleCreateTheme">
-                <Plus class="mr-2 h-4 w-4" />
-                Create Your First Theme
-              </Button>
+              <RouterLink :to="{ name: 'ThemeNew' }">
+                <Button>
+                  <Plus class="mr-2 h-4 w-4" />
+                  Create Your First Theme
+                </Button>
+              </RouterLink>
             </div>
 
             <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <button
+              <ThemeCard
                 v-for="theme in customThemes"
                 :key="theme.id"
-                class="group hover:border-primary/50 hover:bg-accent/50 relative flex items-start gap-3 rounded-lg border p-4 transition-all"
-                :class="{
-                  'border-primary bg-accent': activeTheme?.id === theme.id,
-                  'border-border': activeTheme?.id !== theme.id,
-                }"
-                @click="handleActivateTheme(theme.id)"
-              >
-                <!-- Color Preview -->
-                <div class="flex flex-shrink-0 gap-1.5">
-                  <div
-                    class="h-12 w-8 rounded border"
-                    :style="{ backgroundColor: theme.primaryColor }"
-                  />
-                  <div
-                    class="h-12 w-8 rounded border"
-                    :style="{ backgroundColor: theme.slateColor }"
-                  />
-                </div>
-
-                <!-- Theme Info -->
-                <div class="min-w-0 flex-1 text-left">
-                  <div class="mb-1.5 flex items-center gap-2">
-                    <span class="truncate text-base font-medium">{{ theme.name }}</span>
-                    <Check
-                      v-if="activeTheme?.id === theme.id"
-                      class="text-primary h-4 w-4 flex-shrink-0"
-                    />
-                  </div>
-                  <div class="text-muted-foreground mb-2 flex items-center gap-2 text-xs">
-                    <Badge variant="outline" class="px-1.5 py-0.5 text-[10px]">
-                      {{ theme.borderRadius }}
-                    </Badge>
-                    <span>•</span>
-                    <span>Shadow: {{ theme.shadowIntensity }}</span>
-                  </div>
-                  <button
-                    class="text-primary text-xs font-medium hover:underline"
-                    @click.stop="handleEditTheme(theme.id)"
-                  >
-                    Edit →
-                  </button>
-                </div>
-              </button>
+                :theme="theme"
+                :is-active="activeTheme?.id === theme.id"
+                @activate="handleActivateTheme"
+              />
             </div>
           </CardContent>
         </Card>

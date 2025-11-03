@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'vue-sonner';
 import Card from '@/components/ui/card/Card.vue';
@@ -23,6 +22,7 @@ import CardHeader from '@/components/ui/card/CardHeader.vue';
 import CardTitle from '@/components/ui/card/CardTitle.vue';
 import CardDescription from '@/components/ui/card/CardDescription.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
+import FontPicker from '@/components/settings/molecules/FontPicker.vue';
 import type { Theme } from '@/shared/types/theme';
 
 const route = useRoute();
@@ -33,9 +33,15 @@ const { themes, createTheme, updateTheme, deleteTheme, previewTheme, duplicateTh
 // Form state
 const themeName = ref('');
 const primaryColor = ref('#00c2e5');
+const secondaryColor = ref('#ec4899');
+const tertiaryColor = ref('#8b5cf6');
 const slateColor = ref('#64748b');
+const successColor = ref('#10b981');
+const dangerColor = ref('#ef4444');
+const fontUi = ref<string>('');
+const fontHeading = ref<string>('');
+const fontCode = ref<string>('');
 const borderRadius = ref<'none' | 'sm' | 'md' | 'lg' | 'xl'>('md');
-const shadowIntensity = ref([3]);
 const customCssVars = ref('');
 
 const isSaving = ref(false);
@@ -62,9 +68,41 @@ const primaryShades = computed(() => {
   return result?.shades ?? [];
 });
 
+const secondaryShades = computed(() => {
+  const result = generateShades({
+    baseColor: secondaryColor.value,
+    algorithm: 'tailwind',
+  });
+  return result?.shades ?? [];
+});
+
+const tertiaryShades = computed(() => {
+  const result = generateShades({
+    baseColor: tertiaryColor.value,
+    algorithm: 'tailwind',
+  });
+  return result?.shades ?? [];
+});
+
 const slateShades = computed(() => {
   const result = generateShades({
     baseColor: slateColor.value,
+    algorithm: 'tailwind',
+  });
+  return result?.shades ?? [];
+});
+
+const successShades = computed(() => {
+  const result = generateShades({
+    baseColor: successColor.value,
+    algorithm: 'tailwind',
+  });
+  return result?.shades ?? [];
+});
+
+const dangerShades = computed(() => {
+  const result = generateShades({
+    baseColor: dangerColor.value,
     algorithm: 'tailwind',
   });
   return result?.shades ?? [];
@@ -77,9 +115,15 @@ const previewThemeData = computed<Theme>(() => ({
   isDefault: false,
   isActive: false,
   primaryColor: primaryColor.value,
+  secondaryColor: secondaryColor.value,
+  tertiaryColor: tertiaryColor.value,
   slateColor: slateColor.value,
+  successColor: successColor.value,
+  dangerColor: dangerColor.value,
+  fontUi: fontUi.value || null,
+  fontHeading: fontHeading.value || null,
+  fontCode: fontCode.value || null,
   borderRadius: borderRadius.value,
-  shadowIntensity: shadowIntensity.value[0],
   customCssVars: customCssVars.value || null,
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -102,9 +146,15 @@ watch(
       // Edit mode - load existing theme
       themeName.value = theme.name;
       primaryColor.value = theme.primaryColor;
+      secondaryColor.value = theme.secondaryColor;
+      tertiaryColor.value = theme.tertiaryColor;
       slateColor.value = theme.slateColor;
+      successColor.value = theme.successColor;
+      dangerColor.value = theme.dangerColor;
+      fontUi.value = theme.fontUi || '';
+      fontHeading.value = theme.fontHeading || '';
+      fontCode.value = theme.fontCode || '';
       borderRadius.value = theme.borderRadius;
-      shadowIntensity.value = [theme.shadowIntensity];
       customCssVars.value = theme.customCssVars || '';
     }
   },
@@ -114,22 +164,25 @@ watch(
 onMounted(() => {
   if (isEditMode.value && currentTheme.value) {
     setBreadcrumbs([
-      { label: 'Settings', to: '/settings' },
-      { label: 'Themes', to: '/themes' },
+      { label: 'Settings', href: '/settings' },
+      { label: 'Themes', href: '/themes' },
       { label: currentTheme.value.name },
     ]);
   } else {
     setBreadcrumbs([
-      { label: 'Settings', to: '/settings' },
-      { label: 'Themes', to: '/themes' },
+      { label: 'Settings', href: '/settings' },
+      { label: 'Themes', href: '/themes' },
       { label: 'New Theme' },
     ]);
     // Set defaults for new theme
     themeName.value = 'My Custom Theme';
     primaryColor.value = '#00c2e5';
+    secondaryColor.value = '#ec4899';
+    tertiaryColor.value = '#8b5cf6';
     slateColor.value = '#64748b';
+    successColor.value = '#10b981';
+    dangerColor.value = '#ef4444';
     borderRadius.value = 'md';
-    shadowIntensity.value = [3];
     customCssVars.value = '';
   }
 });
@@ -166,9 +219,15 @@ async function handleSave() {
     const themeData = {
       name: themeName.value.trim(),
       primaryColor: primaryColor.value,
+      secondaryColor: secondaryColor.value,
+      tertiaryColor: tertiaryColor.value,
       slateColor: slateColor.value,
+      successColor: successColor.value,
+      dangerColor: dangerColor.value,
+      fontUi: fontUi.value || null,
+      fontHeading: fontHeading.value || null,
+      fontCode: fontCode.value || null,
       borderRadius: borderRadius.value,
-      shadowIntensity: shadowIntensity.value[0],
       customCssVars: parsedCssVars,
     };
 
@@ -259,7 +318,7 @@ function handleCancel() {
         <Card>
           <CardHeader>
             <CardTitle>Colors</CardTitle>
-            <CardDescription>Define your primary and background colors</CardDescription>
+            <CardDescription>Define your theme colors</CardDescription>
           </CardHeader>
           <CardContent class="space-y-6">
             <!-- Primary Color -->
@@ -289,6 +348,56 @@ function handleCancel() {
               </p>
             </div>
 
+            <!-- Secondary Color -->
+            <div class="space-y-3">
+              <Label for="secondary-color">Secondary Color</Label>
+              <div class="flex gap-3">
+                <input
+                  id="secondary-color"
+                  v-model="secondaryColor"
+                  type="color"
+                  class="h-10 w-16 cursor-pointer rounded border"
+                />
+                <Input v-model="secondaryColor" placeholder="#ec4899" class="flex-1" />
+              </div>
+              <!-- Secondary Shade Preview -->
+              <div class="mt-2 flex gap-1">
+                <div
+                  v-for="shade in secondaryShades"
+                  :key="shade.name"
+                  :style="{ backgroundColor: shade.hex }"
+                  class="h-10 flex-1 rounded-sm border"
+                  :title="`${shade.name}: ${shade.hex}`"
+                />
+              </div>
+              <p class="text-muted-foreground text-xs">Used for accents and highlights</p>
+            </div>
+
+            <!-- Tertiary Color -->
+            <div class="space-y-3">
+              <Label for="tertiary-color">Tertiary Color</Label>
+              <div class="flex gap-3">
+                <input
+                  id="tertiary-color"
+                  v-model="tertiaryColor"
+                  type="color"
+                  class="h-10 w-16 cursor-pointer rounded border"
+                />
+                <Input v-model="tertiaryColor" placeholder="#8b5cf6" class="flex-1" />
+              </div>
+              <!-- Tertiary Shade Preview -->
+              <div class="mt-2 flex gap-1">
+                <div
+                  v-for="shade in tertiaryShades"
+                  :key="shade.name"
+                  :style="{ backgroundColor: shade.hex }"
+                  class="h-10 flex-1 rounded-sm border"
+                  :title="`${shade.name}: ${shade.hex}`"
+                />
+              </div>
+              <p class="text-muted-foreground text-xs">Additional accent color</p>
+            </div>
+
             <!-- Slate/Background Color -->
             <div class="space-y-3">
               <Label for="slate-color">Background/Text Color (Slate)</Label>
@@ -315,6 +424,60 @@ function handleCancel() {
                 Controls backgrounds, text, and neutral UI elements
               </p>
             </div>
+
+            <!-- Success Color -->
+            <div class="space-y-3">
+              <Label for="success-color">Success Color</Label>
+              <div class="flex gap-3">
+                <input
+                  id="success-color"
+                  v-model="successColor"
+                  type="color"
+                  class="h-10 w-16 cursor-pointer rounded border"
+                />
+                <Input v-model="successColor" placeholder="#10b981" class="flex-1" />
+              </div>
+              <!-- Success Shade Preview -->
+              <div class="mt-2 flex gap-1">
+                <div
+                  v-for="shade in successShades"
+                  :key="shade.name"
+                  :style="{ backgroundColor: shade.hex }"
+                  class="h-10 flex-1 rounded-sm border"
+                  :title="`${shade.name}: ${shade.hex}`"
+                />
+              </div>
+              <p class="text-muted-foreground text-xs">
+                Used for success states and positive actions
+              </p>
+            </div>
+
+            <!-- Danger Color -->
+            <div class="space-y-3">
+              <Label for="danger-color">Danger Color</Label>
+              <div class="flex gap-3">
+                <input
+                  id="danger-color"
+                  v-model="dangerColor"
+                  type="color"
+                  class="h-10 w-16 cursor-pointer rounded border"
+                />
+                <Input v-model="dangerColor" placeholder="#ef4444" class="flex-1" />
+              </div>
+              <!-- Danger Shade Preview -->
+              <div class="mt-2 flex gap-1">
+                <div
+                  v-for="shade in dangerShades"
+                  :key="shade.name"
+                  :style="{ backgroundColor: shade.hex }"
+                  class="h-10 flex-1 rounded-sm border"
+                  :title="`${shade.name}: ${shade.hex}`"
+                />
+              </div>
+              <p class="text-muted-foreground text-xs">
+                Used for errors, warnings, and destructive actions
+              </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -322,7 +485,7 @@ function handleCancel() {
         <Card>
           <CardHeader>
             <CardTitle>Design Tokens</CardTitle>
-            <CardDescription>Customize border radius and shadows</CardDescription>
+            <CardDescription>Customize border radius</CardDescription>
           </CardHeader>
           <CardContent class="space-y-6">
             <!-- Border Radius -->
@@ -341,16 +504,36 @@ function handleCancel() {
                 </SelectContent>
               </Select>
             </div>
+          </CardContent>
+        </Card>
 
-            <!-- Shadow Intensity -->
-            <div class="space-y-2">
-              <div class="flex items-center justify-between">
-                <Label>Shadow Intensity</Label>
-                <span class="text-muted-foreground text-sm">{{ shadowIntensity[0] }}</span>
-              </div>
-              <Slider v-model="shadowIntensity" :min="0" :max="6" :step="1" class="w-full" />
-              <p class="text-muted-foreground text-xs">0 = minimal shadows, 6 = maximum depth</p>
-            </div>
+        <!-- Fonts -->
+        <Card>
+          <CardHeader>
+            <CardTitle>Typography</CardTitle>
+            <CardDescription>Customize fonts for different parts of your interface</CardDescription>
+          </CardHeader>
+          <CardContent class="space-y-6">
+            <!-- UI/Body Font -->
+            <FontPicker
+              v-model="fontUi"
+              label="UI & Body Font"
+              placeholder="Search for UI font..."
+            />
+
+            <!-- Heading Font -->
+            <FontPicker
+              v-model="fontHeading"
+              label="Heading Font"
+              placeholder="Search for heading font..."
+            />
+
+            <!-- Code/Monospace Font -->
+            <FontPicker
+              v-model="fontCode"
+              label="Code Font (Monospace)"
+              placeholder="Search for code font..."
+            />
           </CardContent>
         </Card>
 

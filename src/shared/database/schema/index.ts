@@ -285,12 +285,19 @@ export const themes = sqliteTable('themes', {
   isActive: integer('is_active', { mode: 'boolean' }).notNull().default(false),
   // Base colors stored as hex values - will be processed to generate full palettes
   primaryColor: text('primary_color').notNull().default('#00c2e5'), // sky-500
+  secondaryColor: text('secondary_color').notNull().default('#ec4899'), // pink-500
+  tertiaryColor: text('tertiary_color').notNull().default('#8b5cf6'), // purple-500
   slateColor: text('slate_color').notNull().default('#64748b'), // slate-500
+  successColor: text('success_color').notNull().default('#10b981'), // green-500
+  dangerColor: text('danger_color').notNull().default('#ef4444'), // red-500
+  // Font families
+  fontUi: text('font_ui'), // UI and body text font
+  fontHeading: text('font_heading'), // Heading font
+  fontCode: text('font_code'), // Monospace/code font
   // Design tokens
   borderRadius: text('border_radius', { enum: ['none', 'sm', 'md', 'lg', 'xl'] })
     .notNull()
     .default('md'),
-  shadowIntensity: integer('shadow_intensity').notNull().default(3), // 0-6 (maps to shadow-2xs through shadow-2xl)
   // Advanced customization - JSON object with CSS variable overrides
   customCssVars: text('custom_css_vars'), // JSON stringified object like {"--accent": "#ff0000"}
   createdAt: integer('created_at', { mode: 'timestamp' })

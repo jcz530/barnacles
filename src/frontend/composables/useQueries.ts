@@ -1034,6 +1034,24 @@ export const useQueries = () => {
     });
   };
 
+  // Get system fonts
+  const useSystemFontsQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['system-fonts'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<string[]>>('GET', API_ROUTES.SYSTEM_FONTS);
+
+        if (!response) {
+          throw new Error('Failed to fetch system fonts');
+        }
+
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+      staleTime: 60 * 60 * 1000, // Cache for 1 hour (fonts don't change often)
+    });
+  };
+
   // Get all aliases
   const useAliasesQuery = (options?: { enabled?: boolean }) => {
     return useQuery({
@@ -1451,6 +1469,7 @@ export const useQueries = () => {
     useHostsQuery,
     useHostsPathQuery,
     useUpdateHostsMutation,
+    useSystemFontsQuery,
     useAliasesQuery,
     useAliasesConfigPathQuery,
     useDetectAliasesQuery,

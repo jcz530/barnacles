@@ -3,6 +3,7 @@ import os from 'os';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { expandTilde } from '../utils/path-utils';
+import { fontService } from '../services/font-service';
 
 const system = new Hono();
 
@@ -348,6 +349,28 @@ system.post('/hosts', async c => {
       {
         error:
           'Failed to update hosts file. This operation requires administrator/sudo privileges.',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * GET /api/system/fonts
+ * Get all system fonts installed on the user's computer
+ */
+system.get('/fonts', async c => {
+  try {
+    const fonts = await fontService.getSystemFonts();
+    return c.json({
+      data: fonts,
+    });
+  } catch (error) {
+    console.error('Error fetching system fonts:', error);
+    return c.json(
+      {
+        error: 'Failed to fetch system fonts',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       500

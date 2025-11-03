@@ -4,19 +4,30 @@
 @plugin '@tailwindcss/typography';
 @custom-variant dark (&: is(.dark *));
 
-/* Heading styles with Istok Web font */
+/* Heading styles - uses theme font or falls back to Istok Web */
 h1,
 h2,
 h3,
 h4,
 h5,
 h6 {
-  font-family: 'Istok Web', sans-serif !important;
-  font-weight: 700 !important;
+  font-family: var(--font-heading, 'Istok Web', sans-serif);
+  font-weight: 700;
 }
-p {
-  font-family: 'Istok Web', sans-serif !important;
-  font-weight: 400 !important;
+
+/* Body text - uses theme font or falls back to Istok Web */
+p,
+body {
+  font-family: var(--font-ui, 'Istok Web', sans-serif);
+  font-weight: 400;
+}
+
+/* Code/monospace text - uses theme font or falls back to monospace */
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-code, ui-monospace, monospace);
 }
 @theme inline {
   --color-white: var(--color-slate-800);

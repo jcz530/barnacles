@@ -64,12 +64,39 @@ export function useTheme() {
       algorithm: 'tailwind',
     });
 
+    const secondaryPalette = generateShades({
+      baseColor: theme.secondaryColor,
+      algorithm: 'tailwind',
+    });
+
+    const tertiaryPalette = generateShades({
+      baseColor: theme.tertiaryColor,
+      algorithm: 'tailwind',
+    });
+
     const slatePalette = generateShades({
       baseColor: theme.slateColor,
       algorithm: 'tailwind',
     });
 
-    if (!primaryPalette || !slatePalette) {
+    const successPalette = generateShades({
+      baseColor: theme.successColor,
+      algorithm: 'tailwind',
+    });
+
+    const dangerPalette = generateShades({
+      baseColor: theme.dangerColor,
+      algorithm: 'tailwind',
+    });
+
+    if (
+      !primaryPalette ||
+      !secondaryPalette ||
+      !tertiaryPalette ||
+      !slatePalette ||
+      !successPalette ||
+      !dangerPalette
+    ) {
       console.error('Failed to generate color palettes');
       return;
     }
@@ -81,10 +108,38 @@ export function useTheme() {
       cssVar.value = shade.hex;
     });
 
+    // Apply secondary color palette
+    secondaryPalette.shades.forEach((shade, index) => {
+      const shadeName = TAILWIND_SHADES[index];
+      const cssVar = useCssVar(`--color-secondary-${shadeName}`, document.documentElement);
+      cssVar.value = shade.hex;
+    });
+
+    // Apply tertiary color palette
+    tertiaryPalette.shades.forEach((shade, index) => {
+      const shadeName = TAILWIND_SHADES[index];
+      const cssVar = useCssVar(`--color-tertiary-${shadeName}`, document.documentElement);
+      cssVar.value = shade.hex;
+    });
+
     // Apply slate color palette
     slatePalette.shades.forEach((shade, index) => {
       const shadeName = TAILWIND_SHADES[index];
       const cssVar = useCssVar(`--color-slate-${shadeName}`, document.documentElement);
+      cssVar.value = shade.hex;
+    });
+
+    // Apply success color palette
+    successPalette.shades.forEach((shade, index) => {
+      const shadeName = TAILWIND_SHADES[index];
+      const cssVar = useCssVar(`--color-success-${shadeName}`, document.documentElement);
+      cssVar.value = shade.hex;
+    });
+
+    // Apply danger color palette
+    dangerPalette.shades.forEach((shade, index) => {
+      const shadeName = TAILWIND_SHADES[index];
+      const cssVar = useCssVar(`--color-danger-${shadeName}`, document.documentElement);
       cssVar.value = shade.hex;
     });
 
@@ -99,11 +154,30 @@ export function useTheme() {
     const radiusCssVar = useCssVar('--radius', document.documentElement);
     radiusCssVar.value = radiusMap[theme.borderRadius];
 
-    // Apply shadow intensity (using MDC shadow scale)
-    // shadowIntensity ranges from 0-6 mapping to shadow-2xs through shadow-2xl
-    // For now, we'll just store it as a custom property
-    const shadowIntensityCssVar = useCssVar('--shadow-intensity', document.documentElement);
-    shadowIntensityCssVar.value = String(theme.shadowIntensity);
+    // Apply font families
+    if (theme.fontUi) {
+      const fontUiVar = useCssVar('--font-ui', document.documentElement);
+      fontUiVar.value = `"${theme.fontUi}", sans-serif`;
+    } else {
+      const fontUiVar = useCssVar('--font-ui', document.documentElement);
+      fontUiVar.value = ''; // Reset to default
+    }
+
+    if (theme.fontHeading) {
+      const fontHeadingVar = useCssVar('--font-heading', document.documentElement);
+      fontHeadingVar.value = `"${theme.fontHeading}", sans-serif`;
+    } else {
+      const fontHeadingVar = useCssVar('--font-heading', document.documentElement);
+      fontHeadingVar.value = ''; // Reset to default
+    }
+
+    if (theme.fontCode) {
+      const fontCodeVar = useCssVar('--font-code', document.documentElement);
+      fontCodeVar.value = `"${theme.fontCode}", monospace`;
+    } else {
+      const fontCodeVar = useCssVar('--font-code', document.documentElement);
+      fontCodeVar.value = ''; // Reset to default
+    }
 
     // Apply custom CSS variables if any
     if (theme.customCssVars) {

@@ -9,86 +9,122 @@ const DEFAULT_THEMES: CreateThemeInput[] = [
   {
     name: 'Default Sky',
     primaryColor: '#00c2e5',
+    secondaryColor: '#ec4899',
+    tertiaryColor: '#8b5cf6',
     slateColor: '#64748b',
+    successColor: '#10b981',
+    dangerColor: '#ef4444',
     borderRadius: 'md',
-    shadowIntensity: 3,
   },
   {
     name: 'Ocean Deep',
     primaryColor: '#0077be',
+    secondaryColor: '#06b6d4',
+    tertiaryColor: '#3b82f6',
     slateColor: '#475569',
+    successColor: '#059669',
+    dangerColor: '#dc2626',
     borderRadius: 'lg',
-    shadowIntensity: 4,
   },
   {
     name: 'Forest Green',
     primaryColor: '#10b981',
+    secondaryColor: '#22c55e',
+    tertiaryColor: '#84cc16',
     slateColor: '#6b7280',
+    successColor: '#059669',
+    dangerColor: '#f97316',
     borderRadius: 'md',
-    shadowIntensity: 2,
   },
   {
     name: 'Sunset Orange',
     primaryColor: '#f97316',
+    secondaryColor: '#fb923c',
+    tertiaryColor: '#fbbf24',
     slateColor: '#78716c',
+    successColor: '#84cc16',
+    dangerColor: '#dc2626',
     borderRadius: 'xl',
-    shadowIntensity: 3,
   },
   {
     name: 'Purple Haze',
     primaryColor: '#a855f7',
+    secondaryColor: '#c026d3',
+    tertiaryColor: '#d946ef',
     slateColor: '#71717a',
+    successColor: '#22c55e',
+    dangerColor: '#f43f5e',
     borderRadius: 'lg',
-    shadowIntensity: 4,
   },
   {
     name: 'Rose Pink',
     primaryColor: '#f43f5e',
+    secondaryColor: '#ec4899',
+    tertiaryColor: '#fb7185',
     slateColor: '#737373',
+    successColor: '#10b981',
+    dangerColor: '#dc2626',
     borderRadius: 'md',
-    shadowIntensity: 3,
   },
   {
     name: 'Monochrome',
     primaryColor: '#525252',
+    secondaryColor: '#737373',
+    tertiaryColor: '#a3a3a3',
     slateColor: '#737373',
+    successColor: '#404040',
+    dangerColor: '#171717',
     borderRadius: 'sm',
-    shadowIntensity: 1,
   },
   {
     name: 'High Contrast',
     primaryColor: '#000000',
+    secondaryColor: '#ffffff',
+    tertiaryColor: '#525252',
     slateColor: '#525252',
+    successColor: '#22c55e',
+    dangerColor: '#dc2626',
     borderRadius: 'none',
-    shadowIntensity: 6,
   },
   {
     name: 'Nord Aurora',
     primaryColor: '#88c0d0',
+    secondaryColor: '#81a1c1',
+    tertiaryColor: '#5e81ac',
     slateColor: '#4c566a',
+    successColor: '#a3be8c',
+    dangerColor: '#bf616a',
     borderRadius: 'md',
-    shadowIntensity: 2,
   },
   {
     name: 'Dracula Purple',
     primaryColor: '#bd93f9',
+    secondaryColor: '#ff79c6',
+    tertiaryColor: '#8be9fd',
     slateColor: '#6272a4',
+    successColor: '#50fa7b',
+    dangerColor: '#ff5555',
     borderRadius: 'lg',
-    shadowIntensity: 3,
   },
   {
     name: 'Solarized',
     primaryColor: '#268bd2',
+    secondaryColor: '#2aa198',
+    tertiaryColor: '#859900',
     slateColor: '#657b83',
+    successColor: '#859900',
+    dangerColor: '#dc322f',
     borderRadius: 'md',
-    shadowIntensity: 2,
   },
   {
     name: 'Tokyo Night',
     primaryColor: '#7aa2f7',
+    secondaryColor: '#bb9af7',
+    tertiaryColor: '#7dcfff',
     slateColor: '#565f89',
+    successColor: '#9ece6a',
+    dangerColor: '#f7768e',
     borderRadius: 'lg',
-    shadowIntensity: 3,
   },
 ];
 
@@ -166,9 +202,15 @@ class ThemeService {
       isDefault,
       isActive: false,
       primaryColor: input.primaryColor ?? '#00c2e5',
+      secondaryColor: input.secondaryColor ?? '#ec4899',
+      tertiaryColor: input.tertiaryColor ?? '#8b5cf6',
       slateColor: input.slateColor ?? '#64748b',
+      successColor: input.successColor ?? '#10b981',
+      dangerColor: input.dangerColor ?? '#ef4444',
+      fontUi: input.fontUi ?? null,
+      fontHeading: input.fontHeading ?? null,
+      fontCode: input.fontCode ?? null,
       borderRadius: input.borderRadius ?? 'md',
-      shadowIntensity: input.shadowIntensity ?? 3,
       customCssVars: input.customCssVars ? JSON.stringify(input.customCssVars) : null,
       createdAt: now,
       updatedAt: now,
@@ -190,7 +232,16 @@ class ThemeService {
     }
 
     // Prevent updating default themes' core properties (only allow customCssVars)
-    if (existingTheme.isDefault && (input.name || input.primaryColor || input.slateColor)) {
+    if (
+      existingTheme.isDefault &&
+      (input.name ||
+        input.primaryColor ||
+        input.secondaryColor ||
+        input.tertiaryColor ||
+        input.slateColor ||
+        input.successColor ||
+        input.dangerColor)
+    ) {
       throw new Error('Cannot modify core properties of default themes');
     }
 
@@ -202,9 +253,15 @@ class ThemeService {
 
     if (input.name !== undefined) updateData.name = input.name;
     if (input.primaryColor !== undefined) updateData.primaryColor = input.primaryColor;
+    if (input.secondaryColor !== undefined) updateData.secondaryColor = input.secondaryColor;
+    if (input.tertiaryColor !== undefined) updateData.tertiaryColor = input.tertiaryColor;
     if (input.slateColor !== undefined) updateData.slateColor = input.slateColor;
+    if (input.successColor !== undefined) updateData.successColor = input.successColor;
+    if (input.dangerColor !== undefined) updateData.dangerColor = input.dangerColor;
+    if (input.fontUi !== undefined) updateData.fontUi = input.fontUi;
+    if (input.fontHeading !== undefined) updateData.fontHeading = input.fontHeading;
+    if (input.fontCode !== undefined) updateData.fontCode = input.fontCode;
     if (input.borderRadius !== undefined) updateData.borderRadius = input.borderRadius;
-    if (input.shadowIntensity !== undefined) updateData.shadowIntensity = input.shadowIntensity;
     if (input.customCssVars !== undefined) {
       updateData.customCssVars = input.customCssVars ? JSON.stringify(input.customCssVars) : null;
     }
@@ -276,9 +333,15 @@ class ThemeService {
     return this.createTheme({
       name: newName ?? `${theme.name} (Copy)`,
       primaryColor: theme.primaryColor,
+      secondaryColor: theme.secondaryColor,
+      tertiaryColor: theme.tertiaryColor,
       slateColor: theme.slateColor,
+      successColor: theme.successColor,
+      dangerColor: theme.dangerColor,
+      fontUi: theme.fontUi,
+      fontHeading: theme.fontHeading,
+      fontCode: theme.fontCode,
       borderRadius: theme.borderRadius,
-      shadowIntensity: theme.shadowIntensity,
       customCssVars,
     });
   }
@@ -302,9 +365,15 @@ class ThemeService {
 
     return this.updateTheme(id, {
       primaryColor: defaultTheme.primaryColor,
+      secondaryColor: defaultTheme.secondaryColor,
+      tertiaryColor: defaultTheme.tertiaryColor,
       slateColor: defaultTheme.slateColor,
+      successColor: defaultTheme.successColor,
+      dangerColor: defaultTheme.dangerColor,
+      fontUi: defaultTheme.fontUi ?? null,
+      fontHeading: defaultTheme.fontHeading ?? null,
+      fontCode: defaultTheme.fontCode ?? null,
       borderRadius: defaultTheme.borderRadius,
-      shadowIntensity: defaultTheme.shadowIntensity,
       customCssVars: null,
     });
   }
