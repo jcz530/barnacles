@@ -275,7 +275,7 @@ async function handleDuplicate() {
       name: `${currentTheme.value.name} (Copy)`,
     });
     toast.success('Theme duplicated successfully');
-    router.push(`/themes/${newTheme.data.id}/edit`);
+    await router.push(`/themes/${newTheme.id}/edit`);
   } catch (error) {
     console.error('Failed to duplicate theme:', error);
     toast.error('Failed to duplicate theme');
