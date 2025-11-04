@@ -36,6 +36,7 @@ files:
 asarUnpack:
   - '**/node_modules/@libsql/**'
   - '**/node_modules/node-pty/**'
+  - '**/dist/cli/**'
 
 # Include migrations as extra resources
 extraResources:
