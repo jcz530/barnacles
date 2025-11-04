@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useTheme } from '@/composables/useTheme';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { Palette, Plus } from 'lucide-vue-next';
@@ -10,23 +10,53 @@ import CardTitle from '@/components/ui/card/CardTitle.vue';
 import CardDescription from '@/components/ui/card/CardDescription.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
 import ThemeCard from '@/components/settings/molecules/ThemeCard.vue';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const { setBreadcrumbs } = useBreadcrumbs();
-const { themes, activeTheme, activateTheme, isLoading } = useTheme();
+const { themes, activeTheme, deleteTheme, isLoading } = useTheme();
 
 const defaultThemes = computed(() => themes.value.filter(t => t.isDefault));
 const customThemes = computed(() => themes.value.filter(t => !t.isDefault));
+
+const deleteDialogOpen = ref(false);
+const themeToDelete = ref<string | null>(null);
+const themeToDeleteName = computed(() => {
+  if (!themeToDelete.value) return '';
+  const theme = themes.value.find(t => t.id === themeToDelete.value);
+  return theme?.name || '';
+});
 
 onMounted(() => {
   setBreadcrumbs([{ label: 'Settings', href: '/settings' }, { label: 'Themes' }]);
 });
 
-async function handleActivateTheme(themeId: string) {
+function handleDeleteTheme(themeId: string) {
+  themeToDelete.value = themeId;
+  deleteDialogOpen.value = true;
+}
+
+async function confirmDelete() {
+  if (!themeToDelete.value) return;
+
   try {
-    await activateTheme(themeId);
+    await deleteTheme(themeToDelete.value);
+    deleteDialogOpen.value = false;
+    themeToDelete.value = null;
   } catch (error) {
-    console.error('Failed to activate theme:', error);
+    console.error('Failed to delete theme:', error);
   }
+}
+
+function cancelDelete() {
+  deleteDialogOpen.value = false;
+  themeToDelete.value = null;
 }
 </script>
 
@@ -66,7 +96,6 @@ async function handleActivateTheme(themeId: string) {
                 :key="theme.id"
                 :theme="theme"
                 :is-active="activeTheme?.id === theme.id"
-                @activate="handleActivateTheme"
               />
             </div>
           </CardContent>
@@ -109,12 +138,28 @@ async function handleActivateTheme(themeId: string) {
                 :key="theme.id"
                 :theme="theme"
                 :is-active="activeTheme?.id === theme.id"
-                @activate="handleActivateTheme"
+                @delete="handleDeleteTheme"
               />
             </div>
           </CardContent>
         </Card>
       </div>
     </section>
+
+    <!-- Delete Confirmation Dialog -->
+    <Dialog v-model:open="deleteDialogOpen">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Theme</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete "{{ themeToDeleteName }}"? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" @click="cancelDelete">Cancel</Button>
+          <Button variant="destructive" @click="confirmDelete">Delete</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

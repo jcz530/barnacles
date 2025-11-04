@@ -7,7 +7,7 @@ import type { CreateThemeInput, Theme, UpdateThemeInput } from '../../shared/typ
 // Default themes - these will be seeded on first run
 const DEFAULT_THEMES: CreateThemeInput[] = [
   {
-    name: 'Default Sky',
+    name: 'Barnacles - Default',
     primaryColor: '#00c2e5',
     secondaryColor: '#ec4899',
     tertiaryColor: '#8b5cf6',

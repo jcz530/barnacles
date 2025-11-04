@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { Theme } from '@/../../shared/types/theme';
-import { Check } from 'lucide-vue-next';
+import { Check, Trash2 } from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';
 import ThemeColorPreview from './ThemeColorPreview.vue';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useTheme } from '@/composables/useTheme';
 
 defineProps<{
   theme: Theme;
@@ -11,11 +13,22 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  activate: [themeId: string];
+  delete: [themeId: string];
 }>();
 
-function handleActivate(themeId: string) {
-  emit('activate', themeId);
+const { activateTheme } = useTheme();
+
+async function handleActivateTheme(themeId: string) {
+  try {
+    await activateTheme(themeId);
+  } catch (error) {
+    console.error('Failed to activate theme:', error);
+  }
+}
+
+function handleDelete(event: MouseEvent, themeId: string) {
+  event.stopPropagation();
+  emit('delete', themeId);
 }
 </script>
 
@@ -26,8 +39,19 @@ function handleActivate(themeId: string) {
       'border-primary bg-primary-500/20': isActive,
       'border-border': !isActive,
     }"
-    @click="handleActivate(theme.id)"
+    @click="handleActivateTheme(theme.id)"
   >
+    <!-- Delete Button (Custom Themes Only) -->
+    <Button
+      v-if="!theme.isDefault"
+      variant="ghost"
+      size="icon"
+      class="absolute top-2 right-2 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+      @click="handleDelete($event, theme.id)"
+    >
+      <Trash2 class="text-destructive h-4 w-4" />
+    </Button>
+
     <!-- Color Preview -->
     <ThemeColorPreview :theme="theme" />
 
