@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'vue-sonner';
 import Card from '@/components/ui/card/Card.vue';
 import CardHeader from '@/components/ui/card/CardHeader.vue';
@@ -239,7 +238,7 @@ async function handleSave() {
       toast.success('Theme created successfully');
     }
 
-    router.push('/themes');
+    await router.push('/themes');
   } catch (error) {
     console.error('Failed to save theme:', error);
     toast.error('Failed to save theme');
@@ -257,7 +256,7 @@ async function handleDelete() {
     isDeleting.value = true;
     await deleteTheme(currentTheme.value.id);
     toast.success('Theme deleted successfully');
-    router.push('/themes');
+    await router.push('/themes');
   } catch (error) {
     console.error('Failed to delete theme:', error);
     toast.error('Failed to delete theme');
@@ -574,24 +573,24 @@ function handleCancel() {
         </Card>
 
         <!-- Advanced: Custom CSS Variables -->
-        <Card>
-          <CardHeader>
-            <CardTitle>Custom CSS Variables</CardTitle>
-            <CardDescription>Advanced customization for developers</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              v-model="customCssVars"
-              placeholder="--accent: #ff0000;
---muted: #f5f5f5;"
-              rows="8"
-              class="font-mono text-xs"
-            />
-            <p class="text-muted-foreground mt-2 text-xs">
-              Override any CSS variable. Format: <code>--variable-name: value;</code> (one per line)
-            </p>
-          </CardContent>
-        </Card>
+        <!--        <Card>-->
+        <!--          <CardHeader>-->
+        <!--            <CardTitle>Custom CSS Variables</CardTitle>-->
+        <!--            <CardDescription>Advanced customization for developers</CardDescription>-->
+        <!--          </CardHeader>-->
+        <!--          <CardContent>-->
+        <!--            <Textarea-->
+        <!--              v-model="customCssVars"-->
+        <!--              placeholder="&#45;&#45;accent: #ff0000;-->
+        <!--&#45;&#45;muted: #f5f5f5;"-->
+        <!--              rows="8"-->
+        <!--              class="font-mono text-xs"-->
+        <!--            />-->
+        <!--            <p class="text-muted-foreground mt-2 text-xs">-->
+        <!--              Override any CSS variable. Format: <code>&#45;&#45;variable-name: value;</code> (one per line)-->
+        <!--            </p>-->
+        <!--          </CardContent>-->
+        <!--        </Card>-->
 
         <!-- Actions -->
         <div class="flex items-center justify-between">
