@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useTheme } from '@/composables/useTheme';
 import LogoMarkStatic from '@/assets/logo-mark.svg';
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     width?: number;
     height?: number;
@@ -23,7 +23,6 @@ const isDefaultTheme = computed(() => !(activeTheme.value?.primaryColor !== '#00
 
 // Generate a unique ID for this instance's gradient to avoid conflicts
 const gradientId = computed(() => `logo-gradient-${Math.random().toString(36).substring(2, 9)}`);
-console.log(activeTheme.value);
 </script>
 
 <template>
