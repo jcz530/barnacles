@@ -209,7 +209,7 @@ class TerminalDetectorService {
           await execAsync(`wezterm start --cwd "${path}"`);
         } else if (terminal.id === 'ghostty') {
           // Ghostty - open with working directory using macOS open command
-          await execAsync(`open -na Ghostty.app --args --working-directory="${path}"`);
+          await execAsync(`open -a Ghostty.app --args --working-directory="${path}"`);
         } else {
           // Generic approach for other terminals
           await execAsync(`cd "${path}" && ${terminal.command}`);
