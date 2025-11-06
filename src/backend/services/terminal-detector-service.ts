@@ -79,8 +79,8 @@ const TERMINAL_DEFINITIONS: Terminal[] = [
   {
     id: 'ghostty',
     name: 'Ghostty',
-    executable: 'ghostty',
-    command: 'ghostty',
+    executable: 'open',
+    command: 'open -a Ghostty',
     icon: 'ghostty',
     color: '#FF6B00',
   },
@@ -208,8 +208,8 @@ class TerminalDetectorService {
           // WezTerm - start with working directory
           await execAsync(`wezterm start --cwd "${path}"`);
         } else if (terminal.id === 'ghostty') {
-          // Ghostty - open with working directory
-          await execAsync(`ghostty --working-directory="${path}"`);
+          // Ghostty - open with working directory using macOS open command
+          await execAsync(`open -na Ghostty.app --args --working-directory="${path}"`);
         } else {
           // Generic approach for other terminals
           await execAsync(`cd "${path}" && ${terminal.command}`);
