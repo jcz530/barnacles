@@ -24,7 +24,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
@@ -295,9 +294,6 @@ const handleOpenUrl = (url: string) => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Project Actions</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-
         <!-- Open in IDE sub-menu -->
         <DropdownMenuSub v-if="installedIDEs.length > 0">
           <DropdownMenuSubTrigger
