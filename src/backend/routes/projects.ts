@@ -743,7 +743,7 @@ projects.get('/:id/start-processes', async c => {
       );
     }
 
-    const processes = await projectService.getStartProcesses(id);
+    const processes: StartProcess[] = await projectService.getStartProcesses(id);
 
     return c.json({
       data: processes,
@@ -777,7 +777,7 @@ projects.post('/:id/start', async c => {
       );
     }
 
-    const processes = await projectService.getStartProcesses(id);
+    const processes: StartProcess[] = await projectService.getStartProcesses(id);
 
     if (processes.length === 0) {
       return c.json(
