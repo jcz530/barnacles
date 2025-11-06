@@ -40,8 +40,11 @@ const handleToggleFavorite = (e: Event) => {
 
 <template>
   <Card
-    class="flex cursor-pointer flex-col gap-0 pt-0 transition-all hover:shadow-lg hover:ring-2 hover:ring-slate-200"
+    tabindex="0"
+    class="hover:ring-primary-200 focus-visible:ring-primary-400 flex cursor-pointer flex-col gap-0 pt-0 transition-all hover:shadow-lg hover:ring-2"
     @click="handleOpen"
+    @keydown.enter="handleOpen"
+    @keydown.space.prevent="handleOpen"
   >
     <CardHeader class="pb-3">
       <div class="-mr-6 flex justify-end gap-1">
@@ -51,6 +54,8 @@ const handleToggleFavorite = (e: Event) => {
           class="h-8 w-8 p-0"
           :class="project.isFavorite ? 'text-yellow-500' : 'text-slate-400'"
           @click="handleToggleFavorite"
+          @keydown.enter.prevent="handleToggleFavorite"
+          @keydown.space.prevent="handleToggleFavorite"
         >
           <Star class="h-4 w-4" :fill="project.isFavorite ? 'currentColor' : 'none'" />
         </Button>
