@@ -52,7 +52,7 @@ const isDark = useDark({
 onMounted(async () => {
   try {
     highlighter.value = await shiki.createHighlighter({
-      themes: [isDark ? 'github-dark' : 'github-light'],
+      themes: ['github-dark', 'github-light'],
       langs: [
         'javascript',
         'typescript',
@@ -209,7 +209,7 @@ const highlightedCode = computed(() => {
     try {
       return highlighter.value.codeToHtml(fileContent.value, {
         lang: 'xml',
-        theme: 'github-light',
+        theme: isDark ? 'github-dark' : 'github-light',
       });
     } catch (err) {
       console.error('Syntax highlighting error:', err);
@@ -225,7 +225,7 @@ const highlightedCode = computed(() => {
   try {
     return highlighter.value.codeToHtml(fileContent.value, {
       lang: fileTypeInfo.value.language,
-      theme: 'github-light',
+      theme: isDark ? 'github-dark' : 'github-light',
     });
   } catch (err) {
     console.error('Syntax highlighting error:', err);
