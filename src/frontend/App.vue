@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, watch } from 'vue';
 import { useColorInversion } from '@/composables/useColorInversion';
+import { useTheme } from '@/composables/useTheme';
 import { Toaster } from '@/components/ui/sonner';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
 import { useFirstRunDetection } from '@/composables/useFirstRunDetection';
@@ -11,7 +12,25 @@ import 'vue-sonner/style.css'; // vue-sonner v2 requires this import
 // App now uses router-view for rendering pages
 
 // Set up dark mode with automatic color inversion
-useColorInversion();
+const { reinitializeColors } = useColorInversion();
+
+// Set up theming system
+const { activeTheme } = useTheme();
+
+// Re-initialize color inversion whenever the active theme changes
+// This ensures dark mode works correctly with custom theme colors
+watch(
+  activeTheme,
+  newTheme => {
+    if (newTheme) {
+      // Wait a tick for theme CSS variables to be applied
+      setTimeout(() => {
+        reinitializeColors();
+      }, 50);
+    }
+  },
+  { immediate: false }
+);
 
 // Initialize WebSocket connection for project scanning (global across all pages)
 const { connect: connectScanWebSocket } = useProjectScanWebSocket();

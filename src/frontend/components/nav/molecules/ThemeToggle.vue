@@ -7,8 +7,12 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { useDark, useLocalStorage } from '@vueuse/core';
-import { Moon, Sun, SunMoon } from 'lucide-vue-next';
+import { useRoute, useRouter } from 'vue-router';
+import { Moon, Palette, Sun, SunMoon } from 'lucide-vue-next';
 import { computed } from 'vue';
+
+const router = useRouter();
+const route = useRoute();
 
 const isDark = useDark({
   selector: 'html',
@@ -45,6 +49,11 @@ function cycleTheme() {
     isDark.value = nextMode === 'dark';
   }
 }
+const isActive = computed(() => route.path.startsWith('/theme'));
+
+function openThemePicker() {
+  router.push('/themes');
+}
 </script>
 
 <template>
@@ -55,6 +64,12 @@ function cycleTheme() {
           <SidebarMenuButton size="sm" @click="cycleTheme">
             <component :is="currentIcon" />
             <span>{{ currentLabel }}</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="sm" @click="openThemePicker" :is-active="isActive">
+            <Palette />
+            <span>Themes</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

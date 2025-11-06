@@ -68,7 +68,7 @@ const htmlContent = computed(() => {
   <!-- eslint-disable vue/no-v-html -->
   <div
     v-else
-    class="prose prose-slate max-w-none rounded-lg border border-slate-200 bg-slate-100 p-6"
+    class="prose max-w-none rounded-lg border border-slate-200 bg-slate-100 p-6"
     v-html="htmlContent"
   />
   <!-- eslint-enable vue/no-v-html -->

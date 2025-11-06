@@ -14,9 +14,12 @@ import ProjectDetail from '../views/ProjectDetail.vue';
 import Projects from '../views/Projects.vue';
 import Settings from '../views/Settings.vue';
 import Terminals from '../views/Terminals.vue';
+import Themes from '../views/Themes.vue';
+import ThemeEditor from '../views/ThemeEditor.vue';
 import UpdateTest from '../views/UpdateTest.vue';
 import TrayPopup from '../views/TrayPopup.vue';
 import Utilities from '../views/Utilities.vue';
+import DesignSystem from '../views/DesignSystem.vue';
 
 const routes: RouteRecordRaw[] = [
   // Tray popup route (no layout)
@@ -83,6 +86,21 @@ const routes: RouteRecordRaw[] = [
         component: Settings,
       },
       {
+        path: '/themes',
+        name: 'Themes',
+        component: Themes,
+      },
+      {
+        path: '/themes/:id/edit',
+        name: 'ThemeEdit',
+        component: ThemeEditor,
+      },
+      {
+        path: '/themes/new',
+        name: 'ThemeNew',
+        component: ThemeEditor,
+      },
+      {
         path: '/hosts',
         name: 'Hosts',
         component: Hosts,
@@ -117,6 +135,16 @@ const routes: RouteRecordRaw[] = [
         name: 'UpdateTest',
         component: UpdateTest,
       },
+      // Dev-only route for design system
+      ...(import.meta.env.DEV
+        ? [
+            {
+              path: '/design-system',
+              name: 'DesignSystem',
+              component: DesignSystem,
+            },
+          ]
+        : []),
     ],
   },
 ];
@@ -124,6 +152,21 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: import.meta.env.DEV ? createWebHistory() : createWebHashHistory(),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    // If the user navigated with back/forward buttons, restore saved position
+    if (savedPosition) {
+      return savedPosition;
+    }
+    // If navigating to a hash anchor, scroll to that anchor
+    if (to.hash) {
+      return {
+        el: to.hash,
+        behavior: 'smooth',
+      };
+    }
+    // Otherwise, always scroll to top
+    return { top: 0, left: 0 };
+  },
 });
 
 // Update document title and window title on route changes

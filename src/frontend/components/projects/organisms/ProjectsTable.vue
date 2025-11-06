@@ -261,7 +261,7 @@ const table = useVueTable({
               <!-- Technologies Row -->
               <tr
                 v-if="row.original.technologies.length > 0"
-                class="tech-row cursor-pointer border-b border-pink-400/20 transition-colors hover:bg-slate-50"
+                class="tech-row border-secondary-400/20 cursor-pointer border-b transition-colors hover:bg-slate-50"
                 :data-project-id="row.original.id"
                 @click="handleOpen(row.original)"
               >

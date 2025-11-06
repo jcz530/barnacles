@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useQueries } from '../composables/useQueries';
 import TrayProjectItem from '../components/molecules/TrayProjectItem.vue';
-import LogoMark from '../assets/logo-mark.svg';
+import LogoMark from '@/components/nav/atoms/LogoMark.vue';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -126,7 +126,7 @@ onMounted(() => {
       <div class="px-3 py-2.5">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2 text-[15px] font-semibold text-slate-900">
-            <img :src="LogoMark" alt="Barnacles" class="h-5 w-5 shrink-0" />
+            <LogoMark :width="20" :height="20" />
             <span>Barnacles</span>
           </div>
           <div class="flex items-center gap-1">

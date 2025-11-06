@@ -4,46 +4,93 @@
 @plugin '@tailwindcss/typography';
 @custom-variant dark (&: is(.dark *));
 
-/* Heading styles with Istok Web font */
+/* Heading styles - uses theme font or falls back to Istok Web */
 h1,
 h2,
 h3,
 h4,
 h5,
 h6 {
-  font-family: 'Istok Web', sans-serif !important;
-  font-weight: 700 !important;
+  font-family: var(--font-heading, 'Istok Web', sans-serif), sans-serif;
+  font-weight: 700;
 }
-p {
-  font-family: 'Istok Web', sans-serif !important;
-  font-weight: 400 !important;
+
+/* Body text - uses theme font or falls back to Istok Web */
+p,
+body {
+  font-family: var(--font-ui, 'Istok Web', sans-serif), sans-serif;
+  font-weight: 400;
+}
+
+/* Code/monospace text - uses theme font or falls back to monospace */
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-code, ui-monospace, monospace), monospace;
 }
 @theme inline {
   --color-white: var(--color-slate-800);
 
-  --color-sky-50: #eaffff;
-  --color-sky-100: #cbfdff;
-  --color-sky-200: #9ef9ff;
-  --color-sky-300: #5bf1ff;
-  --color-sky-400: #02ddff;
-  --color-sky-500: #00c2e5;
-  --color-sky-600: #009ac0;
-  --color-sky-700: #037a9b;
-  --color-sky-800: #0d627d;
-  --color-sky-900: #105169;
-  --color-sky-950: #033549;
+  --color-primary-50: var(--color-primary-50);
+  --color-primary-100: var(--color-primary-100);
+  --color-primary-200: var(--color-primary-200);
+  --color-primary-300: var(--color-primary-300);
+  --color-primary-400: var(--color-primary-400);
+  --color-primary-500: var(--color-primary-500);
+  --color-primary-600: var(--color-primary-600);
+  --color-primary-700: var(--color-primary-700);
+  --color-primary-800: var(--color-primary-800);
+  --color-primary-900: var(--color-primary-900);
+  --color-primary-950: var(--color-primary-950);
 
-  --color-primary-50: var(--color-sky-50);
-  --color-primary-100: var(--color-sky-100);
-  --color-primary-200: var(--color-sky-200);
-  --color-primary-300: var(--color-sky-300);
-  --color-primary-400: var(--color-sky-400);
-  --color-primary-500: var(--color-sky-500);
-  --color-primary-600: var(--color-sky-600);
-  --color-primary-700: var(--color-sky-700);
-  --color-primary-800: var(--color-sky-800);
-  --color-primary-900: var(--color-sky-900);
-  --color-primary-950: var(--color-sky-950);
+  --color-secondary-50: var(--color-secondary-50);
+  --color-secondary-100: var(--color-secondary-100);
+  --color-secondary-200: var(--color-secondary-200);
+  --color-secondary-300: var(--color-secondary-300);
+  --color-secondary-400: var(--color-secondary-400);
+  --color-secondary-500: var(--color-secondary-500);
+  --color-secondary-600: var(--color-secondary-600);
+  --color-secondary-700: var(--color-secondary-700);
+  --color-secondary-800: var(--color-secondary-800);
+  --color-secondary-900: var(--color-secondary-900);
+  --color-secondary-950: var(--color-secondary-950);
+
+  --color-tertiary-50: var(--color-tertiary-50);
+  --color-tertiary-100: var(--color-tertiary-100);
+  --color-tertiary-200: var(--color-tertiary-200);
+  --color-tertiary-300: var(--color-tertiary-300);
+  --color-tertiary-400: var(--color-tertiary-400);
+  --color-tertiary-500: var(--color-tertiary-500);
+  --color-tertiary-600: var(--color-tertiary-600);
+  --color-tertiary-700: var(--color-tertiary-700);
+  --color-tertiary-800: var(--color-tertiary-800);
+  --color-tertiary-900: var(--color-tertiary-900);
+  --color-tertiary-950: var(--color-tertiary-950);
+
+  --color-success-50: var(--color-success-50);
+  --color-success-100: var(--color-success-100);
+  --color-success-200: var(--color-success-200);
+  --color-success-300: var(--color-success-300);
+  --color-success-400: var(--color-success-400);
+  --color-success-500: var(--color-success-500);
+  --color-success-600: var(--color-success-600);
+  --color-success-700: var(--color-success-700);
+  --color-success-800: var(--color-success-800);
+  --color-success-900: var(--color-success-900);
+  --color-success-950: var(--color-success-950);
+
+  --color-danger-50: var(--color-danger-50);
+  --color-danger-100: var(--color-danger-100);
+  --color-danger-200: var(--color-danger-200);
+  --color-danger-300: var(--color-danger-300);
+  --color-danger-400: var(--color-danger-400);
+  --color-danger-500: var(--color-danger-500);
+  --color-danger-600: var(--color-danger-600);
+  --color-danger-700: var(--color-danger-700);
+  --color-danger-800: var(--color-danger-800);
+  --color-danger-900: var(--color-danger-900);
+  --color-danger-950: var(--color-danger-950);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -64,18 +111,12 @@ p {
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -119,41 +160,21 @@ p {
   --secondary-foreground: oklch(0.208 0.042 265.755);
   --muted: var(--color-slate-100);
   --muted-foreground: var(--color-slate-300);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: var(--color-red-400);
+  --accent: var(--color-slate-100);
+  --accent-foreground: var(--color-slate-700);
+  --destructive: var(--color-danger-400);
   --border: var(--color-slate-100);
-  --destructive-foreground: var(--color-red-400);
-  --input: oklch(0.929 0.013 255.508);
+  --destructive-foreground: var(--color-danger-400);
+  --input: var(--color-slate-100);
   --ring: var(--color-slate-100);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
   --sidebar: var(--color-slate-200);
   --sidebar-foreground: var(--color-slate-800);
-  --sidebar-primary: var(--color-emerald-600);
   --sidebar-primary-foreground: var(--color-slate-200);
   --sidebar-accent: var(--color-primary-500);
   --sidebar-accent-foreground: var(--color-primary-50);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
-
-  --tw-prose-body: var(--color-sky-700);
-
-  --tw-prose-headings: var(--color-slate-800);
-  --tw-prose-lead: oklch(44.6% 0.043 257.281);
-  --tw-prose-links: oklch(20.8% 0.042 265.755);
-  --tw-prose-bold: oklch(20.8% 0.042 265.755);
-  --tw-prose-counters: oklch(55.4% 0.046 257.417);
-  --tw-prose-bullets: oklch(86.9% 0.022 252.894);
-  --tw-prose-hr: oklch(92.9% 0.013 255.508);
-  --tw-prose-quotes: oklch(20.8% 0.042 265.755);
-  --tw-prose-quote-borders: oklch(92.9% 0.013 255.508);
-  --tw-prose-captions: oklch(55.4% 0.046 257.417);
-  --tw-prose-kbd: oklch(20.8% 0.042 265.755);
+  --sidebar-border: var(--color-slate-300);
+  --sidebar-ring: var(--color-slate-300);
 }
 .dark {
   --color-white: var(--color-slate-300);
@@ -168,5 +189,27 @@ p {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+@layer utilities {
+  /* Override Tailwind Typography prose colors */
+  .prose {
+    --tw-prose-body: var(--color-slate-700);
+    --tw-prose-headings: var(--color-slate-900);
+    --tw-prose-lead: var(--color-slate-600);
+    --tw-prose-links: var(--color-primary-600);
+    --tw-prose-bold: var(--color-slate-900);
+    --tw-prose-counters: var(--color-slate-500);
+    --tw-prose-bullets: var(--color-slate-300);
+    --tw-prose-hr: var(--color-slate-200);
+    --tw-prose-quotes: var(--color-slate-900);
+    --tw-prose-quote-borders: var(--color-slate-200);
+    --tw-prose-captions: var(--color-slate-500);
+    --tw-prose-kbd: var(--color-slate-900);
+    --tw-prose-code: var(--color-slate-900);
+    --tw-prose-pre-code: var(--color-slate-200);
+    --tw-prose-pre-bg: var(--color-slate-800);
+    --tw-prose-th-borders: var(--color-slate-300);
+    --tw-prose-td-borders: var(--color-slate-200);
   }
 }

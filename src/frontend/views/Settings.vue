@@ -13,6 +13,7 @@ import DefaultIDESetting from '../components/settings/organisms/DefaultIDESettin
 import DefaultTerminalSetting from '../components/settings/organisms/DefaultTerminalSetting.vue';
 import ShowTrayIconSetting from '../components/settings/organisms/ShowTrayIconSetting.vue';
 import InstallCliCommandSetting from '../components/settings/organisms/InstallCliCommandSetting.vue';
+import ThemesSetting from '../components/settings/organisms/ThemesSetting.vue';
 
 const { setBreadcrumbs } = useBreadcrumbs();
 
@@ -69,6 +70,7 @@ onMounted(() => {
           </CardHeader>
           <CardContent>
             <div class="space-y-6">
+              <ThemesSetting />
               <ShowTrayIconSetting />
             </div>
           </CardContent>

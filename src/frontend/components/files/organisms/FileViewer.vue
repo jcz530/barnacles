@@ -7,7 +7,7 @@ import * as shiki from 'shiki';
 import { Skeleton } from '../../ui/skeleton';
 import { Button } from '../../ui/button';
 import { Code, Copy, FileText, Image } from 'lucide-vue-next';
-import { formatFileSize, getFileTypeInfo } from '../../../utils/file-types';
+import { formatFileSize, getFileTypeInfo } from '@/utils/file-types';
 import { RUNTIME_CONFIG } from '../../../../shared/constants';
 import { useDark } from '@vueuse/core';
 
@@ -52,7 +52,7 @@ const isDark = useDark({
 onMounted(async () => {
   try {
     highlighter.value = await shiki.createHighlighter({
-      themes: [isDark ? 'github-dark' : 'github-light'],
+      themes: ['github-dark', 'github-light'],
       langs: [
         'javascript',
         'typescript',
@@ -209,7 +209,7 @@ const highlightedCode = computed(() => {
     try {
       return highlighter.value.codeToHtml(fileContent.value, {
         lang: 'xml',
-        theme: 'github-light',
+        theme: isDark ? 'github-dark' : 'github-light',
       });
     } catch (err) {
       console.error('Syntax highlighting error:', err);
@@ -225,7 +225,7 @@ const highlightedCode = computed(() => {
   try {
     return highlighter.value.codeToHtml(fileContent.value, {
       lang: fileTypeInfo.value.language,
-      theme: 'github-light',
+      theme: isDark ? 'github-dark' : 'github-light',
     });
   } catch (err) {
     console.error('Syntax highlighting error:', err);

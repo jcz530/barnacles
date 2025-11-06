@@ -39,7 +39,7 @@ const copyPath = () => {
             @click="copyPath"
             :title="copied ? 'Copied!' : 'Copy path'"
           >
-            <Copy class="h-4 w-4" :class="{ 'text-emerald-600': copied }" />
+            <Copy class="h-4 w-4" :class="{ 'text-success-600': copied }" />
           </Button>
         </div>
         <div class="mt-1 overflow-scroll rounded bg-slate-100 p-1 font-mono text-sm text-slate-700">
@@ -52,7 +52,7 @@ const copyPath = () => {
           <span
             class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium"
             :class="{
-              'bg-emerald-100 text-emerald-700': !project.archivedAt,
+              'bg-success-100 text-success-700': !project.archivedAt,
               'bg-slate-100 text-slate-700': !!project.archivedAt,
             }"
           >

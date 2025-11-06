@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import FileTree from './FileTree.vue';
 import FileViewer from './FileViewer.vue';
 import FileSearchInput from '../molecules/FileSearchInput.vue';
@@ -7,7 +7,7 @@ import FileTypeFilter, { type FilterValue } from '../molecules/FileTypeFilter.vu
 import { Skeleton } from '../../ui/skeleton';
 import { Button } from '../../ui/button';
 import type { FileNode } from '@/types/window';
-import { ListChevronsDownUp, ArrowDownAZ, Clock } from 'lucide-vue-next';
+import { ArrowDownAZ, Clock, ListChevronsDownUp } from 'lucide-vue-next';
 import { useFileTree } from '@/composables/useFileTree';
 
 interface Props {
@@ -175,7 +175,7 @@ const handleCollapseAll = () => {
       <div class="flex items-center justify-between border-b border-slate-200 px-3 pb-1">
         <span class="text-xs text-slate-600">
           <template v-if="hasActiveFilters">
-            <span class="font-medium text-sky-600">{{ filteredFileCount }}</span>
+            <span class="text-primary-600 font-medium">{{ filteredFileCount }}</span>
             <span class="text-slate-400">/{{ totalFileCount }}</span>
             <span class="ml-1">files</span>
           </template>
@@ -190,7 +190,7 @@ const handleCollapseAll = () => {
             :title="sortTooltip"
             variant="ghost"
             size="icon"
-            class="h-6 px-2 text-xs hover:bg-slate-200/50 hover:text-sky-600"
+            class="hover:text-primary-600 h-6 px-2 text-xs hover:bg-slate-200/50"
             @click="toggleSort"
           >
             <component :is="sortIcon" :size="16" />
@@ -199,7 +199,7 @@ const handleCollapseAll = () => {
             title="Collapse All"
             variant="ghost"
             size="icon"
-            class="h-6 px-2 text-xs hover:bg-slate-200/50 hover:text-sky-600"
+            class="hover:text-primary-600 h-6 px-2 text-xs hover:bg-slate-200/50"
             @click="handleCollapseAll"
           >
             <ListChevronsDownUp :size="16" />

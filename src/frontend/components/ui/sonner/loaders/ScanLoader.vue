@@ -8,7 +8,7 @@ defineProps<{
 
 <template>
   <div class="scan-loader" :style="{ '--size': `${size || 16}px` }">
-    <Scan class="h-4 w-4 animate-spin text-sky-700" />
+    <Scan class="text-primary-700 h-4 w-4 animate-spin" />
   </div>
 </template>
 

@@ -99,7 +99,18 @@ export function useColorInversion() {
   // Watch for dark mode changes and apply inversion
   watch(isDark, applyColorInversion, { immediate: true });
 
+  /**
+   * Re-initialize colors after a theme change
+   * This should be called after custom theme colors are applied
+   */
+  function reinitializeColors() {
+    originalValues.clear();
+    initializeColors();
+    applyColorInversion();
+  }
+
   return {
     isDark,
+    reinitializeColors,
   };
 }

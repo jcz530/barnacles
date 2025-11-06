@@ -156,11 +156,11 @@ const handleCloseDialog = () => {
     <!-- Drop zone indicator overlay -->
     <div
       v-if="isDragging"
-      class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-sky-500/20 backdrop-blur-sm"
+      class="bg-primary-500/20 pointer-events-none fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
     >
-      <div class="rounded-lg border-4 border-dashed border-sky-500 bg-slate-100 p-8 shadow-2xl">
+      <div class="border-primary-500 rounded-lg border-4 border-dashed bg-slate-100 p-8 shadow-2xl">
         <div class="flex flex-col items-center gap-4">
-          <FolderInput class="h-16 w-16 text-sky-500" />
+          <FolderInput class="text-primary-500 h-16 w-16" />
           <div class="text-center">
             <p class="text-xl font-semibold text-slate-900">Drop files here</p>
             <p class="mt-1 text-sm text-slate-600">

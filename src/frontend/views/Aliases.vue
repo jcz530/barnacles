@@ -403,14 +403,16 @@ const goToPresetPacks = () => {
             </div>
 
             <!-- Info Message -->
-            <div class="flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3">
-              <Sparkles class="mt-0.5 h-5 w-5 text-sky-600" />
-              <div class="text-sm text-sky-800">
+            <div
+              class="bg-primary-50 border-primary-200 flex items-start gap-2 rounded-lg border p-3"
+            >
+              <Sparkles class="text-primary-600 mt-0.5 h-5 w-5" />
+              <div class="text-primary-800 text-sm">
                 <p class="font-medium">Shell restart required</p>
                 <p class="mt-1">
                   After saving, restart your terminal or run
-                  <code class="rounded bg-sky-100 px-1 font-mono">source ~/.zshrc</code> (or
-                  <code class="rounded bg-sky-100 px-1 font-mono">~/.bashrc</code>) to apply
+                  <code class="bg-primary-100 rounded px-1 font-mono">source ~/.zshrc</code> (or
+                  <code class="bg-primary-100 rounded px-1 font-mono">~/.bashrc</code>) to apply
                   changes.
                 </p>
               </div>

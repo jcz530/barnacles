@@ -52,9 +52,9 @@ const { formatDate } = useFormatters();
         </div>
         <div v-else>
           <span
-            class="inline-flex items-center gap-1.5 rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700"
+            class="bg-success-100 text-success-700 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium"
           >
-            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+            <span class="bg-success-500 h-2 w-2 rounded-full"></span>
             Clean Working Tree
           </span>
         </div>

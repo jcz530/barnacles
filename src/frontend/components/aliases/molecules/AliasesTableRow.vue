@@ -36,7 +36,7 @@ const categoryColors: Record<string, string> = {
   git: 'bg-emerald-100 text-emerald-800 border-emerald-300',
   docker: 'bg-blue-100 text-blue-800 border-blue-300',
   system: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  custom: 'bg-cyan-100 text-cyan-800 border-cyan-300',
+  custom: 'bg-primary-100 text-primary-800 border-primary-300',
 };
 
 const getCategoryColor = (category: string) => {
@@ -53,11 +53,11 @@ const getCategoryColor = (category: string) => {
       }"
     >
       <Button
-        variant="ghost"
+        variant="link"
         title="Toggle whether the command is echoed to your terminal before it runs"
         @click="emit('update:field', 'showCommand', !alias.showCommand)"
-        class="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors"
-        type="button"
+        class="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors hover:bg-none"
+        size="icon"
       >
         <Eye v-if="alias.showCommand" class="h-3 w-3" />
         <EyeOff v-else class="h-3 w-3 text-slate-400" />
