@@ -130,7 +130,7 @@ autoSelectProcess();
                 class="flex w-full cursor-pointer items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
                 @click="() => runScript(String(name), 'npm')"
               >
-                <Play class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-600" />
+                <Play class="text-success-600 mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
                 <div class="min-w-0 flex-1">
                   <div class="truncate text-sm font-medium text-slate-800">{{ name }}</div>
                   <div class="truncate text-xs text-slate-500">{{ command }}</div>

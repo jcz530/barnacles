@@ -91,7 +91,7 @@ const handleProjectClick = (e: Event) => {
       <div class="mt-1.5 flex items-center gap-2">
         <div
           class="h-2 w-2 flex-shrink-0 rounded-full"
-          :class="terminal.status === 'running' ? 'bg-emerald-500' : 'bg-slate-500'"
+          :class="terminal.status === 'running' ? 'bg-success-500' : 'bg-slate-500'"
         ></div>
         <span class="text-xs text-slate-500">
           {{ terminal.status === 'running' ? 'Running' : 'Exited' }}

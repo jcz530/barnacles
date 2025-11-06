@@ -15,8 +15,8 @@ const props = defineProps<ToasterProps>();
       '--normal-border': 'var(--border)',
       '--success-bg': 'hsl(142.1 70.6% 45.3%)',
       '--success-text': 'hsl(0 0% 100%)',
-      '--success-border': 'var(--color-emerald-400)',
-      '--info-bg': 'var(--color-sky-800)',
+      '--success-border': 'var(--color-success-400)',
+      '--info-bg': 'var(--color-primary-800)',
       '--info-text': 'var(--primary-foreground)',
       '--info-border': 'var(--color-sky-500)',
       '--error-bg': 'var(--destructive)',
@@ -42,7 +42,7 @@ const props = defineProps<ToasterProps>();
 
 /* Success icon color */
 [data-sonner-toast][data-type='success'] [data-icon] {
-  color: var(--color-emerald-500) !important;
+  color: var(--color-success-500) !important;
 }
 
 [data-sonner-toast][data-type='info'] {
