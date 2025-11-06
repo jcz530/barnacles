@@ -175,20 +175,6 @@ samp {
   --sidebar-accent-foreground: var(--color-primary-50);
   --sidebar-border: var(--color-slate-300);
   --sidebar-ring: var(--color-slate-300);
-
-  --tw-prose-body: var(--color-sky-700);
-
-  --tw-prose-headings: var(--color-slate-800);
-  --tw-prose-lead: oklch(44.6% 0.043 257.281);
-  --tw-prose-links: var(--color-slate-100);
-  --tw-prose-bold: oklch(20.8% 0.042 265.755);
-  --tw-prose-counters: oklch(55.4% 0.046 257.417);
-  --tw-prose-bullets: oklch(86.9% 0.022 252.894);
-  --tw-prose-hr: oklch(92.9% 0.013 255.508);
-  --tw-prose-quotes: oklch(20.8% 0.042 265.755);
-  --tw-prose-quote-borders: oklch(92.9% 0.013 255.508);
-  --tw-prose-captions: oklch(55.4% 0.046 257.417);
-  --tw-prose-kbd: oklch(20.8% 0.042 265.755);
 }
 .dark {
   --color-white: var(--color-slate-300);
@@ -203,5 +189,27 @@ samp {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+@layer utilities {
+  /* Override Tailwind Typography prose colors */
+  .prose {
+    --tw-prose-body: var(--color-slate-700);
+    --tw-prose-headings: var(--color-slate-900);
+    --tw-prose-lead: var(--color-slate-600);
+    --tw-prose-links: var(--color-primary-600);
+    --tw-prose-bold: var(--color-slate-900);
+    --tw-prose-counters: var(--color-slate-500);
+    --tw-prose-bullets: var(--color-slate-300);
+    --tw-prose-hr: var(--color-slate-200);
+    --tw-prose-quotes: var(--color-slate-900);
+    --tw-prose-quote-borders: var(--color-slate-200);
+    --tw-prose-captions: var(--color-slate-500);
+    --tw-prose-kbd: var(--color-slate-900);
+    --tw-prose-code: var(--color-slate-900);
+    --tw-prose-pre-code: var(--color-slate-200);
+    --tw-prose-pre-bg: var(--color-slate-800);
+    --tw-prose-th-borders: var(--color-slate-300);
+    --tw-prose-td-borders: var(--color-slate-200);
   }
 }
