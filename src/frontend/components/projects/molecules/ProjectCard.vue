@@ -49,7 +49,7 @@ const handleToggleFavorite = (e: Event) => {
         <Button
           variant="ghost"
           size="icon"
-          class="absolute right-10 z-[100] h-8 w-8 p-0"
+          class="absolute right-10 z-20 h-8 w-8 p-0"
           :class="project.isFavorite ? 'text-yellow-500' : 'text-slate-400'"
           @click="handleToggleFavorite"
           @keydown.enter.prevent="handleToggleFavorite"
@@ -58,7 +58,7 @@ const handleToggleFavorite = (e: Event) => {
           <Star class="h-4 w-4" :fill="project.isFavorite ? 'currentColor' : 'none'" />
         </Button>
         <ProjectActionsDropdown
-          class="absolute z-[100]"
+          class="absolute z-20"
           :project-id="project.id"
           :project-path="project.path"
           :project-name="project.name"
