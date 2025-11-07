@@ -14,7 +14,8 @@ const props = defineProps<{
     data-slot="card"
     :class="[
       cn(
-        'bg-card text-card-foreground focus:ring-primary-500 flex flex-col gap-6 rounded-xl border py-6 shadow-sm focus:ring-2 focus-visible:ring-2 focus-visible:outline-none',
+        'bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm',
+        'focus:ring-ring focus:ring-2 focus-visible:ring-2 focus-visible:outline-none',
         props.class
       ),
       to && 'relative',
@@ -22,7 +23,11 @@ const props = defineProps<{
   >
     <RouterLink
       v-if="to"
-      class="focus-visible:ring-ring focus:ring-ring absolute inset-0 z-50 rounded-xl outline-none focus:ring-2 focus-visible:ring-2 focus-visible:ring-offset-2"
+      :class="[
+        'absolute inset-0 z-50 rounded-xl outline-none',
+        'focus-visible:ring-ring focus:ring-ring focus:ring-2 focus-visible:ring-2',
+        'focus-visible:ring-offset-2',
+      ]"
       :to="to"
     />
     <slot />
