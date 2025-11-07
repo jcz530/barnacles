@@ -1,16 +1,11 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
 import { useTheme } from '@/composables/useTheme';
 import { Palette } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { RouteNames } from '@/router';
 
-const router = useRouter();
 const { activeTheme } = useTheme();
-
-function openThemePicker() {
-  router.push('/themes');
-}
 </script>
 
 <template>
@@ -46,9 +41,11 @@ function openThemePicker() {
       </div>
 
       <!-- Change Theme Button -->
-      <Button variant="outline" @click="openThemePicker">
-        <Palette class="mr-2 h-4 w-4" />
-        Change Theme
+      <Button variant="outline" as-child>
+        <RouterLink :to="{ name: RouteNames.Themes }">
+          <Palette class="mr-2 h-4 w-4" />
+          Change Theme
+        </RouterLink>
       </Button>
     </div>
   </div>

@@ -166,7 +166,7 @@ samp {
   --border: var(--color-slate-100);
   --destructive-foreground: var(--color-danger-400);
   --input: var(--color-slate-100);
-  --ring: var(--color-slate-100);
+  --ring: var(--color-primary-400);
   --radius: 0.625rem;
   --sidebar: var(--color-slate-200);
   --sidebar-foreground: var(--color-slate-800);
@@ -174,7 +174,7 @@ samp {
   --sidebar-accent: var(--color-primary-500);
   --sidebar-accent-foreground: var(--color-primary-50);
   --sidebar-border: var(--color-slate-300);
-  --sidebar-ring: var(--color-slate-300);
+  --sidebar-ring: var(--color-primary-400);
 }
 .dark {
   --color-white: var(--color-slate-300);

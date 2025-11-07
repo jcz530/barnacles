@@ -517,6 +517,30 @@ export const useQueries = () => {
     });
   };
 
+  // Project package manager detection query
+  const useProjectPackageManagerQuery = (
+    projectId: MaybeRef<string>,
+    options?: { enabled?: boolean }
+  ) => {
+    return useQuery({
+      queryKey: ['project-package-manager', unref(projectId)],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<'npm' | 'yarn' | 'pnpm'>>(
+          'GET',
+          `${API_ROUTES.PROJECTS}/${unref(projectId)}/package-manager`
+        );
+
+        if (!response) {
+          return 'npm'; // Default fallback
+        }
+
+        return response.data || 'npm';
+      },
+      enabled: options?.enabled ?? true,
+      staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    });
+  };
+
   // Settings queries
   const useSettingsQuery = (options?: { enabled?: boolean }) => {
     return useQuery({
@@ -1447,6 +1471,7 @@ export const useQueries = () => {
     useProjectReadmeQuery,
     useProjectPackageScriptsQuery,
     useProjectComposerScriptsQuery,
+    useProjectPackageManagerQuery,
     useSettingsQuery,
     useSettingQuery,
     useDefaultSettingsQuery,

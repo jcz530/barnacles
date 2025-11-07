@@ -596,6 +596,40 @@ projects.get('/:id/composer-scripts', async c => {
 });
 
 /**
+ * GET /api/projects/:id/package-manager
+ * Detect the package manager used by a project (npm, yarn, or pnpm)
+ */
+projects.get('/:id/package-manager', async c => {
+  try {
+    const id = c.req.param('id');
+    const project = await projectService.getProjectById(id);
+
+    if (!project) {
+      return c.json(
+        {
+          error: 'Project not found',
+        },
+        404
+      );
+    }
+
+    const packageManager = await projectService.detectPackageManager(project.path);
+
+    return c.json({
+      data: packageManager,
+    });
+  } catch (error) {
+    console.error('Error detecting package manager:', error);
+    return c.json(
+      {
+        error: 'Failed to detect package manager',
+      },
+      500
+    );
+  }
+});
+
+/**
  * GET /api/projects/:id/icon
  * Serve the project icon file
  */
@@ -743,7 +777,7 @@ projects.get('/:id/start-processes', async c => {
       );
     }
 
-    const processes = await projectService.getStartProcesses(id);
+    const processes: StartProcess[] = await projectService.getStartProcesses(id);
 
     return c.json({
       data: processes,
@@ -777,7 +811,7 @@ projects.post('/:id/start', async c => {
       );
     }
 
-    const processes = await projectService.getStartProcesses(id);
+    const processes: StartProcess[] = await projectService.getStartProcesses(id);
 
     if (processes.length === 0) {
       return c.json(

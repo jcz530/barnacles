@@ -16,7 +16,7 @@ const openUrl = (url: string) => {
 
 <template>
   <div
-    class="border-success-200 bg-success-50 inline-flex items-center gap-2 rounded-md border px-3 py-0 text-sm"
+    class="border-success-200 bg-success-300/20 inline-flex items-center gap-2 rounded-md border px-3 py-0 text-sm"
   >
     <div class="flex items-center gap-1.5" :title="process.name">
       <div class="bg-success-500 h-2 w-2 animate-pulse rounded-full"></div>
@@ -38,7 +38,7 @@ const openUrl = (url: string) => {
     <button
       v-if="onNavigateToProcess"
       @click="onNavigateToProcess"
-      class="ml-1 flex items-center gap-1 text-slate-600 hover:text-slate-800"
+      class="ml-1 flex cursor-pointer items-center gap-1 text-slate-600 hover:text-slate-800"
       title="View process"
     >
       <ArrowRight class="h-3.5 w-3.5" />

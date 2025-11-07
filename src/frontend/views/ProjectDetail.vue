@@ -7,11 +7,13 @@ import OpenInIDEButton from '../components/projects/molecules/OpenInIDEButton.vu
 import OpenTerminalButton from '../components/projects/molecules/OpenTerminalButton.vue';
 import ProjectActionsDropdown from '../components/projects/molecules/ProjectActionsDropdown.vue';
 import StartProcessButton from '../components/projects/molecules/StartProcessButton.vue';
+import TabNavigation, { type Tab } from '../components/molecules/TabNavigation.vue';
 import FileDropZone from '../components/files/organisms/FileDropZone.vue';
 import { Skeleton } from '../components/ui/skeleton';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useQueries } from '../composables/useQueries';
 import { useRunningProcesses } from '../composables/useRunningProcesses';
+import { RouteNames } from '@/router';
 
 const route = useRoute();
 const router = useRouter();
@@ -81,13 +83,13 @@ watch(
 // Get running processes for this project
 const runningProcesses = useRunningProcesses(projectId, allProcessStatuses);
 
-const navigateToProcess = () => {
+const navigateToProcess = async () => {
   // Switch to the terminals tab
-  router.push({ name: 'ProjectTerminals', params: { id: projectId.value } });
+  await router.push({ name: RouteNames.ProjectTerminals, params: { id: projectId.value } });
 };
 
 // Tab configuration
-const tabs = [
+const tabs: Tab[] = [
   { name: 'ProjectOverview', label: 'Overview', value: 'overview' },
   { name: 'ProjectReadme', label: 'README.md', value: 'readme' },
   { name: 'ProjectFiles', label: 'Files', value: 'files' },
@@ -197,19 +199,7 @@ const handleFilesMovedSuccessfully = () => {
 
         <div v-else-if="project" class="w-full">
           <!-- Tab Navigation -->
-          <div
-            class="mb-6 inline-flex h-9 items-center justify-center rounded-lg bg-slate-100 p-1 text-slate-500"
-          >
-            <router-link
-              v-for="tab in tabs"
-              :key="tab.value"
-              :to="{ name: tab.name, params: { id: projectId } }"
-              class="inline-flex items-center justify-center rounded-md px-3 py-1 text-sm font-medium whitespace-nowrap ring-offset-white transition-all focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
-              :class="activeTab === tab.value ? 'text-slate-950 shadow' : 'hover:bg-slate-200/50'"
-            >
-              {{ tab.label }}
-            </router-link>
-          </div>
+          <TabNavigation :tabs="tabs" :active-tab="activeTab" :route-params="{ id: projectId }" />
 
           <!-- Tab Content via Router View -->
           <router-view />

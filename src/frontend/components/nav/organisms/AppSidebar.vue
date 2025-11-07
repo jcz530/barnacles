@@ -9,7 +9,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-
+import { RouteNames } from '@/router';
 import LogoMark from '@/components/nav/atoms/LogoMark.vue';
 import NavMain from '@/components/nav/molecules/NavMain.vue';
 import NavSecondary from '@/components/nav/molecules/NavSecondary.vue';
@@ -57,7 +57,7 @@ const favorites = computed(() =>
     .map(project => {
       return {
         title: project.name,
-        url: { name: 'ProjectOverview', params: { id: project.id } },
+        url: { name: RouteNames.ProjectOverview, params: { id: project.id } },
       };
     })
 );

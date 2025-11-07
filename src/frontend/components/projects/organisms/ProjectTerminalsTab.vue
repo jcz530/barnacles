@@ -18,9 +18,13 @@ const {
   useCreateProcessMutation,
   useKillProcessMutation,
   useProcessOutputByIdQuery,
+  useProjectPackageManagerQuery,
 } = useQueries();
 
 const { data: processes, isLoading } = useProcessesQuery(projectId!);
+const { data: detectedPackageManager } = useProjectPackageManagerQuery(projectId!, {
+  enabled: true,
+});
 const createProcessMutation = useCreateProcessMutation();
 const killProcessMutation = useKillProcessMutation();
 
@@ -81,8 +85,25 @@ const handleCreateProcess = async (command?: string, title?: string) => {
   }
 };
 
+// Computed property for package manager label
+const packageManagerLabel = computed(() => {
+  const pm = detectedPackageManager.value || 'npm';
+  return pm === 'yarn' ? 'Yarn' : pm === 'pnpm' ? 'PNPM' : 'NPM';
+});
+
 const runScript = (scriptName: string, type: 'npm' | 'composer' = 'npm') => {
-  const command = type === 'npm' ? `npm run ${scriptName}` : `composer run-script ${scriptName}`;
+  let command: string;
+  if (type === 'npm') {
+    const pm = detectedPackageManager.value || 'npm';
+    command =
+      pm === 'yarn'
+        ? `yarn ${scriptName}`
+        : pm === 'pnpm'
+          ? `pnpm ${scriptName}`
+          : `npm run ${scriptName}`;
+  } else {
+    command = `composer run-script ${scriptName}`;
+  }
   handleCreateProcess(command, command);
 };
 
@@ -112,13 +133,15 @@ autoSelectProcess();
         </div>
 
         <div v-if="scriptsExpanded" class="p-2">
-          <!-- NPM Scripts -->
+          <!-- Package Manager Scripts -->
           <div v-if="packageJsonScripts && Object.keys(packageJsonScripts).length > 0" class="mb-2">
             <div
               class="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 hover:bg-slate-100"
               @click="npmScriptsExpanded = !npmScriptsExpanded"
             >
-              <span class="text-sm font-medium text-slate-700">NPM Scripts</span>
+              <span class="text-sm font-medium text-slate-700"
+                >{{ packageManagerLabel }} Scripts</span
+              >
               <ChevronDown v-if="npmScriptsExpanded" class="h-3 w-3 text-slate-500" />
               <ChevronRight v-else class="h-3 w-3 text-slate-500" />
             </div>

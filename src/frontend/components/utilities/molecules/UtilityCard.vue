@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useRouter } from 'vue-router';
 import * as LucideIcons from 'lucide-vue-next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,23 +10,18 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const router = useRouter();
 
 // Dynamically get the icon component
 const IconComponent = computed(() => {
   const iconName = props.utility.icon as keyof typeof LucideIcons;
   return LucideIcons[iconName] || LucideIcons.Wrench;
 });
-
-function navigateToUtility() {
-  router.push(props.utility.route);
-}
 </script>
 
 <template>
   <Card
     class="hover:border-primary/50 cursor-pointer transition-all hover:shadow-lg"
-    @click="navigateToUtility"
+    :to="utility.route"
   >
     <CardHeader>
       <div class="flex items-start justify-between">

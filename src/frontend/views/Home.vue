@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
-import type { ProjectWithDetails } from '../../shared/types/api';
 import ProjectCard from '../components/projects/molecules/ProjectCard.vue';
 import { useQueries } from '@/composables/useQueries';
 
-const router = useRouter();
 const {
   useProjectsQuery,
   useDeleteProjectMutation,
@@ -51,10 +48,6 @@ const deleteMutation = useDeleteProjectMutation();
 const toggleFavoriteMutation = useToggleFavoriteMutation();
 
 // Handlers
-const handleOpenProject = (project: ProjectWithDetails) => {
-  router.push({ name: 'ProjectOverview', params: { id: project.id } });
-};
-
 const handleDeleteProject = async (projectId: string) => {
   try {
     await deleteMutation.mutateAsync(projectId);
@@ -102,7 +95,6 @@ const handleToggleFavorite = async (projectId: string) => {
               :project="project"
               :process-statuses="allProcessStatuses"
               @delete="handleDeleteProject"
-              @open="handleOpenProject"
               @toggle-favorite="handleToggleFavorite"
             />
           </div>
@@ -121,7 +113,6 @@ const handleToggleFavorite = async (projectId: string) => {
               :project="project"
               :process-statuses="allProcessStatuses"
               @delete="handleDeleteProject"
-              @open="handleOpenProject"
               @toggle-favorite="handleToggleFavorite"
             />
           </div>

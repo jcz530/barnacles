@@ -36,10 +36,11 @@ const processes = ref<StartProcess[]>([]);
 const configMode = ref<'quick' | 'advanced'>('quick');
 const selectedScripts = ref<string[]>([]); // Format: "type:scriptName" e.g., "npm:dev" or "composer:install"
 
-// Fetch package scripts, composer scripts, hosts, and project details for autocomplete
+// Fetch package scripts, composer scripts, hosts, package manager, and project details for autocomplete
 const {
   useProjectPackageScriptsQuery,
   useProjectComposerScriptsQuery,
+  useProjectPackageManagerQuery,
   useProjectQuery,
   useHostsQuery,
 } = useQueries();
@@ -52,53 +53,19 @@ const { data: composerScripts } = useProjectComposerScriptsQuery(props.projectId
 const { data: project } = useProjectQuery(props.projectId);
 const { data: hosts } = useHostsQuery({ enabled: true });
 
-// Detect package manager from project files
-const detectedPackageManager = ref<'npm' | 'yarn' | 'pnpm'>('npm');
-
-watch(
-  () => project.value,
-  async newProject => {
-    if (!newProject) return;
-
-    try {
-      const fs = await import('fs/promises');
-      const path = await import('path');
-      const projectPath = newProject.path;
-
-      // Check for lock files to determine package manager
-      const hasPnpmLock = await fs
-        .access(path.join(projectPath, 'pnpm-lock.yaml'))
-        .then(() => true)
-        .catch(() => false);
-      if (hasPnpmLock) {
-        detectedPackageManager.value = 'pnpm';
-        return;
-      }
-
-      const hasYarnLock = await fs
-        .access(path.join(projectPath, 'yarn.lock'))
-        .then(() => true)
-        .catch(() => false);
-      if (hasYarnLock) {
-        detectedPackageManager.value = 'yarn';
-        return;
-      }
-
-      detectedPackageManager.value = 'npm';
-    } catch {
-      detectedPackageManager.value = 'npm';
-    }
-  },
-  { immediate: true }
-);
+// Detect package manager from backend API
+const { data: detectedPackageManager } = useProjectPackageManagerQuery(props.projectId, {
+  enabled: true,
+});
 
 // Generate command suggestions from detected package scripts and composer scripts
 const commandSuggestions = computed(() => {
   const suggestions: string[] = [];
+  const pkgManager = detectedPackageManager.value || 'npm';
 
   if (packageScripts.value) {
     Object.keys(packageScripts.value).forEach(scriptName => {
-      switch (detectedPackageManager.value) {
+      switch (pkgManager) {
         case 'yarn':
           suggestions.push(`yarn ${scriptName}`);
           break;
@@ -142,6 +109,7 @@ const colorPalette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#e
 const generateProcessFromScript = (scriptKey: string): StartProcess => {
   const [type, scriptName] = scriptKey.split(':');
   const colorIndex = selectedScripts.value.length % colorPalette.length;
+  const pkgManager = detectedPackageManager.value || 'npm';
 
   let command: string;
   if (type === 'composer') {
@@ -149,9 +117,9 @@ const generateProcessFromScript = (scriptKey: string): StartProcess => {
   } else {
     // npm/yarn/pnpm
     command =
-      detectedPackageManager.value === 'yarn'
+      pkgManager === 'yarn'
         ? `yarn ${scriptName}`
-        : detectedPackageManager.value === 'pnpm'
+        : pkgManager === 'pnpm'
           ? `pnpm ${scriptName}`
           : `npm run ${scriptName}`;
   }
@@ -316,9 +284,9 @@ const handleClose = () => {
             <div v-if="packageScripts && Object.keys(packageScripts).length > 0" class="space-y-2">
               <div class="text-xs font-semibold tracking-wide text-slate-500 uppercase">
                 {{
-                  detectedPackageManager === 'yarn'
+                  (detectedPackageManager || 'npm') === 'yarn'
                     ? 'Yarn'
-                    : detectedPackageManager === 'pnpm'
+                    : (detectedPackageManager || 'npm') === 'pnpm'
                       ? 'PNPM'
                       : 'NPM'
                 }}
@@ -339,9 +307,9 @@ const handleClose = () => {
                     <div class="font-medium">{{ scriptName }}</div>
                     <div class="text-xs text-slate-500">
                       {{
-                        detectedPackageManager === 'yarn'
+                        (detectedPackageManager || 'npm') === 'yarn'
                           ? 'yarn'
-                          : detectedPackageManager === 'pnpm'
+                          : (detectedPackageManager || 'npm') === 'pnpm'
                             ? 'pnpm'
                             : 'npm run'
                       }}

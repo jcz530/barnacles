@@ -6,6 +6,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { RouteNames } from '@/router';
 import { useDark, useLocalStorage } from '@vueuse/core';
 import { useRoute, useRouter } from 'vue-router';
 import { Moon, Palette, Sun, SunMoon } from 'lucide-vue-next';
@@ -50,10 +51,6 @@ function cycleTheme() {
   }
 }
 const isActive = computed(() => route.path.startsWith('/theme'));
-
-function openThemePicker() {
-  router.push('/themes');
-}
 </script>
 
 <template>
@@ -67,9 +64,11 @@ function openThemePicker() {
           </SidebarMenuButton>
         </SidebarMenuItem>
         <SidebarMenuItem>
-          <SidebarMenuButton size="sm" @click="openThemePicker" :is-active="isActive">
-            <Palette />
-            <span>Themes</span>
+          <SidebarMenuButton size="sm" :is-active="isActive" as-child>
+            <RouterLink :to="{ name: RouteNames.Themes }">
+              <Palette />
+              <span>Themes</span>
+            </RouterLink>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { BreadcrumbSymbol } from '@/composables/useBreadcrumbs';
 import { inject } from 'vue';
+import { RouteNames } from '@/router';
 
 const context = inject(BreadcrumbSymbol);
 const breadcrumbs = context?.breadcrumbs;
@@ -19,7 +20,7 @@ const breadcrumbs = context?.breadcrumbs;
     <BreadcrumbList class="text-xs">
       <BreadcrumbItem class="hidden md:block">
         <BreadcrumbLink as-child>
-          <RouterLink to="/"> Dashboard </RouterLink>
+          <RouterLink :to="{ name: RouteNames.Home }"> Dashboard </RouterLink>
         </BreadcrumbLink>
       </BreadcrumbItem>
       <template v-for="(item, index) in breadcrumbs" :key="index">

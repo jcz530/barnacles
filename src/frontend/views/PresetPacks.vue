@@ -13,6 +13,7 @@ import CardContent from '../components/ui/card/CardContent.vue';
 import { Button } from '../components/ui/button';
 import { Checkbox } from '../components/ui/checkbox';
 import { Badge } from '../components/ui/badge';
+import { RouteNames } from '@/router';
 
 const { setBreadcrumbs } = useBreadcrumbs();
 const { usePresetsQuery, useInstallPresetMutation } = useQueries();
@@ -72,15 +73,11 @@ const handleInstall = async () => {
     // Wait a bit for the mutation success handler to invalidate queries
     // Then redirect back to aliases page
     setTimeout(() => {
-      router.push('/aliases');
+      router.push({ name: RouteNames.Aliases });
     }, 1500);
   } catch (error) {
     console.error('Failed to install preset pack:', error);
   }
-};
-
-const goBack = () => {
-  router.push('/aliases');
 };
 
 // Category badge colors
@@ -95,9 +92,11 @@ const categoryColors: Record<string, string> = {
   <div>
     <section class="mt-8">
       <div class="mb-6">
-        <Button @click="goBack" variant="ghost" size="sm" class="mb-4">
-          <ArrowLeft class="mr-2 h-4 w-4" />
-          Back to Aliases
+        <Button variant="ghost" size="sm" class="mb-4" as-child>
+          <RouterLink :to="{ name: RouteNames.Aliases }">
+            <ArrowLeft class="mr-2 h-4 w-4" />
+            Back to Aliases
+          </RouterLink>
         </Button>
         <div class="flex items-center gap-3">
           <div class="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-lg">
@@ -131,7 +130,7 @@ const categoryColors: Record<string, string> = {
                 @click="selectPack(pack)"
                 class="hover:bg-accent w-full rounded-lg border p-4 text-left transition-colors"
                 :class="{
-                  'border-primary bg-accent ring-primary ring-2 ring-offset-2':
+                  'border-primary bg-accent ring-ring ring-2 ring-offset-2':
                     selectedPack === pack.id,
                 }"
               >
@@ -251,7 +250,9 @@ const categoryColors: Record<string, string> = {
 
               <!-- Install Button -->
               <div class="mt-6 flex justify-end gap-2">
-                <Button @click="goBack" variant="outline">Cancel</Button>
+                <Button variant="outline" as-child>
+                  <RouterLink :to="{ name: RouteNames.Aliases }"> Cancel </RouterLink>
+                </Button>
                 <Button
                   @click="handleInstall"
                   :disabled="selectedAliases.size === 0 || installMutation.isPending.value"

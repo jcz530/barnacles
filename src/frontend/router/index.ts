@@ -21,11 +21,39 @@ import TrayPopup from '../views/TrayPopup.vue';
 import Utilities from '../views/Utilities.vue';
 import DesignSystem from '../views/DesignSystem.vue';
 
+// Define route names as a const object for type-safe references
+export const RouteNames = {
+  TrayPopup: 'TrayPopup',
+  Home: 'Home',
+  Projects: 'Projects',
+  ProjectDetail: 'ProjectDetail',
+  ProjectOverview: 'ProjectOverview',
+  ProjectReadme: 'ProjectReadme',
+  ProjectFiles: 'ProjectFiles',
+  ProjectTerminals: 'ProjectTerminals',
+  ProjectRelatedFiles: 'ProjectRelatedFiles',
+  Terminals: 'Terminals',
+  Settings: 'Settings',
+  Themes: 'Themes',
+  ThemeEdit: 'ThemeEdit',
+  ThemeNew: 'ThemeNew',
+  Hosts: 'Hosts',
+  Aliases: 'Aliases',
+  PresetPacks: 'PresetPacks',
+  ConfigFiles: 'ConfigFiles',
+  Utilities: 'Utilities',
+  UtilityDetail: 'UtilityDetail',
+  UpdateTest: 'UpdateTest',
+  DesignSystem: 'DesignSystem',
+} as const;
+
+export type RouteName = (typeof RouteNames)[keyof typeof RouteNames];
+
 const routes: RouteRecordRaw[] = [
   // Tray popup route (no layout)
   {
     path: '/tray-popup',
-    name: 'TrayPopup',
+    name: RouteNames.TrayPopup,
     component: TrayPopup,
   },
   {
@@ -34,105 +62,105 @@ const routes: RouteRecordRaw[] = [
     children: [
       {
         path: '',
-        name: 'Home',
+        name: RouteNames.Home,
         component: Home,
       },
       {
         path: '/projects',
-        name: 'Projects',
+        name: RouteNames.Projects,
         component: Projects,
       },
       {
         path: '/projects/:id',
-        name: 'ProjectDetail',
+        name: RouteNames.ProjectDetail,
         component: ProjectDetail,
-        redirect: { name: 'ProjectOverview' },
+        redirect: { name: RouteNames.ProjectOverview },
         children: [
           {
             path: 'overview',
-            name: 'ProjectOverview',
+            name: RouteNames.ProjectOverview,
             component: ProjectOverviewTab,
           },
           {
             path: 'readme',
-            name: 'ProjectReadme',
+            name: RouteNames.ProjectReadme,
             component: ProjectReadmeTab,
           },
           {
             path: 'files',
-            name: 'ProjectFiles',
+            name: RouteNames.ProjectFiles,
             component: ProjectFilesTab,
           },
           {
             path: 'terminals',
-            name: 'ProjectTerminals',
+            name: RouteNames.ProjectTerminals,
             component: ProjectTerminalsTab,
           },
           {
             path: 'related-files',
-            name: 'ProjectRelatedFiles',
+            name: RouteNames.ProjectRelatedFiles,
             component: ProjectRelatedFilesTab,
           },
         ],
       },
       {
         path: '/terminals',
-        name: 'Terminals',
+        name: RouteNames.Terminals,
         component: Terminals,
       },
       {
         path: '/settings',
-        name: 'Settings',
+        name: RouteNames.Settings,
         component: Settings,
       },
       {
         path: '/themes',
-        name: 'Themes',
+        name: RouteNames.Themes,
         component: Themes,
       },
       {
         path: '/themes/:id/edit',
-        name: 'ThemeEdit',
+        name: RouteNames.ThemeEdit,
         component: ThemeEditor,
       },
       {
         path: '/themes/new',
-        name: 'ThemeNew',
+        name: RouteNames.ThemeNew,
         component: ThemeEditor,
       },
       {
         path: '/hosts',
-        name: 'Hosts',
+        name: RouteNames.Hosts,
         component: Hosts,
       },
       {
         path: '/aliases',
-        name: 'Aliases',
+        name: RouteNames.Aliases,
         component: Aliases,
       },
       {
         path: '/aliases/presets',
-        name: 'PresetPacks',
+        name: RouteNames.PresetPacks,
         component: PresetPacks,
       },
       {
         path: '/configs',
-        name: 'ConfigFiles',
+        name: RouteNames.ConfigFiles,
         component: ConfigFilesPage,
       },
       {
         path: '/utilities',
-        name: 'Utilities',
+        name: RouteNames.Utilities,
         component: Utilities,
       },
       {
         path: '/utilities/:utilityId',
-        name: 'UtilityDetail',
+        name: RouteNames.UtilityDetail,
         component: () => import('../views/utilities/UtilityDetailWrapper.vue'),
       },
       {
         path: '/update-test',
-        name: 'UpdateTest',
+        name: RouteNames.UpdateTest,
         component: UpdateTest,
       },
       // Dev-only route for design system
@@ -140,7 +168,7 @@ const routes: RouteRecordRaw[] = [
         ? [
             {
               path: '/design-system',
-              name: 'DesignSystem',
+              name: RouteNames.DesignSystem,
               component: DesignSystem,
             },
           ]

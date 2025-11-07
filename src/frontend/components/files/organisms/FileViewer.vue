@@ -19,8 +19,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   filePath: null,
 });
-
-const projectId = inject<ComputedRef<string>>('projectId');
+const projectId = inject<ComputedRef<string> | undefined>('projectId', undefined);
 
 const isLoading = ref(false);
 const fileContent = ref<string | null>(null);
@@ -31,11 +30,53 @@ const highlighter = ref<shiki.Highlighter | null>(null);
 const viewAsText = ref(false); // Toggle for SVG view mode
 const copySuccess = ref(false); // Track copy success for visual feedback
 
+// Mapping for config files without extensions or with special names
+const CONFIG_FILE_LANGUAGES: Record<string, string> = {
+  '.npmrc': 'ini',
+  '.bashrc': 'bash',
+  '.bash_profile': 'bash',
+  '.profile': 'bash',
+  '.zshrc': 'bash',
+  '.zsh_profile': 'bash',
+  '.gitconfig': 'ini',
+  '.editorconfig': 'ini',
+  '.env': 'properties',
+  '.prettierrc': 'json',
+  '.eslintrc': 'json',
+  Dockerfile: 'dockerfile',
+  Makefile: 'makefile',
+  Rakefile: 'ruby',
+  Gemfile: 'ruby',
+  Podfile: 'ruby',
+  '.dockerignore': 'plaintext',
+  '.gitignore': 'plaintext',
+  '.nvmrc': 'plaintext',
+  'tsconfig.json': 'jsonc',
+};
+
 // Get file extension and type info
 const extension = computed(() => {
   if (!props.filePath) return undefined;
   const parts = props.filePath.split('.');
   return parts.length > 1 ? parts[parts.length - 1] : undefined;
+});
+
+// Get the filename (last part of path) for config file detection
+const fileName = computed(() => {
+  if (!props.filePath) return undefined;
+  const parts = props.filePath.split('/');
+  return parts[parts.length - 1];
+});
+
+// Determine the language for syntax highlighting
+const detectedLanguage = computed(() => {
+  // First check if it's a known config file
+  if (fileName.value && CONFIG_FILE_LANGUAGES[fileName.value]) {
+    return CONFIG_FILE_LANGUAGES[fileName.value];
+  }
+
+  // Otherwise use the file type info
+  return getFileTypeInfo(extension.value).language;
 });
 
 const fileTypeInfo = computed(() => getFileTypeInfo(extension.value));
@@ -60,6 +101,7 @@ onMounted(async () => {
         'html',
         'css',
         'json',
+        'jsonc',
         'markdown',
         'bash',
         'yaml',
@@ -70,6 +112,11 @@ onMounted(async () => {
         'ruby',
         'vue',
         'xml',
+        'ini',
+        'properties',
+        'dockerfile',
+        'makefile',
+        'plaintext',
       ],
     });
   } catch (err) {
@@ -209,7 +256,7 @@ const highlightedCode = computed(() => {
     try {
       return highlighter.value.codeToHtml(fileContent.value, {
         lang: 'xml',
-        theme: isDark ? 'github-dark' : 'github-light',
+        theme: isDark.value ? 'github-dark' : 'github-light',
       });
     } catch (err) {
       console.error('Syntax highlighting error:', err);
@@ -217,15 +264,18 @@ const highlightedCode = computed(() => {
     }
   }
 
-  // For other files, use the detected language
-  if (!fileTypeInfo.value.language || fileTypeInfo.value.category === 'document') {
+  // Use the detected language (handles config files and regular files)
+  const lang = detectedLanguage.value;
+
+  // Skip highlighting for documents (markdown is handled separately)
+  if (!lang || fileTypeInfo.value.category === 'document') {
     return null;
   }
 
   try {
     return highlighter.value.codeToHtml(fileContent.value, {
-      lang: fileTypeInfo.value.language,
-      theme: isDark ? 'github-dark' : 'github-light',
+      lang,
+      theme: isDark.value ? 'github-dark' : 'github-light',
     });
   } catch (err) {
     console.error('Syntax highlighting error:', err);

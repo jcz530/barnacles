@@ -2,12 +2,13 @@
 import { useFormatters } from '@/composables/useFormatters';
 import { Calendar, Folder, GitBranch, HardDrive, Star } from 'lucide-vue-next';
 import type { ProjectWithDetails } from '../../../../shared/types/api';
-import { useRunningProcesses } from '../../../composables/useRunningProcesses';
+import { useRunningProcesses } from '@/composables/useRunningProcesses';
 import ProcessIndicator from '../../atoms/ProcessIndicator.vue';
 import ProjectIcon from '../atoms/ProjectIcon.vue';
 import { Button } from '../../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import ProjectActionsDropdown from './ProjectActionsDropdown.vue';
+import { RouteNames } from '@/router';
 
 const props = defineProps<{
   project: ProjectWithDetails;
@@ -28,10 +29,6 @@ const runningProcesses = useRunningProcesses(
 
 const { formatSize, formatDate } = useFormatters();
 
-const handleOpen = () => {
-  emit('open', props.project);
-};
-
 const handleToggleFavorite = (e: Event) => {
   e.stopPropagation();
   emit('toggle-favorite', props.project.id);
@@ -40,21 +37,28 @@ const handleToggleFavorite = (e: Event) => {
 
 <template>
   <Card
-    class="flex cursor-pointer flex-col gap-0 pt-0 transition-all hover:shadow-lg hover:ring-2 hover:ring-slate-200"
-    @click="handleOpen"
+    as="button"
+    :to="{
+      name: RouteNames.ProjectOverview,
+      params: { id: project.id },
+    }"
+    class="flex cursor-pointer flex-col gap-0 pt-0 transition-all"
   >
     <CardHeader class="pb-3">
-      <div class="-mr-6 flex justify-end gap-1">
+      <div class="relative -mr-6 mb-8 flex justify-end gap-1">
         <Button
           variant="ghost"
           size="icon"
-          class="h-8 w-8 p-0"
+          class="absolute right-10 z-20 h-8 w-8 p-0"
           :class="project.isFavorite ? 'text-yellow-500' : 'text-slate-400'"
           @click="handleToggleFavorite"
+          @keydown.enter.prevent="handleToggleFavorite"
+          @keydown.space.prevent="handleToggleFavorite"
         >
           <Star class="h-4 w-4" :fill="project.isFavorite ? 'currentColor' : 'none'" />
         </Button>
         <ProjectActionsDropdown
+          class="absolute z-20"
           :project-id="project.id"
           :project-path="project.path"
           :project-name="project.name"
@@ -136,7 +140,7 @@ const handleToggleFavorite = (e: Event) => {
           <span>{{ project.stats.gitBranch }}</span>
           <span
             v-if="project.stats.hasUncommittedChanges"
-            class="ml-auto rounded bg-orange-100 px-1.5 py-0.5 text-xs font-medium text-orange-700"
+            class="bg-tertiary-100/60 text-tertiary-700 ml-auto rounded px-1.5 py-0.5 text-xs font-medium"
           >
             Uncommitted changes
           </span>

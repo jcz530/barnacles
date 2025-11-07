@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SortingState } from '@tanstack/vue-table';
-import { RefreshCw, Scan, Star } from 'lucide-vue-next';
+import { Scan, Star } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMagicKeys, whenever } from '@vueuse/core';
@@ -10,16 +10,18 @@ import SortControl from '../components/atoms/SortControl.vue';
 import ViewToggle from '../components/atoms/ViewToggle.vue';
 import ProjectSearchBar from '../components/projects/molecules/ProjectSearchBar.vue';
 import TechnologyFilter from '../components/projects/molecules/TechnologyFilter.vue';
+import { RouteNames } from '@/router';
 import DateFilter, {
   type DateFilterDirection,
   type DatePreset,
 } from '../components/molecules/DateFilter.vue';
 import ProjectsTable from '../components/projects/organisms/ProjectsTable.vue';
 import { Button } from '../components/ui/button';
-import { useBreadcrumbs } from '../composables/useBreadcrumbs';
-import { useFuzzySearch } from '../composables/useFuzzySearch';
-import { useQueries } from '../composables/useQueries';
-import { useProjectScanWebSocket } from '../composables/useProjectScanWebSocket';
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
+import { useFuzzySearch } from '@/composables/useFuzzySearch';
+import { useQueries } from '@/composables/useQueries';
+import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
+import { useViewMode } from '@/composables/useViewMode';
 
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
@@ -34,11 +36,9 @@ const {
 
 // WebSocket scanning
 const {
-  isConnected: wsConnected,
   isScanning: wsScanning,
   totalDiscovered,
   error: wsScanError,
-  discoveredProjects,
   startScan: startWebSocketScan,
 } = useProjectScanWebSocket();
 
@@ -48,18 +48,14 @@ const selectedTechnologies = ref<string[]>([]);
 const showFavoritesOnly = ref(false);
 const datePreset = ref<DatePreset>('all');
 const dateDirection = ref<DateFilterDirection>('within');
-const viewMode = ref<'table' | 'card'>('table');
+const viewMode = useViewMode('projects-view-mode', 'table');
 const sortField = ref<'name' | 'lastModified' | 'size'>('lastModified');
 const sortDirection = ref<'asc' | 'desc'>('desc');
 const tableSorting = ref<SortingState>([{ id: 'lastModified', desc: true }]);
 const searchBarRef = ref<InstanceType<typeof ProjectSearchBar> | null>(null);
 
 // Queries
-const {
-  data: filteredProjects,
-  isLoading: projectsLoading,
-  refetch: refetchProjects,
-} = useProjectsQuery({
+const { data: filteredProjects, isLoading: projectsLoading } = useProjectsQuery({
   search: ref(''), // Remove server-side search
   technologies: selectedTechnologies,
 });
@@ -211,11 +207,7 @@ const handleDeleteProject = async (projectId: string) => {
 };
 
 const handleOpenProject = (project: ProjectWithDetails) => {
-  router.push({ name: 'ProjectOverview', params: { id: project.id } });
-};
-
-const handleRefresh = () => {
-  refetchProjects();
+  router.push({ name: RouteNames.ProjectOverview, params: { id: project.id } });
 };
 
 const handleToggleFavorite = async (projectId: string) => {
@@ -271,16 +263,10 @@ whenever(keys['Ctrl+K'], () => {
           <h1 class="text-3xl font-bold text-slate-800">Projects</h1>
           <p class="mt-1 text-sm text-slate-600">Manage and explore your development projects</p>
         </div>
-        <div class="flex gap-2">
-          <Button variant="outline" @click="handleRefresh" :disabled="projectsLoading">
-            <RefreshCw class="mr-2 h-4 w-4" :class="{ 'animate-spin': projectsLoading }" />
-            Refresh
-          </Button>
-          <Button @click="handleScanProjects" :disabled="isScanning">
-            <Scan class="mr-2 h-4 w-4" :class="{ 'animate-spin': isScanning }" />
-            {{ isScanning ? `Scanning... (${totalDiscovered} found)` : 'Scan Projects' }}
-          </Button>
-        </div>
+        <Button @click="handleScanProjects" :disabled="isScanning">
+          <Scan class="mr-2 h-4 w-4" :class="{ 'animate-spin': isScanning }" />
+          {{ isScanning ? `Scanning... (${totalDiscovered} found)` : 'Scan Projects' }}
+        </Button>
       </div>
 
       <!-- Filters -->

@@ -18,6 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { RouterLink } from 'vue-router';
+import { RouteNames } from '@/router';
 
 const { setBreadcrumbs } = useBreadcrumbs();
 const { themes, activeTheme, deleteTheme, isLoading } = useTheme();
@@ -69,12 +71,12 @@ function cancelDelete() {
             <h2 class="text-2xl font-semibold">Themes</h2>
             <p class="text-muted-foreground mt-1">Choose a theme or create your own</p>
           </div>
-          <RouterLink :to="{ name: 'ThemeNew' }">
-            <Button variant="default" size="sm">
+          <Button variant="default" as-child size="sm">
+            <RouterLink :to="{ name: RouteNames.ThemeNew }">
               <Plus class="mr-2 h-4 w-4" />
               Create Theme
-            </Button>
-          </RouterLink>
+            </RouterLink>
+          </Button>
         </div>
       </div>
 
@@ -109,12 +111,12 @@ function cancelDelete() {
                 <CardTitle>Custom Themes</CardTitle>
                 <CardDescription>Your personalized theme creations</CardDescription>
               </div>
-              <RouterLink :to="{ name: 'ThemeNew' }">
-                <Button variant="outline">
+              <Button variant="outline" as-child>
+                <RouterLink :to="{ name: RouteNames.ThemeNew }">
                   <Plus class="mr-1.5 h-4 w-4" />
                   New Theme
-                </Button>
-              </RouterLink>
+                </RouterLink>
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -124,7 +126,7 @@ function cancelDelete() {
               <p class="text-muted-foreground mb-6 text-sm">
                 Create your first custom theme to match your style
               </p>
-              <RouterLink :to="{ name: 'ThemeNew' }">
+              <RouterLink :to="{ name: RouteNames.ThemeNew }">
                 <Button>
                   <Plus class="mr-2 h-4 w-4" />
                   Create Your First Theme
