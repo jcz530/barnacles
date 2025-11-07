@@ -60,9 +60,9 @@ describe('Projects API Integration Tests', () => {
       await db
         .insert(projectsSchema)
         .values([
-          createProjectData({ name: 'my-awesome-app' }),
-          createProjectData({ name: 'another-project' }),
-          createProjectData({ name: 'awesome-website' }),
+          createProjectData({ name: 'my-awesome-app', archivedAt: null }),
+          createProjectData({ name: 'another-project', archivedAt: null }),
+          createProjectData({ name: 'awesome-website', archivedAt: null }),
         ]);
 
       const response = await get(app, '/api/projects?search=awesome');

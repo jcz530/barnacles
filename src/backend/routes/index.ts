@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import aliases from './aliases';
 import processes from './processes';
-import projects from './projects';
+import projects from './projects/index';
 import settings from './settings';
 import system from './system';
 import themes from './themes';
