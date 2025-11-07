@@ -8,6 +8,7 @@ import ProjectIcon from '../atoms/ProjectIcon.vue';
 import { Button } from '../../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import ProjectActionsDropdown from './ProjectActionsDropdown.vue';
+import { RouteNames } from '@/router';
 
 const props = defineProps<{
   project: ProjectWithDetails;
@@ -28,10 +29,6 @@ const runningProcesses = useRunningProcesses(
 
 const { formatSize, formatDate } = useFormatters();
 
-const handleOpen = () => {
-  emit('open', props.project);
-};
-
 const handleToggleFavorite = (e: Event) => {
   e.stopPropagation();
   emit('toggle-favorite', props.project.id);
@@ -41,15 +38,15 @@ const handleToggleFavorite = (e: Event) => {
 <template>
   <Card
     as="button"
-    @click="handleOpen"
+    :to="{ name: RouteNames.ProjectOverview, params: { id: project.id } }"
     class="hover:ring-primary-200 focus-visible:ring-primary-400 flex cursor-pointer flex-col gap-0 pt-0 transition-all hover:shadow-lg hover:ring-2"
   >
     <CardHeader class="pb-3">
-      <div class="-mr-6 flex justify-end gap-1">
+      <div class="relative -mr-6 mb-8 flex justify-end gap-1">
         <Button
           variant="ghost"
           size="icon"
-          class="h-8 w-8 p-0"
+          class="absolute right-10 z-[100] h-8 w-8 p-0"
           :class="project.isFavorite ? 'text-yellow-500' : 'text-slate-400'"
           @click="handleToggleFavorite"
           @keydown.enter.prevent="handleToggleFavorite"
@@ -58,6 +55,7 @@ const handleToggleFavorite = (e: Event) => {
           <Star class="h-4 w-4" :fill="project.isFavorite ? 'currentColor' : 'none'" />
         </Button>
         <ProjectActionsDropdown
+          class="absolute z-[100]"
           :project-id="project.id"
           :project-path="project.path"
           :project-name="project.name"

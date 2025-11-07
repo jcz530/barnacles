@@ -38,7 +38,7 @@ const openUrl = (url: string) => {
     <button
       v-if="onNavigateToProcess"
       @click="onNavigateToProcess"
-      class="ml-1 flex items-center gap-1 text-slate-600 hover:text-slate-800"
+      class="ml-1 flex cursor-pointer items-center gap-1 text-slate-600 hover:text-slate-800"
       title="View process"
     >
       <ArrowRight class="h-3.5 w-3.5" />
