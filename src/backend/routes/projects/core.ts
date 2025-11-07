@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { projectService } from '../../services/project-service';
+import { loadProject } from '../../middleware/project-loader';
 
 const core = new Hono();
 
@@ -39,42 +40,22 @@ core.get('/', async c => {
  * GET /:id
  * Get a single project by ID
  */
-core.get('/:id', async c => {
-  try {
-    const id = c.req.param('id');
-    const project = await projectService.getProjectById(id);
+core.get('/:id', loadProject, async c => {
+  const project = c.get('project');
 
-    if (!project) {
-      return c.json(
-        {
-          error: 'Project not found',
-        },
-        404
-      );
-    }
-
-    return c.json({
-      data: project,
-    });
-  } catch (error) {
-    console.error('Error fetching project:', error);
-    return c.json(
-      {
-        error: 'Failed to fetch project',
-      },
-      500
-    );
-  }
+  return c.json({
+    data: project,
+  });
 });
 
 /**
  * DELETE /:id
  * Delete a project
  */
-core.delete('/:id', async c => {
+core.delete('/:id', loadProject, async c => {
   try {
-    const id = c.req.param('id');
-    await projectService.deleteProject(id);
+    const project = c.get('project');
+    await projectService.deleteProject(project.id);
 
     return c.json({
       message: 'Project deleted successfully',
@@ -94,10 +75,10 @@ core.delete('/:id', async c => {
  * PATCH /:id/favorite
  * Toggle project favorite status
  */
-core.patch('/:id/favorite', async c => {
+core.patch('/:id/favorite', loadProject, async c => {
   try {
-    const id = c.req.param('id');
-    const isFavorite = await projectService.toggleProjectFavorite(id);
+    const project = c.get('project');
+    const isFavorite = await projectService.toggleProjectFavorite(project.id);
 
     return c.json({
       data: { isFavorite },
@@ -118,10 +99,10 @@ core.patch('/:id/favorite', async c => {
  * PATCH /:id/archive
  * Archive a project (sets archivedAt to current timestamp)
  */
-core.patch('/:id/archive', async c => {
+core.patch('/:id/archive', loadProject, async c => {
   try {
-    const id = c.req.param('id');
-    await projectService.archiveProject(id);
+    const project = c.get('project');
+    await projectService.archiveProject(project.id);
 
     return c.json({
       message: 'Project archived successfully',
@@ -141,10 +122,10 @@ core.patch('/:id/archive', async c => {
  * PATCH /:id/unarchive
  * Unarchive a project (sets archivedAt to null)
  */
-core.patch('/:id/unarchive', async c => {
+core.patch('/:id/unarchive', loadProject, async c => {
   try {
-    const id = c.req.param('id');
-    await projectService.unarchiveProject(id);
+    const project = c.get('project');
+    await projectService.unarchiveProject(project.id);
 
     return c.json({
       message: 'Project unarchived successfully',
@@ -164,20 +145,9 @@ core.patch('/:id/unarchive', async c => {
  * POST /:id/rescan
  * Rescan a single project to update its information
  */
-core.post('/:id/rescan', async c => {
+core.post('/:id/rescan', loadProject, async c => {
   try {
-    const id = c.req.param('id');
-    const project = await projectService.getProjectById(id);
-
-    if (!project) {
-      return c.json(
-        {
-          error: 'Project not found',
-        },
-        404
-      );
-    }
-
+    const project = c.get('project');
     const rescannedProject = await projectService.rescanProject(project.path);
 
     return c.json({

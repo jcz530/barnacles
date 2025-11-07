@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { projectService } from '../../services/project-service';
+import { loadProject } from '../../middleware/project-loader';
 
 const tools = new Hono();
 
@@ -51,13 +52,13 @@ tools.get('/ides/available', async c => {
  * PATCH /:id/ide
  * Update the preferred IDE for a project
  */
-tools.patch('/:id/ide', async c => {
+tools.patch('/:id/ide', loadProject, async c => {
   try {
-    const id = c.req.param('id');
+    const project = c.get('project');
     const body = await c.req.json();
     const { ideId } = body;
 
-    await projectService.updatePreferredIDE(id, ideId);
+    await projectService.updatePreferredIDE(project.id, ideId);
 
     return c.json({
       message: 'Preferred IDE updated successfully',
@@ -77,13 +78,13 @@ tools.patch('/:id/ide', async c => {
  * POST /:id/open
  * Open a project in its preferred IDE
  */
-tools.post('/:id/open', async c => {
+tools.post('/:id/open', loadProject, async c => {
   try {
-    const id = c.req.param('id');
+    const project = c.get('project');
     const body = await c.req.json().catch(() => ({}));
     const { ideId } = body;
 
-    await projectService.openProjectInIDE(id, ideId);
+    await projectService.openProjectInIDE(project.id, ideId);
 
     return c.json({
       message: 'Project opened in IDE',
@@ -161,13 +162,13 @@ tools.get('/terminals/available', async c => {
  * PATCH /:id/terminal
  * Update the preferred terminal for a project
  */
-tools.patch('/:id/terminal', async c => {
+tools.patch('/:id/terminal', loadProject, async c => {
   try {
-    const id = c.req.param('id');
+    const project = c.get('project');
     const body = await c.req.json();
     const { terminalId } = body;
 
-    await projectService.updatePreferredTerminal(id, terminalId);
+    await projectService.updatePreferredTerminal(project.id, terminalId);
 
     return c.json({
       message: 'Preferred terminal updated successfully',
@@ -187,13 +188,13 @@ tools.patch('/:id/terminal', async c => {
  * POST /:id/open-terminal
  * Open a terminal at the project path
  */
-tools.post('/:id/open-terminal', async c => {
+tools.post('/:id/open-terminal', loadProject, async c => {
   try {
-    const id = c.req.param('id');
+    const project = c.get('project');
     const body = await c.req.json().catch(() => ({}));
     const { terminalId } = body;
 
-    await projectService.openTerminalAtProject(id, terminalId);
+    await projectService.openTerminalAtProject(project.id, terminalId);
 
     return c.json({
       message: 'Terminal opened at project path',

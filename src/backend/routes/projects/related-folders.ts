@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { projectService } from '../../services/project-service';
+import { loadProject } from '../../middleware/project-loader';
+import type { ProjectContext } from '../../types/hono';
 
 const relatedFolders = new Hono();
 
@@ -7,10 +9,10 @@ const relatedFolders = new Hono();
  * GET /:id/related-folders
  * Get all related folders for a project
  */
-relatedFolders.get('/:id/related-folders', async c => {
+relatedFolders.get('/:id/related-folders', loadProject, async (c: ProjectContext) => {
   try {
-    const id = c.req.param('id');
-    const folders = await projectService.getRelatedFolders(id);
+    const project = c.get('project');
+    const folders = await projectService.getRelatedFolders(project.id);
 
     return c.json({
       data: folders,
@@ -30,9 +32,9 @@ relatedFolders.get('/:id/related-folders', async c => {
  * POST /:id/related-folders
  * Add a related folder to a project
  */
-relatedFolders.post('/:id/related-folders', async c => {
+relatedFolders.post('/:id/related-folders', loadProject, async (c: ProjectContext) => {
   try {
-    const id = c.req.param('id');
+    const project = c.get('project');
     const body = await c.req.json();
     const { folderPath } = body;
 
@@ -45,7 +47,7 @@ relatedFolders.post('/:id/related-folders', async c => {
       );
     }
 
-    const result = await projectService.addRelatedFolder(id, folderPath);
+    const result = await projectService.addRelatedFolder(project.id, folderPath);
 
     if (!result.success) {
       return c.json(

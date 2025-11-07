@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { projectService } from '../../services/project-service';
+import { loadProject } from '../../middleware/project-loader';
 
 const packages = new Hono();
 
@@ -7,20 +8,9 @@ const packages = new Hono();
  * GET /:id/package-scripts
  * Get package.json scripts for a project
  */
-packages.get('/:id/package-scripts', async c => {
+packages.get('/:id/package-scripts', loadProject, async c => {
   try {
-    const id = c.req.param('id');
-    const project = await projectService.getProjectById(id);
-
-    if (!project) {
-      return c.json(
-        {
-          error: 'Project not found',
-        },
-        404
-      );
-    }
-
+    const project = c.get('project');
     const scripts = await projectService.getPackageScripts(project.path);
 
     return c.json({
@@ -41,20 +31,9 @@ packages.get('/:id/package-scripts', async c => {
  * GET /:id/composer-scripts
  * Get composer.json scripts for a project
  */
-packages.get('/:id/composer-scripts', async c => {
+packages.get('/:id/composer-scripts', loadProject, async c => {
   try {
-    const id = c.req.param('id');
-    const project = await projectService.getProjectById(id);
-
-    if (!project) {
-      return c.json(
-        {
-          error: 'Project not found',
-        },
-        404
-      );
-    }
-
+    const project = c.get('project');
     const scripts = await projectService.getComposerScripts(project.path);
 
     return c.json({
@@ -75,20 +54,9 @@ packages.get('/:id/composer-scripts', async c => {
  * GET /:id/package-manager
  * Detect the package manager used by a project (npm, yarn, or pnpm)
  */
-packages.get('/:id/package-manager', async c => {
+packages.get('/:id/package-manager', loadProject, async c => {
   try {
-    const id = c.req.param('id');
-    const project = await projectService.getProjectById(id);
-
-    if (!project) {
-      return c.json(
-        {
-          error: 'Project not found',
-        },
-        404
-      );
-    }
-
+    const project = c.get('project');
     const packageManager = await projectService.detectPackageManager(project.path);
 
     return c.json({
@@ -109,10 +77,10 @@ packages.get('/:id/package-manager', async c => {
  * POST /:id/delete-packages
  * Delete third-party packages from a project
  */
-packages.post('/:id/delete-packages', async c => {
+packages.post('/:id/delete-packages', loadProject, async c => {
   try {
-    const id = c.req.param('id');
-    const result = await projectService.deleteThirdPartyPackages(id);
+    const project = c.get('project');
+    const result = await projectService.deleteThirdPartyPackages(project.id);
 
     return c.json({
       data: result,

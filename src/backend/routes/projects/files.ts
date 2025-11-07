@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import path from 'path';
 import { projectService } from '../../services/project-service';
+import { loadProject } from '../../middleware/project-loader';
 
 const files = new Hono();
 
@@ -8,10 +9,10 @@ const files = new Hono();
  * GET /:id/readme
  * Get the README.md file content for a project
  */
-files.get('/:id/readme', async c => {
+files.get('/:id/readme', loadProject, async c => {
   try {
-    const id = c.req.param('id');
-    const readme = await projectService.getProjectReadme(id);
+    const project = c.get('project');
+    const readme = await projectService.getProjectReadme(project.id);
 
     if (!readme) {
       return c.json(
@@ -40,9 +41,9 @@ files.get('/:id/readme', async c => {
  * GET /:id/file?path=...
  * Serve a file from the project directory (for README images, etc.)
  */
-files.get('/:id/file', async c => {
+files.get('/:id/file', loadProject, async c => {
   try {
-    const id = c.req.param('id');
+    const project = c.get('project');
     const filePath = c.req.query('path');
 
     if (!filePath) {
@@ -51,17 +52,6 @@ files.get('/:id/file', async c => {
           error: 'File path is required',
         },
         400
-      );
-    }
-
-    const project = await projectService.getProjectById(id);
-
-    if (!project) {
-      return c.json(
-        {
-          error: 'Project not found',
-        },
-        404
       );
     }
 
@@ -127,19 +117,9 @@ files.get('/:id/file', async c => {
  * GET /:id/icon
  * Serve the project icon file
  */
-files.get('/:id/icon', async c => {
+files.get('/:id/icon', loadProject, async c => {
   try {
-    const id = c.req.param('id');
-    const project = await projectService.getProjectById(id);
-
-    if (!project) {
-      return c.json(
-        {
-          error: 'Project not found',
-        },
-        404
-      );
-    }
+    const project = c.get('project');
 
     if (!project.icon) {
       return c.json(
