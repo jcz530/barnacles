@@ -1,12 +1,23 @@
 <script setup lang="ts">
 import { cn } from '@/lib/utils';
-import type { HTMLAttributes } from 'vue';
+import { computed, HTMLAttributes } from 'vue';
 import { RouteLocationRaw } from 'vue-router';
 
 const props = defineProps<{
   class?: HTMLAttributes['class'];
   to?: RouteLocationRaw;
+  interactable?: boolean;
 }>();
+
+const interactableClasses = computed(() => {
+  if (!props.to && !props.interactable) return '';
+
+  return [
+    'cursor-pointer',
+    'focus:ring-ring focus:ring-2 focus-visible:ring-2 focus-visible:outline-none',
+    'hover:ring-ring hover:shadow-lg hover:ring-2',
+  ];
+});
 </script>
 
 <template>
@@ -15,10 +26,10 @@ const props = defineProps<{
     :class="[
       cn(
         'bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm',
-        'focus:ring-ring focus:ring-2 focus-visible:ring-2 focus-visible:outline-none',
-        props.class
+        interactableClasses,
+        props.class,
+        to && 'relative'
       ),
-      to && 'relative',
     ]"
   >
     <RouterLink
