@@ -31,6 +31,13 @@
     "format": "prettier --write \"src/**/*.{ts,vue,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,vue,css}\"",
     "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:unit": "vitest run src/backend/__tests__/unit",
+    "test:integration": "vitest run src/backend/__tests__/integration",
+    "test:cli": "vitest run src/cli/__tests__",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "rebuild": "electron-builder install-app-deps"
@@ -43,6 +50,7 @@
   "license": "MIT",
   "devDependencies": {
     "@electron/notarize": "^2.5.0",
+    "@faker-js/faker": "^10.1.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/vue-query": "^5.90.2",
@@ -55,6 +63,8 @@
     "@typescript-eslint/eslint-plugin": "^8.44.1",
     "@typescript-eslint/parser": "^8.44.1",
     "@vitejs/plugin-vue": "^5.2.4",
+    "@vitest/coverage-v8": "^4.0.8",
+    "@vitest/ui": "^4.0.8",
     "@vueuse/core": "^13.9.0",
     "@vueuse/integrations": "^13.9.0",
     "@xterm/addon-fit": "^0.10.0",
@@ -87,6 +97,7 @@
     "tw-animate-css": "^1.4.0",
     "typescript": "^5.9.2",
     "vite": "^6.3.6",
+    "vitest": "^4.0.8",
     "vue": "^3.5.22",
     "vue-router": "^4.5.1"
   },
