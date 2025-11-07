@@ -10,6 +10,7 @@ import SortControl from '../components/atoms/SortControl.vue';
 import ViewToggle from '../components/atoms/ViewToggle.vue';
 import ProjectSearchBar from '../components/projects/molecules/ProjectSearchBar.vue';
 import TechnologyFilter from '../components/projects/molecules/TechnologyFilter.vue';
+import { RouteNames } from '@/router';
 import DateFilter, {
   type DateFilterDirection,
   type DatePreset,
@@ -211,7 +212,7 @@ const handleDeleteProject = async (projectId: string) => {
 };
 
 const handleOpenProject = (project: ProjectWithDetails) => {
-  router.push({ name: 'ProjectOverview', params: { id: project.id } });
+  router.push({ name: RouteNames.ProjectOverview, params: { id: project.id } });
 };
 
 const handleRefresh = () => {

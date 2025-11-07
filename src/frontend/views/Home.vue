@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import type { ProjectWithDetails } from '../../shared/types/api';
 import ProjectCard from '../components/projects/molecules/ProjectCard.vue';
 import { useQueries } from '@/composables/useQueries';
+import { RouteNames } from '@/router';
 
 const router = useRouter();
 const {
@@ -52,7 +53,7 @@ const toggleFavoriteMutation = useToggleFavoriteMutation();
 
 // Handlers
 const handleOpenProject = (project: ProjectWithDetails) => {
-  router.push({ name: 'ProjectOverview', params: { id: project.id } });
+  router.push({ name: RouteNames.ProjectOverview, params: { id: project.id } });
 };
 
 const handleDeleteProject = async (projectId: string) => {

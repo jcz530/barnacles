@@ -4,6 +4,7 @@ import { computed, markRaw, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { discoverUtilities, utilityRegistry } from '@/utilities';
+import { RouteNames } from '@/router';
 
 const route = useRoute();
 const router = useRouter();
@@ -26,7 +27,7 @@ onMounted(async () => {
 
     if (!registration) {
       error.value = 'Utility not found';
-      router.push('/utilities');
+      await router.push({ name: RouteNames.Utilities });
       return;
     }
 

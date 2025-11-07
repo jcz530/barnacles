@@ -3,6 +3,7 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
 import type { Alias } from '@/shared/types/api';
 import type { SortingState } from '@tanstack/vue-table';
+import { RouteNames } from '@/router';
 import {
   AlertCircle,
   Check,
@@ -15,7 +16,6 @@ import {
   Sparkles,
 } from 'lucide-vue-next';
 import { computed, onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
 import AliasesTable from '../components/aliases/organisms/AliasesTable.vue';
 import Card from '../components/ui/card/Card.vue';
 import CardHeader from '../components/ui/card/CardHeader.vue';
@@ -34,7 +34,6 @@ const {
   useDeleteAliasMutation,
   useSyncAliasesMutation,
 } = useQueries();
-const router = useRouter();
 
 onMounted(() => {
   setBreadcrumbs([{ label: 'Aliases' }]);
@@ -277,11 +276,6 @@ const copyPathToClipboard = async () => {
     console.error('Failed to copy to clipboard:', error);
   }
 };
-
-// Navigate to preset packs page
-const goToPresetPacks = () => {
-  router.push('/aliases/presets');
-};
 </script>
 
 <template>
@@ -295,9 +289,11 @@ const goToPresetPacks = () => {
           </p>
         </div>
         <div class="flex gap-2">
-          <Button @click="goToPresetPacks" variant="outline" size="sm">
-            <Package class="mr-2 h-4 w-4" />
-            Preset Packs
+          <Button variant="outline" size="sm" as-child>
+            <RouterLink :to="{ name: RouteNames.PresetPacks }">
+              <Package class="mr-2 h-4 w-4" />
+              Preset Packs
+            </RouterLink>
           </Button>
           <Button @click="refreshData" variant="outline" size="sm" :disabled="isLoading">
             <RefreshCw :class="{ 'animate-spin': isLoading }" class="mr-2 h-4 w-4" />

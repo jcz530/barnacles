@@ -1,5 +1,6 @@
 import { useRouter } from 'vue-router';
 import { useQueries } from './useQueries';
+import { RouteNames } from '@/router';
 
 const getGitProviderInfo = (remoteUrl: string): { name: string; webUrl: string } | null => {
   if (!remoteUrl) return null;
@@ -45,7 +46,7 @@ export const useProjectActions = () => {
     if (confirm(`Are you sure you want to delete "${projectName}"?`)) {
       try {
         await deleteMutation.mutateAsync(projectId);
-        router.push('/projects');
+        await router.push({ name: RouteNames.Projects });
       } catch (error) {
         console.error('Failed to delete project:', error);
         alert('Failed to delete project. Please try again.');

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Theme } from '@/../../shared/types/theme';
+import { RouteNames } from '@/router';
 import { Check, Trash2 } from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';
 import ThemeColorPreview from './ThemeColorPreview.vue';
@@ -68,7 +69,7 @@ function handleDelete(event: MouseEvent, themeId: string) {
       </div>
       <RouterLink
         class="text-primary cursor-pointer text-xs font-medium hover:underline"
-        :to="{ name: 'ThemeEdit', params: { id: theme.id } }"
+        :to="{ name: RouteNames.ThemeEdit, params: { id: theme.id } }"
       >
         Customize →
       </RouterLink>

@@ -13,6 +13,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useQueries } from '../composables/useQueries';
 import { useRunningProcesses } from '../composables/useRunningProcesses';
+import { RouteNames } from '@/router';
 
 const route = useRoute();
 const router = useRouter();
@@ -82,9 +83,9 @@ watch(
 // Get running processes for this project
 const runningProcesses = useRunningProcesses(projectId, allProcessStatuses);
 
-const navigateToProcess = () => {
+const navigateToProcess = async () => {
   // Switch to the terminals tab
-  router.push({ name: 'ProjectTerminals', params: { id: projectId.value } });
+  await router.push({ name: RouteNames.ProjectTerminals, params: { id: projectId.value } });
 };
 
 // Tab configuration

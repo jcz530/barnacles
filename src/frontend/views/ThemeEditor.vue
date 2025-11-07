@@ -8,6 +8,7 @@ import { Copy, Save, Trash2 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RouteNames } from '@/router';
 import {
   Select,
   SelectContent,
@@ -238,7 +239,7 @@ async function handleSave() {
       toast.success('Theme created successfully');
     }
 
-    await router.push('/themes');
+    await router.push({ name: RouteNames.Themes });
   } catch (error) {
     console.error('Failed to save theme:', error);
     toast.error('Failed to save theme');
@@ -256,7 +257,7 @@ async function handleDelete() {
     isDeleting.value = true;
     await deleteTheme(currentTheme.value.id);
     toast.success('Theme deleted successfully');
-    await router.push('/themes');
+    await router.push({ name: RouteNames.Themes });
   } catch (error) {
     console.error('Failed to delete theme:', error);
     toast.error('Failed to delete theme');
@@ -274,15 +275,11 @@ async function handleDuplicate() {
       name: `${currentTheme.value.name} (Copy)`,
     });
     toast.success('Theme duplicated successfully');
-    await router.push(`/themes/${newTheme.id}/edit`);
+    await router.push({ name: RouteNames.ThemeEdit, params: { id: newTheme.id } });
   } catch (error) {
     console.error('Failed to duplicate theme:', error);
     toast.error('Failed to duplicate theme');
   }
-}
-
-function handleCancel() {
-  router.push('/themes');
 }
 </script>
 
@@ -615,8 +612,8 @@ function handleCancel() {
             </Button>
           </div>
           <div class="flex gap-2">
-            <Button variant="outline" @click="handleCancel" :disabled="isSaving || isDeleting">
-              Cancel
+            <Button variant="outline" :disabled="isSaving || isDeleting" as-child>
+              <RouterLink :to="{ name: RouteNames.Themes }"> Cancel </RouterLink>
             </Button>
             <Button @click="handleSave" :disabled="isSaving || isDeleting">
               <Save class="mr-2 h-4 w-4" />
