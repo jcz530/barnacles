@@ -2,7 +2,7 @@
 import { useFormatters } from '@/composables/useFormatters';
 import { Calendar, Folder, GitBranch, HardDrive, Star } from 'lucide-vue-next';
 import type { ProjectWithDetails } from '../../../../shared/types/api';
-import { useRunningProcesses } from '../../../composables/useRunningProcesses';
+import { useRunningProcesses } from '@/composables/useRunningProcesses';
 import ProcessIndicator from '../../atoms/ProcessIndicator.vue';
 import ProjectIcon from '../atoms/ProjectIcon.vue';
 import { Button } from '../../ui/button';
@@ -38,8 +38,14 @@ const handleToggleFavorite = (e: Event) => {
 <template>
   <Card
     as="button"
-    :to="{ name: RouteNames.ProjectOverview, params: { id: project.id } }"
-    class="hover:ring-primary-200 focus-visible:ring-primary-400 flex cursor-pointer flex-col gap-0 pt-0 transition-all hover:shadow-lg hover:ring-2"
+    :to="{
+      name: RouteNames.ProjectOverview,
+      params: { id: project.id },
+    }"
+    :class="[
+      'flex cursor-pointer flex-col gap-0 pt-0 transition-all' +
+        'hover:ring-primary-200 focus-visible:ring-primary-400 hover:shadow-lg hover:ring-2',
+    ]"
   >
     <CardHeader class="pb-3">
       <div class="relative -mr-6 mb-8 flex justify-end gap-1">
