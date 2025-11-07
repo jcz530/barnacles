@@ -21,6 +21,7 @@ import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useFuzzySearch } from '../composables/useFuzzySearch';
 import { useQueries } from '../composables/useQueries';
 import { useProjectScanWebSocket } from '../composables/useProjectScanWebSocket';
+import { useViewMode } from '../composables/useViewMode';
 
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
@@ -49,7 +50,7 @@ const selectedTechnologies = ref<string[]>([]);
 const showFavoritesOnly = ref(false);
 const datePreset = ref<DatePreset>('all');
 const dateDirection = ref<DateFilterDirection>('within');
-const viewMode = ref<'table' | 'card'>('table');
+const viewMode = useViewMode('projects-view-mode', 'table');
 const sortField = ref<'name' | 'lastModified' | 'size'>('lastModified');
 const sortDirection = ref<'asc' | 'desc'>('desc');
 const tableSorting = ref<SortingState>([{ id: 'lastModified', desc: true }]);
