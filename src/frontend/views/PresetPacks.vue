@@ -130,7 +130,7 @@ const categoryColors: Record<string, string> = {
                 @click="selectPack(pack)"
                 class="hover:bg-accent w-full rounded-lg border p-4 text-left transition-colors"
                 :class="{
-                  'border-primary bg-accent ring-primary ring-2 ring-offset-2':
+                  'border-primary bg-accent ring-ring ring-2 ring-offset-2':
                     selectedPack === pack.id,
                 }"
               >

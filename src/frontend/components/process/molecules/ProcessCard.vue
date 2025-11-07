@@ -2,6 +2,7 @@
 import { Trash2 } from 'lucide-vue-next';
 import { Button } from '../../ui/button';
 import { useQueries } from '@/composables/useQueries';
+import { Card, CardContent } from '@/components/ui/card';
 
 const { useProjectQuery } = useQueries();
 
@@ -53,28 +54,30 @@ const { data: project } = useProjectQuery(props.process.projectId, {
 </script>
 
 <template>
-  <div
+  <Card
+    interactable
+    tabindex="0"
     :class="[
-      'cursor-pointer rounded-lg border p-3 transition-all',
+      'py-3',
       isStopped && 'opacity-60',
-      isSelected
-        ? 'border-primary-500 border-2 border-b-4 shadow'
-        : 'border-slate-200 bg-none hover:border-slate-300',
+      isSelected ? 'border-primary-500 border-2 border-b-4 shadow' : 'border-slate-200 bg-none',
     ]"
     @click="handleSelect"
+    @keyup.enter="handleSelect"
+    @keyup.space="handleSelect"
   >
-    <div class="flex items-start justify-between">
+    <CardContent class="flex items-start justify-between px-3">
       <div class="min-w-0 flex-1">
         <p class="truncate text-sm font-medium">
           {{ process.title || process.name || process.command || 'Process' }}
         </p>
-        <router-link
+        <RouterLink
           v-if="showProjectLink && project && project.name"
           class="hover:text-primary-600 mt-1 cursor-pointer truncate text-xs text-slate-500"
           :to="{ name: 'ProjectTerminals', params: { id: process.projectId } }"
         >
           {{ project.name }}
-        </router-link>
+        </RouterLink>
         <p
           v-if="process.cwd && process.status === 'running'"
           class="mt-1 truncate text-xs text-slate-400"
@@ -98,6 +101,6 @@ const { data: project } = useProjectQuery(props.process.projectId, {
           <Trash2 title="Clear" class="h-3.5 w-3.5" />
         </Button>
       </div>
-    </div>
-  </div>
+    </CardContent>
+  </Card>
 </template>

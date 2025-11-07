@@ -42,10 +42,7 @@ const handleToggleFavorite = (e: Event) => {
       name: RouteNames.ProjectOverview,
       params: { id: project.id },
     }"
-    :class="[
-      'flex cursor-pointer flex-col gap-0 pt-0 transition-all' +
-        'hover:ring-primary-200 focus-visible:ring-primary-400 hover:shadow-lg hover:ring-2',
-    ]"
+    class="flex cursor-pointer flex-col gap-0 pt-0 transition-all"
   >
     <CardHeader class="pb-3">
       <div class="relative -mr-6 mb-8 flex justify-end gap-1">
@@ -143,7 +140,7 @@ const handleToggleFavorite = (e: Event) => {
           <span>{{ project.stats.gitBranch }}</span>
           <span
             v-if="project.stats.hasUncommittedChanges"
-            class="ml-auto rounded bg-orange-100 px-1.5 py-0.5 text-xs font-medium text-orange-700"
+            class="bg-tertiary-100/60 text-tertiary-700 ml-auto rounded px-1.5 py-0.5 text-xs font-medium"
           >
             Uncommitted changes
           </span>
