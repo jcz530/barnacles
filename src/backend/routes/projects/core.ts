@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { projectService } from '../../services/project-service';
 import { loadProject } from '../../middleware/project-loader';
+import type { ProjectContext } from '../../types/hono';
 
 const core = new Hono();
 
@@ -40,7 +41,7 @@ core.get('/', async c => {
  * GET /:id
  * Get a single project by ID
  */
-core.get('/:id', loadProject, async c => {
+core.get('/:id', loadProject, async (c: ProjectContext) => {
   const project = c.get('project');
 
   return c.json({
@@ -52,7 +53,7 @@ core.get('/:id', loadProject, async c => {
  * DELETE /:id
  * Delete a project
  */
-core.delete('/:id', loadProject, async c => {
+core.delete('/:id', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     await projectService.deleteProject(project.id);
@@ -75,7 +76,7 @@ core.delete('/:id', loadProject, async c => {
  * PATCH /:id/favorite
  * Toggle project favorite status
  */
-core.patch('/:id/favorite', loadProject, async c => {
+core.patch('/:id/favorite', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const isFavorite = await projectService.toggleProjectFavorite(project.id);
@@ -99,7 +100,7 @@ core.patch('/:id/favorite', loadProject, async c => {
  * PATCH /:id/archive
  * Archive a project (sets archivedAt to current timestamp)
  */
-core.patch('/:id/archive', loadProject, async c => {
+core.patch('/:id/archive', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     await projectService.archiveProject(project.id);
@@ -122,7 +123,7 @@ core.patch('/:id/archive', loadProject, async c => {
  * PATCH /:id/unarchive
  * Unarchive a project (sets archivedAt to null)
  */
-core.patch('/:id/unarchive', loadProject, async c => {
+core.patch('/:id/unarchive', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     await projectService.unarchiveProject(project.id);
@@ -145,7 +146,7 @@ core.patch('/:id/unarchive', loadProject, async c => {
  * POST /:id/rescan
  * Rescan a single project to update its information
  */
-core.post('/:id/rescan', loadProject, async c => {
+core.post('/:id/rescan', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const rescannedProject = await projectService.rescanProject(project.path);

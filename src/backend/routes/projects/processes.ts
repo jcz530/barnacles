@@ -3,6 +3,7 @@ import type { StartProcess } from '../../../shared/types/process';
 import { processManagerService } from '../../services/process-manager-service';
 import { projectService } from '../../services/project-service';
 import { loadProject } from '../../middleware/project-loader';
+import type { ProjectContext } from '../../types/hono';
 
 const processes = new Hono();
 
@@ -10,7 +11,7 @@ const processes = new Hono();
  * PATCH /:id/start-processes
  * Update the start processes configuration for a project
  */
-processes.patch('/:id/start-processes', loadProject, async c => {
+processes.patch('/:id/start-processes', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const body = await c.req.json();
@@ -47,7 +48,7 @@ processes.patch('/:id/start-processes', loadProject, async c => {
  * GET /:id/start-processes
  * Get the start processes configuration for a project
  */
-processes.get('/:id/start-processes', loadProject, async c => {
+processes.get('/:id/start-processes', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const startProcesses: StartProcess[] = await projectService.getStartProcesses(project.id);
@@ -70,7 +71,7 @@ processes.get('/:id/start-processes', loadProject, async c => {
  * POST /:id/start
  * Start all configured processes for a project
  */
-processes.post('/:id/start', loadProject, async c => {
+processes.post('/:id/start', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const startProcesses: StartProcess[] = await projectService.getStartProcesses(project.id);
@@ -109,7 +110,7 @@ processes.post('/:id/start', loadProject, async c => {
  * POST /:id/stop
  * Stop all running processes for a project
  */
-processes.post('/:id/stop', loadProject, async c => {
+processes.post('/:id/stop', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     await processManagerService.stopProjectProcesses(project.id);
@@ -166,7 +167,7 @@ processes.get('/process-status', async c => {
  * POST /:id/processes/:processId/stop
  * Stop a specific process for a project
  */
-processes.post('/:id/processes/:processId/stop', loadProject, async c => {
+processes.post('/:id/processes/:processId/stop', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const processId = c.req.param('processId');
@@ -191,7 +192,7 @@ processes.post('/:id/processes/:processId/stop', loadProject, async c => {
  * GET /:id/processes/:processId/output
  * Get the output from a specific process
  */
-processes.get('/:id/processes/:processId/output', loadProject, async c => {
+processes.get('/:id/processes/:processId/output', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const processId = c.req.param('processId');

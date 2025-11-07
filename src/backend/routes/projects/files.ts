@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import path from 'path';
 import { projectService } from '../../services/project-service';
 import { loadProject } from '../../middleware/project-loader';
+import type { ProjectContext } from '../../types/hono';
 
 const files = new Hono();
 
@@ -9,7 +10,7 @@ const files = new Hono();
  * GET /:id/readme
  * Get the README.md file content for a project
  */
-files.get('/:id/readme', loadProject, async c => {
+files.get('/:id/readme', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const readme = await projectService.getProjectReadme(project.id);
@@ -41,7 +42,7 @@ files.get('/:id/readme', loadProject, async c => {
  * GET /:id/file?path=...
  * Serve a file from the project directory (for README images, etc.)
  */
-files.get('/:id/file', loadProject, async c => {
+files.get('/:id/file', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const filePath = c.req.query('path');
@@ -117,7 +118,7 @@ files.get('/:id/file', loadProject, async c => {
  * GET /:id/icon
  * Serve the project icon file
  */
-files.get('/:id/icon', loadProject, async c => {
+files.get('/:id/icon', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
 

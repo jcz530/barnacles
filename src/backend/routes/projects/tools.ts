@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { projectService } from '../../services/project-service';
 import { loadProject } from '../../middleware/project-loader';
+import type { ProjectContext } from '../../types/hono';
 
 const tools = new Hono();
 
@@ -52,7 +53,7 @@ tools.get('/ides/available', async c => {
  * PATCH /:id/ide
  * Update the preferred IDE for a project
  */
-tools.patch('/:id/ide', loadProject, async c => {
+tools.patch('/:id/ide', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const body = await c.req.json();
@@ -78,7 +79,7 @@ tools.patch('/:id/ide', loadProject, async c => {
  * POST /:id/open
  * Open a project in its preferred IDE
  */
-tools.post('/:id/open', loadProject, async c => {
+tools.post('/:id/open', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const body = await c.req.json().catch(() => ({}));
@@ -162,7 +163,7 @@ tools.get('/terminals/available', async c => {
  * PATCH /:id/terminal
  * Update the preferred terminal for a project
  */
-tools.patch('/:id/terminal', loadProject, async c => {
+tools.patch('/:id/terminal', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const body = await c.req.json();
@@ -188,7 +189,7 @@ tools.patch('/:id/terminal', loadProject, async c => {
  * POST /:id/open-terminal
  * Open a terminal at the project path
  */
-tools.post('/:id/open-terminal', loadProject, async c => {
+tools.post('/:id/open-terminal', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const body = await c.req.json().catch(() => ({}));
