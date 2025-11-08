@@ -1,5 +1,5 @@
 import type { Context, Next } from 'hono';
-import { db, users } from '@shared/database';
+import { db, users } from '../../shared/database';
 import { eq } from 'drizzle-orm';
 import { BadRequestException, NotFoundException } from '../exceptions/http-exceptions';
 

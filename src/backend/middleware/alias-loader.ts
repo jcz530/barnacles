@@ -1,5 +1,5 @@
 import type { Context, Next } from 'hono';
-import { aliases, db } from '@shared/database';
+import { aliases, db } from '../../shared/database';
 import { eq } from 'drizzle-orm';
 import { BadRequestException, NotFoundException } from '../exceptions/http-exceptions';
 
