@@ -32,13 +32,6 @@ const api = new Hono();
 api.onError(errorHandler);
 
 api
-  .get('/hello', c => {
-    return c.json({
-      message: 'Hello from Hono! 🔥',
-      timestamp: new Date().toISOString(),
-    });
-  })
-
   // Health check endpoint
   .get('/health', c => {
     return c.json({
