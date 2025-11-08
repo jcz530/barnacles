@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Hono } from 'hono';
 import { eq } from 'drizzle-orm';
 import { createIntegrationTestContext, mockDatabaseForIntegration } from '@test/contexts';
-import { del, get, patch } from '@test/helpers/api-client';
+import { del, get, patch, post } from '@test/helpers/api-client';
+import { setupProjectRoutes } from '@test/helpers/route-test-setup';
 import { createProjectData, createProjectsData } from '@test/factories/project.factory';
 import {
   projects as projectsSchema,
@@ -17,13 +17,7 @@ describe('Projects API Integration Tests', () => {
   const context = createIntegrationTestContext();
 
   beforeEach(async () => {
-    await context.setup(async () => {
-      // Import routes and create app
-      const projectsRoute = await import('@backend/routes/projects');
-      const apiRoutes = new Hono();
-      apiRoutes.route('/api/projects', projectsRoute.default);
-      return apiRoutes;
-    });
+    await setupProjectRoutes(context);
   });
 
   afterEach(async () => {
@@ -229,6 +223,59 @@ describe('Projects API Integration Tests', () => {
       // Verify project was unarchived
       const [unarchived] = await db.select().from(projectsSchema);
       expect(unarchived.archivedAt).toBeNull();
+    });
+  });
+
+  describe('GET /api/projects/:id', () => {
+    it('should return a single project by ID', async () => {
+      const { db, app } = context.get();
+
+      // Create a project
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ name: 'test-project' }))
+        .returning();
+
+      const response = await get(app, `/api/projects/${project.id}`);
+
+      expect(response.status).toBe(200);
+      expect((response.data as any).data).toBeDefined();
+      expect((response.data as any).data.id).toBe(project.id);
+      expect((response.data as any).data.name).toBe('test-project');
+    });
+
+    it('should return 404 for non-existent project', async () => {
+      const { app } = context.get();
+
+      const response = await get(app, '/api/projects/non-existent-id');
+
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('POST /api/projects/:id/rescan', () => {
+    it('should rescan a project and return updated data', async () => {
+      const { db, app } = context.get();
+
+      // Create a project with a valid path (use current directory as test)
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ path: process.cwd() }))
+        .returning();
+
+      const response = await post(app, `/api/projects/${project.id}/rescan`);
+
+      expect(response.status).toBe(200);
+      expect((response.data as any).message).toBe('Project rescanned successfully');
+      expect((response.data as any).data).toBeDefined();
+    });
+
+    it('should return 404 for non-existent project', async () => {
+      const { app } = context.get();
+
+      const response = await post(app, '/api/projects/non-existent-id/rescan');
+
+      expect(response.status).toBe(404);
     });
   });
 });
