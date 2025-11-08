@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "lib": ["ESNext"],
     "module": "ESNext",
     "allowJs": true,
     "skipLibCheck": true,
@@ -20,5 +20,10 @@
       "@cli/*": ["./src/cli/*"],
       "@test/*": ["./src/test/*"]
     }
-  }
+  },
+  "exclude": [
+    "src/frontend",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
 }
