@@ -7,6 +7,7 @@ import system from './system';
 import themes from './themes';
 import users from './users';
 import utilities from './utilities';
+import { errorHandler } from '../middleware/error-handler';
 
 // Read version from package.json
 import { readFileSync } from 'fs';
@@ -26,6 +27,9 @@ try {
 }
 
 const api = new Hono();
+
+// Register global error handler
+api.onError(errorHandler);
 
 api
   .get('/hello', c => {

@@ -88,7 +88,10 @@ describe('Projects API Integration Tests', () => {
       // Create projects
       const [reactProject] = await db
         .insert(projectsSchema)
-        .values([createProjectData({ name: 'react-app' }), createProjectData({ name: 'vue-app' })])
+        .values([
+          createProjectData({ name: 'react-app', archivedAt: null }),
+          createProjectData({ name: 'vue-app', archivedAt: null }),
+        ])
         .returning();
 
       // Associate React project with React technology
