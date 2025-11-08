@@ -1,12 +1,12 @@
 import type { Context } from 'hono';
-import type { projects } from '@shared/database/schema';
+import type { ProjectWithDetails } from '../services/project-service';
 
 /**
  * Extended Hono context with custom variables
  */
 export type AppContext = {
   Variables: {
-    project: typeof projects.$inferSelect;
+    project: ProjectWithDetails;
   };
 };
 
