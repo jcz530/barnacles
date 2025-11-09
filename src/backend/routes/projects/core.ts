@@ -1,8 +1,7 @@
 import { Hono } from 'hono';
-import { projectService } from '../../services/project-service';
+import { projectService } from '../../services/project';
 import { loadProject } from '../../middleware/project-loader';
 import type { ProjectContext } from '../../types/hono';
-import { BadRequestException } from '../../exceptions/http-exceptions';
 
 const core = new Hono();
 

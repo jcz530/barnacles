@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { projectService } from '../../services/project-service';
+import { projectService } from '../../services/project';
 
 const technologies = new Hono();
 

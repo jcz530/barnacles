@@ -1,5 +1,5 @@
 import type { Context } from 'hono';
-import type { ProjectWithDetails } from '../services/project-service';
+import type { ProjectWithDetails } from '../services/project';
 
 /**
  * Extended Hono context with custom variables

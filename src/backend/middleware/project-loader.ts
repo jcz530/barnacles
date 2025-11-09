@@ -1,5 +1,5 @@
 import type { Next } from 'hono';
-import { projectService } from '../services/project-service';
+import { projectService } from '../services/project';
 import type { ProjectContext } from '../types/hono';
 import { BadRequestException, NotFoundException } from '../exceptions/http-exceptions';
 
