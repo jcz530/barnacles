@@ -32,7 +32,7 @@ Create a new file in `src/cli/actions/` (e.g., `my-action.ts`):
 ```typescript
 import { log } from '@clack/prompts';
 import type { ProjectAction } from './types.js';
-import type { ProjectWithDetails } from '../../backend/services/project-service.js';
+import type { ProjectWithDetails } from '../../backend/services/project/index.js';
 
 /**
  * Action to do something with the project

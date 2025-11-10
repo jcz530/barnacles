@@ -1,8 +1,8 @@
 import { autocomplete, log } from '@clack/prompts';
 import pc from '../utils/colors';
 import { Command } from '../core/Command.js';
-import type { ProjectWithDetails } from '../../backend/services/project-service.js';
-import { projectService } from '../../backend/services/project-service.js';
+import type { ProjectWithDetails } from '../../backend/services/project/index.js';
+import { projectService } from '../../backend/services/project/index.js';
 import { formatTimeAgo } from '../utils/format-time.js';
 import { getAction, getActionOptions } from '../actions';
 

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { terminalService } from '../services/terminal-service';
-import { projectService } from '../services/project-service';
+import { projectService } from '../services/project';
 
 const terminals = new Hono();
 

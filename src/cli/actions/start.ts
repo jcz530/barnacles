@@ -1,8 +1,8 @@
-import { log, multiselect, confirm, spinner } from '@clack/prompts';
+import { confirm, log, multiselect, spinner } from '@clack/prompts';
 import type { ProjectAction } from './types.js';
-import type { ProjectWithDetails } from '../../backend/services/project-service.js';
-import { projectService } from '../../backend/services/project-service.js';
-import type { StartProcess, ProjectProcessStatus } from '../../shared/types/process.js';
+import type { ProjectWithDetails } from '../../backend/services/project/index.js';
+import { projectService } from '../../backend/services/project/index.js';
+import type { ProjectProcessStatus, StartProcess } from '../../shared/types/process.js';
 import { createId } from '@paralleldrive/cuid2';
 import pc from '../utils/colors.js';
 import { ensureBackendRunning } from '../utils/app-manager.js';

@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "jsx": "preserve",
+    "moduleResolution": "bundler"
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "./**/*.vue",
+    "./env.d.ts",
+    "../shared/**/*.ts"
+  ],
+  "exclude": [
+    "../backend/**/*",
+    "../main/**/*",
+    "../cli/**/*",
+    "../test/**/*",
+    "../../**/*.test.ts",
+    "../../**/*.spec.ts"
+  ]
+}

@@ -9,7 +9,6 @@ import type {
   DetectedAlias,
   DetectedIDE,
   DetectedTerminal,
-  HelloResponse,
   IDE,
   PresetPack,
   ProjectWithDetails,
@@ -27,15 +26,6 @@ import { useApi } from './useApi';
 export const useQueries = () => {
   const { apiCall } = useApi();
   const queryClient = useQueryClient();
-
-  // Hello API query
-  const useHelloQuery = () => {
-    return useQuery({
-      queryKey: ['hello'],
-      queryFn: () => apiCall<HelloResponse>('GET', API_ROUTES.HELLO),
-      enabled: false, // Manual trigger
-    });
-  };
 
   // Users API query
   const useUsersQuery = (options?: { enabled?: boolean }) => {
@@ -1446,7 +1436,6 @@ export const useQueries = () => {
   };
 
   return {
-    useHelloQuery,
     useUsersQuery,
     useHealthQuery,
     useProjectsQuery,

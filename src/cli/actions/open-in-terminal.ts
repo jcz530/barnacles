@@ -2,7 +2,7 @@ import { log, select } from '@clack/prompts';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import type { ProjectAction } from './types.js';
-import type { ProjectWithDetails } from '../../backend/services/project-service.js';
+import type { ProjectWithDetails } from '../../backend/services/project/index.js';
 import { terminalDetectorService } from '../../backend/services/terminal-detector-service.js';
 import { detectCurrentTerminal, getTerminalName } from '../utils/terminal-detector.js';
 

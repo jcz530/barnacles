@@ -1,12 +1,13 @@
 import { Hono } from 'hono';
 import aliases from './aliases';
 import processes from './processes';
-import projects from './projects';
+import projects from './projects/index';
 import settings from './settings';
 import system from './system';
 import themes from './themes';
 import users from './users';
 import utilities from './utilities';
+import { errorHandler } from '../middleware/error-handler';
 
 // Read version from package.json
 import { readFileSync } from 'fs';
@@ -27,14 +28,10 @@ try {
 
 const api = new Hono();
 
-api
-  .get('/hello', c => {
-    return c.json({
-      message: 'Hello from Hono! 🔥',
-      timestamp: new Date().toISOString(),
-    });
-  })
+// Register global error handler
+api.onError(errorHandler);
 
+api
   // Health check endpoint
   .get('/health', c => {
     return c.json({

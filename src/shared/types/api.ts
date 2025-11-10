@@ -96,10 +96,6 @@ export interface ApiResponse<T = any> {
   message?: string;
 }
 
-export interface HelloResponse {
-  message: string;
-}
-
 export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
 export interface Setting {

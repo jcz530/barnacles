@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { themeService } from '../services/theme-service';
+import { loadTheme, type ThemeContext } from '../middleware/theme-loader';
+import { BadRequestException, NotFoundException } from '../exceptions/http-exceptions';
 
 const themes = new Hono();
 
@@ -8,21 +10,11 @@ const themes = new Hono();
  * Get all themes
  */
 themes.get('/', async c => {
-  try {
-    const allThemes = await themeService.getAllThemes();
+  const allThemes = await themeService.getAllThemes();
 
-    return c.json({
-      data: allThemes,
-    });
-  } catch (error) {
-    console.error('Error fetching themes:', error);
-    return c.json(
-      {
-        error: 'Failed to fetch themes',
-      },
-      500
-    );
-  }
+  return c.json({
+    data: allThemes,
+  });
 });
 
 /**
@@ -30,62 +22,27 @@ themes.get('/', async c => {
  * Get the currently active theme
  */
 themes.get('/active', async c => {
-  try {
-    const activeTheme = await themeService.getActiveTheme();
+  const activeTheme = await themeService.getActiveTheme();
 
-    if (!activeTheme) {
-      return c.json(
-        {
-          error: 'No active theme found',
-        },
-        404
-      );
-    }
-
-    return c.json({
-      data: activeTheme,
-    });
-  } catch (error) {
-    console.error('Error fetching active theme:', error);
-    return c.json(
-      {
-        error: 'Failed to fetch active theme',
-      },
-      500
-    );
+  if (!activeTheme) {
+    throw new NotFoundException('No active theme found');
   }
+
+  return c.json({
+    data: activeTheme,
+  });
 });
 
 /**
  * GET /api/themes/:id
  * Get a single theme by ID
  */
-themes.get('/:id', async c => {
-  try {
-    const id = c.req.param('id');
-    const theme = await themeService.getTheme(id);
+themes.get('/:id', loadTheme, async (c: ThemeContext) => {
+  const theme = c.get('theme');
 
-    if (!theme) {
-      return c.json(
-        {
-          error: 'Theme not found',
-        },
-        404
-      );
-    }
-
-    return c.json({
-      data: theme,
-    });
-  } catch (error) {
-    console.error('Error fetching theme:', error);
-    return c.json(
-      {
-        error: 'Failed to fetch theme',
-      },
-      500
-    );
-  }
+  return c.json({
+    data: theme,
+  });
 });
 
 /**
@@ -93,264 +50,156 @@ themes.get('/:id', async c => {
  * Create a new theme
  */
 themes.post('/', async c => {
-  try {
-    const body = await c.req.json();
-    const {
-      name,
-      primaryColor,
-      secondaryColor,
-      tertiaryColor,
-      slateColor,
-      successColor,
-      dangerColor,
-      fontUi,
-      fontHeading,
-      fontCode,
-      borderRadius,
-      customCssVars,
-    } = body;
+  const body = await c.req.json();
+  const {
+    name,
+    primaryColor,
+    secondaryColor,
+    tertiaryColor,
+    slateColor,
+    successColor,
+    dangerColor,
+    fontUi,
+    fontHeading,
+    fontCode,
+    borderRadius,
+    customCssVars,
+  } = body;
 
-    if (!name) {
-      return c.json(
-        {
-          error: 'Name is required',
-        },
-        400
-      );
-    }
-
-    const theme = await themeService.createTheme({
-      name,
-      primaryColor,
-      secondaryColor,
-      tertiaryColor,
-      slateColor,
-      successColor,
-      dangerColor,
-      fontUi,
-      fontHeading,
-      fontCode,
-      borderRadius,
-      customCssVars,
-    });
-
-    return c.json(
-      {
-        data: theme,
-        message: 'Theme created successfully',
-      },
-      201
-    );
-  } catch (error) {
-    console.error('Error creating theme:', error);
-    return c.json(
-      {
-        error: 'Failed to create theme',
-      },
-      500
-    );
+  if (!name) {
+    throw new BadRequestException('Name is required');
   }
+
+  const theme = await themeService.createTheme({
+    name,
+    primaryColor,
+    secondaryColor,
+    tertiaryColor,
+    slateColor,
+    successColor,
+    dangerColor,
+    fontUi,
+    fontHeading,
+    fontCode,
+    borderRadius,
+    customCssVars,
+  });
+
+  return c.json(
+    {
+      data: theme,
+      message: 'Theme created successfully',
+    },
+    201
+  );
 });
 
 /**
  * PUT /api/themes/:id
  * Update a theme
  */
-themes.put('/:id', async c => {
-  try {
-    const id = c.req.param('id');
-    const body = await c.req.json();
-    const {
-      name,
-      primaryColor,
-      secondaryColor,
-      tertiaryColor,
-      slateColor,
-      successColor,
-      dangerColor,
-      fontUi,
-      fontHeading,
-      fontCode,
-      borderRadius,
-      customCssVars,
-    } = body;
+themes.put('/:id', loadTheme, async (c: ThemeContext) => {
+  const theme = c.get('theme');
+  const body = await c.req.json();
+  const {
+    name,
+    primaryColor,
+    secondaryColor,
+    tertiaryColor,
+    slateColor,
+    successColor,
+    dangerColor,
+    fontUi,
+    fontHeading,
+    fontCode,
+    borderRadius,
+    customCssVars,
+  } = body;
 
-    const theme = await themeService.updateTheme(id, {
-      name,
-      primaryColor,
-      secondaryColor,
-      tertiaryColor,
-      slateColor,
-      successColor,
-      dangerColor,
-      fontUi,
-      fontHeading,
-      fontCode,
-      borderRadius,
-      customCssVars,
-    });
+  const updatedTheme = await themeService.updateTheme(theme.id, {
+    name,
+    primaryColor,
+    secondaryColor,
+    tertiaryColor,
+    slateColor,
+    successColor,
+    dangerColor,
+    fontUi,
+    fontHeading,
+    fontCode,
+    borderRadius,
+    customCssVars,
+  });
 
-    if (!theme) {
-      return c.json(
-        {
-          error: 'Theme not found',
-        },
-        404
-      );
-    }
-
-    return c.json({
-      data: theme,
-      message: 'Theme updated successfully',
-    });
-  } catch (error) {
-    console.error('Error updating theme:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to update theme';
-    return c.json(
-      {
-        error: errorMessage,
-      },
-      500
-    );
-  }
+  return c.json({
+    data: updatedTheme,
+    message: 'Theme updated successfully',
+  });
 });
 
 /**
  * DELETE /api/themes/:id
  * Delete a theme
  */
-themes.delete('/:id', async c => {
-  try {
-    const id = c.req.param('id');
-    const success = await themeService.deleteTheme(id);
+themes.delete('/:id', loadTheme, async (c: ThemeContext) => {
+  const theme = c.get('theme');
+  await themeService.deleteTheme(theme.id);
 
-    if (!success) {
-      return c.json(
-        {
-          error: 'Theme not found',
-        },
-        404
-      );
-    }
-
-    return c.json({
-      message: 'Theme deleted successfully',
-    });
-  } catch (error) {
-    console.error('Error deleting theme:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to delete theme';
-    return c.json(
-      {
-        error: errorMessage,
-      },
-      500
-    );
-  }
+  return c.json({
+    message: 'Theme deleted successfully',
+  });
 });
 
 /**
  * POST /api/themes/:id/activate
  * Activate a theme
  */
-themes.post('/:id/activate', async c => {
-  try {
-    const id = c.req.param('id');
-    const theme = await themeService.activateTheme(id);
+themes.post('/:id/activate', loadTheme, async (c: ThemeContext) => {
+  const theme = c.get('theme');
+  const activatedTheme = await themeService.activateTheme(theme.id);
 
-    if (!theme) {
-      return c.json(
-        {
-          error: 'Theme not found',
-        },
-        404
-      );
-    }
-
-    return c.json({
-      data: theme,
-      message: 'Theme activated successfully',
-    });
-  } catch (error) {
-    console.error('Error activating theme:', error);
-    return c.json(
-      {
-        error: 'Failed to activate theme',
-      },
-      500
-    );
-  }
+  return c.json({
+    data: activatedTheme,
+    message: 'Theme activated successfully',
+  });
 });
 
 /**
  * POST /api/themes/:id/duplicate
  * Duplicate a theme
  */
-themes.post('/:id/duplicate', async c => {
-  try {
-    const id = c.req.param('id');
-    const body = await c.req.json().catch(() => ({}));
-    const { name } = body;
+themes.post('/:id/duplicate', loadTheme, async (c: ThemeContext) => {
+  const theme = c.get('theme');
+  const body = await c.req.json().catch(() => ({}));
+  const { name } = body;
 
-    const theme = await themeService.duplicateTheme(id, name);
+  const duplicatedTheme = await themeService.duplicateTheme(theme.id, name);
 
-    if (!theme) {
-      return c.json(
-        {
-          error: 'Theme not found',
-        },
-        404
-      );
-    }
-
-    return c.json(
-      {
-        data: theme,
-        message: 'Theme duplicated successfully',
-      },
-      201
-    );
-  } catch (error) {
-    console.error('Error duplicating theme:', error);
-    return c.json(
-      {
-        error: 'Failed to duplicate theme',
-      },
-      500
-    );
-  }
+  return c.json(
+    {
+      data: duplicatedTheme,
+      message: 'Theme duplicated successfully',
+    },
+    201
+  );
 });
 
 /**
  * POST /api/themes/:id/reset
  * Reset a default theme to its original values
  */
-themes.post('/:id/reset', async c => {
-  try {
-    const id = c.req.param('id');
-    const theme = await themeService.resetTheme(id);
+themes.post('/:id/reset', loadTheme, async (c: ThemeContext) => {
+  const theme = c.get('theme');
+  const resetTheme = await themeService.resetTheme(theme.id);
 
-    if (!theme) {
-      return c.json(
-        {
-          error: 'Theme not found or is not a default theme',
-        },
-        404
-      );
-    }
-
-    return c.json({
-      data: theme,
-      message: 'Theme reset successfully',
-    });
-  } catch (error) {
-    console.error('Error resetting theme:', error);
-    return c.json(
-      {
-        error: 'Failed to reset theme',
-      },
-      500
-    );
+  if (!resetTheme) {
+    throw new NotFoundException('Theme is not a default theme');
   }
+
+  return c.json({
+    data: resetTheme,
+    message: 'Theme reset successfully',
+  });
 });
 
 /**
@@ -358,21 +207,11 @@ themes.post('/:id/reset', async c => {
  * Initialize default themes (useful for first run or after database reset)
  */
 themes.post('/initialize', async c => {
-  try {
-    await themeService.initializeDefaultThemes();
+  await themeService.initializeDefaultThemes();
 
-    return c.json({
-      message: 'Default themes initialized successfully',
-    });
-  } catch (error) {
-    console.error('Error initializing themes:', error);
-    return c.json(
-      {
-        error: 'Failed to initialize themes',
-      },
-      500
-    );
-  }
+  return c.json({
+    message: 'Default themes initialized successfully',
+  });
 });
 
 export default themes;

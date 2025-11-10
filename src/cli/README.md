@@ -171,7 +171,7 @@ Example:
 ```typescript
 // src/cli/actions/my-action.ts
 import type { ProjectAction } from './types.js';
-import type { ProjectWithDetails } from '../../backend/services/project-service.js';
+import type { ProjectWithDetails } from '../../backend/services/project/index.js';
 import { log } from '@clack/prompts';
 
 export class MyAction implements ProjectAction {

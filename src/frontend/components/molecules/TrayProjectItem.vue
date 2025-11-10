@@ -4,7 +4,7 @@ import DOMPurify from 'dompurify';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { RUNTIME_CONFIG } from '../../../shared/constants';
-import type { ProjectWithDetails } from '../../../backend/services/project-service';
+import type { ProjectWithDetails } from '../../../backend/services/project';
 
 // Configure dayjs
 dayjs.extend(relativeTime);

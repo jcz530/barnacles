@@ -1,7 +1,7 @@
 import { IncomingMessage, Server as HttpServer } from 'http';
 import { WebSocket, WebSocketServer } from 'ws';
 import { projectScannerService } from './project-scanner-service';
-import { projectService } from './project-service';
+import { projectService } from './project';
 import { settingsService } from './settings-service';
 import { getDefaultScanDirectories } from '../utils/default-scan-directories';
 
