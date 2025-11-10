@@ -1,4 +1,4 @@
-import { projectService } from './project-service';
+import { projectService } from './project';
 import { projectScanWebSocketService } from './project-scan-websocket-service';
 import { settingsService } from './settings-service';
 import { projectScannerService } from './project-scanner-service';

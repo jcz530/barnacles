@@ -1,4 +1,4 @@
-import type { ProjectWithDetails } from '../../backend/services/project-service.js';
+import type { ProjectWithDetails } from '../../backend/services/project/index.js';
 
 /**
  * Base interface for project actions

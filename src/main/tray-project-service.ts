@@ -1,6 +1,6 @@
 import { shell } from 'electron';
 import { projectService } from '../backend/services/project-service';
-import type { ProjectWithDetails } from '../backend/services/project-service';
+import type { ProjectWithDetails } from '../backend/services/project';
 import { ideDetectorService } from '../backend/services/ide-detector-service';
 import { terminalDetectorService } from '../backend/services/terminal-detector-service';
 

@@ -1,9 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createUnitTestContext, mockDatabaseForUnit } from '@test/contexts';
 import { projectRelatedFoldersService } from '@backend/services/project/project-related-folders-service';
 import { db } from '@shared/database';
 import { projectRelatedFolders, projects } from '@shared/database/schema';
-import { eq } from 'drizzle-orm';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 

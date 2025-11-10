@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createUnitTestContext, mockDatabaseForUnit } from '@test/contexts';
 import { projectToolsService } from '@backend/services/project/project-tools-service';
 import { db } from '@shared/database';
