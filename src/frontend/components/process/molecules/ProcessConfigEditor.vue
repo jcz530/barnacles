@@ -137,7 +137,6 @@ const generateProcessFromScript = (scriptKey: string): StartProcess => {
 // Initialize processes when the sheet opens
 onMounted(() => {
   if (props.isOpen) {
-    console.log('startProcesses.value', startProcesses.value);
     // Determine mode based on whether we have existing processes
     const hasExistingProcesses = startProcesses.value && startProcesses.value.length > 0;
     configMode.value = hasExistingProcesses ? 'advanced' : 'quick';
