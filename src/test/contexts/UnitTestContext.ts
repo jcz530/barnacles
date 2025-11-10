@@ -1,12 +1,11 @@
 import { vi } from 'vitest';
-import { setupTestDb, teardownTestDb } from '@test/setup/test-db';
+import { db } from '@shared/database/connection';
 import { seedAllDefaults } from '@test/setup/seed-helpers';
+import { clearAllTables } from '@test/setup/test-db-helpers';
 import type { DB } from '@shared/database';
-import type { Client } from '@libsql/client';
 
 export interface UnitTestContext {
   db: DB;
-  client: Client;
 }
 
 export interface UnitTestOptions {
@@ -36,9 +35,6 @@ export interface UnitTestOptions {
  * ```
  */
 export function createUnitTestContext() {
-  let testDb: DB | null = null;
-  let testClient: Client | null = null;
-
   /**
    * Setup the test context with database
    * @param options - Configuration options
@@ -46,45 +42,31 @@ export function createUnitTestContext() {
   async function setup(options: UnitTestOptions = {}): Promise<UnitTestContext> {
     const { seedDefaults = false } = options;
 
-    // Setup test database with migrations
-    const { db, client } = await setupTestDb();
-    testDb = db;
-    testClient = client;
-
-    // Mock the database connection module
-    const connectionModule = await import('@shared/database/connection');
-    (connectionModule as any).db = testDb;
+    // Clear all data from the shared in-memory database to ensure test isolation
+    await clearAllTables(db);
 
     // Optionally seed default data
     if (seedDefaults) {
-      await seedAllDefaults(testDb);
+      await seedAllDefaults(db);
     }
 
-    return { db: testDb, client: testClient };
+    return { db };
   }
 
   /**
    * Teardown the test context
    */
   async function teardown(): Promise<void> {
-    if (testClient) {
-      await teardownTestDb(testClient);
-    }
+    // Clear all data to ensure test isolation
+    await clearAllTables(db);
     vi.clearAllMocks();
-
-    // Reset state
-    testDb = null;
-    testClient = null;
   }
 
   /**
-   * Get the current context (throws if not setup)
+   * Get the current context
    */
   function get(): UnitTestContext {
-    if (!testDb || !testClient) {
-      throw new Error('Test context not initialized. Did you call setup() in beforeEach?');
-    }
-    return { db: testDb, client: testClient };
+    return { db };
   }
 
   return { setup, teardown, get };
@@ -92,14 +74,11 @@ export function createUnitTestContext() {
 
 /**
  * Mock the database connection for use in tests
- * This should be called at the top of test files before any imports
+ * This is now a no-op since the database is mocked globally in vitest-setup.ts
+ * Kept for backward compatibility with existing test files
+ * @deprecated No longer needed - database is mocked globally
  */
 export function mockDatabaseConnection() {
-  vi.mock('@shared/database/connection', async () => {
-    const actual = await vi.importActual('@shared/database/connection');
-    return {
-      ...actual,
-      db: null, // Will be replaced in setup
-    };
-  });
+  // No-op: The database is now mocked globally in vitest-setup.ts
+  // This function is kept for backward compatibility
 }

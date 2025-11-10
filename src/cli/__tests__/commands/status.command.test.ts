@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StatusCommand } from '@cli/commands/status';
 import { createCLITestContext, mockDatabaseForCLI } from '@test/contexts';
 import { createProjectsData } from '@test/factories/project.factory';
@@ -69,18 +69,18 @@ describe('StatusCommand', () => {
     });
 
     it('should handle database errors gracefully', async () => {
-      const { command } = context.get();
+      const { command, db } = context.get();
 
-      // Break the database connection
-      const connectionModule = await import('@shared/database/connection');
-      (connectionModule as any).db = {
-        select: () => {
-          throw new Error('Database connection error');
-        },
-      };
+      // Mock database to throw an error
+      const selectMock = vi.spyOn(db, 'select').mockImplementation(() => {
+        throw new Error('Database connection error');
+      });
 
       // Should not throw even with broken database
       await expect(command.execute({}, [])).resolves.toBeUndefined();
+
+      // Restore the mock
+      selectMock.mockRestore();
     });
   });
 

@@ -32,6 +32,8 @@ jobs:
 #        run: npm run lint
 
       - name: Run tests
+        env:
+          NODE_ENV: test
         run: npm test -- --run
 
       - name: Build project

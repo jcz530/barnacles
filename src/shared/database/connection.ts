@@ -10,6 +10,11 @@ function getDatabasePath(): string {
     return process.env.DATABASE_URL;
   }
 
+  // Use in-memory database for tests
+  if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
+    return ':memory:';
+  }
+
   // Use development database if not in production
   if (process.env.NODE_ENV === 'development') {
     return 'file:./database.db';
