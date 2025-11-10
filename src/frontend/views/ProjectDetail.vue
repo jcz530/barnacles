@@ -13,6 +13,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useQueries } from '../composables/useQueries';
 import { useRunningProcesses } from '../composables/useRunningProcesses';
+import { provideProcessStatusContext } from '../composables/useProcessStatusContext';
 import { RouteNames } from '@/router';
 
 const route = useRoute();
@@ -44,6 +45,9 @@ const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
   enabled: true,
   refetchInterval: 2000,
 });
+
+// Provide process status context to all child components
+provideProcessStatusContext(allProcessStatuses);
 
 // Provide data to child routes
 provide('project', project);
@@ -81,7 +85,7 @@ watch(
 );
 
 // Get running processes for this project
-const runningProcesses = useRunningProcesses(projectId, allProcessStatuses);
+const runningProcesses = useRunningProcesses(projectId);
 
 const navigateToProcess = async () => {
   // Switch to the terminals tab
@@ -126,12 +130,7 @@ const handleFilesMovedSuccessfully = () => {
           <!--          </Button>-->
           <!--        </div>-->
           <div class="flex gap-2">
-            <StartProcessButton
-              v-if="project"
-              :project-id="project.id"
-              :process-statuses="allProcessStatuses"
-              :is-loading="isLoading"
-            />
+            <StartProcessButton v-if="project" :project-id="project.id" :is-loading="isLoading" />
 
             <OpenInIDEButton
               v-if="project"
@@ -160,7 +159,6 @@ const handleFilesMovedSuccessfully = () => {
               :third-party-size="project.stats?.thirdPartySize"
               :preferred-ide-id="project.preferredIde"
               :preferred-terminal-id="project.preferredTerminal"
-              :process-statuses="allProcessStatuses"
             />
           </div>
         </div>

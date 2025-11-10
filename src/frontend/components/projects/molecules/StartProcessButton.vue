@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ChevronDown, Play, Settings, Square } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
-import type { StartProcess } from '../../../../shared/types/process';
 import { useQueries } from '../../../composables/useQueries';
 import ProcessConfigEditor from '../../process/molecules/ProcessConfigEditor.vue';
 import { Button } from '../../ui/button';
@@ -11,25 +10,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
+import { useProcessStatusContext } from '@/composables/useProcessStatusContext';
 
 interface Props {
   projectId: string;
-  processStatuses?: any;
   isLoading?: boolean;
 }
 
 const props = defineProps<Props>();
 
+// Get process status from context
+const { getProjectStatus } = useProcessStatusContext();
+
 const {
   useStartProcessesQuery,
-  useUpdateStartProcessesMutation,
   useStartProjectProcessesMutation,
   useStopProjectProcessesMutation,
   useSettingsQuery,
 } = useQueries();
 
 const { data: startProcesses } = useStartProcessesQuery(props.projectId);
-const updateProcessesMutation = useUpdateStartProcessesMutation();
 const startProcessesMutation = useStartProjectProcessesMutation();
 const stopProcessesMutation = useStopProjectProcessesMutation();
 const settingsQuery = useSettingsQuery({ enabled: true });
@@ -37,12 +37,8 @@ const settingsQuery = useSettingsQuery({ enabled: true });
 const dropdownOpen = ref(false);
 const isConfigEditorOpen = ref(false);
 
-// Get process status from props
-const processStatus = computed(() => {
-  if (!props.processStatuses || !Array.isArray(props.processStatuses)) return null;
-  const projectStatus = props.processStatuses.find((ps: any) => ps.projectId === props.projectId);
-  return projectStatus || null;
-});
+// Get process status from context
+const processStatus = computed(() => getProjectStatus(props.projectId));
 
 const hasProcesses = computed(() => {
   return startProcesses.value && startProcesses.value.length > 0;
@@ -68,18 +64,6 @@ const processUrls = computed(() => {
 const handleOpenConfigEditor = () => {
   isConfigEditorOpen.value = true;
   dropdownOpen.value = false;
-};
-
-const handleSaveProcessConfig = async (processes: StartProcess[]) => {
-  try {
-    await updateProcessesMutation.mutateAsync({
-      projectId: props.projectId,
-      startProcesses: processes,
-    });
-  } catch (error) {
-    console.error('Failed to save process configuration:', error);
-    alert('Failed to save process configuration. Please try again.');
-  }
 };
 
 const handleStartProcesses = async () => {
@@ -189,9 +173,7 @@ const buttonIcon = computed(() => {
     <ProcessConfigEditor
       :project-id="projectId"
       :is-open="isConfigEditorOpen"
-      :initial-processes="(startProcesses as StartProcess[]) || []"
       @update:is-open="isConfigEditorOpen = $event"
-      @save="handleSaveProcessConfig"
     />
   </div>
 </template>

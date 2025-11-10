@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import dayjs from 'dayjs';
 import ProjectCard from '../components/projects/molecules/ProjectCard.vue';
 import { useQueries } from '@/composables/useQueries';
+import { provideProcessStatusContext } from '@/composables/useProcessStatusContext';
 
 const {
   useProjectsQuery,
@@ -23,6 +24,9 @@ const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
   enabled: true,
   refetchInterval: 2000,
 });
+
+// Provide process status context to all child components
+provideProcessStatusContext(allProcessStatuses);
 
 // Favorite projects
 const favoriteProjects = computed(() => {
@@ -93,7 +97,6 @@ const handleToggleFavorite = async (projectId: string) => {
               v-for="project in favoriteProjects"
               :key="project.id"
               :project="project"
-              :process-statuses="allProcessStatuses"
               @delete="handleDeleteProject"
               @toggle-favorite="handleToggleFavorite"
             />
@@ -111,7 +114,6 @@ const handleToggleFavorite = async (projectId: string) => {
               v-for="project in recentProjects"
               :key="project.id"
               :project="project"
-              :process-statuses="allProcessStatuses"
               @delete="handleDeleteProject"
               @toggle-favorite="handleToggleFavorite"
             />

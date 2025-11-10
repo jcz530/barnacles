@@ -12,7 +12,6 @@ import { RouteNames } from '@/router';
 
 const props = defineProps<{
   project: ProjectWithDetails;
-  processStatuses?: any;
 }>();
 
 const emit = defineEmits<{
@@ -22,10 +21,7 @@ const emit = defineEmits<{
 }>();
 
 // Get running processes using the composable
-const runningProcesses = useRunningProcesses(
-  () => props.project.id,
-  () => props.processStatuses
-);
+const runningProcesses = useRunningProcesses(() => props.project.id);
 
 const { formatSize, formatDate } = useFormatters();
 

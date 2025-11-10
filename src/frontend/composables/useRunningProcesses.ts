@@ -1,20 +1,18 @@
 import { computed, type ComputedRef, type MaybeRefOrGetter, toValue } from 'vue';
 import type { ProcessStatus } from '../../shared/types/process';
+import { useProcessStatusContext } from './useProcessStatusContext';
 
 /**
- * Get running processes for a project from the process statuses array
+ * Get running processes for a project from the process status context
  */
 export function useRunningProcesses(
-  projectId: MaybeRefOrGetter<string>,
-  allProcessStatuses: MaybeRefOrGetter<unknown>
+  projectId: MaybeRefOrGetter<string>
 ): ComputedRef<ProcessStatus[]> {
+  const { getProjectStatus } = useProcessStatusContext();
+
   return computed(() => {
-    const statuses = toValue(allProcessStatuses);
     const id = toValue(projectId);
-
-    if (!statuses || !Array.isArray(statuses)) return [];
-
-    const projectStatus = statuses.find((ps: any) => ps.projectId === id);
+    const projectStatus = getProjectStatus(id);
 
     if (!projectStatus || !('processes' in projectStatus)) return [];
 

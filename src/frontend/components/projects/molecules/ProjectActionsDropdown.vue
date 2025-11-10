@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { MoreVertical } from 'lucide-vue-next';
+import { ref } from 'vue';
 import { Button } from '../../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../../ui/dropdown-menu';
 import ProjectActionsDropdownContent from '@/components/projects/molecules/ProjectActionsDropdownContent.vue';
+import ProcessConfigEditor from '@/components/process/molecules/ProcessConfigEditor.vue';
 
 interface Props {
   projectId: string;
@@ -14,10 +16,11 @@ interface Props {
   thirdPartySize?: number | null;
   preferredIdeId?: string | null;
   preferredTerminalId?: string | null;
-  processStatuses?: any;
 }
 
 defineProps<Props>();
+
+const isConfigEditorOpen = ref(false);
 </script>
 
 <template>
@@ -35,8 +38,21 @@ defineProps<Props>();
           :project-name="projectName"
           :is-archived="isArchived"
           :is-favorite="isFavorite"
+          :git-remote-url="gitRemoteUrl"
+          :third-party-size="thirdPartySize"
+          :preferred-ide-id="preferredIdeId"
+          :preferred-terminal-id="preferredTerminalId"
+          @open-config-editor="isConfigEditorOpen = true"
         />
       </DropdownMenuContent>
     </DropdownMenu>
+
+    <!-- Process Config Editor -->
+    <ProcessConfigEditor
+      v-if="isConfigEditorOpen"
+      :project-id="projectId"
+      :is-open="isConfigEditorOpen"
+      @update:is-open="isConfigEditorOpen = $event"
+    />
   </div>
 </template>

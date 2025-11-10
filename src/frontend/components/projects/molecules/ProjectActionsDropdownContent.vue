@@ -13,8 +13,7 @@ import {
   Terminal as TerminalIcon,
   Trash2,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
-import type { StartProcess } from '../../../../shared/types/process';
+import { computed } from 'vue';
 import { useProjectActions } from '../../../composables/useProjectActions';
 import { useQueries } from '../../../composables/useQueries';
 import {
@@ -24,6 +23,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from '../../ui/dropdown-menu';
+import { useProcessStatusContext } from '@/composables/useProcessStatusContext';
 
 interface Props {
   projectId: string;
@@ -35,10 +35,17 @@ interface Props {
   thirdPartySize?: number | null;
   preferredIdeId?: string | null;
   preferredTerminalId?: string | null;
-  processStatuses?: any;
+}
+
+interface Emits {
+  (e: 'openConfigEditor'): void;
 }
 
 const props = defineProps<Props>();
+const emit = defineEmits<Emits>();
+
+// Get process status from context
+const { getProjectStatus } = useProcessStatusContext();
 
 const {
   deleteProject,
@@ -68,7 +75,6 @@ const {
   useDetectedIDEsQuery,
   useDetectedTerminalsQuery,
   useStartProcessesQuery,
-  useUpdateStartProcessesMutation,
   useStartProjectProcessesMutation,
   useStopProjectProcessesMutation,
 } = useQueries();
@@ -81,20 +87,12 @@ const { data: detectedIDEs } = useDetectedIDEsQuery();
 const { data: detectedTerminals } = useDetectedTerminalsQuery();
 
 // Process management
-const isConfigEditorOpen = ref(false);
 const { data: startProcesses } = useStartProcessesQuery(props.projectId);
-const updateProcessesMutation = useUpdateStartProcessesMutation();
 const startProcessesMutation = useStartProjectProcessesMutation();
 const stopProcessesMutation = useStopProjectProcessesMutation();
 
-// Get process status from props instead of individual query
-const processStatus = computed(() => {
-  if (!props.processStatuses || !Array.isArray(props.processStatuses)) return null;
-
-  const projectStatus = props.processStatuses.find((ps: any) => ps.projectId === props.projectId);
-
-  return projectStatus || null;
-});
+// Get process status from context
+const processStatus = computed(() => getProjectStatus(props.projectId));
 
 const gitProvider = computed(() => getGitProvider(props.gitRemoteUrl));
 
@@ -217,19 +215,7 @@ const isProcessRunning = computed(() => {
 });
 
 const handleOpenConfigEditor = () => {
-  isConfigEditorOpen.value = true;
-};
-
-const handleSaveProcessConfig = async (processes: StartProcess[]) => {
-  try {
-    await updateProcessesMutation.mutateAsync({
-      projectId: props.projectId,
-      startProcesses: processes,
-    });
-  } catch (error) {
-    console.error('Failed to save process configuration:', error);
-    alert('Failed to save process configuration. Please try again.');
-  }
+  emit('openConfigEditor');
 };
 
 const handleStartProcesses = async () => {
@@ -425,14 +411,4 @@ const handleOpenUrl = (url: string) => {
     <Trash2 class="mr-2 h-4 w-4" />
     Delete Project
   </DropdownMenuItem>
-
-  <!-- Process Config Editor -->
-  <!--    <ProcessConfigEditor-->
-  <!--      :project-id="projectId"-->
-  <!--      :is-open="isConfigEditorOpen"-->
-  <!--      :initial-processes="(startProcesses as StartProcess[]) || []"-->
-  <!--      @update:is-open="isConfigEditorOpen = $event"-->
-  <!--      @save="handleSaveProcessConfig"-->
-  <!--    />-->
-  <!--  </template>-->
 </template>
