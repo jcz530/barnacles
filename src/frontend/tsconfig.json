@@ -13,5 +13,12 @@
     "./env.d.ts",
     "../shared/**/*.ts"
   ],
-  "exclude": []
+  "exclude": [
+    "../backend/**/*",
+    "../main/**/*",
+    "../cli/**/*",
+    "../test/**/*",
+    "../../**/*.test.ts",
+    "../../**/*.spec.ts"
+  ]
 }
