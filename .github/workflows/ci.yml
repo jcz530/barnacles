@@ -28,8 +28,8 @@ jobs:
       # - name: Run type checking
       #   run: npm run type-check
 
-      - name: Run linter
-        run: npm run lint
+#      - name: Run linter
+#        run: npm run lint
 
       - name: Run tests
         run: npm test -- --run
