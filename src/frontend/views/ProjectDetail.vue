@@ -12,7 +12,7 @@ import FileDropZone from '../components/files/organisms/FileDropZone.vue';
 import { Skeleton } from '../components/ui/skeleton';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useQueries } from '../composables/useQueries';
-import { useRunningProcesses } from '../composables/useRunningProcesses';
+import { provideProcessStatusContext } from '../composables/useProcessStatusContext';
 import { RouteNames } from '@/router';
 
 const route = useRoute();
@@ -44,6 +44,9 @@ const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
   enabled: true,
   refetchInterval: 2000,
 });
+
+// Provide process status context to all child components
+provideProcessStatusContext(allProcessStatuses);
 
 // Provide data to child routes
 provide('project', project);
@@ -79,9 +82,6 @@ watch(
   },
   { immediate: true }
 );
-
-// Get running processes for this project
-const runningProcesses = useRunningProcesses(projectId, allProcessStatuses);
 
 const navigateToProcess = async () => {
   // Switch to the terminals tab
@@ -126,12 +126,7 @@ const handleFilesMovedSuccessfully = () => {
           <!--          </Button>-->
           <!--        </div>-->
           <div class="flex gap-2">
-            <StartProcessButton
-              v-if="project"
-              :project-id="project.id"
-              :process-statuses="allProcessStatuses"
-              :is-loading="isLoading"
-            />
+            <StartProcessButton v-if="project" :project-id="project.id" :is-loading="isLoading" />
 
             <OpenInIDEButton
               v-if="project"
@@ -160,7 +155,6 @@ const handleFilesMovedSuccessfully = () => {
               :third-party-size="project.stats?.thirdPartySize"
               :preferred-ide-id="project.preferredIde"
               :preferred-terminal-id="project.preferredTerminal"
-              :process-statuses="allProcessStatuses"
             />
           </div>
         </div>
@@ -182,8 +176,7 @@ const handleFilesMovedSuccessfully = () => {
             </div>
             <p v-if="project.description" class="mt-1 text-slate-600">{{ project.description }}</p>
             <ProcessIndicator
-              v-if="runningProcesses.length > 0"
-              :process="runningProcesses[0]"
+              :project-id="projectId"
               :on-navigate-to-process="navigateToProcess"
               class="mt-2"
             />

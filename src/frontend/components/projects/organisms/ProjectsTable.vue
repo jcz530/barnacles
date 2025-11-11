@@ -9,13 +9,14 @@ import {
   useVueTable,
 } from '@tanstack/vue-table';
 import { Calendar, GitBranch, HardDrive, Star } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { type Ref, ref, toRef } from 'vue';
 import type { ProjectWithDetails } from '../../../../shared/types/api';
 import ProjectIcon from '../atoms/ProjectIcon.vue';
 import ProjectActionsDropdown from '../molecules/ProjectActionsDropdown.vue';
 import ProjectCard from '../molecules/ProjectCard.vue';
 import TableHeader from '../../molecules/TableHeader.vue';
 import { Button } from '../../ui/button';
+import { provideProcessStatusContext } from '@/composables/useProcessStatusContext';
 
 const props = defineProps<{
   projects: ProjectWithDetails[];
@@ -24,6 +25,9 @@ const props = defineProps<{
   sorting?: SortingState;
   processStatuses?: any;
 }>();
+
+// Provide process status context to all child components
+provideProcessStatusContext(toRef(props, 'processStatuses') as Ref<any[] | undefined>);
 
 const emit = defineEmits<{
   delete: [projectId: string];
@@ -127,7 +131,6 @@ const table = useVueTable({
           v-for="project in projects"
           :key="project.id"
           :project="project"
-          :process-statuses="processStatuses"
           @delete="emit('delete', $event)"
           @open="emit('open', $event)"
           @toggle-favorite="emit('toggle-favorite', $event)"
@@ -252,7 +255,6 @@ const table = useVueTable({
                       :third-party-size="row.original.stats?.thirdPartySize"
                       :preferred-ide-id="row.original.preferredIde"
                       :preferred-terminal-id="row.original.preferredTerminal"
-                      :process-statuses="processStatuses"
                       @click.stop
                     />
                   </template>

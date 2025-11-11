@@ -2,7 +2,6 @@
 import { useFormatters } from '@/composables/useFormatters';
 import { Calendar, Folder, GitBranch, HardDrive, Star } from 'lucide-vue-next';
 import type { ProjectWithDetails } from '../../../../shared/types/api';
-import { useRunningProcesses } from '@/composables/useRunningProcesses';
 import ProcessIndicator from '../../atoms/ProcessIndicator.vue';
 import ProjectIcon from '../atoms/ProjectIcon.vue';
 import { Button } from '../../ui/button';
@@ -12,7 +11,6 @@ import { RouteNames } from '@/router';
 
 const props = defineProps<{
   project: ProjectWithDetails;
-  processStatuses?: any;
 }>();
 
 const emit = defineEmits<{
@@ -20,12 +18,6 @@ const emit = defineEmits<{
   open: [project: ProjectWithDetails];
   'toggle-favorite': [projectId: string];
 }>();
-
-// Get running processes using the composable
-const runningProcesses = useRunningProcesses(
-  () => props.project.id,
-  () => props.processStatuses
-);
 
 const { formatSize, formatDate } = useFormatters();
 
@@ -83,9 +75,7 @@ const handleToggleFavorite = (e: Event) => {
                   size="md"
                 /><CardTitle class="text-lg">{{ project.name }}</CardTitle>
               </div>
-              <div v-if="runningProcesses.length > 0" class="flex">
-                <ProcessIndicator :process="runningProcesses[0]" compact class="mt-0" />
-              </div>
+              <ProcessIndicator :project-id="project.id" compact class="mt-0" />
             </div>
             <CardDescription v-if="project.description" class="mt-1">
               {{ project.description }}

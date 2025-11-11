@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Plus, Trash2, Wrench, X, Zap } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import type { StartProcess } from '../../../../shared/types/process';
 import { useQueries } from '../../../composables/useQueries';
 import { Button } from '../../ui/button';
@@ -21,12 +21,10 @@ import AutocompleteInput from '../../molecules/AutocompleteInput.vue';
 interface Props {
   projectId: string;
   isOpen: boolean;
-  initialProcesses?: StartProcess[];
 }
 
 interface Emits {
   (e: 'update:isOpen', value: boolean): void;
-  (e: 'save', processes: StartProcess[]): void;
 }
 
 const props = defineProps<Props>();
@@ -43,6 +41,8 @@ const {
   useProjectPackageManagerQuery,
   useProjectQuery,
   useHostsQuery,
+  useStartProcessesQuery,
+  useUpdateStartProcessesMutation,
 } = useQueries();
 const { data: packageScripts } = useProjectPackageScriptsQuery(props.projectId, {
   enabled: true,
@@ -52,6 +52,8 @@ const { data: composerScripts } = useProjectComposerScriptsQuery(props.projectId
 });
 const { data: project } = useProjectQuery(props.projectId);
 const { data: hosts } = useHostsQuery({ enabled: true });
+const { data: startProcesses } = useStartProcessesQuery(props.projectId);
+const updateProcessesMutation = useUpdateStartProcessesMutation();
 
 // Detect package manager from backend API
 const { data: detectedPackageManager } = useProjectPackageManagerQuery(props.projectId, {
@@ -133,23 +135,18 @@ const generateProcessFromScript = (scriptKey: string): StartProcess => {
 };
 
 // Initialize processes when the sheet opens
-watch(
-  () => props.isOpen,
-  (isOpen: boolean) => {
-    if (isOpen) {
-      // Determine mode based on whether we have existing processes
-      const hasExistingProcesses = props.initialProcesses && props.initialProcesses.length > 0;
-      configMode.value = hasExistingProcesses ? 'advanced' : 'quick';
+onMounted(() => {
+  if (props.isOpen) {
+    // Determine mode based on whether we have existing processes
+    const hasExistingProcesses = startProcesses.value && startProcesses.value.length > 0;
+    configMode.value = hasExistingProcesses ? 'advanced' : 'quick';
 
-      processes.value = props.initialProcesses
-        ? JSON.parse(JSON.stringify(props.initialProcesses))
-        : [];
+    processes.value = startProcesses.value ? JSON.parse(JSON.stringify(startProcesses.value)) : [];
 
-      // Reset selected scripts
-      selectedScripts.value = [];
-    }
+    // Reset selected scripts
+    selectedScripts.value = [];
   }
-);
+});
 
 const addProcess = () => {
   processes.value.push({
@@ -201,7 +198,7 @@ const canSave = computed(() => {
   return processes.value.some(p => p.name && p.commands.some(c => c.trim()));
 });
 
-const handleSave = () => {
+const handleSave = async () => {
   let processesToSave: StartProcess[];
 
   if (configMode.value === 'quick') {
@@ -219,8 +216,16 @@ const handleSave = () => {
       }));
   }
 
-  emit('save', processesToSave);
-  emit('update:isOpen', false);
+  try {
+    await updateProcessesMutation.mutateAsync({
+      projectId: props.projectId,
+      startProcesses: processesToSave,
+    });
+    emit('update:isOpen', false);
+  } catch (error) {
+    console.error('Failed to save process configuration:', error);
+    alert('Failed to save process configuration. Please try again.');
+  }
 };
 
 const handleClose = () => {
