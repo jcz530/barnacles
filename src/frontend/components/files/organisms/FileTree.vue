@@ -4,6 +4,7 @@ import FileTreeNode from '../molecules/FileTreeNode.vue';
 import type { FileNode } from '@/types/window';
 import type { FilterValue } from '../molecules/FileTypeFilter.vue';
 import { type FileCategory, matchesCategory } from '@/utils/file-types';
+import { useFileTreeNavigation } from '@/composables/useFileTreeNavigation';
 
 interface Props {
   nodes: FileNode[];
@@ -34,6 +35,12 @@ const handleRemoveFolder = (folderPath: string) => {
 
 // Track which directories are expanded
 const expandedPaths = ref<Set<string>>(new Set());
+
+// Create a ref for selected path to pass to navigation composable
+const selectedPathRef = computed({
+  get: () => props.selectedPath,
+  set: () => {}, // Read-only computed ref
+});
 
 // Calculate total file count for a node (recursive)
 function getTotalFileCount(node: FileNode): number {
@@ -201,6 +208,20 @@ const collapseAll = () => {
   expandedPaths.value.clear();
 };
 
+// Setup keyboard navigation
+const { containerRef, focusedIndex, flattenedNodes, updateFocusFromDOM } = useFileTreeNavigation({
+  nodes: filteredNodes,
+  expandedPaths,
+  selectedPath: selectedPathRef,
+  onToggle: toggleExpand,
+  onSelect: handleSelect,
+});
+
+// Handle focus events from tree items
+const handleFocus = () => {
+  updateFocusFromDOM();
+};
+
 // Expose methods to parent component
 defineExpose({
   collapseAll,
@@ -208,13 +229,13 @@ defineExpose({
 </script>
 
 <template>
-  <div class="flex h-full flex-col overflow-y-auto">
+  <div ref="containerRef" class="flex h-full flex-col overflow-y-auto p-1" tabindex="-1">
     <div v-if="filteredNodes.length === 0" class="p-4 text-center text-sm text-slate-500">
       No files found
     </div>
 
     <FileTreeNode
-      v-for="node in filteredNodes"
+      v-for="(node, index) in filteredNodes"
       :key="node.path"
       :node="node"
       :project-path="projectPath"
@@ -227,9 +248,12 @@ defineExpose({
       :file-count="node.type === 'directory' ? fileCounts.get(node.path) : undefined"
       :has-filters="hasActiveFilters"
       :is-related-folders-mode="isRelatedFoldersMode"
+      :focused-index="focusedIndex"
+      :flattened-nodes="flattenedNodes"
       @toggle="toggleExpand"
       @select="handleSelect"
       @remove-folder="handleRemoveFolder"
+      @focus="handleFocus"
     />
   </div>
 </template>

@@ -10,6 +10,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   node: FileNode;
@@ -20,6 +21,7 @@ interface Props {
   fileCount?: { total: number; filtered: number };
   hasFilters?: boolean;
   isRootFolder?: boolean;
+  isFocused?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -29,12 +31,14 @@ const props = withDefaults(defineProps<Props>(), {
   fileCount: undefined,
   hasFilters: false,
   isRootFolder: false,
+  isFocused: false,
 });
 
 const emit = defineEmits<{
   toggle: [node: FileNode];
   select: [node: FileNode];
   'remove-folder': [folderPath: string];
+  focus: [];
 }>();
 
 const fileTypeInfo = computed(() => getFileTypeInfo(props.node.extension));
@@ -64,6 +68,10 @@ const handleClick = () => {
   emit('select', props.node);
 };
 
+const handleFocus = () => {
+  emit('focus');
+};
+
 // Helper to get the full path of the node
 // If the node path is absolute (starts with /), use it directly
 // Otherwise, join with projectPath
@@ -87,7 +95,6 @@ const openInFinder = () => {
 const copyPath = async () => {
   const fullPath = getFullPath();
   try {
-    // eslint-disable-next-line no-undef
     await navigator.clipboard.writeText(fullPath);
   } catch (error) {
     console.error('Failed to copy path:', error);
@@ -120,13 +127,18 @@ const handleRemoveFolder = () => {
 <template>
   <ContextMenu>
     <ContextMenuTrigger as-child>
-      <div
-        class="group flex cursor-pointer items-center gap-1 rounded-sm px-2 py-1 transition-colors hover:bg-slate-200"
+      <Button
+        variant="ghost"
+        size="sm"
+        class="group flex w-full cursor-pointer items-center gap-1 rounded-sm px-2 py-1 transition-colors hover:bg-slate-200"
         :class="{
           'bg-primary-400/20': isSelected,
         }"
         :style="{ paddingLeft: `${depth * 12 + 8}px` }"
+        tabindex="0"
+        :data-tree-item="node.path"
         @click="handleClick"
+        @focus="handleFocus"
       >
         <!-- Expand/collapse icon for directories -->
         <div class="flex h-4 w-4 flex-shrink-0 items-center justify-center">
@@ -152,7 +164,7 @@ const handleRemoveFolder = () => {
 
         <!-- File/folder name -->
         <span
-          class="flex-1 truncate text-sm"
+          class="flex-1 truncate text-left text-sm"
           :class="{
             'font-medium': node.type === 'directory',
             'text-slate-900': isSelected,
@@ -179,7 +191,7 @@ const handleRemoveFolder = () => {
         <span v-if="node.type === 'file' && node.size" class="flex-shrink-0 text-xs text-slate-400">
           {{ formatFileSize(node.size) }}
         </span>
-      </div>
+      </Button>
     </ContextMenuTrigger>
 
     <ContextMenuContent>

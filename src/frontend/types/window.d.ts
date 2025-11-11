@@ -53,11 +53,32 @@ declare global {
           data?: { content: string; type: 'text' | 'binary'; size: number };
           error?: string;
         }>;
+        readFileBinary: (filePath: string) => Promise<{
+          success: boolean;
+          data?: { buffer: Uint8Array; size: number };
+          error?: string;
+        }>;
+        getFileStats: (filePath: string) => Promise<{
+          success: boolean;
+          data?: {
+            size: number;
+            mtime: Date;
+            ctime: Date;
+            isFile: boolean;
+            isDirectory: boolean;
+          };
+          error?: string;
+        }>;
         searchContent: (
           dirPath: string,
           query: string
         ) => Promise<{ success: boolean; data?: SearchResult[]; error?: string }>;
-        selectFolder: () => Promise<{ success: boolean; data?: string; canceled?: boolean; error?: string }>;
+        selectFolder: () => Promise<{
+          success: boolean;
+          data?: string;
+          canceled?: boolean;
+          error?: string;
+        }>;
         moveFiles: (
           filePaths: string[],
           targetFolder: string

@@ -17,7 +17,7 @@ const runningProcesses = useRunningProcesses(() => props.projectId);
 const process = computed(() => runningProcesses.value[0]);
 
 const openUrl = (url: string) => {
-  window.open(url, '_blank');
+  window.electron?.shell.openExternal(url);
 };
 </script>
 

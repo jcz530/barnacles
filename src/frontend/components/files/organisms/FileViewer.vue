@@ -23,7 +23,7 @@ const projectId = inject<ComputedRef<string> | undefined>('projectId', undefined
 
 const isLoading = ref(false);
 const fileContent = ref<string | null>(null);
-const fileType = ref<'text' | 'binary' | null>(null);
+const fileType = ref<'text' | 'binary' | 'media' | null>(null);
 const fileSize = ref<number>(0);
 const error = ref<string | null>(null);
 const highlighter = ref<shiki.Highlighter | null>(null);
@@ -80,6 +80,10 @@ const detectedLanguage = computed(() => {
 });
 
 const fileTypeInfo = computed(() => getFileTypeInfo(extension.value));
+
+// File size limits
+const MAX_PREVIEWABLE_SIZE = 50 * 1024 * 1024; // 50MB - max size for any preview
+const MAX_TEXT_SIZE = 10 * 1024 * 1024; // 10MB - max size for text/code files
 
 // Check if current file is SVG
 const isSvgFile = computed(() => extension.value?.toLowerCase() === 'svg');
@@ -144,6 +148,55 @@ const loadFile = async (forceText = false) => {
       : props.projectPath
         ? `${props.projectPath}/${props.filePath}`
         : props.filePath;
+
+    // First, get file stats to check size before loading
+    const statsResult = await window.electron.files.getFileStats(fullPath);
+
+    if (!statsResult.success || !statsResult.data) {
+      error.value = statsResult.error || 'Failed to get file information';
+      fileContent.value = null;
+      fileType.value = null;
+      isLoading.value = false;
+      return;
+    }
+
+    const fileSizeBytes = statsResult.data.size;
+    fileSize.value = fileSizeBytes;
+
+    // Check if file is too large to preview
+    const category = fileTypeInfo.value.category;
+
+    // For video and audio files, load as binary and create blob URL
+    if (category === 'video' || category === 'audio') {
+      // For media files, use API streaming (works for both project and non-project files)
+      // Store the full path - will be used by mediaSrc to determine which endpoint to use
+      fileContent.value = fullPath;
+      fileType.value = 'media';
+      isLoading.value = false;
+      return;
+    }
+
+    // For text/code files, enforce stricter size limits
+    if (category === 'code' || category === 'document' || forceText) {
+      if (fileSizeBytes > MAX_TEXT_SIZE) {
+        error.value = `File too large to preview (${formatFileSize(fileSizeBytes)}). Maximum size for text files: ${formatFileSize(MAX_TEXT_SIZE)}`;
+        fileContent.value = null;
+        fileType.value = null;
+        isLoading.value = false;
+        return;
+      }
+    }
+
+    // For all other files, check against absolute max
+    if (fileSizeBytes > MAX_PREVIEWABLE_SIZE) {
+      error.value = `File too large to preview (${formatFileSize(fileSizeBytes)}). Maximum size: ${formatFileSize(MAX_PREVIEWABLE_SIZE)}`;
+      fileContent.value = null;
+      fileType.value = null;
+      isLoading.value = false;
+      return;
+    }
+
+    // File size is acceptable, proceed with loading
     const result = await window.electron.files.readFile(fullPath, forceText);
 
     if (result.success && result.data) {
@@ -289,6 +342,16 @@ const isImage = computed(() => {
   return fileTypeInfo.value.category === 'image' && fileType.value === 'binary';
 });
 
+// Check if file is a video
+const isVideo = computed(() => {
+  return fileTypeInfo.value.category === 'video' && fileType.value === 'media';
+});
+
+// Check if file is audio
+const isAudio = computed(() => {
+  return fileTypeInfo.value.category === 'audio' && fileType.value === 'media';
+});
+
 // Get image source for base64 images
 const imageSrc = computed(() => {
   if (!isImage.value || !fileContent.value) return null;
@@ -305,6 +368,68 @@ const imageSrc = computed(() => {
 
   const mimeType = extension.value ? mimeTypes[extension.value.toLowerCase()] : 'image/png';
   return `data:${mimeType};base64,${fileContent.value}`;
+});
+
+// Get video/audio source URL for streaming
+const mediaSrc = computed(() => {
+  if ((!isVideo.value && !isAudio.value) || !fileContent.value) return null;
+
+  // fileContent contains the file path for media files
+  let filePath = fileContent.value;
+
+  // If we have a projectId AND projectPath, use the project-specific endpoint
+  if (projectId?.value && props.projectPath) {
+    // If the path is absolute and we have projectPath, make it relative
+    if (filePath.startsWith('/') && props.projectPath) {
+      // Remove the project path prefix to make it relative
+      const projectPathNormalized = props.projectPath.endsWith('/')
+        ? props.projectPath
+        : props.projectPath + '/';
+
+      if (filePath.startsWith(projectPathNormalized)) {
+        filePath = filePath.substring(projectPathNormalized.length);
+      } else if (filePath.startsWith(props.projectPath)) {
+        // Handle case where projectPath doesn't end with /
+        filePath = filePath.substring(props.projectPath.length);
+        if (filePath.startsWith('/')) {
+          filePath = filePath.substring(1);
+        }
+      }
+    }
+
+    return `${RUNTIME_CONFIG.API_BASE_URL}/api/projects/${projectId.value}/file?path=${encodeURIComponent(filePath)}`;
+  }
+
+  // Otherwise, use the generic file serving endpoint (for related files, config files, etc.)
+  return `${RUNTIME_CONFIG.API_BASE_URL}/api/files/serve?path=${encodeURIComponent(filePath)}`;
+});
+
+// Get MIME type for video/audio elements
+const mediaMimeType = computed(() => {
+  if (!extension.value) return '';
+
+  const videoMimeTypes: Record<string, string> = {
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    ogg: 'video/ogg',
+    mov: 'video/quicktime',
+    avi: 'video/x-msvideo',
+    mkv: 'video/x-matroska',
+    m4v: 'video/mp4',
+  };
+
+  const audioMimeTypes: Record<string, string> = {
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+    flac: 'audio/flac',
+    aac: 'audio/aac',
+    m4a: 'audio/mp4',
+    opus: 'audio/opus',
+  };
+
+  const ext = extension.value.toLowerCase();
+  return videoMimeTypes[ext] || audioMimeTypes[ext] || '';
 });
 
 // Copy raw file content to clipboard
@@ -329,12 +454,10 @@ const copyToClipboard = async () => {
       }
     }
 
-    // eslint-disable-next-line no-undef
     await navigator.clipboard.writeText(contentToCopy);
     copySuccess.value = true;
 
     // Reset success state after 2 seconds
-    // eslint-disable-next-line no-undef
     setTimeout(() => {
       copySuccess.value = false;
     }, 2000);
@@ -404,8 +527,27 @@ const copyToClipboard = async () => {
 
       <!-- Content area -->
       <div class="flex-1 overflow-auto">
+        <!-- Video player -->
+        <div v-if="isVideo && mediaSrc" class="flex items-center justify-center bg-black/5 p-6">
+          <video
+            controls
+            :src="mediaSrc"
+            :type="mediaMimeType"
+            class="h-[70vh] max-w-full rounded-lg shadow-lg"
+          >
+            Your browser does not support the video tag.
+          </video>
+        </div>
+
+        <!-- Audio player -->
+        <div v-else-if="isAudio && mediaSrc" class="flex items-center justify-center p-6">
+          <audio controls :src="mediaSrc" :type="mediaMimeType" class="w-full max-w-2xl">
+            Your browser does not support the audio tag.
+          </audio>
+        </div>
+
         <!-- Image preview -->
-        <div v-if="isImage && imageSrc" class="p-6">
+        <div v-else-if="isImage && imageSrc" class="p-6">
           <img :src="imageSrc" :alt="filePath" class="h-auto max-w-full rounded-lg shadow-sm" />
         </div>
 

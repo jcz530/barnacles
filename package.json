@@ -113,6 +113,7 @@
     "electron-squirrel-startup": "^1.0.1",
     "electron-updater": "^6.6.2",
     "exifreader": "^4.32.0",
+    "focus-trap": "^7.6.6",
     "hono": "^4.9.8",
     "node-pty": "^1.0.0",
     "piexifjs": "^1.0.6",
