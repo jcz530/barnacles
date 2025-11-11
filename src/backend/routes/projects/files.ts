@@ -40,7 +40,7 @@ files.get('/:id/readme', loadProject, async (c: ProjectContext) => {
 
 /**
  * GET /:id/file?path=...
- * Serve a file from the project directory (for README images, etc.)
+ * Serve a file from the project directory with HTTP range request support for video/audio streaming
  */
 files.get('/:id/file', loadProject, async (c: ProjectContext) => {
   try {
@@ -72,9 +72,10 @@ files.get('/:id/file', loadProject, async (c: ProjectContext) => {
       );
     }
 
-    // Check if file exists
+    // Check if file exists and get stats
+    let stats;
     try {
-      await fs.access(fullPath);
+      stats = await fs.stat(fullPath);
     } catch {
       return c.json(
         {
@@ -84,25 +85,89 @@ files.get('/:id/file', loadProject, async (c: ProjectContext) => {
       );
     }
 
-    // Read and serve the file
-    const fileBuffer = await fs.readFile(fullPath);
+    const fileSize = stats.size;
 
     // Determine content type based on file extension
     const ext = path.extname(filePath).toLowerCase();
     const contentTypes: Record<string, string> = {
+      // Images
       '.png': 'image/png',
       '.jpg': 'image/jpeg',
       '.jpeg': 'image/jpeg',
       '.gif': 'image/gif',
       '.svg': 'image/svg+xml',
       '.webp': 'image/webp',
+      '.bmp': 'image/bmp',
+      // Videos
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.ogg': 'video/ogg',
+      '.mov': 'video/quicktime',
+      '.avi': 'video/x-msvideo',
+      '.mkv': 'video/x-matroska',
+      '.m4v': 'video/mp4',
+      // Audio
+      '.mp3': 'audio/mpeg',
+      '.wav': 'audio/wav',
+      '.flac': 'audio/flac',
+      '.aac': 'audio/aac',
+      '.m4a': 'audio/mp4',
+      '.opus': 'audio/opus',
     };
 
     const contentType = contentTypes[ext] || 'application/octet-stream';
 
-    // Set content type header and return the file
-    c.header('Content-Type', contentType);
-    return c.body(fileBuffer);
+    // Check for range request header (used for video/audio seeking)
+    const range = c.req.header('range');
+
+    if (!range) {
+      // No range request - serve entire file
+      const fileBuffer = await fs.readFile(fullPath);
+      c.header('Content-Type', contentType);
+      c.header('Content-Length', fileSize.toString());
+      c.header('Accept-Ranges', 'bytes');
+      return new Response(fileBuffer, {
+        headers: {
+          'Content-Type': contentType,
+          'Content-Length': fileSize.toString(),
+          'Accept-Ranges': 'bytes',
+        },
+      });
+    }
+
+    // Parse range header (format: "bytes=start-end")
+    const parts = range.replace(/bytes=/, '').split('-');
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    const chunkSize = end - start + 1;
+
+    // Validate range
+    if (start >= fileSize || end >= fileSize) {
+      c.header('Content-Range', `bytes */${fileSize}`);
+      return c.json(
+        {
+          error: 'Requested range not satisfiable',
+        },
+        416
+      );
+    }
+
+    // Read the requested chunk
+    const buffer = Buffer.alloc(chunkSize);
+    const fileHandle = await fs.open(fullPath, 'r');
+    await fileHandle.read(buffer, 0, chunkSize, start);
+    await fileHandle.close();
+
+    // Return partial content with appropriate headers
+    return new Response(buffer, {
+      status: 206, // Partial Content
+      headers: {
+        'Content-Type': contentType,
+        'Content-Length': chunkSize.toString(),
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+      },
+    });
   } catch (error) {
     console.error('Error serving project file:', error);
     return c.json(

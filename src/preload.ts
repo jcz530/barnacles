@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import type { ApiMethod } from './shared/types/api';
-import type { UpdateInfo, DownloadProgress, UpdateError } from './shared/types/updater';
+import type { DownloadProgress, UpdateError, UpdateInfo } from './shared/types/updater';
 
 // Expose API methods to renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -76,6 +76,7 @@ contextBridge.exposeInMainWorld('electron', {
     readDirectory: (dirPath: string) => ipcRenderer.invoke('files:read-directory', dirPath),
     readFile: (filePath: string, forceText?: boolean) =>
       ipcRenderer.invoke('files:read-file', filePath, forceText),
+    getFileStats: (filePath: string) => ipcRenderer.invoke('files:get-file-stats', filePath),
     searchContent: (dirPath: string, query: string) =>
       ipcRenderer.invoke('files:search-content', dirPath, query),
     selectFolder: () => ipcRenderer.invoke('files:select-folder'),

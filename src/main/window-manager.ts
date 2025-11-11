@@ -32,6 +32,11 @@ export const createWindow = async (apiPort?: number): Promise<BrowserWindow> => 
       ? `'self' data: blob: http://localhost:${apiPort}`
       : "'self' data: blob: http://localhost:*";
 
+    // Build media-src to allow video/audio from API server, local files, and blob URLs
+    const mediaSrc = apiPort
+      ? `'self' http://localhost:${apiPort} file: blob:`
+      : "'self' http://localhost:* file: blob:";
+
     callback({
       responseHeaders: {
         ...details.responseHeaders,
@@ -40,6 +45,7 @@ export const createWindow = async (apiPort?: number): Promise<BrowserWindow> => 
             "script-src 'self' 'wasm-unsafe-eval'; " +
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
             `img-src ${imgSrc}; ` +
+            `media-src ${mediaSrc}; ` +
             "font-src 'self' data: https://fonts.gstatic.com; " +
             `connect-src ${connectSrc}; ` +
             "object-src 'none'; " +
