@@ -46,19 +46,16 @@ const hasProcesses = computed(() => {
 
 const isProcessRunning = computed(() => {
   const status = processStatus.value;
-  if (!status || !('processes' in status)) return false;
-  const processes = (status as { processes: { status: string }[] }).processes;
-  return processes.some((p: { status: string }) => p.status === 'running');
+  if (!status?.processes) return false;
+  return status.processes.some(p => p.status === 'running');
 });
 
 const processUrls = computed(() => {
   const status = processStatus.value;
-  if (!status || !('processes' in status)) return [];
-  const processes = (status as { processes: { status: string; url?: string; processId: string }[] })
-    .processes;
-  return processes
-    .filter((p: { status: string; url?: string }) => p.status === 'running' && p.url)
-    .map((p: { url?: string; processId: string }) => ({ url: p.url!, processId: p.processId }));
+  if (!status?.processes) return [];
+  return status.processes
+    .filter(p => p.status === 'running' && p.url)
+    .map(p => ({ url: p.url!, processId: p.processId }));
 });
 
 const handleOpenConfigEditor = () => {

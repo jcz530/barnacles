@@ -1,24 +1,30 @@
-import { type InjectionKey, inject, provide, type Ref } from 'vue';
+import { inject, type InjectionKey, isRef, provide, type Ref, toRef } from 'vue';
+import type { ProjectProcessStatus } from '../../shared/types/process';
 
 interface ProcessStatusContext {
-  processStatuses: Ref<any[] | undefined>;
-  getProjectStatus: (projectId: string) => any | null;
+  processStatuses: Ref<ProjectProcessStatus[] | undefined>;
+  getProjectStatus: (projectId: string) => ProjectProcessStatus | null;
 }
 
 const ProcessStatusContextKey: InjectionKey<ProcessStatusContext> = Symbol('ProcessStatusContext');
 
-export function provideProcessStatusContext(processStatuses: Ref<any[] | undefined>) {
-  const getProjectStatus = (projectId: string): any | null => {
-    if (!processStatuses.value || !Array.isArray(processStatuses.value)) {
+export function provideProcessStatusContext(
+  processStatuses: Ref<ProjectProcessStatus[] | undefined> | ProjectProcessStatus[] | undefined
+) {
+  // Ensure we have a Ref
+  const statusesRef = isRef(processStatuses) ? processStatuses : toRef(() => processStatuses);
+
+  const getProjectStatus = (projectId: string): ProjectProcessStatus | null => {
+    if (!statusesRef.value || !Array.isArray(statusesRef.value)) {
       return null;
     }
 
-    const projectStatus = processStatuses.value.find((ps: any) => ps.projectId === projectId);
+    const projectStatus = statusesRef.value.find(ps => ps.projectId === projectId);
     return projectStatus || null;
   };
 
   const context: ProcessStatusContext = {
-    processStatuses,
+    processStatuses: statusesRef,
     getProjectStatus,
   };
 

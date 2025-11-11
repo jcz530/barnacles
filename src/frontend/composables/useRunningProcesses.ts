@@ -14,9 +14,8 @@ export function useRunningProcesses(
     const id = toValue(projectId);
     const projectStatus = getProjectStatus(id);
 
-    if (!projectStatus || !('processes' in projectStatus)) return [];
+    if (!projectStatus?.processes) return [];
 
-    const processes = (projectStatus as { processes: ProcessStatus[] }).processes;
-    return processes.filter(p => p.status === 'running');
+    return projectStatus.processes.filter(p => p.status === 'running');
   });
 }
