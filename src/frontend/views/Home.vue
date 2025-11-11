@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import ProjectCard from '../components/projects/molecules/ProjectCard.vue';
 import { useQueries } from '@/composables/useQueries';
 import { provideProcessStatusContext } from '@/composables/useProcessStatusContext';
+import { SquareDot, Star } from 'lucide-vue-next';
 
 const {
   useProjectsQuery,
@@ -89,7 +90,9 @@ const handleToggleFavorite = async (projectId: string) => {
         <!-- Favorite Projects Section -->
         <div v-if="favoriteProjects.length > 0">
           <div class="mb-4">
-            <h2 class="text-xl font-semibold text-slate-800">Favorite Projects</h2>
+            <h2 class="flex gap-2 text-xl font-semibold text-slate-800">
+              <Star /> Favorite Projects
+            </h2>
             <p class="text-sm text-slate-600">Your starred projects for quick access</p>
           </div>
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -106,7 +109,9 @@ const handleToggleFavorite = async (projectId: string) => {
         <!-- Recently Modified Projects Section -->
         <div v-if="recentProjects.length > 0">
           <div class="mb-4">
-            <h2 class="text-xl font-semibold text-slate-800">Recently Modified</h2>
+            <h2 class="flex items-center gap-2 text-xl font-semibold text-slate-800">
+              <SquareDot />Recently Modified
+            </h2>
             <p class="text-sm text-slate-600">Projects you've worked on recently</p>
           </div>
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
