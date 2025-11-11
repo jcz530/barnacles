@@ -10,6 +10,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   node: FileNode;
@@ -120,8 +121,10 @@ const handleRemoveFolder = () => {
 <template>
   <ContextMenu>
     <ContextMenuTrigger as-child>
-      <div
-        class="group flex cursor-pointer items-center gap-1 rounded-sm px-2 py-1 transition-colors hover:bg-slate-200"
+      <Button
+        variant="ghost"
+        size="sm"
+        class="group flex w-full cursor-pointer items-center gap-1 rounded-sm px-2 py-1 transition-colors hover:bg-slate-200"
         :class="{
           'bg-primary-400/20': isSelected,
         }"
@@ -179,7 +182,7 @@ const handleRemoveFolder = () => {
         <span v-if="node.type === 'file' && node.size" class="flex-shrink-0 text-xs text-slate-400">
           {{ formatFileSize(node.size) }}
         </span>
-      </div>
+      </Button>
     </ContextMenuTrigger>
 
     <ContextMenuContent>

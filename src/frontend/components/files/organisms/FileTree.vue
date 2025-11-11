@@ -208,7 +208,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="flex h-full flex-col overflow-y-auto">
+  <div class="flex h-full flex-col overflow-y-auto p-1">
     <div v-if="filteredNodes.length === 0" class="p-4 text-center text-sm text-slate-500">
       No files found
     </div>
