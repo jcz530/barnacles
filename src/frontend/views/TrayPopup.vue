@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, MoreVertical, Terminal, TerminalSquare } from 'lucide-vue-next';
+import { LogOut, MoreVertical, SquareDot, Star, Terminal, TerminalSquare } from 'lucide-vue-next';
 
 const { useProjectsQuery, useOpenProjectMutation, useOpenTerminalMutation } = useQueries();
 
@@ -48,9 +48,24 @@ const openTerminal = async (projectId: string) => {
   }
 };
 
+const openProject = async (projectId: string) => {
+  try {
+    // Show or create the main window
+    const windowResult = await window.electron?.showOrCreateWindow();
+    if (windowResult?.success) {
+      // Navigate the main window to the project
+      await window.electron?.navigateToProject(projectId);
+      // Close the tray popup
+      window.close();
+    }
+  } catch (error) {
+    console.error('Failed to open project:', error);
+  }
+};
+
 const showInApp = async () => {
   try {
-    const result = await window.electron?.createNewWindow();
+    const result = await window.electron?.showOrCreateWindow();
     if (result?.success) {
       window.close();
     }
@@ -207,15 +222,16 @@ onMounted(() => {
           <!-- Favorites Section -->
           <div v-if="favoriteProjects.length > 0" class="mb-3">
             <h3
-              class="mx-2 mb-1.5 text-[11px] font-semibold tracking-wide text-slate-600 uppercase"
+              class="mx-2 mb-1.5 flex gap-2 text-[11px] font-semibold tracking-wide text-slate-600 uppercase"
             >
-              ⭐ Favorites
+              <Star class="h-4 w-4" /> Favorites
             </h3>
             <div class="flex flex-col gap-0.5">
               <TrayProjectItem
                 v-for="project in favoriteProjects"
                 :key="project.id"
                 :project="project"
+                @open-project="openProject"
                 @open-in-i-d-e="openInIDE"
                 @open-terminal="openTerminal"
               />
@@ -225,15 +241,16 @@ onMounted(() => {
           <!-- Recent Section -->
           <div v-if="recentProjects.length > 0" class="mb-3">
             <h3
-              class="mx-2 mb-1.5 text-[11px] font-semibold tracking-wide text-slate-600 uppercase"
+              class="mx-2 mb-1.5 flex items-center gap-2 text-[11px] font-semibold tracking-wide text-slate-600 uppercase"
             >
-              🕒 Recent
+              <SquareDot class="h-4 w-4" /> Recent
             </h3>
             <div class="flex flex-col gap-0.5">
               <TrayProjectItem
                 v-for="project in recentProjects"
                 :key="project.id"
                 :project="project"
+                @open-project="openProject"
                 @open-in-i-d-e="openInIDE"
                 @open-terminal="openTerminal"
               />

@@ -22,6 +22,17 @@ let apiPort: number | undefined;
 // Track if the app is quitting
 let isQuitting = false;
 
+// Track if we're currently showing the tray popup to prevent activate event interference
+let isShowingTrayPopup = false;
+
+/**
+ * Set flag to indicate tray popup is being shown
+ * This prevents the activate event from showing hidden main windows
+ */
+export const setShowingTrayPopup = (showing: boolean): void => {
+  isShowingTrayPopup = showing;
+};
+
 // Enable right-click context menu with Inspect Element in development mode
 contextMenu({
   showInspectElement: !app.isPackaged,
@@ -182,15 +193,43 @@ app.on('window-all-closed', async () => {
 });
 
 app.on('activate', async () => {
-  // On macOS, show or create a window when the dock icon is clicked
-  const visibleWindows = BrowserWindow.getAllWindows().filter(win => win.isVisible());
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[App] Activate event triggered', { isShowingTrayPopup });
+  }
 
-  if (visibleWindows.length === 0) {
-    const allWindows = BrowserWindow.getAllWindows();
-    if (allWindows.length > 0) {
-      // Show the first hidden window
-      allWindows[0].show();
-      allWindows[0].focus();
+  // Don't show main window if we're currently showing the tray popup
+  if (isShowingTrayPopup) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[App] Ignoring activate event - tray popup is being shown');
+    }
+    return;
+  }
+
+  // On macOS, show or create a window when the dock icon is clicked
+  // Exclude tray popup and other utility windows
+  const allWindows = BrowserWindow.getAllWindows();
+  const mainWindows = allWindows.filter(
+    win =>
+      !win.isDestroyed() &&
+      !win.skipTaskbar &&
+      win.isResizable() && // Main windows are resizable, tray popup is not
+      !win.isAlwaysOnTop() // Main windows are not always on top, tray popup is
+  );
+  const visibleMainWindows = mainWindows.filter(win => win.isVisible());
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[App] Window counts:', {
+      total: allWindows.length,
+      mainWindows: mainWindows.length,
+      visibleMainWindows: visibleMainWindows.length,
+    });
+  }
+
+  if (visibleMainWindows.length === 0) {
+    if (mainWindows.length > 0) {
+      // Show the first hidden main window
+      mainWindows[0].show();
+      mainWindows[0].focus();
     } else {
       // Create a new window if none exist
       await createAppWindow();

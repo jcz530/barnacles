@@ -18,6 +18,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   openInIDE: [projectId: string];
   openTerminal: [projectId: string];
+  openProject: [projectId: string];
 }>();
 
 /**
@@ -65,6 +66,7 @@ const formattedLastModified = computed(() => {
 
 <template>
   <div
+    @click="emit('openProject', project.id)"
     class="group flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 transition-all hover:bg-black/4"
   >
     <div class="flex min-w-0 flex-1 items-center gap-2.5">

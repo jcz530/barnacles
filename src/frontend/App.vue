@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue';
+import { onMounted, onUnmounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useColorInversion } from '@/composables/useColorInversion';
 import { useTheme } from '@/composables/useTheme';
 import { Toaster } from '@/components/ui/sonner';
@@ -10,6 +11,9 @@ import UpdateNotification from '@/components/organisms/UpdateNotification.vue';
 import 'vue-sonner/style.css'; // vue-sonner v2 requires this import
 
 // App now uses router-view for rendering pages
+
+// Router for navigation
+const router = useRouter();
 
 // Set up dark mode with automatic color inversion
 const { reinitializeColors } = useColorInversion();
@@ -41,12 +45,26 @@ const { checkFirstRun } = useFirstRunDetection();
 // Initialize auto-updater
 const { updateState, downloadUpdate, installUpdate, dismissUpdate } = useUpdater();
 
+// Listen for navigation requests from tray popup (set up immediately, not in onMounted)
+let unsubscribe: (() => void) | undefined;
+
+if (window.electron?.onNavigateToProject) {
+  unsubscribe = window.electron.onNavigateToProject((projectId: string) => {
+    router.push(`/projects/${projectId}`);
+  });
+}
+
 onMounted(() => {
   // Connect to WebSocket to check for active scans and receive updates
   connectScanWebSocket();
 
   // Check if this is the first run and trigger scan if needed
   checkFirstRun();
+});
+
+// Clean up listener on unmount
+onUnmounted(() => {
+  unsubscribe?.();
 });
 </script>
 

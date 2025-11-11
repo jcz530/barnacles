@@ -1,54 +1,125 @@
 import { BrowserWindow, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { setShowingTrayPopup } from './main';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Constants
+const POPUP_WIDTH = 380;
+const POPUP_HEIGHT = 500;
+const EDGE_PADDING = 8;
+const TRAY_OFFSET = 4;
+const ACTIVATE_EVENT_DELAY = 300; // Delay before resetting flag to prevent activate event
+
 let popupWindow: BrowserWindow | null = null;
+
+/**
+ * Helper function to reset the activate event flag after a delay
+ */
+const resetActivateFlag = (): void => {
+  setTimeout(() => setShowingTrayPopup(false), ACTIVATE_EVENT_DELAY);
+};
+
+/**
+ * Calculates the optimal position for the tray popup window
+ */
+const calculatePopupPosition = (trayBounds: Electron.Rectangle): { x: number; y: number } => {
+  // Get the display where the tray icon is located
+  // Use the center point of the tray icon for better accuracy
+  const trayCenter = {
+    x: Math.round(trayBounds.x + trayBounds.width / 2),
+    y: Math.round(trayBounds.y + trayBounds.height / 2),
+  };
+  const trayDisplay = screen.getDisplayNearestPoint(trayCenter);
+  const {
+    x: displayX,
+    y: displayY,
+    width: displayWidth,
+    height: displayHeight,
+  } = trayDisplay.workArea;
+
+  // Position window near tray icon (centered horizontally on the tray icon)
+  let x = Math.round(trayBounds.x + trayBounds.width / 2 - POPUP_WIDTH / 2);
+  let y = Math.round(trayBounds.y + trayBounds.height + TRAY_OFFSET);
+
+  // Keep window within the display bounds
+  const displayRight = displayX + displayWidth;
+  const displayBottom = displayY + displayHeight;
+
+  // Adjust horizontal position to stay within display
+  if (x + POPUP_WIDTH > displayRight) {
+    x = displayRight - POPUP_WIDTH - EDGE_PADDING;
+  }
+  if (x < displayX + EDGE_PADDING) {
+    x = displayX + EDGE_PADDING;
+  }
+
+  // For macOS menu bar, window should appear below the icon
+  // For Windows/Linux system tray (bottom), it should appear above if not enough space below
+  if (process.platform === 'win32' || process.platform === 'linux') {
+    if (y + POPUP_HEIGHT > displayBottom) {
+      y = trayBounds.y - POPUP_HEIGHT - TRAY_OFFSET;
+    }
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Tray] Position calculation:', {
+      trayBounds,
+      trayCenter,
+      display: { x: displayX, y: displayY, width: displayWidth, height: displayHeight },
+      finalPosition: { x, y },
+    });
+  }
+
+  return { x, y };
+};
 
 /**
  * Creates or toggles the tray popup window
  */
 export const createTrayPopup = (trayBounds: Electron.Rectangle): BrowserWindow => {
-  // If window exists and is visible, hide it
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Tray] createTrayPopup called with bounds:', trayBounds);
+  }
+
+  // Set flag to prevent activate event from showing main window
+  setShowingTrayPopup(true);
+
+  // If window exists, toggle its visibility
   if (popupWindow && !popupWindow.isDestroyed()) {
     if (popupWindow.isVisible()) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Tray] Hiding existing visible popup');
+      }
       popupWindow.hide();
+      resetActivateFlag();
+      return popupWindow;
     } else {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Tray] Repositioning and showing existing hidden popup');
+      }
+      // Reposition the window before showing it (for multi-monitor support)
+      const position = calculatePopupPosition(trayBounds);
+      popupWindow.setPosition(position.x, position.y, false);
       popupWindow.show();
       popupWindow.focus();
-    }
-    return popupWindow;
-  }
-
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  const windowWidth = 380;
-  const windowHeight = 500;
-
-  // Position window near tray icon
-  let x = Math.round(trayBounds.x + trayBounds.width / 2 - windowWidth / 2);
-  let y = Math.round(trayBounds.y + trayBounds.height + 4);
-
-  // Keep window on screen
-  if (x + windowWidth > width) {
-    x = width - windowWidth - 8;
-  }
-  if (x < 8) {
-    x = 8;
-  }
-
-  // For macOS menu bar, window should appear below the icon
-  // For Windows/Linux system tray (bottom), it should appear above
-  if (process.platform === 'win32' || process.platform === 'linux') {
-    if (y + windowHeight > height) {
-      y = trayBounds.y - windowHeight - 4;
+      // Flag will be reset when window is hidden
+      return popupWindow;
     }
   }
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Tray] Creating new popup window');
+  }
+
+  // Calculate the optimal position for the popup
+  const { x, y } = calculatePopupPosition(trayBounds);
 
   popupWindow = new BrowserWindow({
-    width: windowWidth,
-    height: windowHeight,
+    width: POPUP_WIDTH,
+    height: POPUP_HEIGHT,
     x,
     y,
     show: false,
@@ -88,12 +159,13 @@ export const createTrayPopup = (trayBounds: Electron.Rectangle): BrowserWindow =
     }
   });
 
-  // Hide window when it loses focus (standard approach)
+  // Hide window when it loses focus (auto-hide behavior)
   popupWindow.on('blur', () => {
     // Use setImmediate for better performance than setTimeout
     setImmediate(() => {
       if (popupWindow && !popupWindow.isDestroyed() && !popupWindow.isFocused()) {
         popupWindow.hide();
+        resetActivateFlag();
       }
     });
   });
@@ -103,10 +175,28 @@ export const createTrayPopup = (trayBounds: Electron.Rectangle): BrowserWindow =
     popupWindow?.show();
   });
 
-  // Open dev tools in development
-  if (!process.env.VITE_DEV_SERVER_URL && process.argv.includes('--dev')) {
-    popupWindow.webContents.openDevTools({ mode: 'detach' });
-  }
+  // Open dev tools in development with Cmd+Option+I or F12
+  popupWindow.webContents.on('before-input-event', (event, input) => {
+    if (process.env.NODE_ENV === 'development') {
+      // Cmd+Option+I on macOS or Ctrl+Shift+I on Windows/Linux
+      const isDevToolsShortcut =
+        (input.key === 'I' &&
+          ((input.meta && input.alt && process.platform === 'darwin') ||
+            (input.control && input.shift && process.platform !== 'darwin'))) ||
+        input.key === 'F12';
+
+      if (isDevToolsShortcut) {
+        event.preventDefault();
+        if (popupWindow && !popupWindow.isDestroyed()) {
+          if (popupWindow.webContents.isDevToolsOpened()) {
+            popupWindow.webContents.closeDevTools();
+          } else {
+            popupWindow.webContents.openDevTools({ mode: 'detach' });
+          }
+        }
+      }
+    }
+  });
 
   return popupWindow;
 };
@@ -127,6 +217,8 @@ export const destroyTrayPopup = (): void => {
   if (popupWindow && !popupWindow.isDestroyed()) {
     popupWindow.destroy();
     popupWindow = null;
+    // Reset the flag to prevent any stale state
+    setShowingTrayPopup(false);
   }
 };
 
