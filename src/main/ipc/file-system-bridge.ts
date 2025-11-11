@@ -249,41 +249,6 @@ export const setupFileSystemBridge = (): void => {
     }
   });
 
-  // Handler for reading file as binary buffer (for media files)
-  ipcMain.handle('files:read-file-binary', async (_, filePath: string) => {
-    try {
-      // Expand tilde in path
-      const expandedPath = expandTilde(filePath);
-
-      // Validate path exists
-      if (!existsSync(expandedPath)) {
-        throw new Error(`File does not exist: ${expandedPath}`);
-      }
-
-      const stats = statSync(expandedPath);
-      if (!stats.isFile()) {
-        throw new Error(`Path is not a file: ${expandedPath}`);
-      }
-
-      // Read file as buffer
-      const buffer = await fs.readFile(expandedPath);
-
-      return {
-        success: true,
-        data: {
-          buffer: new Uint8Array(buffer),
-          size: stats.size,
-        },
-      };
-    } catch (error) {
-      console.error('Error reading file as binary:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  });
-
   // Handler for getting file stats without reading content
   ipcMain.handle('files:get-file-stats', async (_, filePath: string) => {
     try {
