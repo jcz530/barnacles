@@ -33,7 +33,12 @@ const calculatePopupPosition = (trayBounds: Electron.Rectangle): { x: number; y:
     y: Math.round(trayBounds.y + trayBounds.height / 2),
   };
   const trayDisplay = screen.getDisplayNearestPoint(trayCenter);
-  const { x: displayX, y: displayY, width: displayWidth, height: displayHeight } = trayDisplay.workArea;
+  const {
+    x: displayX,
+    y: displayY,
+    width: displayWidth,
+    height: displayHeight,
+  } = trayDisplay.workArea;
 
   // Position window near tray icon (centered horizontally on the tray icon)
   let x = Math.round(trayBounds.x + trayBounds.width / 2 - POPUP_WIDTH / 2);
@@ -170,10 +175,28 @@ export const createTrayPopup = (trayBounds: Electron.Rectangle): BrowserWindow =
     popupWindow?.show();
   });
 
-  // Open dev tools in development
-  if (!process.env.VITE_DEV_SERVER_URL && process.argv.includes('--dev')) {
-    popupWindow.webContents.openDevTools({ mode: 'detach' });
-  }
+  // Open dev tools in development with Cmd+Option+I or F12
+  popupWindow.webContents.on('before-input-event', (event, input) => {
+    if (process.env.NODE_ENV === 'development') {
+      // Cmd+Option+I on macOS or Ctrl+Shift+I on Windows/Linux
+      const isDevToolsShortcut =
+        (input.key === 'I' &&
+          ((input.meta && input.alt && process.platform === 'darwin') ||
+            (input.control && input.shift && process.platform !== 'darwin'))) ||
+        input.key === 'F12';
+
+      if (isDevToolsShortcut) {
+        event.preventDefault();
+        if (popupWindow && !popupWindow.isDestroyed()) {
+          if (popupWindow.webContents.isDevToolsOpened()) {
+            popupWindow.webContents.closeDevTools();
+          } else {
+            popupWindow.webContents.openDevTools({ mode: 'detach' });
+          }
+        }
+      }
+    }
+  });
 
   return popupWindow;
 };

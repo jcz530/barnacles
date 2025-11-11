@@ -206,9 +206,15 @@ app.on('activate', async () => {
   }
 
   // On macOS, show or create a window when the dock icon is clicked
-  // Exclude tray popup and other utility windows (skipTaskbar = true)
+  // Exclude tray popup and other utility windows
   const allWindows = BrowserWindow.getAllWindows();
-  const mainWindows = allWindows.filter(win => !win.isDestroyed() && !win.skipTaskbar);
+  const mainWindows = allWindows.filter(
+    win =>
+      !win.isDestroyed() &&
+      !win.skipTaskbar &&
+      win.isResizable() && // Main windows are resizable, tray popup is not
+      !win.isAlwaysOnTop() // Main windows are not always on top, tray popup is
+  );
   const visibleMainWindows = mainWindows.filter(win => win.isVisible());
 
   if (process.env.NODE_ENV === 'development') {

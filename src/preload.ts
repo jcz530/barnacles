@@ -65,7 +65,14 @@ contextBridge.exposeInMainWorld('electron', {
     writeFile: (path: string) => ipcRenderer.invoke('clipboard:write-file', path),
   },
   updateWindowTitle: (title: string) => ipcRenderer.send('update-window-title', title),
+  showOrCreateWindow: () => ipcRenderer.invoke('show-or-create-window'),
   createNewWindow: () => ipcRenderer.invoke('create-new-window'),
+  navigateToProject: (projectId: string) => ipcRenderer.invoke('navigate-to-project', projectId),
+  onNavigateToProject: (callback: (projectId: string) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, projectId: string) => callback(projectId);
+    ipcRenderer.on('navigate-to-project', handler);
+    return () => ipcRenderer.removeListener('navigate-to-project', handler);
+  },
   quitApp: () => ipcRenderer.invoke('quit-app'),
   cli: {
     isInstalled: () => ipcRenderer.invoke('cli:isInstalled'),
