@@ -1,7 +1,6 @@
-import { app, BrowserWindow, nativeImage, Tray } from 'electron';
+import { app, nativeImage, Tray } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createAppWindow } from './main';
 import { createTrayPopup } from './tray-popup-manager';
 
 // ES module equivalent of __dirname
@@ -69,25 +68,6 @@ export const createTray = (): Tray => {
 export const updateTrayMenu = (): void => {
   // No-op: Custom popup UI is used instead of native menu
   // This function is kept for potential future native menu implementation
-};
-
-/**
- * Shows an existing window or creates a new one if none exist
- */
-const showOrCreateWindow = async (): Promise<void> => {
-  const windows = BrowserWindow.getAllWindows();
-
-  if (windows.length > 0) {
-    // Show and focus the first window
-    const window = windows[0];
-    if (!window.isVisible()) {
-      window.show();
-    }
-    window.focus();
-  } else {
-    // No windows exist, create one
-    await createAppWindow();
-  }
 };
 
 /**
