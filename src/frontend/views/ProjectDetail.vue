@@ -12,7 +12,6 @@ import FileDropZone from '../components/files/organisms/FileDropZone.vue';
 import { Skeleton } from '../components/ui/skeleton';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useQueries } from '../composables/useQueries';
-import { useRunningProcesses } from '../composables/useRunningProcesses';
 import { provideProcessStatusContext } from '../composables/useProcessStatusContext';
 import { RouteNames } from '@/router';
 
@@ -83,9 +82,6 @@ watch(
   },
   { immediate: true }
 );
-
-// Get running processes for this project
-const runningProcesses = useRunningProcesses(projectId);
 
 const navigateToProcess = async () => {
   // Switch to the terminals tab
@@ -180,8 +176,7 @@ const handleFilesMovedSuccessfully = () => {
             </div>
             <p v-if="project.description" class="mt-1 text-slate-600">{{ project.description }}</p>
             <ProcessIndicator
-              v-if="runningProcesses.length > 0"
-              :process="runningProcesses[0]"
+              :project-id="projectId"
               :on-navigate-to-process="navigateToProcess"
               class="mt-2"
             />

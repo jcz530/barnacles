@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import { ArrowRight, ExternalLink } from 'lucide-vue-next';
-import type { ProcessStatus } from '../../../shared/types/process';
+import { computed, type MaybeRefOrGetter } from 'vue';
 import { Button } from '../ui/button';
+import { useRunningProcesses } from '../../composables/useRunningProcesses';
 
-defineProps<{
-  process: ProcessStatus;
+const props = defineProps<{
+  projectId: MaybeRefOrGetter<string>;
   onNavigateToProcess?: () => void;
   compact?: boolean;
 }>();
+
+// Get running processes for this project
+const runningProcesses = useRunningProcesses(() => props.projectId);
+
+// Get the first running process (if any)
+const process = computed(() => runningProcesses.value[0]);
 
 const openUrl = (url: string) => {
   window.open(url, '_blank');
@@ -16,6 +23,7 @@ const openUrl = (url: string) => {
 
 <template>
   <div
+    v-if="process"
     class="border-success-200 bg-success-300/20 inline-flex items-center gap-2 rounded-md border px-3 py-0 text-sm"
   >
     <div class="flex items-center gap-1.5" :title="process.name">
