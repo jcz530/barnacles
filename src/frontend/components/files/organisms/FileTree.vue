@@ -42,6 +42,22 @@ const selectedPathRef = computed({
   set: () => {}, // Read-only computed ref
 });
 
+// Shared filter matching logic
+const fileMatchesFilters = (extension: string | undefined, filters: FilterValue[]): boolean => {
+  if (filters.length === 0) return true;
+
+  const ext = extension?.toLowerCase();
+
+  return filters.some(filter => {
+    if (filter.type === 'category') {
+      return matchesCategory(ext, filter.value as FileCategory);
+    } else if (filter.type === 'extension') {
+      return ext === filter.value.toLowerCase();
+    }
+    return false;
+  });
+};
+
 // Calculate total file count for a node (recursive)
 function getTotalFileCount(node: FileNode): number {
   if (node.type === 'file') {
@@ -58,27 +74,11 @@ function getTotalFileCount(node: FileNode): number {
 // Calculate filtered file count for a node (recursive)
 function getFilteredFileCount(node: FileNode): number {
   if (node.type === 'file') {
-    // Check if this file matches the current filters using fuzzy search from parent
     const matchesSearch =
       props.matchingFilePaths === null || props.matchingFilePaths?.has(node.path);
+    const matchesFilter = fileMatchesFilters(node.extension, props.filters);
 
-    const matchesFilter = () => {
-      if (props.filters.length === 0) return true;
-
-      const ext = node.extension?.toLowerCase();
-
-      return props.filters.some(filter => {
-        // Handle FilterValue objects with type and value properties
-        if (filter.type === 'category') {
-          return matchesCategory(ext, filter.value as FileCategory);
-        } else if (filter.type === 'extension') {
-          return ext === filter.value.toLowerCase();
-        }
-        return false;
-      });
-    };
-
-    return matchesSearch && matchesFilter() ? 1 : 0;
+    return matchesSearch && matchesFilter ? 1 : 0;
   }
 
   if (node.type === 'directory' && node.children) {
@@ -136,28 +136,12 @@ function filterNodesRecursive(nodes: FileNode[]): FileNode[] {
         }
       }
     } else {
-      // File node - use fuzzy search results from parent
+      // File node - check both search and filter matches
       const matchesSearch =
         props.matchingFilePaths === null || props.matchingFilePaths?.has(node.path);
+      const matchesFilter = fileMatchesFilters(node.extension, props.filters);
 
-      // Check if file matches any of the filters
-      const matchesFilter = () => {
-        if (props.filters.length === 0) return true;
-
-        const ext = node.extension?.toLowerCase();
-
-        return props.filters.some(filter => {
-          // Handle FilterValue objects with type and value properties
-          if (filter.type === 'category') {
-            return matchesCategory(ext, filter.value as FileCategory);
-          } else if (filter.type === 'extension') {
-            return ext === filter.value.toLowerCase();
-          }
-          return false;
-        });
-      };
-
-      if (matchesSearch && matchesFilter()) {
+      if (matchesSearch && matchesFilter) {
         filtered.push(node);
       }
     }
