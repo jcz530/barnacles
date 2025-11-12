@@ -3,14 +3,13 @@ import { createServer } from 'node:net';
 export interface PortOptions {
   startPort?: number;
   endPort?: number;
-  host?: string;
 }
 
 export const findAvailablePort = async (options: PortOptions = {}): Promise<number> => {
-  const { startPort = 3000, endPort = 65535, host = 'localhost' } = options;
+  const { startPort = 3000, endPort = 65535 } = options;
 
   for (let port = startPort; port <= endPort; port++) {
-    if (await isPortAvailable(port, host)) {
+    if (await isPortAvailable(port)) {
       return port;
     }
   }
@@ -18,19 +17,23 @@ export const findAvailablePort = async (options: PortOptions = {}): Promise<numb
   throw new Error(`No available port found between ${startPort} and ${endPort}`);
 };
 
-export const isPortAvailable = (port: number, host = 'localhost'): Promise<boolean> => {
+export const isPortAvailable = (port: number): Promise<boolean> => {
   return new Promise(resolve => {
     const server = createServer();
 
-    server.listen(port, host, () => {
+    // Set up error handler before calling listen
+    server.on('error', () => {
+      resolve(false);
+    });
+
+    // Bind to :: (all IPv6 addresses, which typically includes IPv4-mapped addresses)
+    // Using :: is more comprehensive than 0.0.0.0 as it usually covers both IPv4 and IPv6
+    // If IPv6 is not available, we'll fall back to checking IPv4
+    server.listen(port, 'localhost', () => {
       server.once('close', () => {
         resolve(true);
       });
       server.close();
-    });
-
-    server.on('error', () => {
-      resolve(false);
     });
   });
 };

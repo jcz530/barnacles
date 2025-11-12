@@ -31,7 +31,7 @@ export function useProjectScanWebSocket() {
   const totalDiscovered = ref(0);
   const error = ref<string | null>(null);
   const discoveredProjects = ref<ProjectWithDetails[]>([]);
-  const { wsBaseUrl } = useApiPort();
+  const { wsBaseUrl, isLoaded, loadApiPort } = useApiPort();
   let scanToastId: string | number | undefined;
 
   /**
@@ -50,9 +50,14 @@ export function useProjectScanWebSocket() {
   /**
    * Connect to the WebSocket server
    */
-  const connect = () => {
+  const connect = async () => {
     if (ws.value && ws.value.readyState === WebSocket.OPEN) {
       return; // Already connected
+    }
+
+    // Ensure we have the correct port before connecting
+    if (!isLoaded.value) {
+      await loadApiPort();
     }
 
     const wsUrl = `${wsBaseUrl.value}/api/projects/scan/ws`;
