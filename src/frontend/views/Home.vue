@@ -90,8 +90,8 @@ const handleToggleFavorite = async (projectId: string) => {
         <!-- Favorite Projects Section -->
         <div v-if="favoriteProjects.length > 0">
           <div class="mb-4">
-            <h2 class="flex gap-2 text-xl font-semibold text-slate-800">
-              <Star /> Favorite Projects
+            <h2 class="flex gap-2 text-xl font-semibold text-slate-700">
+              <Star class="text-primary-400" /> Favorite Projects
             </h2>
             <p class="text-sm text-slate-600">Your starred projects for quick access</p>
           </div>
@@ -109,8 +109,8 @@ const handleToggleFavorite = async (projectId: string) => {
         <!-- Recently Modified Projects Section -->
         <div v-if="recentProjects.length > 0">
           <div class="mb-4">
-            <h2 class="flex items-center gap-2 text-xl font-semibold text-slate-800">
-              <SquareDot />Recently Modified
+            <h2 class="flex items-center gap-2 text-xl font-semibold text-slate-700">
+              <SquareDot class="text-primary-400" />Recently Modified
             </h2>
             <p class="text-sm text-slate-600">Projects you've worked on recently</p>
           </div>
