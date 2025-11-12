@@ -37,7 +37,6 @@ const interactableClasses = computed(() => {
       :class="[
         'absolute inset-0 z-10 rounded-xl outline-none',
         'focus-visible:ring-ring focus:ring-ring focus:ring-2 focus-visible:ring-2',
-        'focus-visible:ring-offset-2',
       ]"
       :to="to"
     />
