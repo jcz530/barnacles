@@ -68,22 +68,13 @@ function getFilteredFileCount(node: FileNode): number {
       const ext = node.extension?.toLowerCase();
 
       return props.filters.some(filter => {
-        const categories: FileCategory[] = [
-          'image',
-          'video',
-          'audio',
-          'document',
-          'code',
-          'data',
-          'archive',
-          'other',
-        ];
-
-        if (categories.includes(filter as FileCategory)) {
-          return matchesCategory(ext, filter as FileCategory);
+        // Handle FilterValue objects with type and value properties
+        if (filter.type === 'category') {
+          return matchesCategory(ext, filter.value as FileCategory);
+        } else if (filter.type === 'extension') {
+          return ext === filter.value.toLowerCase();
         }
-
-        return ext === filter.toLowerCase();
+        return false;
       });
     };
 
@@ -156,24 +147,13 @@ function filterNodesRecursive(nodes: FileNode[]): FileNode[] {
         const ext = node.extension?.toLowerCase();
 
         return props.filters.some(filter => {
-          // Check if filter is a category
-          const categories: FileCategory[] = [
-            'image',
-            'video',
-            'audio',
-            'document',
-            'code',
-            'data',
-            'archive',
-            'other',
-          ];
-
-          if (categories.includes(filter as FileCategory)) {
-            return matchesCategory(ext, filter as FileCategory);
+          // Handle FilterValue objects with type and value properties
+          if (filter.type === 'category') {
+            return matchesCategory(ext, filter.value as FileCategory);
+          } else if (filter.type === 'extension') {
+            return ext === filter.value.toLowerCase();
           }
-
-          // Otherwise it's a specific extension
-          return ext === filter.toLowerCase();
+          return false;
         });
       };
 

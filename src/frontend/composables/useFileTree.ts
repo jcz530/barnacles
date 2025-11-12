@@ -113,22 +113,15 @@ export function useFileTree({ fileTree, searchQuery, filters }: UseFileTreeOptio
             if (filters.value.length === 0) return true;
 
             const ext = node.extension?.toLowerCase();
-            const categories: FileCategory[] = [
-              'image',
-              'video',
-              'audio',
-              'document',
-              'code',
-              'data',
-              'archive',
-              'other',
-            ];
 
             return filters.value.some(filter => {
-              if (categories.includes(filter as FileCategory)) {
-                return matchesCategory(ext, filter as FileCategory);
+              // Handle FilterValue objects with type and value properties
+              if (filter.type === 'category') {
+                return matchesCategory(ext, filter.value as FileCategory);
+              } else if (filter.type === 'extension') {
+                return ext === filter.value.toLowerCase();
               }
-              return ext === filter.toLowerCase();
+              return false;
             });
           };
 

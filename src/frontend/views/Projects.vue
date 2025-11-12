@@ -22,6 +22,7 @@ import { useFuzzySearch } from '@/composables/useFuzzySearch';
 import { useQueries } from '@/composables/useQueries';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
 import { useViewMode } from '@/composables/useViewMode';
+import { useUrlFilters } from '@/composables/useUrlFilters';
 
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
@@ -53,6 +54,24 @@ const sortField = ref<'name' | 'lastModified' | 'size'>('lastModified');
 const sortDirection = ref<'asc' | 'desc'>('desc');
 const tableSorting = ref<SortingState>([{ id: 'lastModified', desc: true }]);
 const searchBarRef = ref<InstanceType<typeof ProjectSearchBar> | null>(null);
+
+// URL filter synchronization
+const { initializeFromUrl, syncFiltersToUrl } = useUrlFilters({
+  searchQuery,
+  selectedTechnologies,
+  showFavoritesOnly,
+  datePreset,
+  dateDirection,
+  sortField,
+  sortDirection,
+  viewMode,
+});
+
+// Initialize filters from URL params on mount
+initializeFromUrl();
+
+// Start syncing filters to URL
+syncFiltersToUrl();
 
 // Queries
 const { data: filteredProjects, isLoading: projectsLoading } = useProjectsQuery({
