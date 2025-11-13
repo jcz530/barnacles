@@ -1,4 +1,4 @@
-import { ref, onUnmounted } from 'vue';
+import { onUnmounted, ref } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { useThrottleFn } from '@vueuse/core';
 import { toast } from 'vue-sonner';
@@ -42,7 +42,7 @@ export function useProjectScanWebSocket() {
     () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
-    3000,
+    1000,
     true, // trailing - ensures a final call happens after the last invocation
     false // leading - don't call immediately on first invocation
   );

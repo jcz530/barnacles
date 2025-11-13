@@ -1,68 +1,38 @@
-import { ref, watch } from 'vue';
-import { useTimeoutFn } from '@vueuse/core';
-import { toast } from 'vue-sonner';
-import { useProjectScanWebSocket } from './useProjectScanWebSocket';
+import { computed, ref } from 'vue';
 import { useQueries } from './useQueries';
 
 /**
- * Composable to detect if this is the first run of the app and trigger an initial scan
+ * Composable to detect if onboarding is needed
+ * Returns whether the onboarding should be shown based on project count
  */
 export function useFirstRunDetection() {
-  const hasChecked = ref(false);
-  const { startScan } = useProjectScanWebSocket();
   const { useProjectsQuery } = useQueries();
 
-  /**
-   * Trigger the initial scan with UI feedback
-   */
-  const triggerInitialScan = () => {
-    // Show welcome toast
-    toast.info('Welcome to Barnacles!', {
-      description: 'Starting initial project scan...',
-      duration: 20000,
-    });
-
-    // Start the scan after a brief delay
-    useTimeoutFn(() => {
-      startScan();
-    }, 1000);
-  };
+  // Query all projects to check if any exist
+  const projectsQuery = useProjectsQuery({
+    search: ref(''),
+    technologies: ref([]),
+    includeArchived: ref(false),
+  });
 
   /**
-   * Check if this is the first run and trigger scan if needed
+   * Whether onboarding needs to be shown
+   * Returns true if no projects exist
    */
-  const checkFirstRun = () => {
-    if (hasChecked.value) {
-      return;
-    }
-
-    hasChecked.value = true;
-
-    // Wait for the app to fully initialize before checking
-    // Set up the projects query
-    const { data, isSuccess } = useProjectsQuery({
-      enabled: true,
-      search: ref(''),
-      technologies: ref([]),
-    });
-
-    // Watch for the query to complete
-    watch(
-      () => isSuccess.value,
-      success => {
-        if (success && data.value) {
-          // Check if there are no projects
-          if (data.value.length === 0) {
-            triggerInitialScan();
-          }
-        }
-      },
-      { immediate: true }
+  const needsOnboarding = computed(() => {
+    return (
+      projectsQuery.isSuccess.value &&
+      (!projectsQuery.data.value || projectsQuery.data.value.length === 0)
     );
-  };
+  });
+
+  /**
+   * Whether the project query is still loading
+   */
+  const isLoading = computed(() => projectsQuery.isLoading.value);
 
   return {
-    checkFirstRun,
-    hasChecked,
+    needsOnboarding,
+    isLoading,
   };
 }

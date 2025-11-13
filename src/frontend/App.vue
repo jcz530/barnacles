@@ -5,7 +5,6 @@ import { useColorInversion } from '@/composables/useColorInversion';
 import { useTheme } from '@/composables/useTheme';
 import { Toaster } from '@/components/ui/sonner';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
-import { useFirstRunDetection } from '@/composables/useFirstRunDetection';
 import { useUpdater } from '@/composables/useUpdater';
 import UpdateNotification from '@/components/organisms/UpdateNotification.vue';
 import 'vue-sonner/style.css'; // vue-sonner v2 requires this import
@@ -39,9 +38,6 @@ watch(
 // Initialize WebSocket connection for project scanning (global across all pages)
 const { connect: connectScanWebSocket } = useProjectScanWebSocket();
 
-// Initialize first-run detection
-const { checkFirstRun } = useFirstRunDetection();
-
 // Initialize auto-updater
 const { updateState, downloadUpdate, installUpdate, dismissUpdate } = useUpdater();
 
@@ -57,9 +53,6 @@ if (window.electron?.onNavigateToProject) {
 onMounted(() => {
   // Connect to WebSocket to check for active scans and receive updates
   connectScanWebSocket();
-
-  // Check if this is the first run and trigger scan if needed
-  checkFirstRun();
 });
 
 // Clean up listener on unmount

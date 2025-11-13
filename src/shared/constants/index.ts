@@ -66,4 +66,5 @@ export const API_ROUTES = {
   THEME_DUPLICATE: (id: string) => `/api/themes/${id}/duplicate`,
   THEME_RESET: (id: string) => `/api/themes/${id}/reset`,
   THEMES_INITIALIZE: '/api/themes/initialize',
+  ONBOARDING_DISCOVER: '/api/onboarding/discover-directories',
 } as const;
