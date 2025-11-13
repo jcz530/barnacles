@@ -60,6 +60,10 @@ const handleFolderAdded = () => {
         Add folders from your file system that are related to this project to quickly browse their
         contents.
       </p>
+      <p class="mt-2 text-sm text-slate-500">
+        Once setup, you can drag and drop files anywhere on this project to easily move them to your
+        related project folders
+      </p>
       <Button class="mt-6" @click="isAddDialogOpen = true">
         <Plus :size="16" class="mr-2" />
         Add Folder

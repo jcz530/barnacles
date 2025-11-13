@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import aliases from './aliases';
 import files from './files';
+import onboarding from './onboarding';
 import processes from './processes';
 import projects from './projects/index';
 import settings from './settings';
@@ -58,6 +59,7 @@ api
   .route('/themes', themes)
   .route('/aliases', aliases)
   .route('/utilities', utilities)
-  .route('/files', files);
+  .route('/files', files)
+  .route('/onboarding', onboarding);
 
 export default api;

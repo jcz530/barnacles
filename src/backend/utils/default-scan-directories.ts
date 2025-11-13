@@ -1,5 +1,6 @@
 import os from 'os';
 import path from 'path';
+import fs from 'fs/promises';
 import { settingsService } from '../services/settings-service';
 import { expandTilde } from './path-utils';
 
@@ -31,4 +32,32 @@ export async function getDefaultScanDirectories(): Promise<string[]> {
 
   // Fallback to default directories
   return getDefaultScanDirectoriesSync();
+}
+
+/**
+ * Discover which default directories actually exist on the file system
+ * @returns Array of objects with directory path and existence status
+ */
+export async function discoverExistingDirectories(): Promise<
+  Array<{ path: string; exists: boolean; readable: boolean }>
+> {
+  const defaultDirs = getDefaultScanDirectoriesSync();
+  const results = await Promise.all(
+    defaultDirs.map(async dirPath => {
+      try {
+        await fs.access(dirPath, fs.constants.R_OK);
+        return { path: dirPath, exists: true, readable: true };
+      } catch (_error) {
+        // Check if directory exists but is not readable
+        try {
+          await fs.access(dirPath, fs.constants.F_OK);
+          return { path: dirPath, exists: true, readable: false };
+        } catch {
+          return { path: dirPath, exists: false, readable: false };
+        }
+      }
+    })
+  );
+
+  return results.filter(result => result.exists && result.readable);
 }

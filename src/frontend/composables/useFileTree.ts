@@ -20,6 +20,25 @@ export function useFileTree({ fileTree, searchQuery, filters }: UseFileTreeOptio
     }
   };
 
+  // Shared filter matching logic
+  const fileMatchesFilters = (
+    extension: string | undefined,
+    filterList: FilterValue[]
+  ): boolean => {
+    if (filterList.length === 0) return true;
+
+    const ext = extension?.toLowerCase();
+
+    return filterList.some(filter => {
+      if (filter.type === 'category') {
+        return matchesCategory(ext, filter.value as FileCategory);
+      } else if (filter.type === 'extension') {
+        return ext === filter.value.toLowerCase();
+      }
+      return false;
+    });
+  };
+
   // Computed selected file path
   const selectedFilePath = computed(() => selectedFile.value?.path || null);
 
@@ -104,35 +123,11 @@ export function useFileTree({ fileTree, searchQuery, filters }: UseFileTreeOptio
       let count = 0;
       for (const node of nodes) {
         if (node.type === 'file') {
-          // Check if file matches search query using fuzzy search results
           const matchesSearch =
             matchingFilePaths.value === null || matchingFilePaths.value.has(node.path);
+          const matchesFilter = fileMatchesFilters(node.extension, filters.value);
 
-          // Check if file matches filters
-          const matchesFilter = () => {
-            if (filters.value.length === 0) return true;
-
-            const ext = node.extension?.toLowerCase();
-            const categories: FileCategory[] = [
-              'image',
-              'video',
-              'audio',
-              'document',
-              'code',
-              'data',
-              'archive',
-              'other',
-            ];
-
-            return filters.value.some(filter => {
-              if (categories.includes(filter as FileCategory)) {
-                return matchesCategory(ext, filter as FileCategory);
-              }
-              return ext === filter.toLowerCase();
-            });
-          };
-
-          if (matchesSearch && matchesFilter()) {
+          if (matchesSearch && matchesFilter) {
             count++;
           }
         } else if (node.type === 'directory' && node.children) {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, Ref, ref, watch } from 'vue';
 import FileTree from './FileTree.vue';
 import FileViewer from './FileViewer.vue';
 import FileSearchInput from '../molecules/FileSearchInput.vue';
@@ -9,6 +9,7 @@ import { Button } from '../../ui/button';
 import type { FileNode } from '@/types/window';
 import { ArrowDownAZ, Clock, ListChevronsDownUp } from 'lucide-vue-next';
 import { useFileTree } from '@/composables/useFileTree';
+import { useFileTreeUrlFilters } from '@/composables/useFileTreeUrlFilters';
 
 interface Props {
   projectPath?: string;
@@ -29,6 +30,7 @@ const fileTreeRef = ref<InstanceType<typeof FileTree> | null>(null);
 
 // Use the file tree composable for shared logic
 const {
+  selectedFile,
   selectedFilePath,
   handleSelect,
   availableExtensions,
@@ -37,6 +39,55 @@ const {
   filteredFileCount,
   hasActiveFilters,
 } = useFileTree({ fileTree, searchQuery, filters });
+
+// Create a writable ref for selected file path (for URL sync)
+const selectedFilePathForUrl = computed({
+  get: () => selectedFilePath.value,
+  set: (path: string | null) => {
+    // When URL is restored, we need to find and select the file
+    if (path && fileTree.value.length > 0) {
+      // Find the file in the tree by path
+      const findFileByPath = (nodes: FileNode[], targetPath: string): FileNode | null => {
+        for (const node of nodes) {
+          if (node.path === targetPath && node.type === 'file') {
+            return node;
+          }
+          if (node.children) {
+            const found = findFileByPath(node.children, targetPath);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      const file = findFileByPath(fileTree.value, path);
+      if (file) {
+        selectedFile.value = file;
+      }
+    }
+  },
+});
+
+// URL filter synchronization
+const { initializeFromUrl, syncFiltersToUrl } = useFileTreeUrlFilters({
+  searchQuery,
+  fileTypeFilters: filters,
+  selectedFilePath: selectedFilePathForUrl as Ref<string | null>,
+});
+
+// Initialize filters from URL params on mount (after file tree loads)
+watch(
+  () => fileTree.value.length,
+  newLength => {
+    if (newLength > 0) {
+      initializeFromUrl();
+    }
+  },
+  { immediate: true }
+);
+
+// Start syncing filters to URL
+syncFiltersToUrl();
 
 // Emit events for sort changes and folder removal
 const emit = defineEmits<{

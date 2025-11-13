@@ -2,8 +2,11 @@
 import { computed, ref } from 'vue';
 import dayjs from 'dayjs';
 import ProjectCard from '../components/projects/molecules/ProjectCard.vue';
+import OnboardingOverlay from '../components/onboarding/organisms/OnboardingOverlay.vue';
 import { useQueries } from '@/composables/useQueries';
 import { provideProcessStatusContext } from '@/composables/useProcessStatusContext';
+import { useFirstRunDetection } from '@/composables/useFirstRunDetection';
+import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
 import { SquareDot, Star } from 'lucide-vue-next';
 
 const {
@@ -52,6 +55,12 @@ const recentProjects = computed(() => {
 const deleteMutation = useDeleteProjectMutation();
 const toggleFavoriteMutation = useToggleFavoriteMutation();
 
+// Onboarding detection
+const { needsOnboarding } = useFirstRunDetection();
+
+// WebSocket for scan progress
+const { startScan } = useProjectScanWebSocket();
+
 // Handlers
 const handleDeleteProject = async (projectId: string) => {
   try {
@@ -74,24 +83,23 @@ const handleToggleFavorite = async (projectId: string) => {
 
 <template>
   <div class="flex h-full flex-col overflow-y-auto">
-    <!-- Header -->
-    <div class="border-b p-6">
-      <h1 class="text-3xl font-bold text-slate-800">Dashboard</h1>
-      <p class="mt-1 text-sm text-slate-600">Quick access to your projects</p>
-    </div>
-
     <!-- Content -->
     <div class="flex-1 p-6">
       <div v-if="isLoading" class="py-12 text-center">
         <p class="text-slate-500">Loading projects...</p>
       </div>
 
+      <!-- Onboarding Empty State -->
+      <div v-else-if="needsOnboarding" class="py-8">
+        <OnboardingOverlay :start-scan="startScan" />
+      </div>
+
       <div v-else class="space-y-8">
         <!-- Favorite Projects Section -->
         <div v-if="favoriteProjects.length > 0">
           <div class="mb-4">
-            <h2 class="flex gap-2 text-xl font-semibold text-slate-800">
-              <Star /> Favorite Projects
+            <h2 class="flex gap-2 text-xl font-semibold text-slate-700">
+              <Star class="text-primary-400" /> Favorite Projects
             </h2>
             <p class="text-sm text-slate-600">Your starred projects for quick access</p>
           </div>
@@ -109,8 +117,8 @@ const handleToggleFavorite = async (projectId: string) => {
         <!-- Recently Modified Projects Section -->
         <div v-if="recentProjects.length > 0">
           <div class="mb-4">
-            <h2 class="flex items-center gap-2 text-xl font-semibold text-slate-800">
-              <SquareDot />Recently Modified
+            <h2 class="flex items-center gap-2 text-xl font-semibold text-slate-700">
+              <SquareDot class="text-primary-400" />Recently Modified
             </h2>
             <p class="text-sm text-slate-600">Projects you've worked on recently</p>
           </div>
@@ -125,7 +133,7 @@ const handleToggleFavorite = async (projectId: string) => {
           </div>
         </div>
 
-        <!-- Empty State -->
+        <!-- Empty State (when onboarding is complete but no projects) -->
         <div
           v-if="!isLoading && favoriteProjects.length === 0 && recentProjects.length === 0"
           class="py-12 text-center"

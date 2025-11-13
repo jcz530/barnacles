@@ -10,6 +10,7 @@ import SortControl from '../components/atoms/SortControl.vue';
 import ViewToggle from '../components/atoms/ViewToggle.vue';
 import ProjectSearchBar from '../components/projects/molecules/ProjectSearchBar.vue';
 import TechnologyFilter from '../components/projects/molecules/TechnologyFilter.vue';
+import OnboardingOverlay from '../components/onboarding/organisms/OnboardingOverlay.vue';
 import { RouteNames } from '@/router';
 import DateFilter, {
   type DateFilterDirection,
@@ -22,6 +23,8 @@ import { useFuzzySearch } from '@/composables/useFuzzySearch';
 import { useQueries } from '@/composables/useQueries';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
 import { useViewMode } from '@/composables/useViewMode';
+import { useUrlFilters } from '@/composables/useUrlFilters';
+import { useFirstRunDetection } from '@/composables/useFirstRunDetection';
 
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
@@ -53,6 +56,24 @@ const sortField = ref<'name' | 'lastModified' | 'size'>('lastModified');
 const sortDirection = ref<'asc' | 'desc'>('desc');
 const tableSorting = ref<SortingState>([{ id: 'lastModified', desc: true }]);
 const searchBarRef = ref<InstanceType<typeof ProjectSearchBar> | null>(null);
+
+// URL filter synchronization
+const { initializeFromUrl, syncFiltersToUrl } = useUrlFilters({
+  searchQuery,
+  selectedTechnologies,
+  showFavoritesOnly,
+  datePreset,
+  dateDirection,
+  sortField,
+  sortDirection,
+  viewMode,
+});
+
+// Initialize filters from URL params on mount
+initializeFromUrl();
+
+// Start syncing filters to URL
+syncFiltersToUrl();
 
 // Queries
 const { data: filteredProjects, isLoading: projectsLoading } = useProjectsQuery({
@@ -161,6 +182,9 @@ const projects = computed(() => {
 // Mutations
 const deleteMutation = useDeleteProjectMutation();
 const toggleFavoriteMutation = useToggleFavoriteMutation();
+
+// Onboarding detection
+const { needsOnboarding } = useFirstRunDetection();
 
 // Computed
 const isScanning = computed(() => wsScanning.value);
@@ -342,8 +366,13 @@ whenever(keys['Ctrl+K'], () => {
     </div>
 
     <!-- Projects Table/Grid -->
-    <div class="flex-1 overflow-y-auto pt-4">
+    <div class="flex-1 overflow-y-auto p-6 pt-4">
+      <!-- Onboarding Empty State -->
+      <OnboardingOverlay v-if="needsOnboarding" :start-scan="startWebSocketScan" />
+
+      <!-- Projects Table -->
       <ProjectsTable
+        v-else
         :projects="projects"
         :is-loading="projectsLoading"
         :view-mode="viewMode"

@@ -37,7 +37,7 @@ const handleToggleFavorite = (e: Event) => {
     class="flex cursor-pointer flex-col gap-0 pt-0 transition-all"
   >
     <CardHeader class="pb-3">
-      <div class="relative -mr-6 mb-8 flex justify-end gap-1">
+      <div class="relative -mr-4 mb-8 flex justify-end gap-1">
         <Button
           variant="ghost"
           size="icon"

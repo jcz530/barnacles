@@ -18,8 +18,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 
-// Filter value can be either a category or a specific extension
-export type FilterValue = FileCategory | string;
+// Filter value is an object with type and value
+export type FilterValue = {
+  type: 'category' | 'extension';
+  value: string;
+};
 
 const props = defineProps<{
   selectedFilters: FilterValue[];
@@ -81,7 +84,7 @@ const filteredTree = computed(() => {
 
 const toggleCategory = (category: FileCategory) => {
   const current = [...props.selectedFilters];
-  const index = current.indexOf(category);
+  const index = current.findIndex(f => f.type === 'category' && f.value === category);
   const extensions = getExtensionsByCategory(category);
 
   if (index > -1) {
@@ -89,10 +92,10 @@ const toggleCategory = (category: FileCategory) => {
     current.splice(index, 1);
   } else {
     // Checking category - add it and remove any individual extensions from this category
-    current.push(category);
+    current.push({ type: 'category', value: category });
     // Remove any individual extensions that belong to this category
     extensions.forEach(ext => {
-      const extIndex = current.indexOf(ext);
+      const extIndex = current.findIndex(f => f.type === 'extension' && f.value === ext);
       if (extIndex > -1) {
         current.splice(extIndex, 1);
       }
@@ -104,8 +107,8 @@ const toggleCategory = (category: FileCategory) => {
 
 const toggleExtension = (extension: string, category: FileCategory) => {
   const current = [...props.selectedFilters];
-  const extIndex = current.indexOf(extension);
-  const catIndex = current.indexOf(category);
+  const extIndex = current.findIndex(f => f.type === 'extension' && f.value === extension);
+  const catIndex = current.findIndex(f => f.type === 'category' && f.value === category);
 
   // Remove parent category if it exists
   if (catIndex > -1) {
@@ -117,7 +120,7 @@ const toggleExtension = (extension: string, category: FileCategory) => {
     current.splice(extIndex, 1);
   } else {
     // Checking extension
-    current.push(extension);
+    current.push({ type: 'extension', value: extension });
   }
 
   emit('update:selectedFilters', current);
@@ -135,19 +138,21 @@ const clearFilters = () => {
   emit('update:selectedFilters', []);
 };
 
-const isFilterSelected = (filter: FilterValue) => {
-  return props.selectedFilters.includes(filter);
+const isFilterSelected = (filterValue: string) => {
+  return props.selectedFilters.some(f => f.value === filterValue);
 };
 
 // Check if a category should be in indeterminate state
 const isCategoryIndeterminate = (category: FileCategory): boolean => {
   // If the category itself is selected, not indeterminate
-  if (props.selectedFilters.includes(category)) {
+  if (props.selectedFilters.some(f => f.type === 'category' && f.value === category)) {
     return false;
   }
 
   const extensions = getExtensionsByCategory(category);
-  const selectedExtensions = extensions.filter(ext => props.selectedFilters.includes(ext));
+  const selectedExtensions = extensions.filter(ext =>
+    props.selectedFilters.some(f => f.type === 'extension' && f.value === ext)
+  );
 
   // Indeterminate if some (but not all) extensions are selected
   return selectedExtensions.length > 0 && selectedExtensions.length < extensions.length;
@@ -156,7 +161,7 @@ const isCategoryIndeterminate = (category: FileCategory): boolean => {
 // Check if a category checkbox should be checked
 const isCategoryChecked = (category: FileCategory): boolean | 'indeterminate' => {
   // Checked if the category itself is selected
-  if (props.selectedFilters.includes(category)) {
+  if (props.selectedFilters.some(f => f.type === 'category' && f.value === category)) {
     return true;
   }
   if (isCategoryIndeterminate(category)) {
@@ -167,7 +172,9 @@ const isCategoryChecked = (category: FileCategory): boolean | 'indeterminate' =>
   const extensions = getExtensionsByCategory(category);
   if (extensions.length === 0) return false;
 
-  const selectedExtensions = extensions.filter(ext => props.selectedFilters.includes(ext));
+  const selectedExtensions = extensions.filter(ext =>
+    props.selectedFilters.some(f => f.type === 'extension' && f.value === ext)
+  );
   return selectedExtensions.length === extensions.length;
 };
 

@@ -4,14 +4,7 @@ import { useQueries } from '../composables/useQueries';
 import TrayProjectItem from '../components/molecules/TrayProjectItem.vue';
 import LogoMark from '@/components/nav/atoms/LogoMark.vue';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { LogOut, MoreVertical, SquareDot, Star, Terminal, TerminalSquare } from 'lucide-vue-next';
+import { LogOut, PanelLeft, Plus, SquareDot, Star } from 'lucide-vue-next';
 
 const { useProjectsQuery, useOpenProjectMutation, useOpenTerminalMutation } = useQueries();
 
@@ -101,32 +94,6 @@ const checkCliInstallation = async () => {
   }
 };
 
-const installCli = async () => {
-  try {
-    const result = await window.electron?.cli.install();
-    if (result?.success) {
-      isCliInstalled.value = true;
-    } else {
-      console.error('Failed to install CLI:', result?.error);
-    }
-  } catch (error) {
-    console.error('Failed to install CLI:', error);
-  }
-};
-
-const uninstallCli = async () => {
-  try {
-    const result = await window.electron?.cli.uninstall();
-    if (result?.success) {
-      isCliInstalled.value = false;
-    } else {
-      console.error('Failed to uninstall CLI:', result?.error);
-    }
-  } catch (error) {
-    console.error('Failed to uninstall CLI:', error);
-  }
-};
-
 // Add tray-popup class to body on mount
 onMounted(() => {
   document.body.classList.add('tray-popup');
@@ -152,10 +119,7 @@ onMounted(() => {
               class="flex items-center justify-center rounded-md bg-black/5 p-1.5 text-slate-900 transition-all hover:scale-105 hover:bg-black/10 active:scale-95"
               title="Open Barnacles"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2" />
-                <line x1="9" y1="3" x2="9" y2="21" stroke-width="2" />
-              </svg>
+              <PanelLeft class="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
@@ -164,42 +128,17 @@ onMounted(() => {
               class="flex items-center justify-center rounded-md bg-black/5 p-1.5 text-slate-900 transition-all hover:scale-105 hover:bg-black/10 active:scale-95"
               title="New Window"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path
-                  d="M12 5v14M5 12h14"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
+              <Plus class="h-4 w-4" />
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="flex items-center justify-center rounded-md bg-black/5 p-1.5 text-slate-900 transition-all hover:scale-105 hover:bg-black/10 active:scale-95"
-                  title="More actions"
-                >
-                  <MoreVertical :size="14" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" class="w-56">
-                <DropdownMenuItem v-if="!isCliInstalled" @click="installCli">
-                  <Terminal :size="16" class="mr-2" />
-                  <span>Install CLI Command</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem v-if="isCliInstalled" @click="uninstallCli">
-                  <TerminalSquare :size="16" class="mr-2" />
-                  <span>Uninstall CLI Command</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem @click="quitApp">
-                  <LogOut :size="16" class="mr-2" />
-                  <span>Quit Barnacles</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="icon"
+              class="flex items-center justify-center rounded-md bg-black/5 p-1.5 text-slate-900 transition-all hover:scale-105 hover:bg-black/10 active:scale-95"
+              title="Quit Barnacles"
+              @click="quitApp"
+            >
+              <LogOut class="mr-2 h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>

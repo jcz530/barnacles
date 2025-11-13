@@ -1,4 +1,4 @@
-import { ref, onUnmounted } from 'vue';
+import { onUnmounted, ref } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { useThrottleFn } from '@vueuse/core';
 import { toast } from 'vue-sonner';
@@ -31,7 +31,7 @@ export function useProjectScanWebSocket() {
   const totalDiscovered = ref(0);
   const error = ref<string | null>(null);
   const discoveredProjects = ref<ProjectWithDetails[]>([]);
-  const { wsBaseUrl } = useApiPort();
+  const { wsBaseUrl, isLoaded, loadApiPort } = useApiPort();
   let scanToastId: string | number | undefined;
 
   /**
@@ -42,7 +42,7 @@ export function useProjectScanWebSocket() {
     () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
-    3000,
+    1000,
     true, // trailing - ensures a final call happens after the last invocation
     false // leading - don't call immediately on first invocation
   );
@@ -50,9 +50,14 @@ export function useProjectScanWebSocket() {
   /**
    * Connect to the WebSocket server
    */
-  const connect = () => {
+  const connect = async () => {
     if (ws.value && ws.value.readyState === WebSocket.OPEN) {
       return; // Already connected
+    }
+
+    // Ensure we have the correct port before connecting
+    if (!isLoaded.value) {
+      await loadApiPort();
     }
 
     const wsUrl = `${wsBaseUrl.value}/api/projects/scan/ws`;
