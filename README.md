@@ -2,234 +2,142 @@
 
 # Barnacles
 
-A desktop application for developers to organize, manage, and analyze their coding projects. Barnacles automatically scans directories, detects technologies, tracks project metadata, and provides integrated terminals and IDE access.
+**Life as a developer doesn't need to be so hard**
 
-Barnacles provides tools for everyday development. Easily find, open, or start your projects from a single interface.
+If you've developed for any amount of time you know how quickly barnacles (projects) attach to you. This app is there to help.  
+
+Barnacles is both a desktop application and command-line tool that helps developers manage all their coding projects and local development settings like terminal aliases and host file entries.
+
 
 ## Download
 
-You can download the latest release for your platform from the [Releases](https://github.com/jcz530/barnacles/releases) page.
+**[Download for macOS](https://github.com/jcz530/barnacles/releases)**
+
+Available for macOS. Other platforms coming soon (get involved to speed it up).
+
+![barnacles-screenshot-projects-cards.png](assets/images/screenshots/barnacles-screenshot-projects-cards.png)
+
+## Why Barnacles?
+
+If you're juggling multiple projects across different directories, Barnacles keeps everything organized:
+
+- **Find any project instantly** with fuzzy search across all your development directories
+- **See what's happening** with automatic Git status tracking and project analytics
+- **Launch faster** with quick access to terminals, IDEs, and favorite projects
+- **Stay organized** with automatic technology detection and filtering
+- **Work from anywhere** with both a GUI app and command-line interface
+
+<!-- Screenshot: Project detail view showing Git info, stats, and quick actions -->
+![barnacles-screenshot-project-details.png](assets/images/screenshots/barnacles-screenshot-project-details.png)
 
 ## Features
 
-- **Project Discovery** - Automatically scan directories to find and catalog all your development projects
-- **Technology Detection** - Identify technologies, frameworks, and languages used in each project
-- **Project Analytics** - View file counts, lines of code, language breakdowns, and project statistics
-- **Git Integration** - Track branch status, commits, and repository information
-- **Process Management** - Start, stop, and monitor project processes with saved configurations
-- **Integrated Terminals** - Launch terminals directly in project directories
-- **IDE Integration** - Quick access to open projects in your preferred IDE
-- **Search & Filter** - Fuzzy search and filter projects by technology
-- **Favorites** - Mark and quickly access your most-used projects
-- **Command Line Interface** - Manage projects and processes from the terminal ([CLI Documentation](src/cli/README.md))
+### 🔍 Automatic Project Discovery
 
-## Technology Stack
+Scan your file system once and Barnacles catalogs all your projects. It recognizes:
+- JavaScript/TypeScript (package.json)
+- Python (requirements.txt, pyproject.toml)
+- Rust (Cargo.toml)
+- Go (go.mod)
+- Java (pom.xml)
+- And any Git repository
 
-- **Electron** - Cross-platform desktop app framework
-- **Vue 3** - Progressive frontend framework with Composition API
-- **Hono** - Lightweight web framework for the backend API
-- **TypeScript** - Full type safety across the entire application
-- **shadcn-vue** - Modern UI component library
-- **Tailwind CSS** - Utility-first CSS framework
-- **Drizzle ORM** - Type-safe database access with SQLite
+### 📊 Project Insights
 
-## Architecture
+See at a glance:
+- Lines of code and file statistics
+- Language breakdown and technologies used
+- Git branch, commits, and repository status
+- Last modified date and activity
 
-The application uses a single-process architecture with four main components:
+<!-- Screenshot: Technology detection and analytics view -->
+![barnacles-screenshot-project-file-stats.png](assets/images/screenshots/barnacles-screenshot-project-file-stats.png)
 
+### ⚡ Quick Actions
+
+Launch what you need instantly:
+- Open in your preferred IDE (VS Code, Cursor, WebStorm, etc.)
+- Start integrated terminal in project directory
+- Start and stop project processes with saved configurations
+- Mark favorites for quick access
+
+### 🎯 Powerful Search
+
+- Fuzzy search finds projects by name instantly
+- Filter by technology, language, or framework
+- Sort by last modified, name, or creation date
+
+### 💻 Command Line Interface
+
+Prefer the terminal? Barnacles includes a full-featured CLI:
+
+```bash
+# Browse projects interactively
+barnacles projects
+
+# Check status
+barnacles status
+
+# Open the app
+barnacles open
 ```
-src/
-├── main/           # Electron main process (window management, lifecycle)
-├── backend/        # Hono API server on port 51000-51010
-│   ├── routes/     # REST API endpoints
-│   └── services/   # Business logic (scanning, detection, terminals)
-├── frontend/       # Vue.js application
-│   ├── components/ # UI components (atomic design pattern)
-│   ├── views/      # Page-level components
-│   └── composables/# Reusable Vue composition functions
-├── cli/            # Command-line interface
-│   ├── commands/   # CLI commands (projects, status, open)
-│   ├── actions/    # Project actions (start, stop, terminal)
-│   └── utils/      # CLI utilities and helpers
-├── shared/         # Common types and utilities
-└── preload.ts      # IPC bridge script
-```
+
+[View CLI Documentation →](src/cli/README.md)
+
+<!-- Screenshot: CLI in action -->
 
 ## Getting Started
 
-### Prerequisites
-
-- Node.js 18 or higher
-- npm or yarn
-- [node-pyt dependencies](https://www.npmjs.com/package/node-pty#dependencies)
-  - Mac: Xcode needs to be installed 
-
 ### Installation
 
-1. Clone this repository:
-
-```bash
-git clone https://github.com/yourusername/barnacles.git
-cd barnacles
-```
-
-2. Install dependencies:
-
-```bash
-npm install
-```
-
-3. Start the application:
-
-```bash
-npm run dev
-```
-
-The application will launch with:
-
-- Electron window displaying the Barnacles UI
-- Hono API server running on `localhost:51000-51010` (automatically finds available port)
-- Hot reload enabled for development
+1. **Download** the app for your platform from the [Releases page](https://github.com/jcz530/barnacles/releases)
+2. **Install** by opening the downloaded file and following the prompts
+3. **Launch** Barnacles from your Applications folder or Start menu
 
 ### First-Time Setup
 
-1. Open the Settings page to configure:
-   - Default terminal application
-   - Default IDE/code editor
-   - Project scan depth (how many directory levels to search)
+When you first open Barnacles:
 
-2. Navigate to the Projects page and click "Scan" to discover projects on your system
+1. **Configure Settings**
+   - Choose your default terminal application
+   - Select your preferred IDE
+   - Set project scan depth (how deep to search for projects)
 
-3. Browse, search, and organize your projects!
+2. **Scan for Projects**
+   - Navigate to the Projects page
+   - Click "Scan" to discover all your development projects
+   - Barnacles will automatically detect technologies and gather metadata
 
-## Command Line Interface
+3. **Start Managing**
+   - Browse, search, and organize your projects
+   - Mark favorites for quick access
+   - Launch terminals, IDEs, and processes with one click
 
-Barnacles includes a powerful CLI for managing projects from the terminal. The `barnacles` command is automatically available after installation.
-
-### Quick Examples
-
-```bash
-# Browse and manage projects interactively
-barnacles projects
-
-# Check Barnacles status
-barnacles status
-
-# Open the Barnacles app
-barnacles open
-
-# Get help
-barnacles --help
-```
-
-### Key Features
-
-- **Interactive Project Browser** - Select and manage projects with an intuitive terminal UI
-- **Process Management** - Start and stop project processes from the command line
-- **Auto-Launch** - Automatically launches the Barnacles app if it's not running
-- **Script Detection** - Automatically detects and suggests scripts from `package.json` and `composer.json`
-
-For complete CLI documentation, see [src/cli/README.md](src/cli/README.md).
-
-## Development Commands
-
-| Command               | Description                                       |
-|-----------------------|---------------------------------------------------|
-| `npm run dev`         | Start the app in development mode with hot reload |
-| `npm run dev:cli`     | Build and run the CLI in development mode         |
-| `npm run start`       | Start the app from built files (production-like)  |
-| `npm run build`       | Build all components for production               |
-| `npm run build:cli`   | Build the CLI for production                      |
-| `npm run lint`        | Run ESLint on the source code                     |
-| `npm run lint:fix`    | Run ESLint and automatically fix issues           |
-| `npm run format`      | Format code with Prettier                         |
-| `npm run type-check`  | Run TypeScript type checking                      |
-| `npm run db:generate` | Generate database migrations                      |
-| `npm run db:migrate`  | Run database migrations                           |
-| `npm run dist`        | Build distributable packages for all platforms    |
+<!-- Screenshot: Settings page -->
 
 ## How It Works
 
-### Project Scanning
+Barnacles runs locally on your machine and:
+- **Scans** your chosen directories for development projects (non-intrusive, read-only)
+- **Stores** project metadata in a local SQLite database
+- **Never** uploads your code or data anywhere
+- **Updates** project information when you rescan or refresh
 
-Barnacles scans your file system to discover development projects by looking for common indicators like:
+All your data stays on your machine. Barnacles is a tool for organization, not cloud storage.
 
-- `package.json` (JavaScript/TypeScript)
-- `Cargo.toml` (Rust)
-- `go.mod` (Go)
-- `requirements.txt` (Python)
-- `pom.xml` (Java/Maven)
-- `.git` directories
+## Support & Documentation
 
-### Technology Detection
-
-For each project, Barnacles automatically detects:
-
-- Programming languages and frameworks
-- Build tools and package managers
-- Testing frameworks
-- Version control status
-- File statistics and lines of code
-
-### Data Management
-
-- Projects are stored in a local SQLite database using Drizzle ORM
-- File system scanning is non-intrusive (read-only)
-- Project metadata is cached and can be refreshed on demand
-
-## Building for Production
-
-Build platform-specific distributables:
-
-```bash
-npm run dist        # Build for current platform
-npm run dist:mac    # Build for macOS
-npm run dist:win    # Build for Windows
-npm run dist:linux  # Build for Linux
-```
+- **CLI Guide**: [src/cli/README.md](src/cli/README.md)
+- **Developer Docs**: [docs/DEVELOPER.md](docs/DEVELOPER.md)
+- **Report Issues**: [GitHub Issues](https://github.com/jcz530/barnacles/issues)
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! If you'd like to help improve Barnacles:
 
-### Development Guidelines
-
-- Follow the atomic design pattern for components
-- Use TypeScript for type safety
-- Keep files under 500 lines
-- Use TanStack Query for API calls
-- Use VueUse for common composables
-- See `CLAUDE.md` for detailed development guidelines
-
-## Project Structure
-
-```
-barnacles/
-├── src/
-│   ├── backend/              # Hono API server
-│   │   ├── routes/           # API route handlers
-│   │   ├── services/         # Business logic
-│   │   └── middleware/       # Request middleware
-│   ├── frontend/             # Vue.js application
-│   │   ├── components/       # Reusable UI components
-│   │   │   ├── atoms/        # Basic elements
-│   │   │   ├── molecules/    # Simple component groups
-│   │   │   ├── organisms/    # Complex components
-│   │   │   └── ui/           # shadcn-vue components
-│   │   ├── views/            # Page components
-│   │   ├── composables/      # Vue composition functions
-│   │   └── router/           # Vue Router configuration
-│   ├── cli/                  # Command-line interface
-│   │   ├── commands/         # CLI commands
-│   │   ├── actions/          # Project actions
-│   │   ├── utils/            # CLI utilities
-│   │   └── core/             # Base classes
-│   ├── main/                 # Electron main process
-│   ├── shared/               # Shared types and utilities
-│   └── preload.ts           # Electron preload script
-├── scripts/                  # Build and utility scripts
-└── drizzle/                 # Database migrations
-```
+1. Check out the [Developer Documentation](docs/DEVELOPER.md) to get started
+2. Look at open issues or suggest new features
+3. Submit a pull request
 
 ## Author
 
