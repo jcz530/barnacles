@@ -8,15 +8,49 @@ Never delete the database or its tables
 
 ## Development Commands
 
+### Running the App
+
 - `npm run dev` - Start the Electron app in development mode with hot reload
 - `npm run start` - Start the Electron app from built files (production-like)
+
+### Building the App
+
+**For quick local testing (no signing/notarizing - much faster!):**
+- `npm run dist:local` - Build local app without signing (defaults to macOS)
+- `npm run dist:mac:local` - Build local macOS app without signing
+- `npm run dist:win:local` - Build local Windows app without signing
+- `npm run dist:linux:local` - Build local Linux app without signing
+
+**For production releases (with signing/notarizing):**
+- `npm run dist` - Build production app with signing (defaults to macOS)
+- `npm run dist:mac` - Build production macOS app with signing
+- `npm run dist:win` - Build production Windows app with signing
+- `npm run dist:linux` - Build production Linux app with signing
+
+Output will be in the `dist/` directory.
+
+**Build Notes:**
+- Local builds (`:local` scripts) skip code signing and notarization for much faster builds
+- Local builds are suitable for testing but cannot be distributed
+- Production builds require Apple Developer certificates and credentials in `.env` file
+- The build script uses `CSC_IDENTITY_AUTO_DISCOVERY=false` to skip signing on local builds
+- Notarization is skipped when `SKIP_NOTARIZE=true` environment variable is set
+
+### Code Quality
+
 - `npm run lint` - Run ESLint on the source code
 - `npm run lint:fix` - Run ESLint and automatically fix issues
 - `npm run format` - Format code with Prettier
 - `npm run format:check` - Check code formatting with Prettier
 - `npm run type-check` - Run TypeScript type checking without emitting files
-- `npm run package` - Package the app for distribution
-- `npm run make` - Build distributable packages
+
+### Testing
+
+- `npm test` - Run all tests in watch mode
+- `npm run test:unit` - Run backend unit tests
+- `npm run test:integration` - Run backend integration tests
+- `npm run test:cli` - Run CLI tests
+- `npm run test:coverage` - Run tests with coverage report
 
 ## Architecture Overview
 
@@ -41,7 +75,8 @@ This is an Electron application with a Vue.js frontend and Hono API backend that
 
 ### Technology Stack
 
-- **Electron Forge** - Build tooling and packaging
+- **Electron** - Cross-platform desktop application framework
+- **electron-builder** - Build tooling and packaging
 - **Vue 3** - Frontend framework with Composition API
 - **Hono** - Lightweight web framework for the backend API
 - **shadcn-vue + reka-ui** - UI component library

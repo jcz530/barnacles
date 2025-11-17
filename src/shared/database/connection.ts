@@ -1,15 +1,12 @@
-import { createClient } from '@libsql/client';
-import { drizzle } from 'drizzle-orm/libsql';
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
 import path from 'node:path';
 import os from 'os';
+import { mkdirSync } from 'node:fs';
 import * as schema from './schema';
 
 // Get the standard database path for both Electron and CLI contexts
 function getDatabasePath(): string {
-  if (process.env.DATABASE_URL) {
-    return process.env.DATABASE_URL;
-  }
-
   // Use in-memory database for tests
   if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
     return ':memory:';
@@ -17,7 +14,7 @@ function getDatabasePath(): string {
 
   // Use development database if not in production
   if (process.env.NODE_ENV === 'development') {
-    return 'file:./database.db';
+    return './database.db';
   }
 
   // Standard user data location for all contexts
@@ -33,14 +30,20 @@ function getDatabasePath(): string {
     userDataPath = path.join(homeDir, '.config', 'Barnacles');
   }
 
-  const dbPath = path.join(userDataPath, 'database.db');
-  return `file:${dbPath}`;
+  // Ensure the directory exists
+  mkdirSync(userDataPath, { recursive: true });
+
+  return path.join(userDataPath, 'database.db');
 }
 
-const client = createClient({
-  url: getDatabasePath(),
-});
+const dbPath = getDatabasePath();
+const sqlite = new Database(dbPath);
 
-export const db = drizzle(client, { schema });
+// Enable WAL mode for better concurrency
+if (dbPath !== ':memory:') {
+  sqlite.pragma('journal_mode = WAL');
+}
+
+export const db = drizzle(sqlite, { schema });
 
 export type DB = typeof db;

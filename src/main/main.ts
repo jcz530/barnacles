@@ -96,20 +96,27 @@ export const toggleCliInstallation = async (enabled: boolean): Promise<void> => 
 
   if (enabled && !currentlyInstalled) {
     // Should be installed but isn't - install it
+    console.log('[CLI] Installing CLI symlink...');
     const result = await installCli();
     if (result.success) {
-      console.log('✅ CLI command installed');
+      console.log('✅ CLI command installed at ~/.local/bin/barnacles');
+      console.log(
+        '[CLI] NOTE: You may need to restart your terminal for the command to be available'
+      );
     } else {
       console.error('❌ Failed to install CLI:', result.error);
     }
   } else if (!enabled && currentlyInstalled) {
     // Shouldn't be installed but is - uninstall it
+    console.log('[CLI] Uninstalling CLI symlink...');
     const result = await uninstallCli();
     if (result.success) {
       console.log('✅ CLI command uninstalled');
     } else {
       console.error('❌ Failed to uninstall CLI:', result.error);
     }
+  } else if (enabled && currentlyInstalled) {
+    console.log('[CLI] CLI command is already installed');
   }
 };
 
@@ -157,10 +164,16 @@ const initialize = async (): Promise<void> => {
     }
 
     // Install CLI command if enabled in settings
-    const installCli = await settingsService.getValue<boolean>('installCliCommand');
-    if (installCli !== false) {
+    const shouldInstallCli = await settingsService.getValue<boolean>('installCliCommand');
+    if (shouldInstallCli !== false) {
       // Default to true if not set
-      await toggleCliInstallation(true);
+      console.log('[CLI] Installing CLI command...');
+      try {
+        await toggleCliInstallation(true);
+        console.log('[CLI] CLI command installation completed');
+      } catch (error) {
+        console.error('[CLI] Failed to install CLI command:', error);
+      }
     }
 
     // Create the main window with the actual API port for CSP

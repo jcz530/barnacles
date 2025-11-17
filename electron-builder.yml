@@ -32,10 +32,37 @@ files:
   - '!node_modules/**/tsconfig.json'
 
 # Include/exclude node modules patterns
-# Note: Only unpack native modules that need direct file system access
+# Note: Unpack native modules and CLI dependencies
+# With better-sqlite3, we have a much simpler dependency tree
 asarUnpack:
-  - '**/node_modules/@libsql/**'
+  # Native modules and their full dependency trees
+  - '**/node_modules/better-sqlite3/**'
   - '**/node_modules/node-pty/**'
+  # CLI dependencies - unpack everything the CLI needs
+  - '**/node_modules/@clack/**'
+  - '**/node_modules/@paralleldrive/**'
+  - '**/node_modules/@noble/**'
+  - '**/node_modules/drizzle-orm/**'
+  - '**/node_modules/picocolors/**'
+  - '**/node_modules/sisteransi/**'
+  - '**/node_modules/dayjs/**'
+  - '**/node_modules/ignore/**'
+  # Native module helpers and their dependencies
+  - '**/node_modules/bindings/**'
+  - '**/node_modules/file-uri-to-path/**'
+  - '**/node_modules/prebuild-install/**'
+  - '**/node_modules/detect-libc/**'
+  - '**/node_modules/expand-template/**'
+  - '**/node_modules/github-from-package/**'
+  - '**/node_modules/minimist/**'
+  - '**/node_modules/mkdirp-classic/**'
+  - '**/node_modules/napi-build-utils/**'
+  - '**/node_modules/node-abi/**'
+  - '**/node_modules/pump/**'
+  - '**/node_modules/rc/**'
+  - '**/node_modules/simple-get/**'
+  - '**/node_modules/nan/**'
+  # CLI distribution
   - '**/dist/cli/**'
 
 # Include migrations as extra resources

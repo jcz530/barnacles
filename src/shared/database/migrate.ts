@@ -1,7 +1,7 @@
 import { db } from './connection';
 import path from 'path';
 import { app } from 'electron';
-import { migrate } from 'drizzle-orm/libsql/migrator';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
 export async function runMigrations(): Promise<void> {
   // Check if we're in a packaged app

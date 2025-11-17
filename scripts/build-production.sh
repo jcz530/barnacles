@@ -7,8 +7,36 @@ if [ -f ".env" ] && [ -z "$APPLE_ID" ]; then
   export $(cat .env | grep -v '^#' | xargs)
 fi
 
-# Get platform argument (defaults to --mac if not specified)
-PLATFORM="${1:---mac}"
+# Parse arguments
+PLATFORM="--mac"
+SKIP_SIGN=false
+
+for arg in "$@"; do
+  case $arg in
+    --mac|--win|--linux)
+      PLATFORM="$arg"
+      ;;
+    --skip-sign)
+      SKIP_SIGN=true
+      ;;
+    *)
+      echo "Unknown argument: $arg"
+      echo "Usage: $0 [--mac|--win|--linux] [--skip-sign]"
+      exit 1
+      ;;
+  esac
+done
+
+if [ "$SKIP_SIGN" = true ]; then
+  echo "⚠️  Building WITHOUT code signing and notarization (faster local build)"
+  export CSC_IDENTITY_AUTO_DISCOVERY=false
+  export SKIP_NOTARIZE=true
+  # For local builds, only create zip (skip DMG which can have permission issues)
+  export ELECTRON_BUILDER_ARGS="--mac zip"
+else
+  echo "Building with code signing and notarization (production build)"
+  export ELECTRON_BUILDER_ARGS="$PLATFORM"
+fi
 
 echo "Building application..."
 npm run build
@@ -32,8 +60,12 @@ if [ -d "node_modules/electron" ]; then
   exit 1
 fi
 
-echo "Installing @electron/notarize for code signing..."
-npm install --no-save @electron/notarize
+if [ "$SKIP_SIGN" = false ]; then
+  echo "Installing @electron/notarize for code signing..."
+  npm install --no-save @electron/notarize
+else
+  echo "Skipping @electron/notarize installation (not needed for unsigned builds)"
+fi
 
 echo "Creating placeholder directories for missing libsql platform packages..."
 mkdir -p node_modules/@libsql/darwin-x64
@@ -42,8 +74,8 @@ echo '{"name":"@libsql/darwin-x64","version":"0.0.0"}' > node_modules/@libsql/da
 echo "Rebuilding native modules for Electron..."
 npx --yes electron-builder install-app-deps
 
-echo "Running electron-builder for platform: $PLATFORM"
-npx --yes electron-builder "$PLATFORM"
+echo "Running electron-builder with args: $ELECTRON_BUILDER_ARGS"
+npx --yes electron-builder $ELECTRON_BUILDER_ARGS
 
 echo "Restoring development dependencies..."
 rm -rf node_modules
