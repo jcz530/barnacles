@@ -25,11 +25,11 @@ const __dirname = path.dirname(__filename);
  */
 export function getCliPath(): string {
   if (app.isPackaged) {
-    // In production, use the wrapper script that runs with Electron's Node.js
-    return path.join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'cli', 'barnacles');
+    // In production, CLI uses system Node.js (no native modules needed!)
+    return path.join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'cli', 'index.js');
   } else {
-    // In development, use the wrapper script
-    return path.join(__dirname, '../../dist/cli/barnacles');
+    // In development, use the built CLI
+    return path.join(__dirname, '../../dist/cli/index.js');
   }
 }
 

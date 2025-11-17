@@ -13,15 +13,7 @@ import {
 import { Command } from '../core/Command.js';
 import pc from 'picocolors';
 import type { Alias } from '../../shared/types/api';
-import {
-  createAlias,
-  deleteAlias,
-  detectShell,
-  getAliasByName,
-  getAllAliases,
-  syncAliases,
-  updateAlias,
-} from '../../backend/services/alias-service.js';
+import { apiClient } from '../utils/api-client.js';
 
 /**
  * Command to list and display terminal aliases
@@ -79,7 +71,9 @@ export class AliasesCommand extends Command {
    * Get shell reload instruction message
    */
   private async getReloadMessage(): Promise<string> {
-    const shellInfo = await detectShell();
+    const shellInfo = await apiClient.get<{ path: string; shell: string; profilePaths: string[] }>(
+      '/api/aliases/config-path'
+    );
     let reloadCommand = 'source ~/.bashrc';
 
     if (shellInfo.shell === 'zsh') {
@@ -166,7 +160,7 @@ export class AliasesCommand extends Command {
 
     try {
       // Fetch all aliases from database using alias-service
-      const allAliases = await getAllAliases();
+      const allAliases = await apiClient.get<Alias[]>('/api/aliases');
 
       s.stop(`Found ${allAliases.length} alias${allAliases.length === 1 ? '' : 'es'}`);
 
@@ -311,7 +305,8 @@ export class AliasesCommand extends Command {
 
     try {
       // Check if alias already exists
-      const existing = await getAliasByName(name);
+      const allAliases = await apiClient.get<Alias[]>('/api/aliases');
+      const existing = allAliases.find(a => a.name === name);
 
       if (existing) {
         s.stop('Alias already exists');
@@ -328,7 +323,7 @@ export class AliasesCommand extends Command {
 
         // Update existing alias
         s.start('Updating alias...');
-        await updateAlias(existing.id, {
+        await apiClient.put(`/api/aliases/${existing.id}`, {
           command,
           description,
           showCommand,
@@ -337,12 +332,11 @@ export class AliasesCommand extends Command {
         s.stop('Alias updated successfully');
       } else {
         // Get max order for new alias
-        const allAliases = await getAllAliases();
         const maxOrder = allAliases.length > 0 ? Math.max(...allAliases.map(a => a.order)) : 0;
 
         // Insert new alias
         s.message('Adding alias...');
-        await createAlias({
+        await apiClient.post('/api/aliases', {
           name,
           command,
           description: description || null,
@@ -357,7 +351,7 @@ export class AliasesCommand extends Command {
 
       // Sync aliases to shell
       s.start('Syncing aliases to shell...');
-      await syncAliases();
+      await apiClient.post('/api/aliases/sync');
       s.stop('Aliases synced to shell');
 
       log.success(`${pc.green(name)} → ${pc.yellow(command)}`);
@@ -388,7 +382,7 @@ export class AliasesCommand extends Command {
 
     try {
       // Fetch all aliases using alias-service
-      const allAliases = await getAllAliases();
+      const allAliases = await apiClient.get<Alias[]>('/api/aliases');
       s.stop(`Found ${allAliases.length} alias${allAliases.length === 1 ? '' : 'es'}`);
 
       if (allAliases.length === 0) {
@@ -432,11 +426,11 @@ export class AliasesCommand extends Command {
       s.start('Removing alias...');
 
       // Remove the alias
-      await deleteAlias(aliasToRemove.id);
+      await apiClient.delete(`/api/aliases/${aliasToRemove.id}`);
 
       // Sync aliases to shell
       s.message('Syncing aliases to shell...');
-      await syncAliases();
+      await apiClient.post('/api/aliases/sync');
 
       s.stop('Alias removed and synced successfully');
       log.success(`Removed: ${pc.yellow(name)}`);
@@ -464,7 +458,7 @@ export class AliasesCommand extends Command {
 
     try {
       // Fetch all aliases using alias-service
-      const allAliases = await getAllAliases();
+      const allAliases = await apiClient.get<Alias[]>('/api/aliases');
       s.stop(`Found ${allAliases.length} alias${allAliases.length === 1 ? '' : 'es'}`);
 
       let name = args[0];
@@ -513,11 +507,11 @@ export class AliasesCommand extends Command {
       s.start('Removing alias...');
 
       // Remove the alias
-      await deleteAlias(aliasToRemove.id);
+      await apiClient.delete(`/api/aliases/${aliasToRemove.id}`);
 
       // Sync aliases to shell
       s.message('Syncing aliases to shell...');
-      await syncAliases();
+      await apiClient.post('/api/aliases/sync');
 
       s.stop('Alias removed and synced successfully');
       log.success(`Removed: ${pc.yellow(name)}`);

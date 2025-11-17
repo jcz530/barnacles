@@ -122,6 +122,13 @@ export const toggleCliInstallation = async (enabled: boolean): Promise<void> => 
 
 const initialize = async (): Promise<void> => {
   try {
+    // Check if launched in background/headless mode
+    const launchInBackground = process.argv.includes('--background');
+
+    if (launchInBackground) {
+      console.log('🔇 Launching in background mode (no window)');
+    }
+
     // Fix PATH on macOS - Electron doesn't inherit the full shell PATH
     if (process.platform === 'darwin') {
       try {
@@ -157,9 +164,9 @@ const initialize = async (): Promise<void> => {
     // Create the application menu
     createMenu();
 
-    // Create the system tray if enabled in settings
+    // Create the system tray if enabled in settings OR if in background mode
     const showTrayIcon = await settingsService.getValue<boolean>('showTrayIcon');
-    if (showTrayIcon) {
+    if (showTrayIcon || launchInBackground) {
       createTray();
     }
 
@@ -176,11 +183,16 @@ const initialize = async (): Promise<void> => {
       }
     }
 
-    // Create the main window with the actual API port for CSP
-    await createAppWindow();
+    // Create the main window with the actual API port for CSP (unless in background mode)
+    if (!launchInBackground) {
+      await createAppWindow();
+    }
 
     console.log('🚀 Application initialized successfully');
     console.log(`📡 API available at ${serverInfo.baseUrl}`);
+    if (launchInBackground) {
+      console.log('👻 Running in background - no window created');
+    }
   } catch (error) {
     console.error('Failed to initialize application:', error);
     app.quit();

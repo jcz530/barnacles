@@ -58,18 +58,21 @@ export async function getBackendUrl(): Promise<string | null> {
 }
 
 /**
- * Launch the Barnacles Electron app
+ * Launch the Barnacles Electron app in background mode
+ * This starts the app with the API server but no window
  */
 export async function launchBarnacles(): Promise<void> {
   try {
-    // Use 'open' command on macOS to launch the app in the background
+    // Launch the app in background mode (no window, just API + tray)
     if (process.platform === 'darwin') {
-      await execAsync('open -a Barnacles');
+      // On macOS, use open with --args to pass --background flag
+      await execAsync('open -a Barnacles --args --background');
     } else if (process.platform === 'win32') {
-      await execAsync('start barnacles');
+      // On Windows, start with --background flag
+      await execAsync('start barnacles --background');
     } else {
-      // Linux
-      await execAsync('barnacles &');
+      // On Linux, launch in background
+      await execAsync('barnacles --background &');
     }
   } catch (error) {
     throw new Error(

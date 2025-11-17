@@ -1,6 +1,6 @@
 import { confirm, log, spinner } from '@clack/prompts';
 import type { ProjectAction } from './types.js';
-import type { ProjectWithDetails } from '../../backend/services/project/index.js';
+import type { ProjectWithDetails } from '../../shared/types/api.js';
 import type { ProjectProcessStatus } from '../../shared/types/process.js';
 import pc from '../utils/colors.js';
 import { ensureBackendRunning } from '../utils/app-manager.js';

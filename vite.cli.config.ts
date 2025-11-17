@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import { copyFileSync, chmodSync } from 'fs';
 
 export default defineConfig({
   build: {
@@ -12,19 +11,6 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [
-        '@clack/prompts',
-        '@paralleldrive/cuid2',
-        '@noble/hashes',
-        'picocolors',
-        'sisteransi',
-        'dayjs',
-        'better-sqlite3',
-        'bindings',
-        'prebuild-install',
-        'drizzle-orm',
-        'ignore',
-        'node-pty',
-        'nan',
         // Node.js built-in modules
         'fs',
         'fs/promises',
@@ -33,12 +19,32 @@ export default defineConfig({
         'url',
         'util',
         'os',
+        'process',
+        'tty',
+        'readline',
         'node:path',
         'node:fs',
         'node:os',
+        'node:process',
+        'node:tty',
+        'node:readline',
+        'node:util',
         'crypto',
         'timers/promises',
+        // Native modules (should not be imported by CLI, but listed to prevent bundling if accidentally imported)
+        'better-sqlite3',
+        'drizzle-orm',
+        'node-pty',
       ],
+      output: {
+        // Add shims for CommonJS globals in ES modules
+        banner: `
+import { fileURLToPath as __fileURLToPath } from 'url';
+import { dirname as __dirname_func } from 'path';
+const __filename = __fileURLToPath(import.meta.url);
+const __dirname = __dirname_func(__filename);
+`,
+      },
     },
     target: 'node18',
     minify: false,
@@ -48,16 +54,4 @@ export default defineConfig({
       '@': resolve(__dirname, 'src/frontend'),
     },
   },
-  plugins: [
-    {
-      name: 'copy-cli-wrapper',
-      closeBundle() {
-        // Copy wrapper script to dist/cli
-        const src = resolve(__dirname, 'src/cli/wrapper.sh');
-        const dest = resolve(__dirname, 'dist/cli/barnacles');
-        copyFileSync(src, dest);
-        chmodSync(dest, 0o755);
-      },
-    },
-  ],
 });

@@ -1,11 +1,9 @@
 import { confirm, log, multiselect, spinner } from '@clack/prompts';
 import type { ProjectAction } from './types.js';
-import type { ProjectWithDetails } from '../../backend/services/project/index.js';
-import { projectService } from '../../backend/services/project/index.js';
+import type { ProjectWithDetails } from '../../shared/types/api.js';
 import type { ProjectProcessStatus, StartProcess } from '../../shared/types/process.js';
-import { createId } from '@paralleldrive/cuid2';
 import pc from '../utils/colors.js';
-import { ensureBackendRunning } from '../utils/app-manager.js';
+import { apiClient } from '../utils/api-client.js';
 
 /**
  * Action to start project processes
@@ -16,8 +14,10 @@ export class StartAction implements ProjectAction {
   readonly hint = 'Start configured processes or select scripts to run';
 
   async execute(project: ProjectWithDetails): Promise<void> {
-    // Check if there are existing process configurations
-    const existingProcesses = await projectService.getStartProcesses(project.id);
+    // Check if there are existing process configurations via API
+    const existingProcesses = await apiClient.get<StartProcess[]>(
+      `/api/projects/${project.id}/start-processes`
+    );
 
     if (existingProcesses.length > 0) {
       // Show existing processes and start them
@@ -84,9 +84,9 @@ export class StartAction implements ProjectAction {
     log.step("No configured processes. Let's set them up!");
 
     const [packageScripts, composerScripts, packageManager] = await Promise.all([
-      projectService.getPackageScripts(project.path),
-      projectService.getComposerScripts(project.path),
-      projectService.detectPackageManager(project.path),
+      apiClient.get<Record<string, string>>(`/api/projects/${project.id}/package-scripts`),
+      apiClient.get<Record<string, string>>(`/api/projects/${project.id}/composer-scripts`),
+      apiClient.get<'npm' | 'yarn' | 'pnpm'>(`/api/projects/${project.id}/package-manager`),
     ]);
 
     const packageScriptKeys = Object.keys(packageScripts);
@@ -148,7 +148,7 @@ export class StartAction implements ProjectAction {
 
     if (shouldSave) {
       try {
-        await projectService.updateStartProcesses(project.id, processes);
+        await apiClient.patch(`/api/projects/${project.id}/start-processes`, { processes });
         log.success('Configuration saved');
       } catch (error) {
         log.error(

@@ -2,7 +2,7 @@ import { log } from '@clack/prompts';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import type { ProjectAction } from './types.js';
-import type { ProjectWithDetails } from '../../backend/services/project/index.js';
+import type { ProjectWithDetails } from '../../shared/types/api.js';
 
 const execAsync = promisify(exec);
 

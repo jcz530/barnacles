@@ -1,10 +1,10 @@
 import { autocomplete, log } from '@clack/prompts';
 import pc from '../utils/colors';
 import { Command } from '../core/Command.js';
-import type { ProjectWithDetails } from '../../backend/services/project/index.js';
-import { projectService } from '../../backend/services/project/index.js';
+import type { ProjectWithDetails } from '../../shared/types/api.js';
 import { formatTimeAgo } from '../utils/format-time.js';
 import { getAction, getActionOptions } from '../actions';
+import { apiClient } from '../utils/api-client.js';
 
 /**
  * Command to list and select projects
@@ -25,14 +25,14 @@ export class ProjectsCommand extends Command {
   ];
 
   async execute(_flags: Record<string, string | boolean>): Promise<void> {
-    // Fetch projects from the service
+    // Fetch projects from the API
     log.step('Loading projects...');
     let projects: ProjectWithDetails[];
 
     try {
-      projects = await projectService.getProjects();
+      projects = await apiClient.get<ProjectWithDetails[]>('/api/projects');
     } catch (error) {
-      log.error('Failed to fetch projects from database.');
+      log.error('Failed to fetch projects from API.');
       console.error(error);
       process.exit(1);
     }
