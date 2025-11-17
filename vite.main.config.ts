@@ -16,12 +16,7 @@ export default defineConfig({
       external: [
         'electron',
         ...builtinModules.flatMap(p => [p, `node:${p}`]),
-        '@libsql/client',
-        '@libsql/darwin-arm64',
-        '@libsql/linux-x64',
-        '@libsql/win32-x64',
-        '@libsql/linux-arm64',
-        '@libsql/win32-arm64',
+        'better-sqlite3',
         '@hono/node-server',
         'hono',
         'electron-squirrel-startup',
@@ -42,7 +37,7 @@ export default defineConfig({
     mainFields: ['module', 'jsnext:main', 'jsnext'],
   },
   optimizeDeps: {
-    exclude: ['@libsql/client'],
+    exclude: ['better-sqlite3'],
   },
   plugins: [
     {

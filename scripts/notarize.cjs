@@ -1,10 +1,23 @@
-const { notarize } = require('@electron/notarize');
-
 exports.default = async function notarizing(context) {
   const { electronPlatformName, appOutDir } = context;
 
   // Only notarize on macOS
   if (electronPlatformName !== 'darwin') {
+    return;
+  }
+
+  // Check if notarization should be skipped
+  if (process.env.SKIP_NOTARIZE === 'true') {
+    console.log('⚠️  Skipping notarization (SKIP_NOTARIZE=true)');
+    return;
+  }
+
+  // Check if @electron/notarize is available (won't be installed for local builds)
+  let notarize;
+  try {
+    notarize = require('@electron/notarize').notarize;
+  } catch (error) {
+    console.log('⚠️  Skipping notarization (@electron/notarize not installed)');
     return;
   }
 

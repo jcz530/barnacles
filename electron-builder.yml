@@ -32,11 +32,15 @@ files:
   - '!node_modules/**/tsconfig.json'
 
 # Include/exclude node modules patterns
-# Note: Only unpack native modules that need direct file system access
+# Note: Only native modules need unpacking now - CLI uses API!
 asarUnpack:
-  - '**/node_modules/@libsql/**'
+  # Native modules (required by main app)
+  - '**/node_modules/better-sqlite3/**'
   - '**/node_modules/node-pty/**'
+  # CLI distribution
   - '**/dist/cli/**'
+  # Package.json (needed by CLI to read version)
+  - 'package.json'
 
 # Include migrations as extra resources
 extraResources:

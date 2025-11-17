@@ -4,7 +4,32 @@ The Barnacles CLI provides command-line access to Barnacles functionality, allow
 
 ## Installation
 
-The CLI is automatically installed with the Barnacles application. After installing Barnacles, the `barnacles` command will be available in your terminal.
+The CLI is automatically installed when you first launch the Barnacles application. The installation process:
+
+1. Creates a symlink at `~/.local/bin/barnacles`
+2. Adds `~/.local/bin` to your shell's PATH (in `.zshrc`, `.bashrc`, or `.bash_profile`)
+
+**Important**: After installing Barnacles and launching it for the first time, you'll need to:
+- **Restart your terminal**, or
+- Run `source ~/.zshrc` (or `source ~/.bashrc` for bash users)
+
+Then the `barnacles` command will be available.
+
+### Verifying Installation
+
+To check if the CLI is properly installed:
+
+```bash
+which barnacles
+# Should output: /Users/yourusername/.local/bin/barnacles
+
+barnacles --version
+# Should display the current version
+```
+
+### Manual Installation
+
+If the CLI isn't automatically installed, you can enable it from the Barnacles Settings page under "Install CLI Command".
 
 ## Usage
 

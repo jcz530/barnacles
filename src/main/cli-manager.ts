@@ -25,7 +25,7 @@ const __dirname = path.dirname(__filename);
  */
 export function getCliPath(): string {
   if (app.isPackaged) {
-    // In production, the CLI is bundled in the app
+    // In production, CLI uses system Node.js (no native modules needed!)
     return path.join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'cli', 'index.js');
   } else {
     // In development, use the built CLI
@@ -56,14 +56,18 @@ async function ensureLocalBinInPath(): Promise<void> {
 
   // Create ~/.local/bin if it doesn't exist
   if (!existsSync(localBinDir)) {
+    console.log('[CLI] Creating ~/.local/bin directory...');
     mkdirSync(localBinDir, { recursive: true });
   }
 
   // Check if it's in PATH
   const pathDirs = process.env.PATH?.split(':') || [];
   if (pathDirs.includes(localBinDir)) {
+    console.log('[CLI] ~/.local/bin is already in PATH');
     return; // Already in PATH
   }
+
+  console.log('[CLI] ~/.local/bin is not in PATH, adding to shell config files...');
 
   // Add to shell config files
   const shellConfigFiles = [
@@ -74,14 +78,25 @@ async function ensureLocalBinInPath(): Promise<void> {
 
   const pathExport = `\n# Added by Barnacles\nexport PATH="$HOME/.local/bin:$PATH"\n`;
 
+  let filesUpdated = 0;
   for (const configFile of shellConfigFiles) {
     if (existsSync(configFile)) {
       const content = readFileSync(configFile, 'utf-8');
       // Only add if not already present
       if (!content.includes('$HOME/.local/bin') && !content.includes('~/.local/bin')) {
+        console.log(`[CLI] Adding PATH export to ${path.basename(configFile)}`);
         appendFileSync(configFile, pathExport);
+        filesUpdated++;
+      } else {
+        console.log(`[CLI] ${path.basename(configFile)} already contains ~/.local/bin in PATH`);
       }
     }
+  }
+
+  if (filesUpdated > 0) {
+    console.log(
+      `[CLI] Updated ${filesUpdated} shell config file(s). You'll need to restart your terminal or run 'source ~/.zshrc' (or equivalent) for changes to take effect.`
+    );
   }
 }
 
@@ -111,11 +126,16 @@ export async function installCli(): Promise<{ success: boolean; error?: string }
   const symlinkPath = getSymlinkPath();
 
   try {
+    console.log('[CLI] CLI path:', cliPath);
+    console.log('[CLI] Symlink path:', symlinkPath);
+
     // Check if CLI exists
     if (!existsSync(cliPath)) {
+      const error = `CLI script not found at ${cliPath}. Please rebuild the application.`;
+      console.error('[CLI]', error);
       return {
         success: false,
-        error: 'CLI script not found. Please rebuild the application.',
+        error,
       };
     }
 
@@ -127,6 +147,7 @@ export async function installCli(): Promise<{ success: boolean; error?: string }
     }
 
     // Ensure ~/.local/bin exists and is in PATH
+    console.log('[CLI] Ensuring ~/.local/bin exists and is in PATH...');
     await ensureLocalBinInPath();
 
     // Check if symlink already exists
@@ -134,17 +155,22 @@ export async function installCli(): Promise<{ success: boolean; error?: string }
       const stats = lstatSync(symlinkPath);
       if (stats.isSymbolicLink()) {
         // Remove existing symlink
+        console.log('[CLI] Removing existing symlink...');
         unlinkSync(symlinkPath);
       } else {
+        const error = 'A file named "barnacles" already exists at ~/.local/bin';
+        console.error('[CLI]', error);
         return {
           success: false,
-          error: 'A file named "barnacles" already exists at ~/.local/bin',
+          error,
         };
       }
     }
 
     // Create the symlink (no sudo needed for user directory)
+    console.log('[CLI] Creating symlink...');
     symlinkSync(cliPath, symlinkPath);
+    console.log('[CLI] Symlink created successfully');
 
     return { success: true };
   } catch (error) {

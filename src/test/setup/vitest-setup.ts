@@ -5,7 +5,7 @@
 
 import { vi } from 'vitest';
 import { db } from '@shared/database/connection';
-import { migrate } from 'drizzle-orm/libsql/migrator';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import path from 'path';
 
 // Mock node-pty which is compiled for Electron's Node version

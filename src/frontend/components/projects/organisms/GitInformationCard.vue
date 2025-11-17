@@ -3,12 +3,18 @@ import { Clock, GitBranch } from 'lucide-vue-next';
 import type { ProjectWithDetails } from '../../../../shared/types/api';
 import { useFormatters } from '../../../composables/useFormatters';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { Button } from '../../ui/button';
+import { computed } from 'vue';
+import { useProjectActions } from '@/composables/useProjectActions';
 
 interface Props {
   project: ProjectWithDetails;
 }
+const props = defineProps<Props>();
 
-defineProps<Props>();
+const { getGitProvider, openGitRemote } = useProjectActions();
+
+const gitProvider = computed(() => getGitProvider(props.project.stats.gitRemoteUrl));
 
 const { formatDate } = useFormatters();
 </script>
@@ -23,6 +29,20 @@ const { formatDate } = useFormatters();
     </CardHeader>
     <CardContent>
       <div v-if="project.stats?.gitBranch" class="space-y-4">
+        <div>
+          <div class="text-sm font-medium text-slate-500">Remote</div>
+          <div class="mt-1 font-mono text-sm text-slate-900">
+            <Button
+              v-if="project.stats.gitRemoteUrl"
+              variant="link"
+              :title="gitProvider.webUrl"
+              @click="() => openGitRemote(gitProvider.webUrl)"
+            >
+              {{ gitProvider.name }}</Button
+            >
+            <p v-else>Unset</p>
+          </div>
+        </div>
         <div>
           <div class="text-sm font-medium text-slate-500">Current Branch</div>
           <div class="mt-1 font-mono text-sm text-slate-900">

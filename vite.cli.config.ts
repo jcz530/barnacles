@@ -11,8 +11,7 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [
-        '@clack/prompts',
-        'picocolors',
+        // Node.js built-in modules
         'fs',
         'fs/promises',
         'path',
@@ -20,17 +19,32 @@ export default defineConfig({
         'url',
         'util',
         'os',
+        'process',
+        'tty',
+        'readline',
         'node:path',
         'node:fs',
         'node:os',
+        'node:process',
+        'node:tty',
+        'node:readline',
+        'node:util',
         'crypto',
-        '@libsql/client',
-        'drizzle-orm',
-        'ignore',
-        'node-pty',
-        '@paralleldrive/cuid2',
         'timers/promises',
+        // Native modules (should not be imported by CLI, but listed to prevent bundling if accidentally imported)
+        'better-sqlite3',
+        'drizzle-orm',
+        'node-pty',
       ],
+      output: {
+        // Add shims for CommonJS globals in ES modules
+        banner: `
+import { fileURLToPath as __fileURLToPath } from 'url';
+import { dirname as __dirname_func } from 'path';
+const __filename = __fileURLToPath(import.meta.url);
+const __dirname = __dirname_func(__filename);
+`,
+      },
     },
     target: 'node18',
     minify: false,

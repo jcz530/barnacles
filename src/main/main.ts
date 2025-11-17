@@ -96,25 +96,39 @@ export const toggleCliInstallation = async (enabled: boolean): Promise<void> => 
 
   if (enabled && !currentlyInstalled) {
     // Should be installed but isn't - install it
+    console.log('[CLI] Installing CLI symlink...');
     const result = await installCli();
     if (result.success) {
-      console.log('✅ CLI command installed');
+      console.log('✅ CLI command installed at ~/.local/bin/barnacles');
+      console.log(
+        '[CLI] NOTE: You may need to restart your terminal for the command to be available'
+      );
     } else {
       console.error('❌ Failed to install CLI:', result.error);
     }
   } else if (!enabled && currentlyInstalled) {
     // Shouldn't be installed but is - uninstall it
+    console.log('[CLI] Uninstalling CLI symlink...');
     const result = await uninstallCli();
     if (result.success) {
       console.log('✅ CLI command uninstalled');
     } else {
       console.error('❌ Failed to uninstall CLI:', result.error);
     }
+  } else if (enabled && currentlyInstalled) {
+    console.log('[CLI] CLI command is already installed');
   }
 };
 
 const initialize = async (): Promise<void> => {
   try {
+    // Check if launched in background/headless mode
+    const launchInBackground = process.argv.includes('--background');
+
+    if (launchInBackground) {
+      console.log('🔇 Launching in background mode (no window)');
+    }
+
     // Fix PATH on macOS - Electron doesn't inherit the full shell PATH
     if (process.platform === 'darwin') {
       try {
@@ -150,24 +164,35 @@ const initialize = async (): Promise<void> => {
     // Create the application menu
     createMenu();
 
-    // Create the system tray if enabled in settings
+    // Create the system tray if enabled in settings OR if in background mode
     const showTrayIcon = await settingsService.getValue<boolean>('showTrayIcon');
-    if (showTrayIcon) {
+    if (showTrayIcon || launchInBackground) {
       createTray();
     }
 
     // Install CLI command if enabled in settings
-    const installCli = await settingsService.getValue<boolean>('installCliCommand');
-    if (installCli !== false) {
+    const shouldInstallCli = await settingsService.getValue<boolean>('installCliCommand');
+    if (shouldInstallCli !== false) {
       // Default to true if not set
-      await toggleCliInstallation(true);
+      console.log('[CLI] Installing CLI command...');
+      try {
+        await toggleCliInstallation(true);
+        console.log('[CLI] CLI command installation completed');
+      } catch (error) {
+        console.error('[CLI] Failed to install CLI command:', error);
+      }
     }
 
-    // Create the main window with the actual API port for CSP
-    await createAppWindow();
+    // Create the main window with the actual API port for CSP (unless in background mode)
+    if (!launchInBackground) {
+      await createAppWindow();
+    }
 
     console.log('🚀 Application initialized successfully');
     console.log(`📡 API available at ${serverInfo.baseUrl}`);
+    if (launchInBackground) {
+      console.log('👻 Running in background - no window created');
+    }
   } catch (error) {
     console.error('Failed to initialize application:', error);
     app.quit();

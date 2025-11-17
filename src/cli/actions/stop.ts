@@ -1,9 +1,10 @@
 import { confirm, log, spinner } from '@clack/prompts';
 import type { ProjectAction } from './types.js';
-import type { ProjectWithDetails } from '../../backend/services/project/index.js';
+import type { ProjectWithDetails } from '../../shared/types/api.js';
 import type { ProjectProcessStatus } from '../../shared/types/process.js';
 import pc from '../utils/colors.js';
-import { ensureBackendRunning } from '../utils/app-manager.js';
+import { API_ROUTES } from '../../shared/constants/index.js';
+import { apiClient } from '../utils/api-client.js';
 
 /**
  * Action to stop running project processes
@@ -15,28 +16,13 @@ export class StopAction implements ProjectAction {
 
   async execute(project: ProjectWithDetails): Promise<void> {
     try {
-      // Ensure backend is running
-      const s = spinner();
-      s.start('Connecting to Barnacles backend...');
-      const backendUrl = await ensureBackendRunning();
-      s.stop('Connected to backend');
-
-      if (!backendUrl) {
-        log.error('Failed to connect to Barnacles backend. Please start the app manually.');
-        return;
-      }
-
       // Get process status via API
-      const statusResponse = await fetch(
-        `${backendUrl}/api/projects/process-status?projectId=${project.id}`
+      const s = spinner();
+      s.start('Checking process status...');
+      const processStatus = await apiClient.get<ProjectProcessStatus>(
+        `${API_ROUTES.PROJECTS_PROCESS_STATUS}?projectId=${project.id}`
       );
-
-      if (!statusResponse.ok) {
-        throw new Error(`HTTP ${statusResponse.status}: ${statusResponse.statusText}`);
-      }
-
-      const statusResult: { data: ProjectProcessStatus } = await statusResponse.json();
-      const processStatus = statusResult.data;
+      s.stop('Process status retrieved');
 
       if (!processStatus.processes || processStatus.processes.length === 0) {
         log.info('No processes are running for this project');
@@ -67,13 +53,9 @@ export class StopAction implements ProjectAction {
       }
 
       // Stop processes via API
-      const stopResponse = await fetch(`${backendUrl}/api/projects/${project.id}/stop`, {
-        method: 'POST',
-      });
-
-      if (!stopResponse.ok) {
-        throw new Error(`HTTP ${stopResponse.status}: ${stopResponse.statusText}`);
-      }
+      s.start('Stopping processes...');
+      await apiClient.post(API_ROUTES.PROJECTS_STOP(project.id));
+      s.stop('Processes stopped');
 
       log.success(`Stopped ${runningProcesses.length} process(es)`);
     } catch (error) {
