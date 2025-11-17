@@ -3,6 +3,7 @@ import { box, intro, outro, spinner } from '@clack/prompts';
 import { Command } from '../core/Command.js';
 import pc from 'picocolors';
 import { apiClient } from '../utils/api-client.js';
+import { API_ROUTES } from '../../shared/constants/index.js';
 
 /**
  * Command to check the status of Barnacles
@@ -31,13 +32,13 @@ export class StatusCommand extends Command {
     if (backendUrl) {
       try {
         // Get project count via API
-        const projects = await apiClient.get<Array<{ id: string }>>('/api/projects');
+        const projects = await apiClient.get<Array<{ id: string }>>(API_ROUTES.PROJECTS);
         projectCount = projects.length;
 
         // Get running processes via API
         const processesResponse = await apiClient.get<
           Array<{ processes?: Array<{ status: string }> }>
-        >('/api/projects/process-status');
+        >(API_ROUTES.PROJECTS_PROCESS_STATUS);
 
         // Count running processes across all projects
         runningProcesses = processesResponse.reduce(

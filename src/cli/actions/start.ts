@@ -4,6 +4,8 @@ import type { ProjectWithDetails } from '../../shared/types/api.js';
 import type { ProjectProcessStatus, StartProcess } from '../../shared/types/process.js';
 import pc from '../utils/colors.js';
 import { apiClient } from '../utils/api-client.js';
+import { API_ROUTES } from '../../shared/constants/index.js';
+import { randomUUID } from 'crypto';
 
 /**
  * Action to start project processes
@@ -16,7 +18,7 @@ export class StartAction implements ProjectAction {
   async execute(project: ProjectWithDetails): Promise<void> {
     // Check if there are existing process configurations via API
     const existingProcesses = await apiClient.get<StartProcess[]>(
-      `/api/projects/${project.id}/start-processes`
+      API_ROUTES.PROJECTS_START_PROCESSES(project.id)
     );
 
     if (existingProcesses.length > 0) {
@@ -36,47 +38,7 @@ export class StartAction implements ProjectAction {
         return;
       }
 
-      try {
-        // Ensure backend is running
-        const s = spinner();
-        s.start('Connecting to Barnacles backend...');
-        const backendUrl = await ensureBackendRunning();
-        s.stop('Connected to backend');
-
-        if (!backendUrl) {
-          log.error('Failed to start Barnacles backend. Please start the app manually.');
-          return;
-        }
-
-        // Start processes via API
-        const response = await fetch(`${backendUrl}/api/projects/${project.id}/start`, {
-          method: 'POST',
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const result: { data: ProjectProcessStatus; message: string } = await response.json();
-        const status = result.data;
-
-        const successCount = status.processes.filter(p => p.status === 'running').length;
-        log.success(`Started ${successCount} process(es)`);
-
-        // Show status of each process
-        status.processes.forEach(p => {
-          if (p.status === 'running') {
-            log.message(`  ${pc.green('✓')} ${p.name} - Running`);
-          } else {
-            log.message(`  ${pc.red('✗')} ${p.name} - ${p.error || 'Failed'}`);
-          }
-        });
-      } catch (error) {
-        log.error(
-          `Failed to start processes: ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
-      }
-
+      await this.startProcesses(project.id);
       return;
     }
 
@@ -84,9 +46,9 @@ export class StartAction implements ProjectAction {
     log.step("No configured processes. Let's set them up!");
 
     const [packageScripts, composerScripts, packageManager] = await Promise.all([
-      apiClient.get<Record<string, string>>(`/api/projects/${project.id}/package-scripts`),
-      apiClient.get<Record<string, string>>(`/api/projects/${project.id}/composer-scripts`),
-      apiClient.get<'npm' | 'yarn' | 'pnpm'>(`/api/projects/${project.id}/package-manager`),
+      apiClient.get<Record<string, string>>(API_ROUTES.PROJECTS_PACKAGE_SCRIPTS(project.id)),
+      apiClient.get<Record<string, string>>(API_ROUTES.PROJECTS_COMPOSER_SCRIPTS(project.id)),
+      apiClient.get<'npm' | 'yarn' | 'pnpm'>(API_ROUTES.PROJECTS_PACKAGE_MANAGER(project.id)),
     ]);
 
     const packageScriptKeys = Object.keys(packageScripts);
@@ -148,7 +110,7 @@ export class StartAction implements ProjectAction {
 
     if (shouldSave) {
       try {
-        await apiClient.patch(`/api/projects/${project.id}/start-processes`, { processes });
+        await apiClient.patch(API_ROUTES.PROJECTS_START_PROCESSES(project.id), { processes });
         log.success('Configuration saved');
       } catch (error) {
         log.error(
@@ -159,30 +121,20 @@ export class StartAction implements ProjectAction {
 
     // Start the processes
     log.step(`Starting ${processes.length} process(es)...`);
+    await this.startProcesses(project.id);
+  }
 
+  /**
+   * Start processes for a project via API and display results
+   */
+  private async startProcesses(projectId: string): Promise<void> {
     try {
-      // Ensure backend is running
       const s = spinner();
-      s.start('Connecting to Barnacles backend...');
-      const backendUrl = await ensureBackendRunning();
-      s.stop('Connected to backend');
-
-      if (!backendUrl) {
-        log.error('Failed to start Barnacles backend. Please start the app manually.');
-        return;
-      }
-
-      // Start processes via API
-      const response = await fetch(`${backendUrl}/api/projects/${project.id}/start`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result: { data: ProjectProcessStatus; message: string } = await response.json();
-      const status = result.data;
+      s.start('Starting processes...');
+      const status = await apiClient.post<ProjectProcessStatus>(
+        API_ROUTES.PROJECTS_START(projectId)
+      );
+      s.stop('Processes started');
 
       const successCount = status.processes.filter(p => p.status === 'running').length;
       log.success(`Started ${successCount} process(es)`);
@@ -235,7 +187,7 @@ export class StartAction implements ProjectAction {
       }
 
       return {
-        id: createId(),
+        id: randomUUID(),
         name: scriptName.charAt(0).toUpperCase() + scriptName.slice(1).replace(/-/g, ' '),
         commands: [command],
         color: colorPalette[index % colorPalette.length],

@@ -14,6 +14,7 @@ import { Command } from '../core/Command.js';
 import pc from 'picocolors';
 import type { Alias } from '../../shared/types/api';
 import { apiClient } from '../utils/api-client.js';
+import { API_ROUTES } from '../../shared/constants/index.js';
 
 /**
  * Command to list and display terminal aliases
@@ -72,7 +73,7 @@ export class AliasesCommand extends Command {
    */
   private async getReloadMessage(): Promise<string> {
     const shellInfo = await apiClient.get<{ path: string; shell: string; profilePaths: string[] }>(
-      '/api/aliases/config-path'
+      API_ROUTES.ALIASES_CONFIG_PATH
     );
     let reloadCommand = 'source ~/.bashrc';
 
@@ -160,7 +161,7 @@ export class AliasesCommand extends Command {
 
     try {
       // Fetch all aliases from database using alias-service
-      const allAliases = await apiClient.get<Alias[]>('/api/aliases');
+      const allAliases = await apiClient.get<Alias[]>(API_ROUTES.ALIASES);
 
       s.stop(`Found ${allAliases.length} alias${allAliases.length === 1 ? '' : 'es'}`);
 
@@ -305,7 +306,7 @@ export class AliasesCommand extends Command {
 
     try {
       // Check if alias already exists
-      const allAliases = await apiClient.get<Alias[]>('/api/aliases');
+      const allAliases = await apiClient.get<Alias[]>(API_ROUTES.ALIASES);
       const existing = allAliases.find(a => a.name === name);
 
       if (existing) {
@@ -323,7 +324,7 @@ export class AliasesCommand extends Command {
 
         // Update existing alias
         s.start('Updating alias...');
-        await apiClient.put(`/api/aliases/${existing.id}`, {
+        await apiClient.put(API_ROUTES.ALIAS_BY_ID(existing.id), {
           command,
           description,
           showCommand,
@@ -336,7 +337,7 @@ export class AliasesCommand extends Command {
 
         // Insert new alias
         s.message('Adding alias...');
-        await apiClient.post('/api/aliases', {
+        await apiClient.post(API_ROUTES.ALIASES, {
           name,
           command,
           description: description || null,
@@ -351,7 +352,7 @@ export class AliasesCommand extends Command {
 
       // Sync aliases to shell
       s.start('Syncing aliases to shell...');
-      await apiClient.post('/api/aliases/sync');
+      await apiClient.post(API_ROUTES.ALIASES_SYNC);
       s.stop('Aliases synced to shell');
 
       log.success(`${pc.green(name)} → ${pc.yellow(command)}`);
@@ -382,7 +383,7 @@ export class AliasesCommand extends Command {
 
     try {
       // Fetch all aliases using alias-service
-      const allAliases = await apiClient.get<Alias[]>('/api/aliases');
+      const allAliases = await apiClient.get<Alias[]>(API_ROUTES.ALIASES);
       s.stop(`Found ${allAliases.length} alias${allAliases.length === 1 ? '' : 'es'}`);
 
       if (allAliases.length === 0) {
@@ -426,11 +427,11 @@ export class AliasesCommand extends Command {
       s.start('Removing alias...');
 
       // Remove the alias
-      await apiClient.delete(`/api/aliases/${aliasToRemove.id}`);
+      await apiClient.delete(API_ROUTES.ALIAS_BY_ID(aliasToRemove.id));
 
       // Sync aliases to shell
       s.message('Syncing aliases to shell...');
-      await apiClient.post('/api/aliases/sync');
+      await apiClient.post(API_ROUTES.ALIASES_SYNC);
 
       s.stop('Alias removed and synced successfully');
       log.success(`Removed: ${pc.yellow(name)}`);
@@ -458,7 +459,7 @@ export class AliasesCommand extends Command {
 
     try {
       // Fetch all aliases using alias-service
-      const allAliases = await apiClient.get<Alias[]>('/api/aliases');
+      const allAliases = await apiClient.get<Alias[]>(API_ROUTES.ALIASES);
       s.stop(`Found ${allAliases.length} alias${allAliases.length === 1 ? '' : 'es'}`);
 
       let name = args[0];
@@ -507,11 +508,11 @@ export class AliasesCommand extends Command {
       s.start('Removing alias...');
 
       // Remove the alias
-      await apiClient.delete(`/api/aliases/${aliasToRemove.id}`);
+      await apiClient.delete(API_ROUTES.ALIAS_BY_ID(aliasToRemove.id));
 
       // Sync aliases to shell
       s.message('Syncing aliases to shell...');
-      await apiClient.post('/api/aliases/sync');
+      await apiClient.post(API_ROUTES.ALIASES_SYNC);
 
       s.stop('Alias removed and synced successfully');
       log.success(`Removed: ${pc.yellow(name)}`);

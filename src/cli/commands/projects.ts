@@ -5,6 +5,7 @@ import type { ProjectWithDetails } from '../../shared/types/api.js';
 import { formatTimeAgo } from '../utils/format-time.js';
 import { getAction, getActionOptions } from '../actions';
 import { apiClient } from '../utils/api-client.js';
+import { API_ROUTES } from '../../shared/constants/index.js';
 
 /**
  * Command to list and select projects
@@ -30,7 +31,7 @@ export class ProjectsCommand extends Command {
     let projects: ProjectWithDetails[];
 
     try {
-      projects = await apiClient.get<ProjectWithDetails[]>('/api/projects');
+      projects = await apiClient.get<ProjectWithDetails[]>(API_ROUTES.PROJECTS);
     } catch (error) {
       log.error('Failed to fetch projects from API.');
       console.error(error);
