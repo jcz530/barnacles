@@ -39,6 +39,8 @@ asarUnpack:
   - '**/node_modules/node-pty/**'
   # CLI distribution
   - '**/dist/cli/**'
+  # Package.json (needed by CLI to read version)
+  - 'package.json'
 
 # Include migrations as extra resources
 extraResources:
