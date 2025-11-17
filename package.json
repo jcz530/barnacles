@@ -52,6 +52,9 @@
     "url": "https://joeczubiak.com"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
   "devDependencies": {
     "@electron/notarize": "^2.5.0",
     "@faker-js/faker": "^10.1.0",

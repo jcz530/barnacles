@@ -38,7 +38,7 @@ src/
 
 ### Prerequisites
 
-- Node.js 18 or higher
+- Node.js 22
 - npm or yarn
 - [node-pty dependencies](https://www.npmjs.com/package/node-pty#dependencies)
   - Mac: Xcode needs to be installed
