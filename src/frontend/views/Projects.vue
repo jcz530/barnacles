@@ -358,7 +358,7 @@ whenever(keys['Ctrl+K'], () => {
         </div>
         <div
           v-if="wsScanError"
-          class="flex items-center gap-2 rounded-md bg-red-50 px-3 py-1 text-sm text-red-700"
+          class="text-danger-700 bg-danger-50 flex items-center gap-2 rounded-md px-3 py-1 text-sm"
         >
           <span>⚠️ {{ wsScanError }}</span>
         </div>

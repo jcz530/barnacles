@@ -7,7 +7,6 @@ import { RouteNames } from '@/router';
 import {
   AlertCircle,
   Check,
-  Copy,
   Package,
   Plus,
   RefreshCw,
@@ -24,6 +23,7 @@ import CardDescription from '../components/ui/card/CardDescription.vue';
 import CardContent from '../components/ui/card/CardContent.vue';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import CopyButton from '@/components/atoms/CopyButton.vue';
 
 const { setBreadcrumbs } = useBreadcrumbs();
 const {
@@ -260,22 +260,6 @@ const isFormValid = computed(() => {
     alias => alias.name.length > 0 && isValidAliasName(alias.name) && alias.command.length > 0
   );
 });
-
-// Copy path to clipboard
-const isCopied = ref(false);
-const copyPathToClipboard = async () => {
-  if (!configInfo.value?.path) return;
-
-  try {
-    await navigator.clipboard.writeText(configInfo.value.path);
-    isCopied.value = true;
-    setTimeout(() => {
-      isCopied.value = false;
-    }, 2000);
-  } catch (error) {
-    console.error('Failed to copy to clipboard:', error);
-  }
-};
 </script>
 
 <template>
@@ -321,17 +305,7 @@ const copyPathToClipboard = async () => {
             }}</code>
           </div>
         </div>
-        <Button
-          @click="copyPathToClipboard"
-          variant="ghost"
-          size="sm"
-          class="h-8"
-          :class="{ 'text-green-600': isCopied }"
-        >
-          <Check v-if="isCopied" class="mr-2 h-4 w-4" />
-          <Copy v-else class="mr-2 h-4 w-4" />
-          {{ isCopied ? 'Copied!' : 'Copy Path' }}
-        </Button>
+        <CopyButton :value="configInfo.path" label="Copy Path" />
       </div>
 
       <Card>
@@ -417,10 +391,10 @@ const copyPathToClipboard = async () => {
             <!-- Error Message -->
             <div
               v-if="syncMutation.isError.value"
-              class="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3"
+              class="bg-danger-50 border-danger-200 flex items-start gap-2 rounded-lg border p-3"
             >
-              <AlertCircle class="mt-0.5 h-5 w-5 text-red-600" />
-              <div class="text-sm text-red-800">
+              <AlertCircle class="text-danger-600 mt-0.5 h-5 w-5" />
+              <div class="text-danger-800 text-sm">
                 <p class="font-medium">Failed to sync aliases</p>
                 <p class="mt-1">{{ syncMutation.error.value?.message || 'Unknown error' }}</p>
               </div>
@@ -429,10 +403,10 @@ const copyPathToClipboard = async () => {
             <!-- Success Message -->
             <div
               v-if="syncMutation.isSuccess.value && !hasUnsavedChanges"
-              class="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3"
+              class="border-success-200 bg-success-50 flex items-start gap-2 rounded-lg border p-3"
             >
-              <Check class="mt-0.5 h-5 w-5 text-green-600" />
-              <div class="text-sm text-green-800">
+              <Check class="text-success-600 mt-0.5 h-5 w-5" />
+              <div class="text-success-800 text-sm">
                 <p class="font-medium">Aliases saved and synced successfully</p>
               </div>
             </div>

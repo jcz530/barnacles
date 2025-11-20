@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { Input } from '../ui/input';
 
 interface Props {
@@ -59,7 +59,7 @@ const handleKeydown = (event: KeyboardEvent) => {
       :class="[
         {
           'text-muted-foreground italic': isEmpty,
-          'border border-red-500': isInvalid,
+          'border-danger-500 border': isInvalid,
           'border border-transparent': !isInvalid,
         },
         props.class,
@@ -80,7 +80,7 @@ const handleKeydown = (event: KeyboardEvent) => {
       :placeholder="placeholder"
       class="font-mono text-sm"
       :class="{
-        'border-red-500': isInvalid,
+        'border-danger-500': isInvalid,
       }"
       @update:model-value="val => emit('update:modelValue', val)"
       @blur="stopEditing"

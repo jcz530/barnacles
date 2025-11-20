@@ -2,7 +2,7 @@
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
 import type { SortingState } from '@tanstack/vue-table';
-import { AlertCircle, Check, Copy, Plus, RefreshCw, Save, Search, Trash2 } from 'lucide-vue-next';
+import { AlertCircle, Plus, RefreshCw, Save, Search, Trash2 } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 import Card from '../components/ui/card/Card.vue';
 import CardHeader from '../components/ui/card/CardHeader.vue';
@@ -12,6 +12,7 @@ import CardContent from '../components/ui/card/CardContent.vue';
 import HostsTable from '../components/hosts/organisms/HostsTable.vue';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import CopyButton from '@/components/atoms/CopyButton.vue';
 
 interface HostEntry {
   id: string;
@@ -160,22 +161,6 @@ const isFormValid = computed(() => {
     host => isValidIP(host.ip) && isValidHostname(host.hostname) && host.hostname.length > 0
   );
 });
-
-// Copy path to clipboard
-const isCopied = ref(false);
-const copyPathToClipboard = async () => {
-  if (!hostsPath.value) return;
-
-  try {
-    await navigator.clipboard.writeText(hostsPath.value);
-    isCopied.value = true;
-    setTimeout(() => {
-      isCopied.value = false;
-    }, 2000);
-  } catch (error) {
-    console.error('Failed to copy to clipboard:', error);
-  }
-};
 </script>
 
 <template>
@@ -207,17 +192,7 @@ const copyPathToClipboard = async () => {
             hostsPath
           }}</code>
         </div>
-        <Button
-          @click="copyPathToClipboard"
-          variant="ghost"
-          size="sm"
-          class="h-8"
-          :class="{ 'text-green-600': isCopied }"
-        >
-          <Check v-if="isCopied" class="mr-2 h-4 w-4" />
-          <Copy v-else class="mr-2 h-4 w-4" />
-          {{ isCopied ? 'Copied!' : 'Copy Path' }}
-        </Button>
+        <CopyButton :value="hostsPath" label="Copy Path" />
       </div>
 
       <Card>
@@ -285,7 +260,7 @@ const copyPathToClipboard = async () => {
                         placeholder="127.0.0.1"
                         class="font-mono text-sm"
                         :class="{
-                          'border-red-500': host.ip && !isValidIP(host.ip),
+                          'border-danger-500': host.ip && !isValidIP(host.ip),
                         }"
                       />
                     </div>
@@ -303,7 +278,7 @@ const copyPathToClipboard = async () => {
                         placeholder="myapp.local"
                         class="font-mono text-sm"
                         :class="{
-                          'border-red-500': host.hostname && !isValidHostname(host.hostname),
+                          'border-danger-500': host.hostname && !isValidHostname(host.hostname),
                         }"
                       />
                     </div>
@@ -363,10 +338,10 @@ const copyPathToClipboard = async () => {
             <!-- Error Message -->
             <div
               v-if="saveMutation.isError.value"
-              class="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3"
+              class="bg-danger-50 border-danger-200 flex items-start gap-2 rounded-lg border p-3"
             >
-              <AlertCircle class="mt-0.5 h-5 w-5 text-red-600" />
-              <div class="text-sm text-red-800">
+              <AlertCircle class="text-danger-600 mt-0.5 h-5 w-5" />
+              <div class="text-danger-800 text-sm">
                 <p class="font-medium">Failed to save changes</p>
                 <p class="mt-1">{{ saveMutation.error.value?.message || 'Unknown error' }}</p>
               </div>
@@ -375,10 +350,10 @@ const copyPathToClipboard = async () => {
             <!-- Success Message -->
             <div
               v-if="saveMutation.isSuccess.value && !hasUnsavedChanges"
-              class="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3"
+              class="border-success-200 bg-success-50 flex items-start gap-2 rounded-lg border p-3"
             >
-              <AlertCircle class="mt-0.5 h-5 w-5 text-green-600" />
-              <div class="text-sm text-green-800">
+              <AlertCircle class="text-success-600 mt-0.5 h-5 w-5" />
+              <div class="text-success-800 text-sm">
                 <p class="font-medium">Changes saved successfully</p>
               </div>
             </div>

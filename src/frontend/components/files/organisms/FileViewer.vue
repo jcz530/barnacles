@@ -485,8 +485,8 @@ const copyToClipboard = async () => {
 
     <!-- Error state -->
     <div v-else-if="error" class="p-6">
-      <div class="rounded-lg border border-red-200 bg-red-50 p-4">
-        <p class="text-sm text-red-700">{{ error }}</p>
+      <div class="bg-danger-50 border-danger-200 rounded-lg border p-4">
+        <p class="text-danger-700 text-sm">{{ error }}</p>
       </div>
     </div>
 
@@ -515,7 +515,7 @@ const copyToClipboard = async () => {
               @click="copyToClipboard"
               class="gap-2"
               title="Copy raw file contents"
-              :class="{ 'border-green-200 bg-green-50 text-green-600': copySuccess }"
+              :class="{ 'border-success-200 bg-success-50 text-success-600': copySuccess }"
             >
               <Copy class="h-4 w-4" />
               {{ copySuccess ? 'Copied!' : 'Raw' }}

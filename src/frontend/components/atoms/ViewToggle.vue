@@ -31,3 +31,11 @@ const activeClasses = 'text-primary-700 bg-slate-200';
     </button>
   </div>
 </template>
+<style lang="css">
+button svg {
+  transition: transform 0.1s ease-in-out;
+}
+button:active svg {
+  transform: scale(0.95);
+}
+</style>

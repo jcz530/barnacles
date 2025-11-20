@@ -7,13 +7,14 @@ import {
   type SortingState,
   useVueTable,
 } from '@tanstack/vue-table';
-import { Copy, Eye, EyeOff, Pencil, Trash2, User } from 'lucide-vue-next';
+import { Eye, EyeOff, Pencil, Trash2, User } from 'lucide-vue-next';
 import { ref } from 'vue';
 import type { Account } from '../../../../shared/types/api';
 import TableHeader from '../../molecules/TableHeader.vue';
 import { Button } from '../../ui/button';
 import { useQueries } from '@/composables/useQueries';
 import { toast } from 'vue-sonner';
+import CopyButton from '@/components/atoms/CopyButton.vue';
 
 const props = defineProps<{
   accounts: Account[];
@@ -31,6 +32,7 @@ const internalSorting = ref<SortingState>([]);
 const visiblePasswords = ref<Set<number>>(new Set());
 
 const columnHelper = createColumnHelper<Account>();
+const copyTimeoutMs = 30_000;
 
 const togglePasswordVisibility = (accountId: number, e: Event) => {
   e.stopPropagation();
@@ -41,16 +43,6 @@ const togglePasswordVisibility = (accountId: number, e: Event) => {
     newSet.add(accountId);
   }
   visiblePasswords.value = newSet;
-};
-
-const copyToClipboard = async (text: string, fieldName: string, e: Event) => {
-  e.stopPropagation();
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success(`${fieldName} copied to clipboard`);
-  } catch (error) {
-    toast.error('Failed to copy to clipboard');
-  }
 };
 
 const handleEdit = (account: Account, e: Event) => {
@@ -146,9 +138,8 @@ const table = useVueTable({
               :key="cell.id"
               class="px-4 py-3 text-sm"
               :class="{
-                'w-48': cell.column.id === 'name',
+                'w-48': cell.column.id === 'name' || cell.column.id === 'email',
                 'w-40': cell.column.id === 'username',
-                'w-48': cell.column.id === 'email',
                 'w-32': cell.column.id === 'password',
                 'w-64': cell.column.id === 'loginUrl',
                 'w-24': cell.column.id === 'id',
@@ -177,14 +168,7 @@ const table = useVueTable({
               <template v-else-if="cell.column.id === 'username'">
                 <div v-if="row.original.username" class="flex items-center gap-2">
                   <span class="flex-1 truncate text-slate-900">{{ row.original.username }}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100"
-                    @click="copyToClipboard(row.original.username!, 'Username', $event)"
-                  >
-                    <Copy class="h-3.5 w-3.5" />
-                  </Button>
+                  <CopyButton :value="row.original.username" :timeout="copyTimeoutMs" />
                 </div>
                 <span v-else class="text-slate-400">—</span>
               </template>
@@ -193,14 +177,7 @@ const table = useVueTable({
               <template v-else-if="cell.column.id === 'email'">
                 <div v-if="row.original.email" class="flex items-center gap-2">
                   <span class="flex-1 truncate text-slate-900">{{ row.original.email }}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100"
-                    @click="copyToClipboard(row.original.email!, 'Email', $event)"
-                  >
-                    <Copy class="h-3.5 w-3.5" />
-                  </Button>
+                  <CopyButton :value="row.original.email" :timeout="copyTimeoutMs" />
                 </div>
                 <span v-else class="text-slate-400">—</span>
               </template>
@@ -223,14 +200,7 @@ const table = useVueTable({
                       <Eye v-if="!visiblePasswords.has(row.original.id)" class="h-3.5 w-3.5" />
                       <EyeOff v-else class="h-3.5 w-3.5" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      class="h-6 w-6 p-0 opacity-0 transition-opacity group-hover:opacity-100"
-                      @click="copyToClipboard(row.original.password!, 'Password', $event)"
-                    >
-                      <Copy class="h-3.5 w-3.5" />
-                    </Button>
+                    <CopyButton :value="row.original.password" :timeout="copyTimeoutMs" />
                   </div>
                 </div>
                 <span v-else class="text-slate-400">—</span>
@@ -248,14 +218,7 @@ const table = useVueTable({
                   >
                     {{ row.original.loginUrl }}
                   </a>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100"
-                    @click="copyToClipboard(row.original.loginUrl!, 'Login URL', $event)"
-                  >
-                    <Copy class="h-3.5 w-3.5" />
-                  </Button>
+                  <CopyButton :value="row.original.loginUrl" :timeout="copyTimeoutMs" />
                 </div>
                 <span v-else class="text-slate-400">—</span>
               </template>

@@ -1,23 +1,17 @@
 <script setup lang="ts">
-import { Copy, Folder } from 'lucide-vue-next';
-import { useClipboard } from '@vueuse/core';
+import { Folder } from 'lucide-vue-next';
 import type { Project } from '../../../../shared/types/api';
 import { useFormatters } from '../../../composables/useFormatters';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Button } from '../../ui/button';
+import CopyButton from '@/components/atoms/CopyButton.vue';
 
 interface Props {
   project: Project;
 }
 
-const props = defineProps<Props>();
+defineProps<Props>();
 
 const { formatDate } = useFormatters();
-const { copy, copied } = useClipboard();
-
-const copyPath = () => {
-  copy(props.project.path);
-};
 </script>
 
 <template>
@@ -32,15 +26,7 @@ const copyPath = () => {
       <div>
         <div class="flex items-center justify-between">
           <div class="text-sm font-medium text-slate-500">Path</div>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-7 w-7 p-0"
-            @click="copyPath"
-            :title="copied ? 'Copied!' : 'Copy path'"
-          >
-            <Copy class="h-4 w-4" :class="{ 'text-success-600': copied }" />
-          </Button>
+          <CopyButton :value="project.path" />
         </div>
         <div class="mt-1 overflow-scroll rounded bg-slate-100 p-1 font-mono text-sm text-slate-700">
           {{ project.path }}

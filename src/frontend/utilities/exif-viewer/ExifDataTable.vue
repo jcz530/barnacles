@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { ChevronDown, Copy, Check, MapPin } from 'lucide-vue-next';
+import { ChevronDown, MapPin } from 'lucide-vue-next';
 import type { ParsedExifData } from '../../../shared/utilities/exif-reader';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import CopyButton from '@/components/atoms/CopyButton.vue';
 
 const props = defineProps<{
   exifData: ParsedExifData | null;
 }>();
 
 const searchQuery = ref('');
-const copiedValue = ref<string | null>(null);
 
 const filteredCategories = computed(() => {
   if (!props.exifData) return [];
@@ -34,18 +33,6 @@ const totalFields = computed(() => {
   if (!props.exifData) return 0;
   return props.exifData.categories.reduce((total, category) => total + category.fields.length, 0);
 });
-
-const copyToClipboard = async (value: string) => {
-  try {
-    await navigator.clipboard.writeText(value);
-    copiedValue.value = value;
-    setTimeout(() => {
-      copiedValue.value = null;
-    }, 2000);
-  } catch (error) {
-    console.error('Failed to copy:', error);
-  }
-};
 </script>
 
 <template>
@@ -123,15 +110,7 @@ const copyToClipboard = async (value: string) => {
                   {{ field.value }}
                 </p>
               </div>
-              <Button
-                @click="copyToClipboard(field.value)"
-                variant="ghost"
-                size="icon"
-                class="shrink-0"
-              >
-                <Check v-if="copiedValue === field.value" class="h-4 w-4 text-green-600" />
-                <Copy v-else class="h-4 w-4" />
-              </Button>
+              <CopyButton :value="field.value" size="icon" class="shrink-0" />
             </div>
           </div>
         </CollapsibleContent>

@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Check, ChevronDown, Copy, Download } from 'lucide-vue-next';
+import { ChevronDown, Download } from 'lucide-vue-next';
+import CopyButton from '@/components/atoms/CopyButton.vue';
 import {
   checkShadeContrast,
   type GeneratedPalette,
@@ -46,8 +47,6 @@ const showAdvanced = ref(false);
 
 const palette = ref<GeneratedPalette | null>(null);
 const error = ref<string | null>(null);
-const copiedShade = ref<string | null>(null);
-const copiedExport = ref(false);
 const highlighter = ref<shiki.Highlighter | null>(null);
 const isDark = useDark({
   selector: 'html',
@@ -185,31 +184,6 @@ function getFormattedColor(hex: string): string {
       return converted.oklch;
     default:
       return hex;
-  }
-}
-
-async function copyShade(shade: string, hex: string) {
-  try {
-    const formattedColor = getFormattedColor(hex);
-    await navigator.clipboard.writeText(formattedColor);
-    copiedShade.value = shade;
-    setTimeout(() => {
-      copiedShade.value = null;
-    }, 2000);
-  } catch (err) {
-    console.error('Failed to copy:', err);
-  }
-}
-
-async function copyExportCode() {
-  try {
-    await navigator.clipboard.writeText(exportCode.value);
-    copiedExport.value = true;
-    setTimeout(() => {
-      copiedExport.value = false;
-    }, 2000);
-  } catch (err) {
-    console.error('Failed to copy:', err);
   }
 }
 
@@ -584,15 +558,10 @@ const colorFormatOptions = [
                 </div>
 
                 <!-- Copy Button -->
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <CopyButton
+                  :value="getFormattedColor(shade.hex)"
                   class="opacity-0 transition-opacity group-hover:opacity-100"
-                  @click="copyShade(shade.name, shade.hex)"
-                >
-                  <Check v-if="copiedShade === shade.name" class="h-4 w-4 text-green-500" />
-                  <Copy v-else class="h-4 w-4" />
-                </Button>
+                />
               </div>
             </div>
           </CardContent>
@@ -607,11 +576,7 @@ const colorFormatOptions = [
                 <CardDescription>Copy or download in various formats</CardDescription>
               </div>
               <div class="flex gap-2">
-                <Button variant="outline" size="sm" @click="copyExportCode">
-                  <Check v-if="copiedExport" class="mr-2 h-4 w-4 text-green-500" />
-                  <Copy v-else class="mr-2 h-4 w-4" />
-                  Copy
-                </Button>
+                <CopyButton :value="exportCode" variant="outline" label="Copy" />
                 <Button variant="outline" size="sm" @click="downloadPalette">
                   <Download class="mr-2 h-4 w-4" />
                   Code

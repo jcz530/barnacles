@@ -267,8 +267,8 @@ const handleCollapseAll = () => {
 
         <!-- Error state -->
         <div v-else-if="error" class="p-4">
-          <div class="rounded-lg border border-red-200 bg-red-50 p-3">
-            <p class="text-sm text-red-700">{{ error }}</p>
+          <div class="bg-danger-50 border-danger-200 rounded-lg border p-3">
+            <p class="text-danger-700 text-sm">{{ error }}</p>
           </div>
         </div>
 

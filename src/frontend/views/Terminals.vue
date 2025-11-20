@@ -105,7 +105,7 @@ const selectProcess = (process: any) => {
                 Stopped ({{ stoppedProcesses.length }})
               </h3>
               <button
-                class="text-xs text-slate-400 transition-colors hover:text-red-400"
+                class="hover:text-danger-400 text-xs text-slate-400 transition-colors"
                 @click="handleClearAllStopped"
               >
                 Clear All

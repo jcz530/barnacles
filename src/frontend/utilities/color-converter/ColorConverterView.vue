@@ -5,15 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Check, Copy } from 'lucide-vue-next';
 import { convertColor, type ColorFormats } from '../../../shared/utilities/color-converter';
+import CopyButton from '@/components/atoms/CopyButton.vue';
 
 const colorInput = ref('#3b82f6');
 const colorPickerValue = ref('#3b82f6');
 const alpha = ref([1]);
 const convertedColors = ref<ColorFormats | null>(null);
 const error = ref<string | null>(null);
-const copiedFormat = ref<string | null>(null);
 
 // Sync color picker with text input when text changes and is valid hex
 watch(colorInput, newValue => {
@@ -50,18 +49,6 @@ watch(
 );
 
 const alphaPercent = computed(() => Math.round(alpha.value[0] * 100));
-
-async function copyToClipboard(format: string, value: string) {
-  try {
-    await navigator.clipboard.writeText(value);
-    copiedFormat.value = format;
-    setTimeout(() => {
-      copiedFormat.value = null;
-    }, 2000);
-  } catch (err) {
-    console.error('Failed to copy:', err);
-  }
-}
 
 const colorFormats = computed(() => {
   if (!convertedColors.value) return [];
@@ -161,15 +148,7 @@ const colorFormats = computed(() => {
                   <div class="mb-1 text-sm font-medium">{{ format.label }}</div>
                   <code class="text-muted-foreground text-xs break-all">{{ format.value }}</code>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  class="ml-2 flex-shrink-0"
-                  @click="copyToClipboard(format.key, format.value)"
-                >
-                  <Check v-if="copiedFormat === format.key" class="h-4 w-4 text-green-500" />
-                  <Copy v-else class="h-4 w-4" />
-                </Button>
+                <CopyButton :value="format.value" class="ml-2 flex-shrink-0" />
               </div>
             </div>
 
