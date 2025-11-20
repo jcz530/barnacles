@@ -189,7 +189,7 @@ const hasFilters = computed(() => props.selectedFilters.length > 0);
         File Type
         <span
           v-if="hasFilters"
-          class="bg-success-400/40 ml-2 rounded-full px-2 py-0.5 text-xs text-white"
+          class="bg-success-400/40 ml-2 rounded-full px-2 py-0.5 text-xs text-slate-50"
         >
           {{ selectedFilters.length }}
         </span>

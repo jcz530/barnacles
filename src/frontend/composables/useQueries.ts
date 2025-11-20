@@ -3,9 +3,11 @@ import type { MaybeRef } from 'vue';
 import { computed, unref } from 'vue';
 import { API_ROUTES } from '../../shared/constants';
 import type {
+  Account,
   Alias,
   AliasTheme,
   ApiResponse,
+  CreateAccountInput,
   DetectedAlias,
   DetectedIDE,
   DetectedTerminal,
@@ -16,6 +18,7 @@ import type {
   ShellInfo,
   Technology,
   Terminal,
+  UpdateAccountInput,
   User,
 } from '../../shared/types/api';
 import type { Theme } from '../../shared/types/theme';
@@ -1435,6 +1438,90 @@ export const useQueries = () => {
     });
   };
 
+  // Accounts query
+  const useAccountsQuery = (projectId: MaybeRef<string>, options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['projects', unref(projectId), 'accounts'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<Account[]>>(
+          'GET',
+          API_ROUTES.PROJECTS_ACCOUNTS(unref(projectId))
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch accounts');
+        }
+
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
+  // Create account mutation
+  const useCreateAccountMutation = () => {
+    return useMutation({
+      mutationFn: async ({ projectId, data }: { projectId: string; data: CreateAccountInput }) => {
+        const response = await apiCall<ApiResponse<Account>>(
+          'POST',
+          API_ROUTES.PROJECTS_ACCOUNTS(projectId),
+          data
+        );
+
+        if (!response) {
+          throw new Error('Failed to create account');
+        }
+
+        return response.data;
+      },
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries({ queryKey: ['projects', variables.projectId, 'accounts'] });
+      },
+    });
+  };
+
+  // Update account mutation
+  const useUpdateAccountMutation = () => {
+    return useMutation({
+      mutationFn: async ({
+        projectId,
+        accountId,
+        data,
+      }: {
+        projectId: string;
+        accountId: number;
+        data: UpdateAccountInput;
+      }) => {
+        const response = await apiCall<ApiResponse<Account>>(
+          'PUT',
+          API_ROUTES.PROJECTS_ACCOUNT_BY_ID(projectId, accountId),
+          data
+        );
+
+        if (!response) {
+          throw new Error('Failed to update account');
+        }
+
+        return response.data;
+      },
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries({ queryKey: ['projects', variables.projectId, 'accounts'] });
+      },
+    });
+  };
+
+  // Delete account mutation
+  const useDeleteAccountMutation = () => {
+    return useMutation({
+      mutationFn: async ({ projectId, accountId }: { projectId: string; accountId: number }) => {
+        await apiCall('DELETE', API_ROUTES.PROJECTS_ACCOUNT_BY_ID(projectId, accountId));
+      },
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries({ queryKey: ['projects', variables.projectId, 'accounts'] });
+      },
+    });
+  };
+
   return {
     useUsersQuery,
     useHealthQuery,
@@ -1502,5 +1589,9 @@ export const useQueries = () => {
     useUpdateThemeMutation,
     useDeleteThemeMutation,
     useDuplicateThemeMutation,
+    useAccountsQuery,
+    useCreateAccountMutation,
+    useUpdateAccountMutation,
+    useDeleteAccountMutation,
   };
 };

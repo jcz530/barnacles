@@ -95,6 +95,7 @@ const tabs: Tab[] = [
   { name: 'ProjectFiles', label: 'Files', value: 'files' },
   { name: 'ProjectRelatedFiles', label: 'Related Files', value: 'related-files' },
   { name: 'ProjectTerminals', label: 'Processes', value: 'terminals' },
+  { name: 'ProjectAccounts', label: 'Accounts', value: 'accounts' },
 ];
 
 // Computed property to determine active tab based on current route

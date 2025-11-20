@@ -91,4 +91,7 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.invoke('files:move-files', filePaths, targetFolder),
     getPathForFile: (file: File) => webUtils.getPathForFile(file),
   },
+  storage: {
+    getEncryptionKey: () => ipcRenderer.invoke('storage:get-encryption-key'),
+  },
 });

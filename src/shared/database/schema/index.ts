@@ -161,6 +161,25 @@ export const projectRelatedFolders = sqliteTable('project_related_folders', {
     .$defaultFn(() => new Date()),
 });
 
+export const projectAccounts = sqliteTable('project_accounts', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  name: text('name'),
+  username: text('username'),
+  email: text('email'),
+  password: text('password'), // stored encrypted
+  notes: text('notes'),
+  loginUrl: text('login_url'),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 // Relations
 export const projectsRelations = relations(projects, ({ many, one }) => ({
   technologies: many(projectTechnologies),
@@ -170,6 +189,7 @@ export const projectsRelations = relations(projects, ({ many, one }) => ({
   }),
   processes: many(projectProcesses),
   relatedFolders: many(projectRelatedFolders),
+  accounts: many(projectAccounts),
 }));
 
 export const technologiesRelations = relations(technologies, ({ many }) => ({
@@ -224,6 +244,13 @@ export const projectProcessCommandsRelations = relations(projectProcessCommands,
 export const projectRelatedFoldersRelations = relations(projectRelatedFolders, ({ one }) => ({
   project: one(projects, {
     fields: [projectRelatedFolders.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const projectAccountsRelations = relations(projectAccounts, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectAccounts.projectId],
     references: [projects.id],
   }),
 }));

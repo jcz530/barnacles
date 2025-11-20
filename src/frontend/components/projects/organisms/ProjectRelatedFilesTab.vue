@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, ref } from 'vue';
+import { inject, ref, type ComputedRef } from 'vue';
 import { useQueries } from '@/composables/useQueries';
 import { Button } from '../../ui/button';
 import { FolderOpen, Plus } from 'lucide-vue-next';
@@ -7,7 +7,7 @@ import FileExplorer from '../../files/organisms/FileExplorer.vue';
 import AddRelatedFolderDialog from './AddRelatedFolderDialog.vue';
 
 // Inject project data from parent
-const projectId = inject<string>('projectId');
+const projectId = inject<ComputedRef<string>>('projectId');
 
 if (!projectId) {
   throw new Error('ProjectRelatedFilesTab must be used within a project detail page');
@@ -15,7 +15,7 @@ if (!projectId) {
 
 const { useRelatedFoldersQuery, useRemoveRelatedFolderMutation } = useQueries();
 
-// Fetch related folders
+// Fetch related folders (pass the ref itself, not .value, as the query expects MaybeRef)
 const { data: folders, isLoading } = useRelatedFoldersQuery(projectId, { enabled: true });
 
 // Mutations
@@ -34,7 +34,7 @@ const handleRemoveFolder = async (folderId: string) => {
   }
 
   try {
-    await removeMutation.mutateAsync({ projectId, folderId });
+    await removeMutation.mutateAsync({ projectId: projectId.value, folderId });
   } catch (error) {
     console.error('Failed to remove folder:', error);
   }

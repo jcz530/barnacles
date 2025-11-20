@@ -69,4 +69,7 @@ export const API_ROUTES = {
   THEME_RESET: (id: string) => `/api/themes/${id}/reset`,
   THEMES_INITIALIZE: '/api/themes/initialize',
   ONBOARDING_DISCOVER: '/api/onboarding/discover-directories',
+  PROJECTS_ACCOUNTS: (projectId: string) => `/api/projects/${projectId}/accounts`,
+  PROJECTS_ACCOUNT_BY_ID: (projectId: string, accountId: number) =>
+    `/api/projects/${projectId}/accounts/${accountId}`,
 } as const;
