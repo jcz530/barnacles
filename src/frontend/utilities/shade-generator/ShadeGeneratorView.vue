@@ -187,7 +187,6 @@ function getFormattedColor(hex: string): string {
   }
 }
 
-
 function downloadPalette() {
   const blob = new Blob([exportCode.value], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);

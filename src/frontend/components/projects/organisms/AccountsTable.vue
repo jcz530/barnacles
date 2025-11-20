@@ -32,6 +32,7 @@ const internalSorting = ref<SortingState>([]);
 const visiblePasswords = ref<Set<number>>(new Set());
 
 const columnHelper = createColumnHelper<Account>();
+const copyTimeoutMs = 30_000;
 
 const togglePasswordVisibility = (accountId: number, e: Event) => {
   e.stopPropagation();
@@ -167,7 +168,7 @@ const table = useVueTable({
               <template v-else-if="cell.column.id === 'username'">
                 <div v-if="row.original.username" class="flex items-center gap-2">
                   <span class="flex-1 truncate text-slate-900">{{ row.original.username }}</span>
-                  <CopyButton :value="row.original.username" />
+                  <CopyButton :value="row.original.username" :timeout="copyTimeoutMs" />
                 </div>
                 <span v-else class="text-slate-400">—</span>
               </template>
@@ -176,7 +177,7 @@ const table = useVueTable({
               <template v-else-if="cell.column.id === 'email'">
                 <div v-if="row.original.email" class="flex items-center gap-2">
                   <span class="flex-1 truncate text-slate-900">{{ row.original.email }}</span>
-                  <CopyButton :value="row.original.email" />
+                  <CopyButton :value="row.original.email" :timeout="copyTimeoutMs" />
                 </div>
                 <span v-else class="text-slate-400">—</span>
               </template>
@@ -199,7 +200,7 @@ const table = useVueTable({
                       <Eye v-if="!visiblePasswords.has(row.original.id)" class="h-3.5 w-3.5" />
                       <EyeOff v-else class="h-3.5 w-3.5" />
                     </Button>
-                    <CopyButton :value="row.original.password" />
+                    <CopyButton :value="row.original.password" :timeout="copyTimeoutMs" />
                   </div>
                 </div>
                 <span v-else class="text-slate-400">—</span>
@@ -217,7 +218,7 @@ const table = useVueTable({
                   >
                     {{ row.original.loginUrl }}
                   </a>
-                  <CopyButton :value="row.original.loginUrl" />
+                  <CopyButton :value="row.original.loginUrl" :timeout="copyTimeoutMs" />
                 </div>
                 <span v-else class="text-slate-400">—</span>
               </template>

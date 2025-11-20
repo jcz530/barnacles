@@ -16,11 +16,11 @@ const props = defineProps<{
 const emit = defineEmits<{
   edit: [accountId: number];
 }>();
-
 const { useDeleteAccountMutation } = useQueries();
 const deleteMutation = useDeleteAccountMutation();
 
 const visiblePasswords = ref<Set<number>>(new Set());
+const copyTimeoutMs = 30_000;
 
 const togglePasswordVisibility = (accountId: number) => {
   const newSet = new Set(visiblePasswords.value);
@@ -103,14 +103,14 @@ const openUrl = (url: string) => {
         <div v-if="account.username" class="flex items-center gap-2 text-sm">
           <User class="h-4 w-4 shrink-0 text-slate-400" />
           <span class="flex-1 truncate text-slate-700">{{ account.username }}</span>
-          <CopyButton :value="account.username" />
+          <CopyButton :value="account.username" :timeout="copyTimeoutMs" />
         </div>
 
         <!-- Email -->
         <div v-if="account.email" class="flex items-center gap-2 text-sm">
           <Mail class="h-4 w-4 shrink-0 text-slate-400" />
           <span class="flex-1 truncate text-slate-700">{{ account.email }}</span>
-          <CopyButton :value="account.email" />
+          <CopyButton :value="account.email" :timeout="copyTimeoutMs" />
         </div>
 
         <!-- Password -->
@@ -129,7 +129,7 @@ const openUrl = (url: string) => {
               <Eye v-if="!visiblePasswords.has(account.id)" class="h-3.5 w-3.5" />
               <EyeOff v-else class="h-3.5 w-3.5" />
             </Button>
-            <CopyButton :value="account.password" />
+            <CopyButton :value="account.password" :timeout="copyTimeoutMs" />
           </div>
         </div>
 
@@ -142,7 +142,7 @@ const openUrl = (url: string) => {
           >
             {{ account.loginUrl }}
           </button>
-          <CopyButton :value="account.loginUrl" />
+          <CopyButton :value="account.loginUrl" :timeout="copyTimeoutMs" />
         </div>
 
         <!-- Notes -->

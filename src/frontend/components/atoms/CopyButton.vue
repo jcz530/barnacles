@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import type { ButtonVariants } from '@/components/ui/button';
 import { Button } from '@/components/ui/button';
 import { Check, Copy } from 'lucide-vue-next';
-import type { ButtonProps } from '@/components/ui/button';
 
 interface CopyButtonProps {
   /** The text content to copy to clipboard */
@@ -12,11 +12,9 @@ interface CopyButtonProps {
   /** Label to show when copied (only if label prop is provided) */
   copiedLabel?: string;
   /** Button variant */
-  variant?: ButtonProps['variant'];
+  variant?: ButtonVariants['variant'];
   /** Button size */
-  size?: ButtonProps['size'];
-  /** Additional CSS classes */
-  class?: string;
+  size?: ButtonVariants['size'];
   /** Icon size class (e.g., 'h-4 w-4') */
   iconSize?: string;
   /** Duration to show success state in milliseconds */
@@ -34,18 +32,11 @@ const props = withDefaults(defineProps<CopyButtonProps>(), {
 });
 
 const isCopied = ref(false);
-const isAnimating = ref(false);
 
 async function handleCopy() {
   try {
     await navigator.clipboard.writeText(props.value);
-    isAnimating.value = true;
     isCopied.value = true;
-
-    // Reset animation state after animation completes
-    setTimeout(() => {
-      isAnimating.value = false;
-    }, 300);
 
     // Reset copied state after timeout
     setTimeout(() => {
@@ -61,20 +52,15 @@ async function handleCopy() {
   <Button
     :variant="variant"
     :size="size"
-    :class="class"
+    :class="[{ 'bg-success-400/20 hover:bg-success-400/20': isCopied }]"
     :title="title || (isCopied ? copiedLabel : 'Copy to clipboard')"
     @click="handleCopy"
   >
-    <div class="copy-icon-container">
+    <div class="icon-container">
+      <Copy :class="[iconSize, { hidden: isCopied, visible: !isCopied }]" class="copy-icon" />
       <Check
-        v-if="isCopied"
-        :class="[iconSize, { 'icon-enter': isAnimating }]"
-        class="copy-icon text-success-500"
-      />
-      <Copy
-        v-else
-        :class="[iconSize, { 'icon-exit': isAnimating && isCopied }]"
-        class="copy-icon"
+        :class="[iconSize, { hidden: !isCopied, visible: isCopied }]"
+        class="check-icon text-success-500"
       />
     </div>
     <span v-if="label" :class="{ 'ml-2': true }">
@@ -84,34 +70,66 @@ async function handleCopy() {
 </template>
 
 <style scoped>
-.copy-icon-container {
+.icon-container {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-width: 1rem;
+  min-height: 1rem;
 }
 
-.copy-icon {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+.copy-icon,
+.check-icon {
+  position: absolute;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Enter animation for Check icon */
-.icon-enter {
-  animation: iconEnter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+.copy-icon.visible {
+  animation: fadeInRotate 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* Exit animation for Copy icon */
-.icon-exit {
-  animation: iconExit 0.2s cubic-bezier(0.4, 0, 1, 1);
+.copy-icon.hidden {
+  animation: fadeOutRotate 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
-@keyframes iconEnter {
+.check-icon.visible {
+  animation: fadeInScale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.check-icon.hidden {
+  animation: fadeOutScale 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes fadeInRotate {
+  from {
+    opacity: 0;
+    transform: scale(0.5) rotate(-180deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes fadeOutRotate {
+  from {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.5) rotate(180deg);
+  }
+}
+
+@keyframes fadeInScale {
   0% {
     opacity: 0;
-    transform: scale(0.5) rotate(-90deg);
+    transform: scale(0.3) rotate(-90deg);
   }
-  50% {
-    transform: scale(1.1) rotate(0deg);
+  60% {
+    transform: scale(1.15) rotate(5deg);
   }
   100% {
     opacity: 1;
@@ -119,19 +137,14 @@ async function handleCopy() {
   }
 }
 
-@keyframes iconExit {
-  0% {
+@keyframes fadeOutScale {
+  from {
     opacity: 1;
     transform: scale(1) rotate(0deg);
   }
-  100% {
+  to {
     opacity: 0;
-    transform: scale(0.8) rotate(90deg);
+    transform: scale(0.3) rotate(90deg);
   }
-}
-
-/* Hover effect */
-.copy-icon:hover {
-  transform: scale(1.05);
 }
 </style>
