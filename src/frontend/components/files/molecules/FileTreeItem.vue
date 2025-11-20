@@ -209,7 +209,7 @@ const handleRemoveFolder = () => {
       </ContextMenuItem>
       <template v-if="isRootFolder">
         <ContextMenuSeparator />
-        <ContextMenuItem @click="handleRemoveFolder" class="text-red-600">
+        <ContextMenuItem @click="handleRemoveFolder" class="text-danger-600">
           <Trash2 class="h-4 w-4" />
           Remove from Related Folders
         </ContextMenuItem>

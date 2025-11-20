@@ -485,8 +485,8 @@ const copyToClipboard = async () => {
 
     <!-- Error state -->
     <div v-else-if="error" class="p-6">
-      <div class="rounded-lg border border-red-200 bg-red-50 p-4">
-        <p class="text-sm text-red-700">{{ error }}</p>
+      <div class="bg-danger-50 rounded-lg border border-red-200 p-4">
+        <p class="text-danger-700 text-sm">{{ error }}</p>
       </div>
     </div>
 

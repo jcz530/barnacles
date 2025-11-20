@@ -417,10 +417,10 @@ const copyPathToClipboard = async () => {
             <!-- Error Message -->
             <div
               v-if="syncMutation.isError.value"
-              class="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3"
+              class="bg-danger-50 flex items-start gap-2 rounded-lg border border-red-200 p-3"
             >
-              <AlertCircle class="mt-0.5 h-5 w-5 text-red-600" />
-              <div class="text-sm text-red-800">
+              <AlertCircle class="text-danger-600 mt-0.5 h-5 w-5" />
+              <div class="text-danger-800 text-sm">
                 <p class="font-medium">Failed to sync aliases</p>
                 <p class="mt-1">{{ syncMutation.error.value?.message || 'Unknown error' }}</p>
               </div>

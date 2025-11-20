@@ -95,7 +95,7 @@ const { data: project } = useProjectQuery(props.process.projectId, {
         <Button
           variant="ghost"
           size="sm"
-          class="h-6 w-6 p-0 text-slate-500 hover:text-red-400"
+          class="hover:text-danger-400 h-6 w-6 p-0 text-slate-500"
           @click="handleDelete"
         >
           <Trash2 title="Clear" class="h-3.5 w-3.5" />

@@ -122,7 +122,7 @@ const handleBrowse = async () => {
         </div>
 
         <!-- Error message -->
-        <div v-if="errorMessage" class="rounded-md bg-red-50 p-3 text-sm text-red-700">
+        <div v-if="errorMessage" class="text-danger-700 bg-danger-50 rounded-md p-3 text-sm">
           {{ errorMessage }}
         </div>
       </div>

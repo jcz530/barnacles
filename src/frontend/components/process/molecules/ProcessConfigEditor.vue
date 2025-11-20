@@ -408,7 +408,7 @@ const handleClose = () => {
                   variant="ghost"
                   size="sm"
                   @click="removeProcess(processIndex)"
-                  class="text-red-500 hover:text-red-600"
+                  class="text-danger-500 hover:text-danger-600"
                 >
                   <Trash2 class="h-4 w-4" />
                 </Button>
