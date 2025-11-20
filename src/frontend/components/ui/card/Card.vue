@@ -16,6 +16,7 @@ const interactableClasses = computed(() => {
     'cursor-pointer',
     'focus:ring-ring focus:ring-2 focus-visible:ring-2 focus-visible:outline-none',
     'hover:ring-ring hover:shadow-lg hover:ring-2',
+    'active:scale-[0.995] transition-scale duration-100',
   ];
 });
 </script>
