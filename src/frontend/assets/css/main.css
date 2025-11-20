@@ -21,6 +21,13 @@ body {
   font-family: var(--font-ui, 'Istok Web', sans-serif), sans-serif;
   font-weight: 400;
 }
+a {
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 
 /* Code/monospace text - uses theme font or falls back to monospace */
 code,
