@@ -2,7 +2,7 @@
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
 import type { SortingState } from '@tanstack/vue-table';
-import { AlertCircle, Check, Copy, Plus, RefreshCw, Save, Search, Trash2 } from 'lucide-vue-next';
+import { AlertCircle, Plus, RefreshCw, Save, Search, Trash2 } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 import Card from '../components/ui/card/Card.vue';
 import CardHeader from '../components/ui/card/CardHeader.vue';
@@ -12,6 +12,7 @@ import CardContent from '../components/ui/card/CardContent.vue';
 import HostsTable from '../components/hosts/organisms/HostsTable.vue';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import CopyButton from '@/components/atoms/CopyButton.vue';
 
 interface HostEntry {
   id: string;
@@ -160,22 +161,6 @@ const isFormValid = computed(() => {
     host => isValidIP(host.ip) && isValidHostname(host.hostname) && host.hostname.length > 0
   );
 });
-
-// Copy path to clipboard
-const isCopied = ref(false);
-const copyPathToClipboard = async () => {
-  if (!hostsPath.value) return;
-
-  try {
-    await navigator.clipboard.writeText(hostsPath.value);
-    isCopied.value = true;
-    setTimeout(() => {
-      isCopied.value = false;
-    }, 2000);
-  } catch (error) {
-    console.error('Failed to copy to clipboard:', error);
-  }
-};
 </script>
 
 <template>
@@ -207,17 +192,7 @@ const copyPathToClipboard = async () => {
             hostsPath
           }}</code>
         </div>
-        <Button
-          @click="copyPathToClipboard"
-          variant="ghost"
-          size="sm"
-          class="h-8"
-          :class="{ 'text-green-600': isCopied }"
-        >
-          <Check v-if="isCopied" class="mr-2 h-4 w-4" />
-          <Copy v-else class="mr-2 h-4 w-4" />
-          {{ isCopied ? 'Copied!' : 'Copy Path' }}
-        </Button>
+        <CopyButton :value="hostsPath" label="Copy Path" />
       </div>
 
       <Card>

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Copy, Eye, EyeOff, KeyRound, Link, Mail, Pencil, Trash2, User } from 'lucide-vue-next';
+import { Eye, EyeOff, KeyRound, Link, Mail, Pencil, Trash2, User } from 'lucide-vue-next';
 import type { Account } from '../../../../shared/types/api';
 import { Button } from '../../ui/button';
 import { useQueries } from '@/composables/useQueries';
 import { toast } from 'vue-sonner';
 import { Card } from '@/components/ui/card';
+import CopyButton from '@/components/atoms/CopyButton.vue';
 
 const props = defineProps<{
   accounts: Account[];
@@ -29,15 +30,6 @@ const togglePasswordVisibility = (accountId: number) => {
     newSet.add(accountId);
   }
   visiblePasswords.value = newSet;
-};
-
-const copyToClipboard = async (text: string, fieldName: string) => {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success(`${fieldName} copied to clipboard`);
-  } catch {
-    toast.error('Failed to copy to clipboard');
-  }
 };
 
 const handleEdit = (account: Account) => {
@@ -111,28 +103,14 @@ const openUrl = (url: string) => {
         <div v-if="account.username" class="flex items-center gap-2 text-sm">
           <User class="h-4 w-4 shrink-0 text-slate-400" />
           <span class="flex-1 truncate text-slate-700">{{ account.username }}</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100"
-            @click="copyToClipboard(account.username!, 'Username')"
-          >
-            <Copy class="h-3.5 w-3.5" />
-          </Button>
+          <CopyButton :value="account.username" />
         </div>
 
         <!-- Email -->
         <div v-if="account.email" class="flex items-center gap-2 text-sm">
           <Mail class="h-4 w-4 shrink-0 text-slate-400" />
           <span class="flex-1 truncate text-slate-700">{{ account.email }}</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100"
-            @click="copyToClipboard(account.email!, 'Email')"
-          >
-            <Copy class="h-3.5 w-3.5" />
-          </Button>
+          <CopyButton :value="account.email" />
         </div>
 
         <!-- Password -->
@@ -151,14 +129,7 @@ const openUrl = (url: string) => {
               <Eye v-if="!visiblePasswords.has(account.id)" class="h-3.5 w-3.5" />
               <EyeOff v-else class="h-3.5 w-3.5" />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="h-6 w-6 p-0 opacity-0 transition-opacity group-hover:opacity-100"
-              @click="copyToClipboard(account.password!, 'Password')"
-            >
-              <Copy class="h-3.5 w-3.5" />
-            </Button>
+            <CopyButton :value="account.password" />
           </div>
         </div>
 
@@ -171,14 +142,7 @@ const openUrl = (url: string) => {
           >
             {{ account.loginUrl }}
           </button>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-6 w-6 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100"
-            @click="copyToClipboard(account.loginUrl!, 'Login URL')"
-          >
-            <Copy class="h-3.5 w-3.5" />
-          </Button>
+          <CopyButton :value="account.loginUrl" />
         </div>
 
         <!-- Notes -->
