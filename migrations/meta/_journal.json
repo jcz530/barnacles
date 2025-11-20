@@ -134,6 +134,13 @@
       "when": 1761990000000,
       "tag": "0018_add_themes_table",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1763606087002,
+      "tag": "0019_nostalgic_sersi",
+      "breakpoints": true
     }
   ]
 }

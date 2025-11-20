@@ -5,6 +5,7 @@ import ProjectReadmeTab from '../components/projects/organisms/ProjectReadmeTab.
 import ProjectTerminalsTab from '../components/projects/organisms/ProjectTerminalsTab.vue';
 import ProjectFilesTab from '../components/projects/organisms/ProjectFilesTab.vue';
 import ProjectRelatedFilesTab from '../components/projects/organisms/ProjectRelatedFilesTab.vue';
+import ProjectAccountsTab from '../components/projects/organisms/ProjectAccountsTab.vue';
 import Aliases from '../views/Aliases.vue';
 import ConfigFilesPage from '../pages/ConfigFilesPage.vue';
 import Home from '../views/Home.vue';
@@ -20,6 +21,7 @@ import UpdateTest from '../views/UpdateTest.vue';
 import TrayPopup from '../views/TrayPopup.vue';
 import Utilities from '../views/Utilities.vue';
 import DesignSystem from '../views/DesignSystem.vue';
+import AccountForm from '../views/AccountForm.vue';
 
 // Define route names as a const object for type-safe references
 export const RouteNames = {
@@ -32,6 +34,9 @@ export const RouteNames = {
   ProjectFiles: 'ProjectFiles',
   ProjectTerminals: 'ProjectTerminals',
   ProjectRelatedFiles: 'ProjectRelatedFiles',
+  ProjectAccounts: 'ProjectAccounts',
+  ProjectAccountNew: 'ProjectAccountNew',
+  ProjectAccountEdit: 'ProjectAccountEdit',
   Terminals: 'Terminals',
   Settings: 'Settings',
   Themes: 'Themes',
@@ -100,6 +105,21 @@ const routes: RouteRecordRaw[] = [
             path: 'related-files',
             name: RouteNames.ProjectRelatedFiles,
             component: ProjectRelatedFilesTab,
+          },
+          {
+            path: 'accounts',
+            name: RouteNames.ProjectAccounts,
+            component: ProjectAccountsTab,
+          },
+          {
+            path: 'accounts/new',
+            name: RouteNames.ProjectAccountNew,
+            component: AccountForm,
+          },
+          {
+            path: 'accounts/:accountId/edit',
+            name: RouteNames.ProjectAccountEdit,
+            component: AccountForm,
           },
         ],
       },

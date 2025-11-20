@@ -6,6 +6,7 @@ import processes from './processes';
 import relatedFolders from './related-folders';
 import technologies from './technologies';
 import tools from './tools';
+import accounts from './accounts';
 
 const projects = new Hono();
 
@@ -31,6 +32,9 @@ projects.route('/', files);
 
 // Related folders
 projects.route('/', relatedFolders);
+
+// Accounts
+projects.route('/', accounts);
 
 // Core routes (includes /:id which is a catch-all, so must be last)
 projects.route('/', core);

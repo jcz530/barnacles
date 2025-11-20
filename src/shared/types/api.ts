@@ -83,6 +83,37 @@ export interface TerminalInstance {
   exitCode?: number;
 }
 
+export interface Account {
+  id: number;
+  projectId: string;
+  name?: string | null;
+  username?: string | null;
+  email?: string | null;
+  password?: string | null; // Decrypted password from API
+  notes?: string | null;
+  loginUrl?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateAccountInput {
+  name?: string;
+  username?: string;
+  email?: string;
+  password?: string;
+  notes?: string;
+  loginUrl?: string;
+}
+
+export interface UpdateAccountInput {
+  name?: string;
+  username?: string;
+  email?: string;
+  password?: string;
+  notes?: string;
+  loginUrl?: string;
+}
+
 export interface ProjectWithDetails extends Project {
   technologies: Technology[];
   stats?: ProjectStats | null;

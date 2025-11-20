@@ -1,5 +1,5 @@
 .claude
-database.db
+database.db*
 dist
 
 # Compiled JavaScript files in source directories (should only be in dist/)

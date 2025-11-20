@@ -8,7 +8,7 @@ import dayjs from 'dayjs';
 import type { ProjectWithDetails } from '../../shared/types/api';
 import SortControl from '../components/atoms/SortControl.vue';
 import ViewToggle from '../components/atoms/ViewToggle.vue';
-import ProjectSearchBar from '../components/projects/molecules/ProjectSearchBar.vue';
+import SearchInput from '../components/molecules/SearchInput.vue';
 import TechnologyFilter from '../components/projects/molecules/TechnologyFilter.vue';
 import OnboardingOverlay from '../components/onboarding/organisms/OnboardingOverlay.vue';
 import { RouteNames } from '@/router';
@@ -55,7 +55,7 @@ const viewMode = useViewMode('projects-view-mode', 'table');
 const sortField = ref<'name' | 'lastModified' | 'size'>('lastModified');
 const sortDirection = ref<'asc' | 'desc'>('desc');
 const tableSorting = ref<SortingState>([{ id: 'lastModified', desc: true }]);
-const searchBarRef = ref<InstanceType<typeof ProjectSearchBar> | null>(null);
+const searchBarRef = ref<InstanceType<typeof SearchInput> | null>(null);
 
 // URL filter synchronization
 const { initializeFromUrl, syncFiltersToUrl } = useUrlFilters({
@@ -295,7 +295,7 @@ whenever(keys['Ctrl+K'], () => {
 
       <!-- Filters -->
       <div class="grid grid-cols-2 gap-3">
-        <ProjectSearchBar ref="searchBarRef" v-model="searchQuery" />
+        <SearchInput ref="searchBarRef" placeholder="Search projects..." v-model="searchQuery" />
       </div>
       <div class="mt-4 flex items-center gap-3">
         <Button

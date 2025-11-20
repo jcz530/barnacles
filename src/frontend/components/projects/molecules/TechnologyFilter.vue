@@ -48,7 +48,7 @@ const hasFilters = computed(() => props.selectedTechnologies.length > 0);
         Technologies
         <span
           v-if="hasFilters"
-          class="ml-2 rounded-full bg-slate-800 px-2 py-0.5 text-xs text-white"
+          class="ml-2 rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-50"
         >
           {{ selectedTechnologies.length }}
         </span>
