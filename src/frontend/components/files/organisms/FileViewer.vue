@@ -515,7 +515,7 @@ const copyToClipboard = async () => {
               @click="copyToClipboard"
               class="gap-2"
               title="Copy raw file contents"
-              :class="{ 'border-green-200 bg-green-50 text-green-600': copySuccess }"
+              :class="{ 'border-success-200 bg-success-50 text-success-600': copySuccess }"
             >
               <Copy class="h-4 w-4" />
               {{ copySuccess ? 'Copied!' : 'Raw' }}

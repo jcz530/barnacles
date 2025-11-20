@@ -403,10 +403,10 @@ const isFormValid = computed(() => {
             <!-- Success Message -->
             <div
               v-if="syncMutation.isSuccess.value && !hasUnsavedChanges"
-              class="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3"
+              class="border-success-200 bg-success-50 flex items-start gap-2 rounded-lg border p-3"
             >
-              <Check class="mt-0.5 h-5 w-5 text-green-600" />
-              <div class="text-sm text-green-800">
+              <Check class="text-success-600 mt-0.5 h-5 w-5" />
+              <div class="text-success-800 text-sm">
                 <p class="font-medium">Aliases saved and synced successfully</p>
               </div>
             </div>

@@ -239,10 +239,10 @@ const categoryColors: Record<string, string> = {
               <!-- Success Message -->
               <div
                 v-if="installMutation.isSuccess.value"
-                class="mt-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3"
+                class="border-success-200 bg-success-50 mt-4 flex items-start gap-2 rounded-lg border p-3"
               >
-                <Check class="mt-0.5 h-5 w-5 text-green-600" />
-                <div class="text-sm text-green-800">
+                <Check class="text-success-600 mt-0.5 h-5 w-5" />
+                <div class="text-success-800 text-sm">
                   <p class="font-medium">Preset pack installed successfully!</p>
                   <p class="mt-1">Redirecting to aliases page...</p>
                 </div>
