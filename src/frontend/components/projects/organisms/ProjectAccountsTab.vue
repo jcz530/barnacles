@@ -41,7 +41,8 @@ const filteredAccounts = computed(() => {
       account.name?.toLowerCase().includes(query) ||
       account.username?.toLowerCase().includes(query) ||
       account.email?.toLowerCase().includes(query) ||
-      account.loginUrl?.toLowerCase().includes(query)
+      account.loginUrl?.toLowerCase().includes(query) ||
+      account.notes?.toLowerCase().includes(query)
     );
   });
 });
