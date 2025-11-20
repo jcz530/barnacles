@@ -417,7 +417,7 @@ const copyPathToClipboard = async () => {
             <!-- Error Message -->
             <div
               v-if="syncMutation.isError.value"
-              class="bg-danger-50 flex items-start gap-2 rounded-lg border border-red-200 p-3"
+              class="bg-danger-50 border-danger-200 flex items-start gap-2 rounded-lg border p-3"
             >
               <AlertCircle class="text-danger-600 mt-0.5 h-5 w-5" />
               <div class="text-danger-800 text-sm">

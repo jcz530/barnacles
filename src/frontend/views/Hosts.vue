@@ -285,7 +285,7 @@ const copyPathToClipboard = async () => {
                         placeholder="127.0.0.1"
                         class="font-mono text-sm"
                         :class="{
-                          'border-red-500': host.ip && !isValidIP(host.ip),
+                          'border-danger-500': host.ip && !isValidIP(host.ip),
                         }"
                       />
                     </div>
@@ -303,7 +303,7 @@ const copyPathToClipboard = async () => {
                         placeholder="myapp.local"
                         class="font-mono text-sm"
                         :class="{
-                          'border-red-500': host.hostname && !isValidHostname(host.hostname),
+                          'border-danger-500': host.hostname && !isValidHostname(host.hostname),
                         }"
                       />
                     </div>
@@ -363,7 +363,7 @@ const copyPathToClipboard = async () => {
             <!-- Error Message -->
             <div
               v-if="saveMutation.isError.value"
-              class="bg-danger-50 flex items-start gap-2 rounded-lg border border-red-200 p-3"
+              class="bg-danger-50 border-danger-200 flex items-start gap-2 rounded-lg border p-3"
             >
               <AlertCircle class="text-danger-600 mt-0.5 h-5 w-5" />
               <div class="text-danger-800 text-sm">
