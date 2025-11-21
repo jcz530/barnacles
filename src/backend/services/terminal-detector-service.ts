@@ -55,8 +55,8 @@ const TERMINAL_DEFINITIONS: Terminal[] = [
   {
     id: 'kitty',
     name: 'Kitty',
-    executable: 'kitty',
-    command: 'kitty',
+    executable: 'open',
+    command: 'open -a kitty',
     icon: 'kitty',
     color: '#000000',
   },
@@ -199,8 +199,8 @@ class TerminalDetectorService {
           // Alacritty - open with working directory
           await execAsync(`alacritty --working-directory "${path}"`);
         } else if (terminal.id === 'kitty') {
-          // Kitty - open with working directory
-          await execAsync(`kitty --directory="${path}"`);
+          // Kitty - open with working directory using macOS open command
+          await execAsync(`open -a kitty.app --args --directory="${path}"`);
         } else if (terminal.id === 'hyper') {
           // Hyper - open and cd to path
           await execAsync(`hyper "${path}"`);
