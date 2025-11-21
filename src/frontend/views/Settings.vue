@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
-import { onMounted } from 'vue';
-import Card from '../components/ui/card/Card.vue';
-import CardHeader from '../components/ui/card/CardHeader.vue';
-import CardTitle from '../components/ui/card/CardTitle.vue';
-import CardDescription from '../components/ui/card/CardDescription.vue';
-import CardContent from '../components/ui/card/CardContent.vue';
+import { nextTick, onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
+import { SETTING_KEYS, type SettingKey } from '../../shared/types/api';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import SettingWrapper from '../components/settings/molecules/SettingWrapper.vue';
 import ScanMaxDepthSetting from '../components/settings/organisms/ScanMaxDepthSetting.vue';
 import ScanIncludedDirectoriesSetting from '../components/settings/organisms/ScanIncludedDirectoriesSetting.vue';
 import ScanExcludedDirectoriesSetting from '../components/settings/organisms/ScanExcludedDirectoriesSetting.vue';
@@ -16,9 +15,35 @@ import InstallCliCommandSetting from '../components/settings/organisms/InstallCl
 import ThemesSetting from '../components/settings/organisms/ThemesSetting.vue';
 
 const { setBreadcrumbs } = useBreadcrumbs();
+const route = useRoute();
+const highlightedSetting = ref<SettingKey | null>(null);
 
-onMounted(() => {
+onMounted(async () => {
   setBreadcrumbs([{ label: 'Settings' }]);
+
+  const settingParam = route.query.setting as string | undefined;
+  if (settingParam) {
+    // Validate that the setting key exists
+    const isValidSetting = Object.values(SETTING_KEYS).includes(settingParam as SettingKey);
+
+    if (isValidSetting) {
+      await nextTick();
+
+      // Add a small delay to ensure DOM is fully rendered
+      setTimeout(() => {
+        const element = document.querySelector(`[data-setting="${settingParam}"]`);
+
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          highlightedSetting.value = settingParam as SettingKey;
+          // Remove highlight after animation
+          setTimeout(() => {
+            highlightedSetting.value = null;
+          }, 5000);
+        }
+      }, 100);
+    }
+  }
 });
 </script>
 
@@ -39,9 +64,24 @@ onMounted(() => {
           </CardHeader>
           <CardContent>
             <div class="space-y-6">
-              <ScanIncludedDirectoriesSetting />
-              <ScanMaxDepthSetting />
-              <ScanExcludedDirectoriesSetting />
+              <SettingWrapper
+                :setting-key="SETTING_KEYS.SCAN_INCLUDED_DIRECTORIES"
+                :highlighted="highlightedSetting"
+              >
+                <ScanIncludedDirectoriesSetting />
+              </SettingWrapper>
+              <SettingWrapper
+                :setting-key="SETTING_KEYS.SCAN_MAX_DEPTH"
+                :highlighted="highlightedSetting"
+              >
+                <ScanMaxDepthSetting />
+              </SettingWrapper>
+              <SettingWrapper
+                :setting-key="SETTING_KEYS.SCAN_EXCLUDED_DIRECTORIES"
+                :highlighted="highlightedSetting"
+              >
+                <ScanExcludedDirectoriesSetting />
+              </SettingWrapper>
             </div>
           </CardContent>
         </Card>
@@ -56,8 +96,18 @@ onMounted(() => {
           </CardHeader>
           <CardContent>
             <div class="space-y-6">
-              <DefaultIDESetting />
-              <DefaultTerminalSetting />
+              <SettingWrapper
+                :setting-key="SETTING_KEYS.DEFAULT_IDE"
+                :highlighted="highlightedSetting"
+              >
+                <DefaultIDESetting />
+              </SettingWrapper>
+              <SettingWrapper
+                :setting-key="SETTING_KEYS.DEFAULT_TERMINAL"
+                :highlighted="highlightedSetting"
+              >
+                <DefaultTerminalSetting />
+              </SettingWrapper>
             </div>
           </CardContent>
         </Card>
@@ -70,8 +120,15 @@ onMounted(() => {
           </CardHeader>
           <CardContent>
             <div class="space-y-6">
-              <ThemesSetting />
-              <ShowTrayIconSetting />
+              <SettingWrapper :setting-key="SETTING_KEYS.THEMES" :highlighted="highlightedSetting">
+                <ThemesSetting />
+              </SettingWrapper>
+              <SettingWrapper
+                :setting-key="SETTING_KEYS.SHOW_TRAY_ICON"
+                :highlighted="highlightedSetting"
+              >
+                <ShowTrayIconSetting />
+              </SettingWrapper>
             </div>
           </CardContent>
         </Card>
@@ -84,7 +141,12 @@ onMounted(() => {
           </CardHeader>
           <CardContent>
             <div class="space-y-6">
-              <InstallCliCommandSetting />
+              <SettingWrapper
+                :setting-key="SETTING_KEYS.INSTALL_CLI_COMMAND"
+                :highlighted="highlightedSetting"
+              >
+                <InstallCliCommandSetting />
+              </SettingWrapper>
             </div>
           </CardContent>
         </Card>
@@ -92,5 +154,3 @@ onMounted(() => {
     </section>
   </div>
 </template>
-
-<style scoped></style>
