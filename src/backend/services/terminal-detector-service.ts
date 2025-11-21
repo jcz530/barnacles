@@ -47,8 +47,8 @@ const TERMINAL_DEFINITIONS: Terminal[] = [
   {
     id: 'alacritty',
     name: 'Alacritty',
-    executable: 'alacritty',
-    command: 'alacritty',
+    executable: 'open',
+    command: 'open -a Alacritty',
     icon: 'alacritty',
     color: '#F46D01',
   },
@@ -63,16 +63,16 @@ const TERMINAL_DEFINITIONS: Terminal[] = [
   {
     id: 'hyper',
     name: 'Hyper',
-    executable: 'hyper',
-    command: 'hyper',
+    executable: 'open',
+    command: 'open -a Hyper',
     icon: 'hyper',
     color: '#000000',
   },
   {
     id: 'wezterm',
     name: 'WezTerm',
-    executable: 'wezterm',
-    command: 'wezterm',
+    executable: 'open',
+    command: 'open -a WezTerm',
     icon: 'wezterm',
     color: '#4E49EE',
   },
@@ -196,17 +196,17 @@ class TerminalDetectorService {
           // Warp terminal - open directly to the path
           await execAsync(`open -a Warp "${path}"`);
         } else if (terminal.id === 'alacritty') {
-          // Alacritty - open with working directory
-          await execAsync(`alacritty --working-directory "${path}"`);
+          // Alacritty - open with working directory using macOS open command
+          await execAsync(`open -a Alacritty.app --args --working-directory "${path}"`);
         } else if (terminal.id === 'kitty') {
           // Kitty - open with working directory using macOS open command
           await execAsync(`open -a kitty.app --args --directory="${path}"`);
         } else if (terminal.id === 'hyper') {
-          // Hyper - open and cd to path
-          await execAsync(`hyper "${path}"`);
+          // Hyper - open with working directory using macOS open command
+          await execAsync(`open -a Hyper.app --args "${path}"`);
         } else if (terminal.id === 'wezterm') {
-          // WezTerm - start with working directory
-          await execAsync(`wezterm start --cwd "${path}"`);
+          // WezTerm - start with working directory using macOS open command
+          await execAsync(`open -a WezTerm.app --args start --cwd "${path}"`);
         } else if (terminal.id === 'ghostty') {
           // Ghostty - open with working directory using macOS open command
           await execAsync(`open -a Ghostty.app --args --working-directory="${path}"`);
