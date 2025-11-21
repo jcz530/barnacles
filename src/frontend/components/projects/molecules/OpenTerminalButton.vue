@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown, Terminal as TerminalIcon } from 'lucide-vue-next';
+import { ChevronDown, Play, Star, Terminal as TerminalIcon } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import type { DetectedTerminal } from '../../../../shared/types/api';
 import { useQueries } from '../../../composables/useQueries';
@@ -48,9 +48,9 @@ const preferredTerminal = computed(() => {
   return installedTerminals.value.find(terminal => terminal.id === terminalId);
 });
 
-const handleOpenTerminal = async () => {
+const handleOpenTerminal = async (terminalId?: string) => {
   try {
-    await openTerminalMutation.mutateAsync({ projectId: props.projectId });
+    await openTerminalMutation.mutateAsync({ projectId: props.projectId, terminalId });
   } catch (error: any) {
     console.error('Failed to open terminal:', error);
 
@@ -107,22 +107,39 @@ const handleMainButtonClick = () => {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Select Terminal</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          v-for="terminal in installedTerminals"
-          :key="terminal.id"
-          @click="handleSelectTerminal(terminal.id)"
-          :disabled="updateTerminalMutation.isPending.value"
-        >
-          <div
-            v-if="terminal.color"
-            class="mr-2 h-3 w-3 rounded-sm"
-            :style="{ backgroundColor: terminal.color }"
-          />
-          {{ terminal.name }}
-          <span v-if="terminal.id === preferredTerminalId" class="ml-auto text-xs text-slate-500"
-            >✓</span
+        <div class="flex" v-for="terminal in installedTerminals" :key="terminal.id">
+          <Button class="flex-1" as-child variant="ghost" title="Set as preferred terminal">
+            <DropdownMenuItem
+              @click="handleSelectTerminal(terminal.id)"
+              :disabled="updateTerminalMutation.isPending.value"
+              class="flex items-center gap-2 pr-1"
+            >
+              <Star
+                class="h-3 w-3 shrink-0"
+                :class="
+                  terminal.id === preferredTerminalId
+                    ? 'fill-secondary-400 text-secondary-400'
+                    : 'text-muted-foreground'
+                "
+              />
+              <div
+                v-if="terminal.color"
+                class="h-3 w-3 shrink-0 rounded-sm"
+                :style="{ backgroundColor: terminal.color }"
+              />
+              <span class="flex-1">{{ terminal.name }}</span>
+            </DropdownMenuItem>
+          </Button>
+          <Button
+            variant="ghost"
+            @click.stop="handleOpenTerminal(terminal.id)"
+            :disabled="openTerminalMutation.isPending.value"
+            class="hover:bg-muted ml-2 rounded p-1"
+            title="Open once"
           >
-        </DropdownMenuItem>
+            <Play class="h-3 w-3" />
+          </Button>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   </div>
