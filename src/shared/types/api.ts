@@ -200,3 +200,13 @@ export interface PresetPack {
     description: string;
   }>;
 }
+
+export interface GitStats {
+  commits: number;
+  filesChanged: number;
+  projectsWorkedOn: number;
+  linesAdded: number;
+  linesRemoved: number;
+  streak: number;
+  period: 'week' | 'month' | 'last-week';
+}

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import dayjs from 'dayjs';
 import ProjectCard from '../components/projects/molecules/ProjectCard.vue';
 import OnboardingOverlay from '../components/onboarding/organisms/OnboardingOverlay.vue';
+import GitStatsOverview from '../components/projects/organisms/GitStatsOverview.vue';
 import { useQueries } from '@/composables/useQueries';
 import { provideProcessStatusContext } from '@/composables/useProcessStatusContext';
 import { useFirstRunDetection } from '@/composables/useFirstRunDetection';
@@ -95,6 +96,9 @@ const handleToggleFavorite = async (projectId: string) => {
       </div>
 
       <div v-else class="space-y-8">
+        <!-- Git Stats Section -->
+        <GitStatsOverview />
+
         <!-- Favorite Projects Section -->
         <div v-if="favoriteProjects.length > 0">
           <div class="mb-4">

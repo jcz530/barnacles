@@ -7,6 +7,7 @@ import relatedFolders from './related-folders';
 import technologies from './technologies';
 import tools from './tools';
 import accounts from './accounts';
+import gitStats from './git-stats';
 
 const projects = new Hono();
 
@@ -23,6 +24,9 @@ projects.route('/', tools);
 
 // Processes (must be before /:id routes for /process-status)
 projects.route('/', processes);
+
+// Git stats (must be before /:id routes)
+projects.route('/', gitStats);
 
 // Packages
 projects.route('/', packages);
