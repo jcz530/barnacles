@@ -136,6 +136,19 @@ export interface Setting {
   updatedAt: Date;
 }
 
+export const SETTING_KEYS = {
+  DEFAULT_IDE: 'defaultIde',
+  DEFAULT_TERMINAL: 'defaultTerminal',
+  INSTALL_CLI_COMMAND: 'installCliCommand',
+  SCAN_EXCLUDED_DIRECTORIES: 'scanExcludedDirectories',
+  SCAN_INCLUDED_DIRECTORIES: 'scanIncludedDirectories',
+  SCAN_MAX_DEPTH: 'scanMaxDepth',
+  SHOW_TRAY_ICON: 'showTrayIcon',
+  THEMES: 'themes',
+} as const;
+
+export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];
+
 export interface Alias {
   id: string;
   name: string;

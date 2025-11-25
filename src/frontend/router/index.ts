@@ -132,6 +132,7 @@ const routes: RouteRecordRaw[] = [
         path: '/settings',
         name: RouteNames.Settings,
         component: Settings,
+        props: route => ({ setting: route.query.setting }),
       },
       {
         path: '/themes',

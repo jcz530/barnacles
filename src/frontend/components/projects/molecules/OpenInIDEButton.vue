@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ChevronDown, ExternalLink } from 'lucide-vue-next';
+import { ChevronDown, ExternalLink, Globe, Play, Star } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
-import type { DetectedIDE } from '../../../../shared/types/api';
+import { type DetectedIDE, SETTING_KEYS } from '../../../../shared/types/api';
 import { useQueries } from '../../../composables/useQueries';
 import { Button } from '../../ui/button';
 import {
@@ -14,6 +14,7 @@ import {
 } from '../../ui/dropdown-menu';
 import { toastDanger } from '../../ui/sonner';
 import { handlePermissionError } from '../../../utils/error-handlers';
+import { RouteNames } from '@/router';
 
 interface Props {
   projectId: string;
@@ -47,9 +48,9 @@ const preferredIDE = computed(() => {
   return installedIDEs.value.find(ide => ide.id === ideId);
 });
 
-const handleOpenInIDE = async () => {
+const handleOpenInIDE = async (ideId?: string) => {
   try {
-    await openProjectMutation.mutateAsync({ projectId: props.projectId });
+    await openProjectMutation.mutateAsync({ projectId: props.projectId, ideId });
   } catch (error: any) {
     console.error('Failed to open project:', error);
 
@@ -104,22 +105,49 @@ const handleMainButtonClick = () => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Select IDE</DropdownMenuLabel>
+        <DropdownMenuLabel class="flex items-center">
+          <span class="flex-1">Select IDE</span>
+          <Button variant="ghost" as-child title="Set a global preferred IDE"
+            ><RouterLink
+              :to="{ name: RouteNames.Settings, query: { setting: SETTING_KEYS.DEFAULT_IDE } }"
+              ><Globe class="text-slate-500" /></RouterLink
+          ></Button>
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          v-for="ide in installedIDEs"
-          :key="ide.id"
-          @click="handleSelectIDE(ide.id)"
-          :disabled="updateIDEMutation.isPending.value"
-        >
-          <div
-            v-if="ide.color"
-            class="mr-2 h-3 w-3 rounded-sm"
-            :style="{ backgroundColor: ide.color }"
-          />
-          {{ ide.name }}
-          <span v-if="ide.id === preferredIdeId" class="ml-auto text-xs text-slate-500">✓</span>
-        </DropdownMenuItem>
+
+        <div class="flex" v-for="ide in installedIDEs" :key="ide.id">
+          <Button class="flex-1" as-child variant="ghost" title="Set as preferred terminal">
+            <DropdownMenuItem
+              @click="handleSelectIDE(ide.id)"
+              :disabled="updateIDEMutation.isPending.value"
+              class="flex items-center gap-2 pr-1"
+            >
+              <Star
+                class="h-3 w-3 shrink-0"
+                :class="
+                  ide.id === preferredIdeId
+                    ? 'fill-secondary-400 text-secondary-400'
+                    : 'text-muted-foreground'
+                "
+              />
+              <div
+                v-if="ide.color"
+                class="h-3 w-3 shrink-0 rounded-sm"
+                :style="{ backgroundColor: ide.color }"
+              />
+              <span class="flex-1">{{ ide.name }}</span>
+            </DropdownMenuItem>
+          </Button>
+          <Button
+            variant="ghost"
+            @click.stop="handleOpenInIDE(ide.id)"
+            :disabled="openProjectMutation.isPending.value"
+            class="hover:bg-muted ml-2 rounded p-1"
+            title="Open once"
+          >
+            <Play class="h-3 w-3" />
+          </Button>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   </div>
