@@ -201,12 +201,16 @@ export interface PresetPack {
   }>;
 }
 
-export interface GitStats {
+export interface GitStatsByDay {
+  date: string; // YYYY-MM-DD format
   commits: number;
   filesChanged: number;
-  projectsWorkedOn: number;
   linesAdded: number;
   linesRemoved: number;
-  streak: number;
+  projectsWorkedOn: number;
+}
+
+export interface GitStats {
   period: 'week' | 'month' | 'last-week';
+  days: GitStatsByDay[];
 }

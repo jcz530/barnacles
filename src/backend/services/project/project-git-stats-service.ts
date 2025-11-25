@@ -5,22 +5,25 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
-export interface GitStats {
+export interface GitStatsByDay {
+  date: string; // YYYY-MM-DD format
   commits: number;
   filesChanged: number;
-  projectsWorkedOn: number;
   linesAdded: number;
   linesRemoved: number;
-  streak: number;
-  period: 'week' | 'month' | 'last-week';
+  projectsWorkedOn: number;
 }
 
-interface ProjectGitData {
+export interface GitStats {
+  period: 'week' | 'month' | 'last-week';
+  days: GitStatsByDay[];
+}
+
+interface DailyProjectData {
   commits: number;
-  filesChanged: Set<string>;
+  files: Set<string>;
   linesAdded: number;
   linesRemoved: number;
-  commitDates: Set<string>; // YYYY-MM-DD format
 }
 
 // Files to exclude from line count stats
@@ -38,7 +41,7 @@ const EXCLUDED_FILES = [
 
 class ProjectGitStatsService {
   /**
-   * Get git stats across all projects for a given period
+   * Get git stats across all projects for a given period, grouped by day
    */
   async getGitStats(
     projectPaths: string[],
@@ -49,124 +52,145 @@ class ProjectGitStatsService {
     // Get user info from git config
     const userEmail = await this.getUserEmail();
 
-    const allCommitDates = new Set<string>();
-    let totalCommits = 0;
-    const allFilesChanged = new Set<string>();
-    let totalLinesAdded = 0;
-    let totalLinesRemoved = 0;
-    let projectsWorkedOn = 0;
+    // Create a map of date -> daily stats
+    const dailyStatsMap = new Map<string, DailyProjectData>();
+
+    // Get all dates in the period
+    const allDates = this.getDateRange(sinceDate, untilDate);
+    allDates.forEach(date => {
+      dailyStatsMap.set(date, {
+        commits: 0,
+        files: new Set<string>(),
+        linesAdded: 0,
+        linesRemoved: 0,
+      });
+    });
+
+    // Track which projects contributed on each day
+    const projectsByDay = new Map<string, Set<string>>();
 
     // Process each project
     for (const projectPath of projectPaths) {
-      const projectData = await this.getProjectGitData(
+      const projectDailyData = await this.getProjectDailyGitData(
         projectPath,
         userEmail,
         sinceDate,
         untilDate
       );
 
-      if (projectData && projectData.commits > 0) {
-        totalCommits += projectData.commits;
-        projectData.filesChanged.forEach(file => allFilesChanged.add(file));
-        totalLinesAdded += projectData.linesAdded;
-        totalLinesRemoved += projectData.linesRemoved;
-        projectData.commitDates.forEach(date => allCommitDates.add(date));
-        projectsWorkedOn++;
+      if (projectDailyData) {
+        // Merge project data into overall daily stats
+        projectDailyData.forEach((data, date) => {
+          const existing = dailyStatsMap.get(date);
+          if (existing) {
+            existing.commits += data.commits;
+            data.files.forEach(file => existing.files.add(file));
+            existing.linesAdded += data.linesAdded;
+            existing.linesRemoved += data.linesRemoved;
+
+            // Track this project for this day
+            if (data.commits > 0) {
+              if (!projectsByDay.has(date)) {
+                projectsByDay.set(date, new Set());
+              }
+              projectsByDay.get(date)!.add(projectPath);
+            }
+          }
+        });
       }
     }
 
-    // Calculate streak
-    const streak = this.calculateStreak(allCommitDates);
+    // Convert map to array of GitStatsByDay
+    const days: GitStatsByDay[] = allDates.map(date => {
+      const data = dailyStatsMap.get(date)!;
+      return {
+        date,
+        commits: data.commits,
+        filesChanged: data.files.size,
+        linesAdded: data.linesAdded,
+        linesRemoved: data.linesRemoved,
+        projectsWorkedOn: projectsByDay.get(date)?.size ?? 0,
+      };
+    });
 
     return {
-      commits: totalCommits,
-      filesChanged: allFilesChanged.size,
-      projectsWorkedOn,
-      linesAdded: totalLinesAdded,
-      linesRemoved: totalLinesRemoved,
-      streak,
       period,
+      days,
     };
   }
 
   /**
-   * Get git data for a single project
+   * Get git data for a single project, grouped by day
    */
-  private async getProjectGitData(
+  private async getProjectDailyGitData(
     projectPath: string,
     userEmail: string,
     sinceDate: string,
     untilDate: string
-  ): Promise<ProjectGitData | null> {
+  ): Promise<Map<string, DailyProjectData> | null> {
     try {
       // Check if git repo exists
       const gitDir = path.join(projectPath, '.git');
       await fs.access(gitDir);
 
-      // Get commit count
-      const { stdout: commitLog } = await execAsync(
-        `git log --all --author="${userEmail}" --since="${sinceDate}" --until="${untilDate}" --format=%H`,
+      // Get log with date, hash, and numstat in one go
+      const { stdout: logOutput } = await execAsync(
+        `git log --all --author="${userEmail}" --since="${sinceDate}" --until="${untilDate}" --format="%as|%H" --numstat`,
         { cwd: projectPath }
       );
 
-      const commits = commitLog.trim() ? commitLog.trim().split('\n').length : 0;
-
-      if (commits === 0) {
+      if (!logOutput.trim()) {
         return null;
       }
 
-      // Get files changed and line stats
-      const { stdout: numstatLog } = await execAsync(
-        `git log --all --author="${userEmail}" --since="${sinceDate}" --until="${untilDate}" --numstat --format=%H`,
-        { cwd: projectPath }
-      );
+      const dailyData = new Map<string, DailyProjectData>();
+      const lines = logOutput.split('\n');
+      let currentDate: string | null = null;
 
-      const filesChanged = new Set<string>();
-      let linesAdded = 0;
-      let linesRemoved = 0;
-
-      const lines = numstatLog.split('\n');
       for (const line of lines) {
-        const parts = line.trim().split('\t');
-        if (parts.length === 3) {
-          const [added, removed, file] = parts;
+        if (!line.trim()) continue;
 
-          // Skip excluded files
-          const fileName = path.basename(file);
-          if (EXCLUDED_FILES.includes(fileName)) {
-            continue;
+        // Check if this is a commit header line (date|hash)
+        if (line.includes('|')) {
+          const [date] = line.split('|');
+          currentDate = date;
+
+          // Initialize this date if not exists
+          if (!dailyData.has(date)) {
+            dailyData.set(date, {
+              commits: 0,
+              files: new Set<string>(),
+              linesAdded: 0,
+              linesRemoved: 0,
+            });
           }
 
-          // Skip binary files (git shows '-' for binary)
-          if (added !== '-' && removed !== '-') {
-            linesAdded += parseInt(added, 10) || 0;
-            linesRemoved += parseInt(removed, 10) || 0;
-            filesChanged.add(file);
+          // Increment commit count for this date
+          dailyData.get(date)!.commits++;
+        } else if (currentDate) {
+          // This is a numstat line
+          const parts = line.trim().split('\t');
+          if (parts.length === 3) {
+            const [added, removed, file] = parts;
+
+            // Skip excluded files
+            const fileName = path.basename(file);
+            if (EXCLUDED_FILES.includes(fileName)) {
+              continue;
+            }
+
+            // Skip binary files (git shows '-' for binary)
+            if (added !== '-' && removed !== '-') {
+              const dayData = dailyData.get(currentDate)!;
+              dayData.linesAdded += parseInt(added, 10) || 0;
+              dayData.linesRemoved += parseInt(removed, 10) || 0;
+              dayData.files.add(file);
+            }
           }
         }
       }
 
-      // Get commit dates for streak calculation
-      const { stdout: commitDates } = await execAsync(
-        `git log --all --author="${userEmail}" --since="${sinceDate}" --until="${untilDate}" --format=%as`,
-        { cwd: projectPath }
-      );
-
-      const commitDatesSet = new Set<string>();
-      if (commitDates.trim()) {
-        commitDates
-          .trim()
-          .split('\n')
-          .forEach(date => commitDatesSet.add(date));
-      }
-
-      return {
-        commits,
-        filesChanged,
-        linesAdded,
-        linesRemoved,
-        commitDates: commitDatesSet,
-      };
+      return dailyData;
     } catch {
       // Not a git repo or other error, skip silently
       return null;
@@ -187,54 +211,19 @@ class ProjectGitStatsService {
   }
 
   /**
-   * Calculate streak of consecutive days with commits
+   * Get all dates in a range (inclusive)
    */
-  private calculateStreak(commitDates: Set<string>): number {
-    if (commitDates.size === 0) {
-      return 0;
+  private getDateRange(startDate: string, endDate: string): string[] {
+    const dates: string[] = [];
+    const current = new Date(startDate);
+    const end = new Date(endDate);
+
+    while (current <= end) {
+      dates.push(current.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + 1);
     }
 
-    // Sort dates in descending order (newest first)
-    const sortedDates = Array.from(commitDates).sort().reverse();
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Check if most recent commit was today or yesterday
-    const mostRecentDate = new Date(sortedDates[0]);
-    mostRecentDate.setHours(0, 0, 0, 0);
-
-    const daysSinceLastCommit = Math.floor(
-      (today.getTime() - mostRecentDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    // Streak is broken if last commit was more than 1 day ago
-    if (daysSinceLastCommit > 1) {
-      return 0;
-    }
-
-    // Count consecutive days working backwards from most recent
-    let streak = 1;
-    let currentDate = new Date(mostRecentDate);
-
-    for (let i = 1; i < sortedDates.length; i++) {
-      const prevDate = new Date(sortedDates[i]);
-      prevDate.setHours(0, 0, 0, 0);
-
-      const expectedDate = new Date(currentDate);
-      expectedDate.setDate(expectedDate.getDate() - 1);
-
-      if (prevDate.getTime() === expectedDate.getTime()) {
-        streak++;
-        currentDate = prevDate;
-      } else if (prevDate.getTime() < expectedDate.getTime()) {
-        // Gap found, stop counting
-        break;
-      }
-      // If same date, continue (multiple commits same day)
-    }
-
-    return streak;
+    return dates;
   }
 
   /**

@@ -11,7 +11,7 @@ defineProps<{
 
 <template>
   <div
-    class="bg-slate-100x relative flex flex-col items-center justify-center rounded-lg border p-0 p-4"
+    class="relative flex flex-col items-center justify-center rounded-lg border bg-slate-100 p-0 p-4"
   >
     <component
       :is="icon"

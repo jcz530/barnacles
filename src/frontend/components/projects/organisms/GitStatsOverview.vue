@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useQueries } from '@/composables/useQueries';
 import { FileText, Flame, FolderGit2, GitCommit, Minus, Plus } from 'lucide-vue-next';
 import GitStatCard from '../molecules/GitStatCard.vue';
@@ -21,6 +21,92 @@ const getPeriodLabel = (period: 'week' | 'month' | 'last-week') => {
       return 'Last Week';
   }
 };
+
+// Calculate totals from daily data
+const totals = computed(() => {
+  if (!stats.value?.days) {
+    return {
+      commits: 0,
+      filesChanged: 0,
+      projectsWorkedOn: 0,
+      linesAdded: 0,
+      linesRemoved: 0,
+      streak: 0,
+    };
+  }
+
+  const days = stats.value.days;
+
+  // Sum up basic stats
+  const commits = days.reduce((sum, day) => sum + day.commits, 0);
+  const linesAdded = days.reduce((sum, day) => sum + day.linesAdded, 0);
+  const linesRemoved = days.reduce((sum, day) => sum + day.linesRemoved, 0);
+
+  // Get unique counts
+  const filesChanged = days.reduce((sum, day) => sum + day.filesChanged, 0);
+  const projectsWorkedOn = Math.max(...days.map(day => day.projectsWorkedOn), 0);
+
+  // Calculate streak
+  const streak = calculateStreak(days);
+
+  return {
+    commits,
+    filesChanged,
+    projectsWorkedOn,
+    linesAdded,
+    linesRemoved,
+    streak,
+  };
+});
+
+// Calculate streak from daily data
+const calculateStreak = (days: typeof stats.value.days) => {
+  if (!days || days.length === 0) return 0;
+
+  // Sort by date descending (newest first)
+  const sortedDays = [...days].sort((a, b) => b.date.localeCompare(a.date));
+
+  // Get days with commits
+  const activeDays = sortedDays.filter(day => day.commits > 0);
+  if (activeDays.length === 0) return 0;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Check if most recent commit was today or yesterday
+  const mostRecentDate = new Date(activeDays[0].date);
+  mostRecentDate.setHours(0, 0, 0, 0);
+
+  const daysSinceLastCommit = Math.floor(
+    (today.getTime() - mostRecentDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  // Streak is broken if last commit was more than 1 day ago
+  if (daysSinceLastCommit > 1) return 0;
+
+  // Count consecutive days working backwards
+  let streak = 1;
+  let currentDate = new Date(mostRecentDate);
+
+  for (let i = 1; i < activeDays.length; i++) {
+    const prevDate = new Date(activeDays[i].date);
+    prevDate.setHours(0, 0, 0, 0);
+
+    const expectedDate = new Date(currentDate);
+    expectedDate.setDate(expectedDate.getDate() - 1);
+
+    if (prevDate.getTime() === expectedDate.getTime()) {
+      streak++;
+      currentDate = prevDate;
+    } else if (prevDate.getTime() < expectedDate.getTime()) {
+      // Gap found, stop counting
+      break;
+    }
+    // If same date, continue (shouldn't happen with daily data but handle it)
+  }
+
+  return streak;
+};
 </script>
 
 <template>
@@ -33,8 +119,8 @@ const getPeriodLabel = (period: 'week' | 'month' | 'last-week') => {
             :key="period"
             size="sm"
             variant="ghost"
-            @click="selectedPeriod = period"
             :class="[selectedPeriod === period ? 'text-success-500' : '']"
+            @click="selectedPeriod = period"
           >
             {{ getPeriodLabel(period) }}
           </Button>
@@ -51,27 +137,27 @@ const getPeriodLabel = (period: 'week' | 'month' | 'last-week') => {
         <GitStatCard
           :icon="Flame"
           label="Day Streak"
-          :value="stats.streak"
+          :value="totals.streak"
           icon-class="text-orange-500"
         />
-        <GitStatCard :icon="GitCommit" label="Commits" :value="stats.commits" />
-        <GitStatCard :icon="FileText" label="Files Changed" :value="stats.filesChanged" />
+        <GitStatCard :icon="GitCommit" label="Commits" :value="totals.commits" />
+        <GitStatCard :icon="FileText" label="Files Changed" :value="totals.filesChanged" />
         <GitStatCard
           :icon="FolderGit2"
           label="Projects"
-          :value="stats.projectsWorkedOn"
+          :value="totals.projectsWorkedOn"
           icon-class="text-blue-500"
         />
         <GitStatCard
           :icon="Plus"
           label="Lines Added"
-          :value="stats.linesAdded.toLocaleString()"
+          :value="totals.linesAdded.toLocaleString()"
           icon-class="text-green-500"
         />
         <GitStatCard
           :icon="Minus"
           label="Lines Removed"
-          :value="stats.linesRemoved.toLocaleString()"
+          :value="totals.linesRemoved.toLocaleString()"
           icon-class="text-red-500"
         />
       </div>
