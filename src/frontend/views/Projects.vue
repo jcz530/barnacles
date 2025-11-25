@@ -10,6 +10,7 @@ import SortControl from '../components/atoms/SortControl.vue';
 import ViewToggle from '../components/atoms/ViewToggle.vue';
 import SearchInput from '../components/molecules/SearchInput.vue';
 import TechnologyFilter from '../components/projects/molecules/TechnologyFilter.vue';
+import GitRemoteFilter from '../components/projects/molecules/GitRemoteFilter.vue';
 import OnboardingOverlay from '../components/onboarding/organisms/OnboardingOverlay.vue';
 import { RouteNames } from '@/router';
 import DateFilter, {
@@ -25,6 +26,7 @@ import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
 import { useViewMode } from '@/composables/useViewMode';
 import { useUrlFilters } from '@/composables/useUrlFilters';
 import { useFirstRunDetection } from '@/composables/useFirstRunDetection';
+import { useProjectActions } from '@/composables/useProjectActions';
 
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
@@ -37,6 +39,8 @@ const {
   useProcessStatusQuery,
 } = useQueries();
 
+const { getGitProvider } = useProjectActions();
+
 // WebSocket scanning
 const {
   isScanning: wsScanning,
@@ -48,6 +52,7 @@ const {
 // State
 const searchQuery = ref('');
 const selectedTechnologies = ref<string[]>([]);
+const selectedGitProviders = ref<string[]>([]);
 const showFavoritesOnly = ref(false);
 const datePreset = ref<DatePreset>('all');
 const dateDirection = ref<DateFilterDirection>('within');
@@ -61,6 +66,7 @@ const searchBarRef = ref<InstanceType<typeof SearchInput> | null>(null);
 const { initializeFromUrl, syncFiltersToUrl } = useUrlFilters({
   searchQuery,
   selectedTechnologies,
+  selectedGitProviders,
   showFavoritesOnly,
   datePreset,
   dateDirection,
@@ -93,6 +99,30 @@ const { data: technologies, isLoading: technologiesLoading } = useTechnologiesQu
 const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
   enabled: true,
   refetchInterval: 2000,
+});
+
+// Extract unique git providers from all projects
+const availableGitProviders = computed(() => {
+  const providers = new Set<string>();
+  const allProjects = filteredProjects.value || [];
+
+  allProjects.forEach(project => {
+    const remoteUrl = project.stats?.gitRemoteUrl;
+    if (remoteUrl) {
+      const provider = getGitProvider(remoteUrl);
+      if (provider) {
+        providers.add(provider.name);
+      }
+    } else {
+      providers.add('None');
+    }
+  });
+
+  return Array.from(providers).sort((a, b) => {
+    if (a === 'None') return 1;
+    if (b === 'None') return -1;
+    return a.localeCompare(b);
+  });
 });
 
 // Local fuzzy search
@@ -152,6 +182,24 @@ const projects = computed(() => {
     });
   }
 
+  // Filter by git provider
+  if (selectedGitProviders.value.length > 0) {
+    items = items.filter(project => {
+      const remoteUrl = project.stats?.gitRemoteUrl;
+
+      if (!remoteUrl) {
+        return selectedGitProviders.value.includes('None');
+      }
+
+      const provider = getGitProvider(remoteUrl);
+      if (!provider) {
+        return selectedGitProviders.value.includes('None');
+      }
+
+      return selectedGitProviders.value.includes(provider.name);
+    });
+  }
+
   items.sort((a, b) => {
     let aVal: any;
     let bVal: any;
@@ -193,6 +241,7 @@ const hasActiveFilters = computed(
   () =>
     searchQuery.value.trim() !== '' ||
     selectedTechnologies.value.length > 0 ||
+    selectedGitProviders.value.length > 0 ||
     showFavoritesOnly.value ||
     datePreset.value !== 'all'
 );
@@ -312,6 +361,11 @@ whenever(keys['Ctrl+K'], () => {
           :selected-technologies="selectedTechnologies"
           @update:selected-technologies="selectedTechnologies = $event"
         />
+        <GitRemoteFilter
+          :available-providers="availableGitProviders"
+          :selected-providers="selectedGitProviders"
+          @update:selected-providers="selectedGitProviders = $event"
+        />
         <DateFilter
           :selected-preset="datePreset"
           :direction="dateDirection"
@@ -325,6 +379,7 @@ whenever(keys['Ctrl+K'], () => {
           @click="
             searchQuery = '';
             selectedTechnologies = [];
+            selectedGitProviders = [];
             showFavoritesOnly = false;
             datePreset = 'all';
             dateDirection = 'within';
