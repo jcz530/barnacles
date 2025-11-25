@@ -2,6 +2,7 @@ import { exec } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 import { promisify } from 'util';
+import dayjs from 'dayjs';
 
 const execAsync = promisify(exec);
 
@@ -215,12 +216,12 @@ class ProjectGitStatsService {
    */
   private getDateRange(startDate: string, endDate: string): string[] {
     const dates: string[] = [];
-    const current = new Date(startDate);
-    const end = new Date(endDate);
+    let current = dayjs(startDate);
+    const end = dayjs(endDate);
 
-    while (current <= end) {
-      dates.push(current.toISOString().split('T')[0]);
-      current.setDate(current.getDate() + 1);
+    while (current.isBefore(end) || current.isSame(end, 'day')) {
+      dates.push(current.format('YYYY-MM-DD'));
+      current = current.add(1, 'day');
     }
 
     return dates;
@@ -233,49 +234,40 @@ class ProjectGitStatsService {
     sinceDate: string;
     untilDate: string;
   } {
-    const now = new Date();
-    now.setHours(23, 59, 59, 999);
-
-    let sinceDate: Date;
-    let untilDate: Date = now;
+    const today = dayjs();
 
     switch (period) {
       case 'week': {
-        // This week (Monday to today)
-        const today = new Date(now);
-        const dayOfWeek = today.getDay();
-        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        sinceDate = new Date(today);
-        sinceDate.setDate(today.getDate() - daysToMonday);
-        sinceDate.setHours(0, 0, 0, 0);
-        break;
+        // This week (Monday to Sunday - always 7 days)
+        const monday = today.day(1); // Get this week's Monday (or today if it's Monday)
+        const sunday = monday.add(6, 'day'); // Monday + 6 = Sunday
+
+        return {
+          sinceDate: monday.format('YYYY-MM-DD'),
+          untilDate: sunday.format('YYYY-MM-DD'),
+        };
       }
       case 'last-week': {
-        // Last week (Monday to Sunday)
-        const today = new Date(now);
-        const dayOfWeek = today.getDay();
-        const daysToLastMonday = dayOfWeek === 0 ? 13 : dayOfWeek + 6;
-        sinceDate = new Date(today);
-        sinceDate.setDate(today.getDate() - daysToLastMonday);
-        sinceDate.setHours(0, 0, 0, 0);
+        // Last week (Monday to Sunday - 7 days)
+        const thisMonday = today.day(1);
+        const lastMonday = thisMonday.subtract(7, 'day');
+        const lastSunday = lastMonday.add(6, 'day');
 
-        untilDate = new Date(sinceDate);
-        untilDate.setDate(sinceDate.getDate() + 6);
-        untilDate.setHours(23, 59, 59, 999);
-        break;
+        return {
+          sinceDate: lastMonday.format('YYYY-MM-DD'),
+          untilDate: lastSunday.format('YYYY-MM-DD'),
+        };
       }
       case 'month': {
         // This month (1st to today)
-        sinceDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        sinceDate.setHours(0, 0, 0, 0);
-        break;
+        const firstDay = today.startOf('month');
+
+        return {
+          sinceDate: firstDay.format('YYYY-MM-DD'),
+          untilDate: today.format('YYYY-MM-DD'),
+        };
       }
     }
-
-    return {
-      sinceDate: sinceDate.toISOString().split('T')[0],
-      untilDate: untilDate.toISOString().split('T')[0],
-    };
   }
 }
 
