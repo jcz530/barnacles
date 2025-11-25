@@ -15,6 +15,7 @@ const {
   useDeleteProjectMutation,
   useToggleFavoriteMutation,
   useProcessStatusQuery,
+  useSettingsQuery,
 } = useQueries();
 
 // Get all projects
@@ -28,6 +29,13 @@ const { data: allProjects, isLoading } = useProjectsQuery({
 const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
   enabled: true,
   refetchInterval: 2000,
+});
+
+// Get settings to check if stats should be shown
+const { data: settings } = useSettingsQuery({ enabled: true });
+const showDashboardStats = computed(() => {
+  const dashboardStatsSetting = settings.value?.find(s => s.key === 'showDashboardStats');
+  return dashboardStatsSetting ? String(dashboardStatsSetting.value) === 'true' : true;
 });
 
 // Provide process status context to all child components
@@ -97,7 +105,7 @@ const handleToggleFavorite = async (projectId: string) => {
 
       <div v-else class="space-y-8">
         <!-- Git Stats Section -->
-        <GitStatsOverview />
+        <GitStatsOverview v-if="showDashboardStats" />
 
         <!-- Favorite Projects Section -->
         <div v-if="favoriteProjects.length > 0">

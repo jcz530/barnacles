@@ -143,6 +143,7 @@ export const SETTING_KEYS = {
   SCAN_EXCLUDED_DIRECTORIES: 'scanExcludedDirectories',
   SCAN_INCLUDED_DIRECTORIES: 'scanIncludedDirectories',
   SCAN_MAX_DEPTH: 'scanMaxDepth',
+  SHOW_DASHBOARD_STATS: 'showDashboardStats',
   SHOW_TRAY_ICON: 'showTrayIcon',
   THEMES: 'themes',
 } as const;

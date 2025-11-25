@@ -11,6 +11,7 @@ import ScanExcludedDirectoriesSetting from '../components/settings/organisms/Sca
 import DefaultIDESetting from '../components/settings/organisms/DefaultIDESetting.vue';
 import DefaultTerminalSetting from '../components/settings/organisms/DefaultTerminalSetting.vue';
 import ShowTrayIconSetting from '../components/settings/organisms/ShowTrayIconSetting.vue';
+import ShowDashboardStatsSetting from '../components/settings/organisms/ShowDashboardStatsSetting.vue';
 import InstallCliCommandSetting from '../components/settings/organisms/InstallCliCommandSetting.vue';
 import ThemesSetting from '../components/settings/organisms/ThemesSetting.vue';
 
@@ -122,6 +123,12 @@ onMounted(async () => {
             <div class="space-y-6">
               <SettingWrapper :setting-key="SETTING_KEYS.THEMES" :highlighted="highlightedSetting">
                 <ThemesSetting />
+              </SettingWrapper>
+              <SettingWrapper
+                :setting-key="SETTING_KEYS.SHOW_DASHBOARD_STATS"
+                :highlighted="highlightedSetting"
+              >
+                <ShowDashboardStatsSetting />
               </SettingWrapper>
               <SettingWrapper
                 :setting-key="SETTING_KEYS.SHOW_TRAY_ICON"
