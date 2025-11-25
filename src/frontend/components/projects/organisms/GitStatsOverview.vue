@@ -4,6 +4,7 @@ import { useQueries } from '@/composables/useQueries';
 import { FileText, Flame, FolderGit2, GitCommit, Minus, Plus } from 'lucide-vue-next';
 import GitStatCard from '../molecules/GitStatCard.vue';
 import { Button } from '../../ui/button';
+import dayjs from 'dayjs';
 
 const { useGitStatsQuery } = useQueries();
 
@@ -43,6 +44,8 @@ const totals = computed(() => {
       linesAdded: 0,
       linesRemoved: 0,
       streak: 0,
+      streakWarning: false,
+      maxStreak: 0,
     };
   }
 
@@ -58,7 +61,7 @@ const totals = computed(() => {
   const projectsWorkedOn = Math.max(...days.map(day => day.projectsWorkedOn), 0);
 
   // Calculate streak
-  const streak = calculateStreak(days);
+  const streakResult = calculateStreak(days);
 
   return {
     commits,
@@ -66,7 +69,9 @@ const totals = computed(() => {
     projectsWorkedOn,
     linesAdded,
     linesRemoved,
-    streak,
+    streak: streakResult.streak,
+    streakWarning: streakResult.warning,
+    maxStreak: streakResult.maxStreak,
   };
 });
 
@@ -94,51 +99,77 @@ const dailyStreakActivity = computed(
 
 // Calculate streak from daily data
 const calculateStreak = (days: typeof stats.value.days) => {
-  if (!days || days.length === 0) return 0;
+  if (!days || days.length === 0) return { streak: 0, warning: false, maxStreak: 0 };
 
   // Sort by date descending (newest first)
   const sortedDays = [...days].sort((a, b) => b.date.localeCompare(a.date));
 
   // Get days with commits
   const activeDays = sortedDays.filter(day => day.commits > 0);
-  if (activeDays.length === 0) return 0;
+  if (activeDays.length === 0) return { streak: 0, warning: false, maxStreak: 0 };
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  // Check if most recent commit was today or yesterday
-  const mostRecentDate = new Date(activeDays[0].date);
-  mostRecentDate.setHours(0, 0, 0, 0);
-
-  const daysSinceLastCommit = Math.floor(
-    (today.getTime() - mostRecentDate.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const today = dayjs().startOf('day');
+  const mostRecentDate = dayjs(activeDays[0].date).startOf('day');
+  const daysSinceLastCommit = today.diff(mostRecentDate, 'day');
 
   // Streak is broken if last commit was more than 1 day ago
-  if (daysSinceLastCommit > 1) return 0;
+  if (daysSinceLastCommit > 1) {
+    // Calculate max streak for non-current periods
+    const maxStreak = calculateMaxStreak(activeDays);
+    return { streak: 0, warning: false, maxStreak };
+  }
+
+  // Warning if last commit was yesterday (not today)
+  const warning = daysSinceLastCommit === 1;
 
   // Count consecutive days working backwards
   let streak = 1;
-  let currentDate = new Date(mostRecentDate);
+  let currentDate = mostRecentDate;
 
   for (let i = 1; i < activeDays.length; i++) {
-    const prevDate = new Date(activeDays[i].date);
-    prevDate.setHours(0, 0, 0, 0);
+    const prevDate = dayjs(activeDays[i].date).startOf('day');
+    const expectedDate = currentDate.subtract(1, 'day');
 
-    const expectedDate = new Date(currentDate);
-    expectedDate.setDate(expectedDate.getDate() - 1);
-
-    if (prevDate.getTime() === expectedDate.getTime()) {
+    if (prevDate.isSame(expectedDate, 'day')) {
       streak++;
       currentDate = prevDate;
-    } else if (prevDate.getTime() < expectedDate.getTime()) {
+    } else if (prevDate.isBefore(expectedDate, 'day')) {
       // Gap found, stop counting
       break;
     }
     // If same date, continue (shouldn't happen with daily data but handle it)
   }
 
-  return streak;
+  // Calculate max streak for the period
+  const maxStreak = calculateMaxStreak(activeDays);
+
+  return { streak, warning, maxStreak };
+};
+
+// Calculate the maximum streak within a period
+const calculateMaxStreak = (activeDays: Array<{ date: string; commits: number }>) => {
+  if (activeDays.length === 0) return 0;
+
+  let maxStreak = 1;
+  let currentStreak = 1;
+  let currentDate = dayjs(activeDays[0].date).startOf('day');
+
+  for (let i = 1; i < activeDays.length; i++) {
+    const prevDate = dayjs(activeDays[i].date).startOf('day');
+    const expectedDate = currentDate.subtract(1, 'day');
+
+    if (prevDate.isSame(expectedDate, 'day')) {
+      currentStreak++;
+      maxStreak = Math.max(maxStreak, currentStreak);
+      currentDate = prevDate;
+    } else if (prevDate.isBefore(expectedDate, 'day')) {
+      // Gap found, reset streak
+      currentStreak = 1;
+      currentDate = prevDate;
+    }
+  }
+
+  return maxStreak;
 };
 </script>
 
@@ -165,11 +196,14 @@ const calculateStreak = (days: typeof stats.value.days) => {
       <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         <GitStatCard
           :icon="Flame"
-          label="Day Streak"
-          :value="totals.streak"
+          :label="selectedPeriod === 'week' ? 'Day Streak' : 'Max Streak'"
+          :value="selectedPeriod === 'week' ? totals.streak : totals.maxStreak"
           icon-class="text-orange-500"
           :daily-values="dailyStreakActivity"
           :is-loading="isLoading"
+          :warning-message="
+            selectedPeriod === 'week' && totals.streakWarning ? 'no commits today' : undefined
+          "
         />
         <GitStatCard
           :icon="GitCommit"

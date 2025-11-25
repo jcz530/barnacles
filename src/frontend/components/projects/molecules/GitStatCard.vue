@@ -14,6 +14,7 @@ const props = defineProps<{
   iconClass?: string;
   dailyValues?: DailyValue[];
   isLoading?: boolean;
+  warningMessage?: string;
 }>();
 
 // Create unique transition name from label
@@ -95,6 +96,9 @@ const barGap = computed(() => {
     </div>
 
     <div class="text-xs text-slate-500">{{ label }}</div>
+    <div v-if="warningMessage" class="mt-1 text-xs font-medium text-orange-500">
+      {{ warningMessage }}
+    </div>
   </div>
 </template>
 
