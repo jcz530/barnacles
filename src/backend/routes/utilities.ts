@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { getCompleteIpInfo } from '../../shared/utilities/ip-info';
 
 /**
  * Utilities routes
@@ -19,6 +20,20 @@ utilities.get('/', async c => {
   } catch (error) {
     console.error('Error fetching utilities:', error);
     return c.json({ error: 'Failed to fetch utilities' }, 500);
+  }
+});
+
+/**
+ * GET /api/utilities/ip-info
+ * Get IP address information (public IP, local IPs, hostname, network interfaces)
+ */
+utilities.get('/ip-info', async c => {
+  try {
+    const ipInfo = await getCompleteIpInfo();
+    return c.json({ data: ipInfo });
+  } catch (error) {
+    console.error('Error fetching IP info:', error);
+    return c.json({ error: 'Failed to fetch IP information' }, 500);
   }
 });
 

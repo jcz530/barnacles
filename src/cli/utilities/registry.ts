@@ -51,5 +51,10 @@ export function registerCliUtilities(): void {
     cliUtilityRegistry.register(module.exifViewerCli);
   });
 
+  // Import and register ip-info
+  import('./ip-info.js').then(module => {
+    cliUtilityRegistry.register(module.ipInfoCli);
+  });
+
   // Future utilities can be registered here
 }
