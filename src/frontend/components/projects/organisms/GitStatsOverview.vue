@@ -22,6 +22,17 @@ const getPeriodLabel = (period: 'week' | 'month' | 'last-week') => {
   }
 };
 
+const changePeriod = (period: 'week' | 'month' | 'last-week') => {
+  if (!document.startViewTransition) {
+    selectedPeriod.value = period;
+    return;
+  }
+
+  document.startViewTransition(() => {
+    selectedPeriod.value = period;
+  });
+};
+
 // Calculate totals from daily data
 const totals = computed(() => {
   if (!stats.value?.days) {
@@ -58,6 +69,28 @@ const totals = computed(() => {
     streak,
   };
 });
+
+// Extract daily arrays for each metric with dates
+const dailyCommits = computed(
+  () => stats.value?.days.map(d => ({ date: d.date, value: d.commits })) ?? []
+);
+const dailyFilesChanged = computed(
+  () => stats.value?.days.map(d => ({ date: d.date, value: d.filesChanged })) ?? []
+);
+const dailyLinesAdded = computed(
+  () => stats.value?.days.map(d => ({ date: d.date, value: d.linesAdded })) ?? []
+);
+const dailyLinesRemoved = computed(
+  () => stats.value?.days.map(d => ({ date: d.date, value: d.linesRemoved })) ?? []
+);
+const dailyProjectsWorkedOn = computed(
+  () => stats.value?.days.map(d => ({ date: d.date, value: d.projectsWorkedOn })) ?? []
+);
+
+// For streak, we want to show binary (1 if commits > 0, 0 otherwise)
+const dailyStreakActivity = computed(
+  () => stats.value?.days.map(d => ({ date: d.date, value: d.commits > 0 ? 1 : 0 })) ?? []
+);
 
 // Calculate streak from daily data
 const calculateStreak = (days: typeof stats.value.days) => {
@@ -119,8 +152,8 @@ const calculateStreak = (days: typeof stats.value.days) => {
             :key="period"
             size="sm"
             variant="ghost"
-            :class="[selectedPeriod === period ? 'text-success-500' : '']"
-            @click="selectedPeriod = period"
+            :class="[selectedPeriod === period ? 'text-primary-500' : '']"
+            @click="changePeriod(period)"
           >
             {{ getPeriodLabel(period) }}
           </Button>
@@ -129,41 +162,53 @@ const calculateStreak = (days: typeof stats.value.days) => {
     </div>
 
     <div class="pt-4">
-      <div v-if="isLoading" class="py-8 text-center">
-        <p class="text-slate-500">Loading stats...</p>
-      </div>
-
-      <div v-else-if="stats" class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+      <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         <GitStatCard
           :icon="Flame"
           label="Day Streak"
           :value="totals.streak"
           icon-class="text-orange-500"
+          :daily-values="dailyStreakActivity"
+          :is-loading="isLoading"
         />
-        <GitStatCard :icon="GitCommit" label="Commits" :value="totals.commits" />
-        <GitStatCard :icon="FileText" label="Files Changed" :value="totals.filesChanged" />
+        <GitStatCard
+          :icon="GitCommit"
+          label="Commits"
+          :value="totals.commits"
+          :daily-values="dailyCommits"
+          :is-loading="isLoading"
+        />
+        <GitStatCard
+          :icon="FileText"
+          label="Files Changed"
+          :value="totals.filesChanged"
+          :daily-values="dailyFilesChanged"
+          :is-loading="isLoading"
+        />
         <GitStatCard
           :icon="FolderGit2"
           label="Projects"
           :value="totals.projectsWorkedOn"
           icon-class="text-blue-500"
+          :daily-values="dailyProjectsWorkedOn"
+          :is-loading="isLoading"
         />
         <GitStatCard
           :icon="Plus"
           label="Lines Added"
           :value="totals.linesAdded.toLocaleString()"
           icon-class="text-green-500"
+          :daily-values="dailyLinesAdded"
+          :is-loading="isLoading"
         />
         <GitStatCard
           :icon="Minus"
           label="Lines Removed"
           :value="totals.linesRemoved.toLocaleString()"
           icon-class="text-red-500"
+          :daily-values="dailyLinesRemoved"
+          :is-loading="isLoading"
         />
-      </div>
-
-      <div v-else class="py-8 text-center">
-        <p class="text-slate-500">No stats available</p>
       </div>
     </div>
   </div>
