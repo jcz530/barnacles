@@ -129,7 +129,7 @@ const table = useVueTable({
       >
         <ProjectCard
           v-for="project in projects"
-          :key="project.id"
+          :key="`${project.id}-card`"
           :project="project"
           @delete="emit('delete', $event)"
           @open="emit('open', $event)"
@@ -141,7 +141,7 @@ const table = useVueTable({
         <table class="w-full border-collapse">
           <TableHeader :header-groups="table.getHeaderGroups()" />
           <tbody>
-            <template v-for="row in table.getRowModel().rows" :key="row.id">
+            <template v-for="row in table.getRowModel().rows" :key="row.original.id">
               <tr
                 class="project-row group cursor-pointer transition-colors"
                 :data-project-id="row.original.id"
