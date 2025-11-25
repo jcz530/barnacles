@@ -69,11 +69,11 @@ const barGap = computed(() => {
       <div
         v-for="(bar, index) in barHeights"
         :key="index"
-        class="flex h-full items-end rounded-sm bg-gradient-to-t from-slate-200/40 to-slate-200/40"
+        class="flex h-full items-end rounded-sm bg-gradient-to-t from-slate-200/40 to-slate-200/80"
         :class="barWidth"
       >
         <div
-          class="from-primary-400/20 to-primary-400 flex-1 rounded-sm bg-gradient-to-t transition-all"
+          class="from-primary-500/60 to-primary-500/80 flex-1 rounded-sm bg-gradient-to-t transition-all"
           :style="{ height: `${bar.height}%` }"
           :title="`${bar.formattedDate}: ${bar.value}`"
         />
