@@ -143,6 +143,7 @@ export const SETTING_KEYS = {
   SCAN_EXCLUDED_DIRECTORIES: 'scanExcludedDirectories',
   SCAN_INCLUDED_DIRECTORIES: 'scanIncludedDirectories',
   SCAN_MAX_DEPTH: 'scanMaxDepth',
+  SHOW_DASHBOARD_STATS: 'showDashboardStats',
   SHOW_TRAY_ICON: 'showTrayIcon',
   THEMES: 'themes',
 } as const;
@@ -199,4 +200,18 @@ export interface PresetPack {
     command: string;
     description: string;
   }>;
+}
+
+export interface GitStatsByDay {
+  date: string; // YYYY-MM-DD format
+  commits: number;
+  filesChanged: number;
+  linesAdded: number;
+  linesRemoved: number;
+  projectsWorkedOn: number;
+}
+
+export interface GitStats {
+  period: 'week' | 'month' | 'last-week';
+  days: GitStatsByDay[];
 }

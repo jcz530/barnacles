@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import dayjs from 'dayjs';
 import ProjectCard from '../components/projects/molecules/ProjectCard.vue';
 import OnboardingOverlay from '../components/onboarding/organisms/OnboardingOverlay.vue';
+import GitStatsOverview from '../components/projects/organisms/GitStatsOverview.vue';
 import { useQueries } from '@/composables/useQueries';
 import { provideProcessStatusContext } from '@/composables/useProcessStatusContext';
 import { useFirstRunDetection } from '@/composables/useFirstRunDetection';
@@ -14,6 +15,7 @@ const {
   useDeleteProjectMutation,
   useToggleFavoriteMutation,
   useProcessStatusQuery,
+  useSettingsQuery,
 } = useQueries();
 
 // Get all projects
@@ -27,6 +29,13 @@ const { data: allProjects, isLoading } = useProjectsQuery({
 const { data: allProcessStatuses } = useProcessStatusQuery(undefined, {
   enabled: true,
   refetchInterval: 2000,
+});
+
+// Get settings to check if stats should be shown
+const { data: settings } = useSettingsQuery({ enabled: true });
+const showDashboardStats = computed(() => {
+  const dashboardStatsSetting = settings.value?.find(s => s.key === 'showDashboardStats');
+  return dashboardStatsSetting ? String(dashboardStatsSetting.value) === 'true' : true;
 });
 
 // Provide process status context to all child components
@@ -95,6 +104,9 @@ const handleToggleFavorite = async (projectId: string) => {
       </div>
 
       <div v-else class="space-y-8">
+        <!-- Git Stats Section -->
+        <GitStatsOverview v-if="showDashboardStats" />
+
         <!-- Favorite Projects Section -->
         <div v-if="favoriteProjects.length > 0">
           <div class="mb-4">

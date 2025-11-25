@@ -11,6 +11,7 @@ import type {
   DetectedAlias,
   DetectedIDE,
   DetectedTerminal,
+  GitStats,
   IDE,
   PresetPack,
   ProjectWithDetails,
@@ -1522,6 +1523,35 @@ export const useQueries = () => {
     });
   };
 
+  // Git stats query
+  const useGitStatsQuery = (
+    period: MaybeRef<'week' | 'month' | 'last-week'>,
+    options?: { enabled?: boolean }
+  ) => {
+    return useQuery({
+      queryKey: computed(() => ['git-stats', unref(period)] as const),
+      queryFn: async () => {
+        const params = new URLSearchParams();
+        params.append('period', unref(period));
+
+        const query = `?${params.toString()}`;
+
+        const response = await apiCall<ApiResponse<GitStats>>(
+          'GET',
+          `${API_ROUTES.PROJECTS_GIT_STATS}${query}`
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch git stats');
+        }
+
+        return response.data;
+      },
+      enabled: options?.enabled ?? true,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
+  };
+
   return {
     useUsersQuery,
     useHealthQuery,
@@ -1593,5 +1623,6 @@ export const useQueries = () => {
     useCreateAccountMutation,
     useUpdateAccountMutation,
     useDeleteAccountMutation,
+    useGitStatsQuery,
   };
 };
