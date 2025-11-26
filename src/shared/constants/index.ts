@@ -73,4 +73,5 @@ export const API_ROUTES = {
   PROJECTS_ACCOUNT_BY_ID: (projectId: string, accountId: number) =>
     `/api/projects/${projectId}/accounts/${accountId}`,
   PROJECTS_GIT_STATS: '/api/projects/git-stats',
+  UTILITIES_IP_INFO: '/api/utilities/ip-info',
 } as const;

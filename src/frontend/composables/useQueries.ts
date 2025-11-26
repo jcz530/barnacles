@@ -23,6 +23,7 @@ import type {
   User,
 } from '../../shared/types/api';
 import type { Theme } from '../../shared/types/theme';
+import type { IpInfo } from '../../shared/utilities/ip-info';
 import { useApi } from './useApi';
 
 /* global URLSearchParams */
@@ -1552,6 +1553,24 @@ export const useQueries = () => {
     });
   };
 
+  // IP info query
+  const useIpInfoQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['ip-info'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<IpInfo>>('GET', API_ROUTES.UTILITIES_IP_INFO);
+
+        if (!response) {
+          throw new Error('Failed to fetch IP information');
+        }
+
+        return response.data;
+      },
+      enabled: options?.enabled ?? true,
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
+  };
+
   return {
     useUsersQuery,
     useHealthQuery,
@@ -1624,5 +1643,6 @@ export const useQueries = () => {
     useUpdateAccountMutation,
     useDeleteAccountMutation,
     useGitStatsQuery,
+    useIpInfoQuery,
   };
 };
