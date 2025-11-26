@@ -113,8 +113,8 @@ async function getPublicIpViaCurl(): Promise<string> {
       if (ip && isValidIpv4(ip)) {
         return ip;
       }
-    } catch (error) {
-      console.warn(`Failed to fetch from ${service}:`, error);
+    } catch {
+      // Silently try next service - failures are expected when services are unreachable
     }
   }
 
