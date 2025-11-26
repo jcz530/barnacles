@@ -67,7 +67,7 @@ async function displayIpInfo() {
 }
 
 export const ipInfoCli = {
-  id: 'ip-info',
+  id: 'ip',
   name: 'IP Address Info',
   description: 'Display your public IP, local IPs, hostname, and network interface details',
   handler: {
@@ -81,6 +81,6 @@ export const ipInfoCli = {
       }
     },
     helpText: 'Display network and IP address information',
-    examples: ['barnacles utilities ip-info', 'barnacles util ip-info'],
+    examples: ['barnacles utilities ip', 'barnacles util ip'],
   },
 };
