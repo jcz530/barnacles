@@ -201,6 +201,7 @@ const calculateMaxStreak = (activeDays: Array<{ date: string; commits: number }>
           icon-class="text-orange-500"
           :daily-values="dailyStreakActivity"
           :is-loading="isLoading"
+          hide-values
           :warning-message="
             selectedPeriod === 'week' && totals.streakWarning ? 'no commits today' : undefined
           "
