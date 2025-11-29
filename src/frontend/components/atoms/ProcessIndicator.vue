@@ -28,7 +28,7 @@ const openUrl = (url: string) => {
   >
     <div class="flex items-center gap-1.5" :title="process.name">
       <div class="bg-success-500 h-2 w-2 animate-pulse rounded-full"></div>
-      <span v-if="!compact" class="text-success-700 font-medium">Running</span>
+      <span v-if="!compact" class="text-success-500 font-medium">Running</span>
     </div>
 
     <div v-if="process.url || process.detectedUrl" class="flex items-center gap-1">
