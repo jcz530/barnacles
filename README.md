@@ -15,7 +15,7 @@ Barnacles is both a desktop application and command-line tool that helps develop
 
 Available for macOS. Other platforms coming soon (get involved to speed it up).
 
-![barnacles-screenshot-projects-cards.png](assets/images/screenshots/barnacles-screenshot-projects-cards.png)
+![barnacles-screenshot-projects-cards.png](assets/images/screenshots/barnacles-screenshot-dashboard.png)
 
 ## Why Barnacles?
 
