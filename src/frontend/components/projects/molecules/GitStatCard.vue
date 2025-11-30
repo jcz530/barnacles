@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
 import { computed } from 'vue';
+import dayjs from 'dayjs';
 
 interface DailyValue {
   date: string;
@@ -14,6 +15,7 @@ const props = defineProps<{
   iconClass?: string;
   dailyValues?: DailyValue[];
   isLoading?: boolean;
+  hideValues?: boolean;
   warningMessage?: string;
 }>();
 
@@ -31,18 +33,21 @@ const barHeights = computed(() => {
   const values = props.dailyValues.map(d => d.value);
   const max = Math.max(...values, 1); // Avoid division by zero
 
-  return props.dailyValues.map(dailyValue => ({
-    height: max > 0 ? (dailyValue.value / max) * 100 : 0,
-    value: dailyValue.value,
-    date: dailyValue.date,
-    formattedDate: formatDate(dailyValue.date),
-  }));
+  return props.dailyValues.map(dailyValue => {
+    return {
+      height: max > 0 ? (dailyValue.value / max) * 100 : 0,
+      value: dailyValue.value,
+      date: dailyValue.date,
+      formattedDate: formatDate(dailyValue.date),
+      dayInitial: dayjs(dailyValue.date).format('dd').charAt(0),
+      isToday: dayjs(dailyValue.date).isSame(dayjs(), 'day'),
+    };
+  });
 });
 
 // Format date for tooltip
 const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return dayjs(dateStr).format('ddd, MMM D');
 };
 
 // Determine bar width based on number of days
@@ -61,10 +66,10 @@ const barGap = computed(() => {
 </script>
 
 <template>
-  <div class="relative flex flex-col items-center p-4">
+  <div class="group relative flex flex-col items-center p-4">
     <div class="bg-primary-200/20 absolute top-6 h-6 w-3/4 blur-lg"></div>
     <div
-      class="relative top-0 left-0 mt-3 mb-4 flex h-6 w-full justify-center gap-0.5 overflow-hidden rounded p-0.5"
+      class="group/chart relative top-0 left-0 mt-3 mb-4 flex h-6 w-full justify-center gap-0.5 rounded p-0.5"
       :class="barGap"
     >
       <div
@@ -78,6 +83,28 @@ const barGap = computed(() => {
           :style="{ height: `${bar.height}%` }"
           :title="`${bar.formattedDate}: ${bar.value}`"
         />
+        <span
+          v-if="dailyValues.length <= 7"
+          class="invisible absolute -bottom-3 translate-1/2 rotate-6 text-[0.4rem] text-slate-500 opacity-0 transition-all duration-300 ease-in-out group-hover:visible group-hover:translate-none group-hover:rotate-none group-hover:opacity-100"
+          :class="
+            bar.isToday
+              ? 'before:bg-primary-500/80 rounded-full before:absolute before:right-0 before:-bottom-0 before:left-0 before:block before:h-0.5 before:w-full before:rounded-full'
+              : ''
+          "
+          :style="`transition-delay: ${(index + 1) * 50}ms`"
+          :title="bar.formattedDate"
+        >
+          {{ bar.dayInitial }}
+        </span>
+        <span
+          v-if="!hideValues && dailyValues.length <= 7"
+          class="invisible absolute -top-3 min-w-4 translate-y-1/2 rotate-[-30deg] text-left text-[0.45rem] opacity-0 transition-all duration-300 ease-out group-hover/chart:visible group-hover/chart:translate-none group-hover/chart:-rotate-45 group-hover/chart:opacity-100"
+          :class="[bar.value === 0 ? 'text-slate-500/40' : 'text-slate-500']"
+          :style="`transition-delay: ${(index + 1) * 50}ms`"
+          :title="bar.formattedDate"
+        >
+          {{ bar.value.toLocaleString() }}
+        </span>
       </div>
     </div>
     <div class="flex flex-1 items-center justify-center gap-2">
