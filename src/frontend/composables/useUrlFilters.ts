@@ -5,6 +5,7 @@ import type { DateFilterDirection, DatePreset } from '../components/molecules/Da
 export interface ProjectFilters {
   searchQuery: Ref<string>;
   selectedTechnologies: Ref<string[]>;
+  selectedGitProviders: Ref<string[]>;
   showFavoritesOnly: Ref<boolean>;
   datePreset: Ref<DatePreset>;
   dateDirection: Ref<DateFilterDirection>;
@@ -43,6 +44,13 @@ export function useUrlFilters(filters: ProjectFilters) {
     // Technologies (comma-separated)
     if (urlParams.technologies) {
       filters.selectedTechnologies.value = String(urlParams.technologies)
+        .split(',')
+        .filter(Boolean);
+    }
+
+    // Git providers (comma-separated)
+    if (urlParams.gitProviders) {
+      filters.selectedGitProviders.value = String(urlParams.gitProviders)
         .split(',')
         .filter(Boolean);
     }
@@ -110,6 +118,7 @@ export function useUrlFilters(filters: ProjectFilters) {
       const paramsToSet: Record<string, string | null> = {
         search: null,
         technologies: null,
+        gitProviders: null,
         favorites: null,
         datePreset: null,
         dateDirection: null,
@@ -126,6 +135,11 @@ export function useUrlFilters(filters: ProjectFilters) {
       // Technologies (comma-separated)
       if (filters.selectedTechnologies.value.length > 0) {
         paramsToSet.technologies = filters.selectedTechnologies.value.join(',');
+      }
+
+      // Git providers (comma-separated)
+      if (filters.selectedGitProviders.value.length > 0) {
+        paramsToSet.gitProviders = filters.selectedGitProviders.value.join(',');
       }
 
       // Favorites
@@ -174,6 +188,7 @@ export function useUrlFilters(filters: ProjectFilters) {
     watch(
       [
         filters.selectedTechnologies,
+        filters.selectedGitProviders,
         filters.showFavoritesOnly,
         filters.datePreset,
         filters.dateDirection,

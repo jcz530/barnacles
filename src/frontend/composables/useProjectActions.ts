@@ -8,21 +8,35 @@ const getGitProviderInfo = (remoteUrl: string): { name: string; webUrl: string }
   // Convert SSH URLs to HTTPS format for processing
   let url = remoteUrl;
   if (url.startsWith('git@')) {
-    url = url.replace('git@', 'https://').replace('.com:', '.com/');
+    // Handle both .com: and .org: patterns
+    url = url.replace('git@', 'https://').replace(/:([^/])/, '/$1');
   }
 
   // Remove .git suffix
   url = url.replace(/\.git$/, '');
 
+  // Clean up protocol prefixes
+  const cleanUrl = url.replace(/^git\+/, '').replace(/^ssh:\/\//, '');
+
+  // Detect provider based on domain
   if (url.includes('github.com')) {
-    return { name: 'GitHub', webUrl: url.replace(/^git\+/, '').replace(/^ssh:\/\//, '') };
-  } else if (url.includes('gitlab.com')) {
-    return { name: 'GitLab', webUrl: url.replace(/^git\+/, '').replace(/^ssh:\/\//, '') };
+    return { name: 'GitHub', webUrl: cleanUrl };
+  } else if (url.includes('gitlab.com') || url.includes('gitlab.')) {
+    return { name: 'GitLab', webUrl: cleanUrl };
   } else if (url.includes('bitbucket.org')) {
-    return { name: 'Bitbucket', webUrl: url.replace(/^git\+/, '').replace(/^ssh:\/\//, '') };
+    return { name: 'Bitbucket', webUrl: cleanUrl };
+  } else if (url.includes('dev.azure.com') || url.includes('visualstudio.com')) {
+    return { name: 'Azure DevOps', webUrl: cleanUrl };
+  } else if (url.includes('gitea.')) {
+    return { name: 'Gitea', webUrl: cleanUrl };
+  } else if (url.includes('codeberg.org')) {
+    return { name: 'Codeberg', webUrl: cleanUrl };
+  } else if (url.includes('sourceforge.net')) {
+    return { name: 'SourceForge', webUrl: cleanUrl };
   }
 
-  return null;
+  // Return "Other" for unrecognized providers instead of null
+  return { name: 'Other', webUrl: cleanUrl };
 };
 
 export const useProjectActions = () => {
