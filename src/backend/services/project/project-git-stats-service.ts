@@ -3,22 +3,9 @@ import fs from 'fs/promises';
 import path from 'path';
 import { promisify } from 'util';
 import dayjs from 'dayjs';
+import type { GitStats, GitStatsByDay, GitStatsTotals } from '@shared/types/api';
 
 const execAsync = promisify(exec);
-
-export interface GitStatsByDay {
-  date: string; // YYYY-MM-DD format
-  commits: number;
-  filesChanged: number;
-  linesAdded: number;
-  linesRemoved: number;
-  projectsWorkedOn: number;
-}
-
-export interface GitStats {
-  period: 'week' | 'month' | 'last-week';
-  days: GitStatsByDay[];
-}
 
 interface DailyProjectData {
   commits: number;
@@ -70,6 +57,9 @@ class ProjectGitStatsService {
     // Track which projects contributed on each day
     const projectsByDay = new Map<string, Set<string>>();
 
+    // Track all unique projects across the entire period
+    const allProjects = new Set<string>();
+
     // Process each project
     for (const projectPath of projectPaths) {
       const projectDailyData = await this.getProjectDailyGitData(
@@ -95,6 +85,7 @@ class ProjectGitStatsService {
                 projectsByDay.set(date, new Set());
               }
               projectsByDay.get(date)!.add(projectPath);
+              allProjects.add(projectPath);
             }
           }
         });
@@ -114,9 +105,19 @@ class ProjectGitStatsService {
       };
     });
 
+    // Calculate totals across all days
+    const totals: GitStatsTotals = {
+      commits: days.reduce((sum, day) => sum + day.commits, 0),
+      filesChanged: days.reduce((sum, day) => sum + day.filesChanged, 0),
+      linesAdded: days.reduce((sum, day) => sum + day.linesAdded, 0),
+      linesRemoved: days.reduce((sum, day) => sum + day.linesRemoved, 0),
+      projectsWorkedOn: allProjects.size,
+    };
+
     return {
       period,
       days,
+      totals,
     };
   }
 

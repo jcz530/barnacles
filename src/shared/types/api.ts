@@ -211,7 +211,16 @@ export interface GitStatsByDay {
   projectsWorkedOn: number;
 }
 
+export interface GitStatsTotals {
+  commits: number;
+  filesChanged: number;
+  linesAdded: number;
+  linesRemoved: number;
+  projectsWorkedOn: number;
+}
+
 export interface GitStats {
-  period: 'week' | 'month' | 'last-week';
   days: GitStatsByDay[];
+  period: 'week' | 'month' | 'last-week';
+  totals: GitStatsTotals;
 }

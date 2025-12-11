@@ -34,9 +34,9 @@ const changePeriod = (period: 'week' | 'month' | 'last-week') => {
   });
 };
 
-// Calculate totals from daily data
+// Calculate totals - use backend totals and add streak calculations
 const totals = computed(() => {
-  if (!stats.value?.days) {
+  if (!stats.value?.days || !stats.value?.totals) {
     return {
       commits: 0,
       filesChanged: 0,
@@ -49,26 +49,18 @@ const totals = computed(() => {
     };
   }
 
-  const days = stats.value.days;
+  // Use backend totals
+  const backendTotals = stats.value.totals;
 
-  // Sum up basic stats
-  const commits = days.reduce((sum, day) => sum + day.commits, 0);
-  const linesAdded = days.reduce((sum, day) => sum + day.linesAdded, 0);
-  const linesRemoved = days.reduce((sum, day) => sum + day.linesRemoved, 0);
-
-  // Get unique counts
-  const filesChanged = days.reduce((sum, day) => sum + day.filesChanged, 0);
-  const projectsWorkedOn = Math.max(...days.map(day => day.projectsWorkedOn), 0);
-
-  // Calculate streak
-  const streakResult = calculateStreak(days);
+  // Calculate streak (frontend-specific logic for warnings)
+  const streakResult = calculateStreak(stats.value.days);
 
   return {
-    commits,
-    filesChanged,
-    projectsWorkedOn,
-    linesAdded,
-    linesRemoved,
+    commits: backendTotals.commits,
+    filesChanged: backendTotals.filesChanged,
+    projectsWorkedOn: backendTotals.projectsWorkedOn,
+    linesAdded: backendTotals.linesAdded,
+    linesRemoved: backendTotals.linesRemoved,
     streak: streakResult.streak,
     streakWarning: streakResult.warning,
     maxStreak: streakResult.maxStreak,
