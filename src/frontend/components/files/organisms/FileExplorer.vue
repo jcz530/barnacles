@@ -4,15 +4,18 @@ import FileTree from './FileTree.vue';
 import FileViewer from './FileViewer.vue';
 import FileSearchInput from '../molecules/FileSearchInput.vue';
 import FileTypeFilter, { type FilterValue } from '../molecules/FileTypeFilter.vue';
+import ExclusionsDropdown from '../molecules/ExclusionsDropdown.vue';
 import { Skeleton } from '../../ui/skeleton';
 import { Button } from '../../ui/button';
 import type { FileNode } from '@/types/window';
 import { ArrowDownAZ, Clock, ListChevronsDownUp } from 'lucide-vue-next';
 import { useFileTree } from '@/composables/useFileTree';
 import { useFileTreeUrlFilters } from '@/composables/useFileTreeUrlFilters';
+import { useQueries } from '@/composables/useQueries';
 
 interface Props {
   projectPath?: string;
+  projectId?: string;
   rootFolders?: Array<{ id: string; folderPath: string }>;
   sortBy?: 'alphabetical' | 'lastModified';
 }
@@ -21,12 +24,38 @@ const props = withDefaults(defineProps<Props>(), {
   sortBy: 'alphabetical',
 });
 
+// Exclusions queries and mutations
+const { useProjectExclusionsQuery, useAddExclusionMutation, useRemoveExclusionMutation } =
+  useQueries();
+
+// Only fetch exclusions if we have a projectId
+const {
+  data: exclusionsData,
+  refetch: refetchExclusions,
+  isFetched: exclusionsFetched,
+} = useProjectExclusionsQuery(
+  computed(() => props.projectId || ''),
+  {
+    enabled: computed(() => !!props.projectId),
+  }
+);
+
+const addExclusionMutation = useAddExclusionMutation();
+const removeExclusionMutation = useRemoveExclusionMutation();
+
+// Extract exclusion paths for the IPC call
+const exclusionPaths = computed(() => {
+  if (!exclusionsData.value) return [];
+  return exclusionsData.value.map(e => e.path);
+});
+
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 const fileTree = ref<FileNode[]>([]);
 const searchQuery = ref('');
 const filters = ref<FilterValue[]>([]);
 const fileTreeRef = ref<InstanceType<typeof FileTree> | null>(null);
+const globalExclusions = ref<string[]>([]);
 
 // Use the file tree composable for shared logic
 const {
@@ -140,17 +169,42 @@ const makePathsAbsolute = (nodes: FileNode[], basePath: string): FileNode[] => {
   });
 };
 
+// Load global exclusions that exist in the project
+const loadGlobalExclusions = async () => {
+  if (!props.projectPath) {
+    globalExclusions.value = [];
+    return;
+  }
+
+  try {
+    const result = await window.electron.files.getGlobalExclusions(props.projectPath);
+    if (result.success && result.data) {
+      globalExclusions.value = result.data;
+    } else {
+      globalExclusions.value = [];
+    }
+  } catch {
+    globalExclusions.value = [];
+  }
+};
+
 // Load directory tree on mount
 const loadFileTree = async () => {
   isLoading.value = true;
   error.value = null;
+
+  // Get current exclusion paths
+  const currentExclusions = exclusionPaths.value.length > 0 ? exclusionPaths.value : undefined;
 
   try {
     // If we have multiple root folders, load each one
     if (props.rootFolders && props.rootFolders.length > 0) {
       const folderTrees = await Promise.all(
         props.rootFolders.map(async folder => {
-          const result = await window.electron.files.readDirectory(folder.folderPath);
+          const result = await window.electron.files.readDirectory(
+            folder.folderPath,
+            currentExclusions
+          );
           if (result.success && result.data) {
             // Convert relative paths to absolute paths
             const childrenWithAbsolutePaths = makePathsAbsolute(result.data, folder.folderPath);
@@ -172,7 +226,10 @@ const loadFileTree = async () => {
       fileTree.value = folderTrees.filter(Boolean) as FileNode[];
     } else if (props.projectPath) {
       // Single project path mode (original behavior)
-      const result = await window.electron.files.readDirectory(props.projectPath);
+      const result = await window.electron.files.readDirectory(
+        props.projectPath,
+        currentExclusions
+      );
 
       if (result.success && result.data) {
         fileTree.value = result.data;
@@ -180,6 +237,9 @@ const loadFileTree = async () => {
         error.value = result.error || 'Failed to load file tree';
         fileTree.value = [];
       }
+
+      // Also load global exclusions for this project
+      await loadGlobalExclusions();
     } else {
       fileTree.value = [];
     }
@@ -192,10 +252,18 @@ const loadFileTree = async () => {
 };
 
 // Load file tree when component mounts or props change
+// Wait for exclusions to be fetched before loading (if we have a projectId)
 watch(
-  () => [props.projectPath, props.rootFolders],
-  () => {
-    loadFileTree();
+  () => [props.projectPath, props.rootFolders, props.projectId, exclusionsFetched.value] as const,
+  ([projectPath, rootFolders, projectId, fetched]) => {
+    // If we have a projectId, wait for exclusions to be fetched first
+    if (projectId && !fetched) {
+      return;
+    }
+    // Load the file tree once exclusions are ready (or if no projectId)
+    if (projectPath || (rootFolders && rootFolders.length > 0)) {
+      loadFileTree();
+    }
   },
   { immediate: true, deep: true }
 );
@@ -204,6 +272,49 @@ watch(
 const handleCollapseAll = () => {
   fileTreeRef.value?.collapseAll();
 };
+
+// Handle hiding a folder (adding to exclusions)
+const handleHideFolder = async (path: string) => {
+  if (!props.projectId) return;
+
+  try {
+    await addExclusionMutation.mutateAsync({
+      projectId: props.projectId,
+      path,
+    });
+    // Reload the file tree with updated exclusions
+    await refetchExclusions();
+    await loadFileTree();
+  } catch (err) {
+    console.error('Failed to hide folder:', err);
+  }
+};
+
+// Handle removing an exclusion (unhiding a folder)
+const handleRemoveExclusion = async (exclusionId: string) => {
+  if (!props.projectId) return;
+
+  try {
+    await removeExclusionMutation.mutateAsync({
+      projectId: props.projectId,
+      exclusionId,
+    });
+    // Reload the file tree with updated exclusions
+    await refetchExclusions();
+    await loadFileTree();
+  } catch (err) {
+    console.error('Failed to remove exclusion:', err);
+  }
+};
+
+// Exclusions for the dropdown component
+const exclusionsForDropdown = computed(() => {
+  if (!exclusionsData.value) return [];
+  return exclusionsData.value.map(e => ({
+    id: e.id,
+    path: e.path,
+  }));
+});
 </script>
 
 <template>
@@ -236,6 +347,12 @@ const handleCollapseAll = () => {
           </template>
         </span>
         <div class="flex gap-1">
+          <ExclusionsDropdown
+            v-if="projectId"
+            :exclusions="exclusionsForDropdown"
+            :global-exclusions="globalExclusions"
+            @remove="handleRemoveExclusion"
+          />
           <Button
             v-if="rootFolders && rootFolders.length > 0"
             :title="sortTooltip"
@@ -285,6 +402,7 @@ const handleCollapseAll = () => {
           :is-related-folders-mode="isRelatedFoldersMode"
           @select="handleSelect"
           @remove-folder="handleRemoveFolder"
+          @hide-folder="handleHideFolder"
         />
       </div>
     </div>

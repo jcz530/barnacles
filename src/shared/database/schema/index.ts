@@ -161,6 +161,19 @@ export const projectRelatedFolders = sqliteTable('project_related_folders', {
     .$defaultFn(() => new Date()),
 });
 
+export const projectExclusions = sqliteTable('project_exclusions', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  path: text('path').notNull(), // Relative path from project root
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export const projectAccounts = sqliteTable('project_accounts', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   projectId: text('project_id')
@@ -189,6 +202,7 @@ export const projectsRelations = relations(projects, ({ many, one }) => ({
   }),
   processes: many(projectProcesses),
   relatedFolders: many(projectRelatedFolders),
+  exclusions: many(projectExclusions),
   accounts: many(projectAccounts),
 }));
 
@@ -244,6 +258,13 @@ export const projectProcessCommandsRelations = relations(projectProcessCommands,
 export const projectRelatedFoldersRelations = relations(projectRelatedFolders, ({ one }) => ({
   project: one(projects, {
     fields: [projectRelatedFolders.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const projectExclusionsRelations = relations(projectExclusions, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectExclusions.projectId],
     references: [projects.id],
   }),
 }));

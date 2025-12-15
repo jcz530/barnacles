@@ -36,6 +36,7 @@ const emit = defineEmits<{
   toggle: [node: FileNode];
   select: [node: FileNode];
   'remove-folder': [folderPath: string];
+  'hide-folder': [path: string];
   focus: [path: string];
 }>();
 
@@ -66,6 +67,7 @@ const isFocused = computed(() => {
       @toggle="emit('toggle', node)"
       @select="emit('select', node)"
       @remove-folder="emit('remove-folder', $event)"
+      @hide-folder="emit('hide-folder', $event)"
       @focus="emit('focus', node.path)"
     />
 
@@ -90,6 +92,7 @@ const isFocused = computed(() => {
         @toggle="emit('toggle', $event)"
         @select="emit('select', $event)"
         @remove-folder="emit('remove-folder', $event)"
+        @hide-folder="emit('hide-folder', $event)"
         @focus="emit('focus', $event)"
       />
     </template>

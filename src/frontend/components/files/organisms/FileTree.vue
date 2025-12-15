@@ -27,10 +27,15 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   select: [node: FileNode];
   'remove-folder': [folderPath: string];
+  'hide-folder': [path: string];
 }>();
 
 const handleRemoveFolder = (folderPath: string) => {
   emit('remove-folder', folderPath);
+};
+
+const handleHideFolder = (path: string) => {
+  emit('hide-folder', path);
 };
 
 // Track which directories are expanded
@@ -217,6 +222,7 @@ defineExpose({
       @toggle="toggleExpand"
       @select="handleSelect"
       @remove-folder="handleRemoveFolder"
+      @hide-folder="handleHideFolder"
       @focus="handleFocus"
     />
   </div>
