@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { projectService } from '../../services/project';
 import { projectGitStatsService } from '../../services/project/project-git-stats-service';
+import { settingsService } from '../../services/settings-service';
 
 const gitStats = new Hono();
 
@@ -20,8 +21,15 @@ gitStats.get('/git-stats', async c => {
   // Extract project paths
   const projectPaths = projects.map(p => p.path);
 
+  // Get additional emails from settings
+  const additionalEmails = (await settingsService.getValue<string[]>('gitEmails')) ?? [];
+
   // Get git stats
-  const stats = await projectGitStatsService.getGitStats(projectPaths, validPeriod);
+  const stats = await projectGitStatsService.getGitStats(
+    projectPaths,
+    validPeriod,
+    additionalEmails
+  );
 
   return c.json({
     data: stats,
