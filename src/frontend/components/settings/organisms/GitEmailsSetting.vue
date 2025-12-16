@@ -154,17 +154,18 @@ const canAddEmail = computed(() => {
       <Badge
         v-for="(email, index) in emails"
         :key="email"
-        variant="secondary"
-        class="flex items-center gap-1 py-1 pr-1 pl-2"
+        variant="default"
+        class="flex items-center gap-1 py-1 pr-1 pl-2 shadow-sm"
       >
         {{ email }}
-        <button
+        <Button
           @click="removeEmail(index)"
+          size="icon"
           :disabled="isSaving"
-          class="hover:bg-muted ml-1 rounded p-0.5"
+          class="ml-1 h-4 w-4 cursor-pointer rounded shadow-none hover:bg-slate-400/70"
         >
-          <X :size="12" />
-        </button>
+          <X class="h-2 w-2 p-0.5" />
+        </Button>
       </Badge>
     </div>
     <p v-else class="text-muted-foreground mt-2 text-sm italic">
