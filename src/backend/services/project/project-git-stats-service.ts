@@ -33,12 +33,18 @@ class ProjectGitStatsService {
    */
   async getGitStats(
     projectPaths: string[],
-    period: 'week' | 'month' | 'last-week'
+    period: 'week' | 'month' | 'last-week',
+    additionalEmails: string[] = []
   ): Promise<GitStats> {
     const { sinceDate, untilDate } = this.getPeriodDates(period);
 
     // Get user info from git config
-    const userEmail = await this.getUserEmail();
+    const globalEmail = await this.getGlobalEmail();
+
+    // Collect all emails: global + additional from settings
+    const allEmails = new Set<string>();
+    if (globalEmail) allEmails.add(globalEmail);
+    additionalEmails.forEach(email => allEmails.add(email));
 
     // Create a map of date -> daily stats
     const dailyStatsMap = new Map<string, DailyProjectData>();
@@ -62,9 +68,13 @@ class ProjectGitStatsService {
 
     // Process each project
     for (const projectPath of projectPaths) {
+      // Check for per-project email and add to the set
+      const localEmail = await this.getProjectLocalEmail(projectPath);
+      if (localEmail) allEmails.add(localEmail);
+
       const projectDailyData = await this.getProjectDailyGitData(
         projectPath,
-        userEmail,
+        Array.from(allEmails),
         sinceDate,
         untilDate
       );
@@ -126,7 +136,7 @@ class ProjectGitStatsService {
    */
   private async getProjectDailyGitData(
     projectPath: string,
-    userEmail: string,
+    userEmails: string[],
     sinceDate: string,
     untilDate: string
   ): Promise<Map<string, DailyProjectData> | null> {
@@ -135,9 +145,12 @@ class ProjectGitStatsService {
       const gitDir = path.join(projectPath, '.git');
       await fs.access(gitDir);
 
+      // Build author filter - git log supports multiple --author flags with OR logic
+      const authorFlags = userEmails.map(email => `--author="${email}"`).join(' ');
+
       // Get log with date, hash, and numstat in one go
       const { stdout: logOutput } = await execAsync(
-        `git log --all --author="${userEmail}" --since="${sinceDate}" --until="${untilDate}" --format="%as|%H" --numstat`,
+        `git log --all ${authorFlags} --since="${sinceDate}" --until="${untilDate}" --format="%as|%H" --numstat`,
         { cwd: projectPath }
       );
 
@@ -200,14 +213,25 @@ class ProjectGitStatsService {
   }
 
   /**
-   * Get user email from git config
+   * Get user email from global git config
    */
-  private async getUserEmail(): Promise<string> {
+  private async getGlobalEmail(): Promise<string> {
     try {
       const { stdout } = await execAsync('git config --global user.email');
       return stdout.trim();
     } catch {
-      // Fallback to empty string (will match all commits)
+      return '';
+    }
+  }
+
+  /**
+   * Get local email configured for a specific project
+   */
+  private async getProjectLocalEmail(projectPath: string): Promise<string> {
+    try {
+      const { stdout } = await execAsync('git config user.email', { cwd: projectPath });
+      return stdout.trim();
+    } catch {
       return '';
     }
   }

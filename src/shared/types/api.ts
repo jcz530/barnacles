@@ -139,6 +139,7 @@ export interface Setting {
 export const SETTING_KEYS = {
   DEFAULT_IDE: 'defaultIde',
   DEFAULT_TERMINAL: 'defaultTerminal',
+  GIT_EMAILS: 'gitEmails',
   INSTALL_CLI_COMMAND: 'installCliCommand',
   SCAN_EXCLUDED_DIRECTORIES: 'scanExcludedDirectories',
   SCAN_INCLUDED_DIRECTORIES: 'scanIncludedDirectories',

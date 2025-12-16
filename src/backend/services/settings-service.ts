@@ -40,7 +40,7 @@ const DEFAULT_SETTINGS = {
   showTrayIcon: { value: 'false', type: 'boolean' as const },
   showDashboardStats: { value: 'true', type: 'boolean' as const },
   installCliCommand: { value: 'true', type: 'boolean' as const },
-  // Add more default settings here as needed
+  gitEmails: { value: JSON.stringify([]), type: 'json' as const },
 };
 
 class SettingsService {

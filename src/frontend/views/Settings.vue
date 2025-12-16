@@ -14,6 +14,7 @@ import ShowTrayIconSetting from '../components/settings/organisms/ShowTrayIconSe
 import ShowDashboardStatsSetting from '../components/settings/organisms/ShowDashboardStatsSetting.vue';
 import InstallCliCommandSetting from '../components/settings/organisms/InstallCliCommandSetting.vue';
 import ThemesSetting from '../components/settings/organisms/ThemesSetting.vue';
+import GitEmailsSetting from '../components/settings/organisms/GitEmailsSetting.vue';
 
 const { setBreadcrumbs } = useBreadcrumbs();
 const route = useRoute();
@@ -135,6 +136,24 @@ onMounted(async () => {
                 :highlighted="highlightedSetting"
               >
                 <ShowTrayIconSetting />
+              </SettingWrapper>
+            </div>
+          </CardContent>
+        </Card>
+
+        <!-- Git Stats -->
+        <Card>
+          <CardHeader>
+            <CardTitle>Git Stats</CardTitle>
+            <CardDescription>Configure how git statistics are calculated</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div class="space-y-6">
+              <SettingWrapper
+                :setting-key="SETTING_KEYS.GIT_EMAILS"
+                :highlighted="highlightedSetting"
+              >
+                <GitEmailsSetting />
               </SettingWrapper>
             </div>
           </CardContent>

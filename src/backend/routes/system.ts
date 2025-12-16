@@ -2,8 +2,12 @@ import { Hono } from 'hono';
 import os from 'os';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { expandTilde } from '../utils/path-utils';
 import { fontService } from '../services/font-service';
+
+const execAsync = promisify(exec);
 
 const system = new Hono();
 
@@ -375,6 +379,23 @@ system.get('/fonts', async c => {
       },
       500
     );
+  }
+});
+
+/**
+ * GET /api/system/git-email
+ * Get the global git email configured on the system
+ */
+system.get('/git-email', async c => {
+  try {
+    const { stdout } = await execAsync('git config --global user.email');
+    return c.json({
+      data: stdout.trim(),
+    });
+  } catch {
+    return c.json({
+      data: null,
+    });
   }
 });
 
