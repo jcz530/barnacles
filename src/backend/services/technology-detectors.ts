@@ -299,4 +299,58 @@ export const TECHNOLOGY_DETECTORS: TechnologyDetector[] = [
     files: ['app.json'],
     packageJsonKeys: ['expo'],
   },
+  // AI Coding Assistants
+  {
+    name: 'Claude Code',
+    slug: 'claude-code',
+    icon: 'anthropic',
+    color: '#D97757',
+    files: ['.claude', 'CLAUDE.md'],
+  },
+  {
+    name: 'Beads',
+    slug: 'beads',
+    icon: 'beads',
+    color: '#6366F1',
+    files: ['.beads'],
+  },
+  {
+    name: 'Cursor',
+    slug: 'cursor',
+    icon: 'cursor',
+    color: '#000000',
+    files: ['.cursor', '.cursorrules'],
+  },
+  {
+    name: 'GitHub Copilot',
+    slug: 'github-copilot',
+    icon: 'github',
+    color: '#000000',
+    files: ['.github/copilot-instructions.md'],
+  },
+  // AI SDKs
+  {
+    name: 'Anthropic SDK',
+    slug: 'anthropic-sdk',
+    icon: 'anthropic',
+    color: '#D97757',
+    files: [],
+    packageJsonKeys: ['@anthropic-ai/sdk'],
+  },
+  {
+    name: 'OpenAI SDK',
+    slug: 'openai-sdk',
+    icon: 'openai',
+    color: '#10A37F',
+    files: [],
+    packageJsonKeys: ['openai'],
+  },
+  {
+    name: 'Vercel AI SDK',
+    slug: 'vercel-ai-sdk',
+    icon: 'vercel',
+    color: '#000000',
+    files: [],
+    packageJsonKeys: ['ai'],
+  },
 ];
