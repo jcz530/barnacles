@@ -51,8 +51,12 @@ declare global {
       };
       files: {
         readDirectory: (
-          dirPath: string
+          dirPath: string,
+          customExclusions?: string[]
         ) => Promise<{ success: boolean; data?: FileNode[]; error?: string }>;
+        getGlobalExclusions: (
+          dirPath: string
+        ) => Promise<{ success: boolean; data?: string[]; error?: string }>;
         readFile: (
           filePath: string,
           forceText?: boolean

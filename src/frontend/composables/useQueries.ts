@@ -205,6 +205,70 @@ export const useQueries = () => {
     });
   };
 
+  // Project exclusions query (file tree hidden directories)
+  const useProjectExclusionsQuery = (
+    projectId: MaybeRef<string>,
+    options?: { enabled?: boolean }
+  ) => {
+    return useQuery({
+      queryKey: computed(() => ['projects', unref(projectId), 'exclusions'] as const),
+      queryFn: async () => {
+        const response = await apiCall<
+          ApiResponse<Array<{ id: string; projectId: string; path: string; createdAt: string }>>
+        >('GET', `${API_ROUTES.PROJECTS}/${unref(projectId)}/exclusions`);
+
+        if (!response) {
+          throw new Error('Failed to fetch exclusions');
+        }
+
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
+  // Add exclusion mutation
+  const useAddExclusionMutation = () => {
+    return useMutation({
+      mutationFn: async ({ projectId, path }: { projectId: string; path: string }) => {
+        const response = await apiCall<
+          ApiResponse<{ id: string; projectId: string; path: string; createdAt: string }>
+        >('POST', `${API_ROUTES.PROJECTS}/${projectId}/exclusions`, { path });
+
+        if (!response) {
+          throw new Error('Failed to add exclusion');
+        }
+
+        return response.data;
+      },
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries({
+          queryKey: ['projects', variables.projectId, 'exclusions'],
+        });
+      },
+    });
+  };
+
+  // Remove exclusion mutation
+  const useRemoveExclusionMutation = () => {
+    return useMutation({
+      mutationFn: async ({
+        projectId,
+        exclusionId,
+      }: {
+        projectId: string;
+        exclusionId: string;
+      }) => {
+        await apiCall('DELETE', `${API_ROUTES.PROJECTS}/${projectId}/exclusions/${exclusionId}`);
+      },
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries({
+          queryKey: ['projects', variables.projectId, 'exclusions'],
+        });
+      },
+    });
+  };
+
   // Delete project mutation
   const useDeleteProjectMutation = () => {
     return useMutation({
@@ -1580,6 +1644,9 @@ export const useQueries = () => {
     useRelatedFoldersQuery,
     useAddRelatedFolderMutation,
     useRemoveRelatedFolderMutation,
+    useProjectExclusionsQuery,
+    useAddExclusionMutation,
+    useRemoveExclusionMutation,
     useDeleteProjectMutation,
     useRescanProjectMutation,
     useToggleFavoriteMutation,

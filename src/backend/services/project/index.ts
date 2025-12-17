@@ -12,11 +12,13 @@ import { projectToolsService } from './project-tools-service';
 import { projectFileSystemService } from './project-filesystem-service';
 import { projectPackageService } from './project-package-service';
 import { projectRelatedFoldersService } from './project-related-folders-service';
+import { projectExclusionsService } from './project-exclusions-service';
 
 // Re-export types
 export type { Technology } from './project-technology-service';
 export type { ProjectStats } from './project-stats-service';
 export type { RelatedFolder } from './project-related-folders-service';
+export type { ProjectExclusion } from './project-exclusions-service';
 
 export interface Project {
   id: string;
@@ -443,6 +445,27 @@ class ProjectService {
    */
   async removeRelatedFolder(folderId: string) {
     return projectRelatedFoldersService.removeRelatedFolder(folderId);
+  }
+
+  /**
+   * Get all exclusions for a project
+   */
+  async getExclusions(projectId: string) {
+    return projectExclusionsService.getExclusions(projectId);
+  }
+
+  /**
+   * Add an exclusion to a project
+   */
+  async addExclusion(projectId: string, path: string) {
+    return projectExclusionsService.addExclusion(projectId, path);
+  }
+
+  /**
+   * Remove an exclusion from a project
+   */
+  async removeExclusion(exclusionId: string) {
+    return projectExclusionsService.removeExclusion(exclusionId);
   }
 }
 

@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ChevronDown, ChevronRight, Copy, FileCheck, FolderOpen, Trash2 } from 'lucide-vue-next';
+import {
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  EyeOff,
+  FileCheck,
+  FolderOpen,
+  Trash2,
+} from 'lucide-vue-next';
 import { formatFileSize, getFileTypeInfo, getFolderIcon } from '@/utils/file-types';
 import type { FileNode } from '@/types/window';
 import {
@@ -38,6 +46,7 @@ const emit = defineEmits<{
   toggle: [node: FileNode];
   select: [node: FileNode];
   'remove-folder': [folderPath: string];
+  'hide-folder': [path: string];
   focus: [];
 }>();
 
@@ -121,6 +130,11 @@ const copyFile = async () => {
 const handleRemoveFolder = () => {
   const fullPath = getFullPath();
   emit('remove-folder', fullPath);
+};
+
+const handleHideFolder = () => {
+  // Emit the relative path for exclusions
+  emit('hide-folder', props.node.path);
 };
 </script>
 
@@ -207,6 +221,13 @@ const handleRemoveFolder = () => {
         <Copy class="h-4 w-4" />
         Copy Path
       </ContextMenuItem>
+      <template v-if="node.type === 'directory' && !isRootFolder">
+        <ContextMenuSeparator />
+        <ContextMenuItem @click="handleHideFolder">
+          <EyeOff class="h-4 w-4" />
+          Hide from File Tree
+        </ContextMenuItem>
+      </template>
       <template v-if="isRootFolder">
         <ContextMenuSeparator />
         <ContextMenuItem @click="handleRemoveFolder" class="text-danger-600">

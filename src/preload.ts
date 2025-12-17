@@ -80,7 +80,10 @@ contextBridge.exposeInMainWorld('electron', {
     uninstall: () => ipcRenderer.invoke('cli:uninstall'),
   },
   files: {
-    readDirectory: (dirPath: string) => ipcRenderer.invoke('files:read-directory', dirPath),
+    readDirectory: (dirPath: string, customExclusions?: string[]) =>
+      ipcRenderer.invoke('files:read-directory', dirPath, customExclusions),
+    getGlobalExclusions: (dirPath: string) =>
+      ipcRenderer.invoke('files:get-global-exclusions', dirPath),
     readFile: (filePath: string, forceText?: boolean) =>
       ipcRenderer.invoke('files:read-file', filePath, forceText),
     getFileStats: (filePath: string) => ipcRenderer.invoke('files:get-file-stats', filePath),

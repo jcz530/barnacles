@@ -60,9 +60,14 @@ function expandTilde(filepath: string): string {
 /**
  * Check if a path should be excluded based on exact name match or subdirectory pattern
  */
-function isExcluded(entryName: string, relativePath: string): boolean {
+function isExcluded(
+  entryName: string,
+  relativePath: string,
+  customExclusions?: Set<string>
+): boolean {
   const normalizedPath = relativePath.split(path.sep).join('/');
 
+  // Check hardcoded exclusions first
   for (const excluded of EXCLUDED_DIRS) {
     const pattern = excluded.replace(/\/+$/, ''); // Remove trailing slashes
     if (!pattern) continue;
@@ -92,13 +97,32 @@ function isExcluded(entryName: string, relativePath: string): boolean {
     }
   }
 
+  // Check custom per-project exclusions
+  if (customExclusions && customExclusions.size > 0) {
+    // Check exact path match
+    if (customExclusions.has(normalizedPath)) {
+      return true;
+    }
+
+    // Check if this path is a child of an excluded path
+    for (const excludedPath of customExclusions) {
+      if (normalizedPath.startsWith(excludedPath + '/')) {
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
 /**
  * Recursively read a directory and build a tree structure
  */
-async function readDirectoryTree(dirPath: string, relativeTo: string): Promise<FileNode[]> {
+async function readDirectoryTree(
+  dirPath: string,
+  relativeTo: string,
+  customExclusions?: Set<string>
+): Promise<FileNode[]> {
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
     const nodes: FileNode[] = [];
@@ -108,13 +132,13 @@ async function readDirectoryTree(dirPath: string, relativeTo: string): Promise<F
       const relativePath = path.relative(relativeTo, fullPath);
 
       // Skip excluded directories and files
-      if (isExcluded(entry.name, relativePath)) {
+      if (isExcluded(entry.name, relativePath, customExclusions)) {
         continue;
       }
 
       if (entry.isDirectory()) {
         // Recursively read subdirectories
-        const children = await readDirectoryTree(fullPath, relativeTo);
+        const children = await readDirectoryTree(fullPath, relativeTo, customExclusions);
         nodes.push({
           name: entry.name,
           path: relativePath,
@@ -223,31 +247,37 @@ async function searchInFiles(
 
 export const setupFileSystemBridge = (): void => {
   // Handler for reading directory tree
-  ipcMain.handle('files:read-directory', async (_, dirPath: string) => {
-    try {
-      // Expand tilde in path
-      const expandedPath = expandTilde(dirPath);
+  ipcMain.handle(
+    'files:read-directory',
+    async (_, dirPath: string, customExclusions?: string[]) => {
+      try {
+        // Expand tilde in path
+        const expandedPath = expandTilde(dirPath);
 
-      // Validate path exists
-      if (!existsSync(expandedPath)) {
-        throw new Error(`Path does not exist: ${expandedPath}`);
+        // Validate path exists
+        if (!existsSync(expandedPath)) {
+          throw new Error(`Path does not exist: ${expandedPath}`);
+        }
+
+        const stats = statSync(expandedPath);
+        if (!stats.isDirectory()) {
+          throw new Error(`Path is not a directory: ${expandedPath}`);
+        }
+
+        // Convert custom exclusions array to Set for efficient lookup
+        const exclusionsSet = customExclusions ? new Set(customExclusions) : undefined;
+
+        const tree = await readDirectoryTree(expandedPath, expandedPath, exclusionsSet);
+        return { success: true, data: tree };
+      } catch (error) {
+        console.error('Error reading directory:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
       }
-
-      const stats = statSync(expandedPath);
-      if (!stats.isDirectory()) {
-        throw new Error(`Path is not a directory: ${expandedPath}`);
-      }
-
-      const tree = await readDirectoryTree(expandedPath, expandedPath);
-      return { success: true, data: tree };
-    } catch (error) {
-      console.error('Error reading directory:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
     }
-  });
+  );
 
   // Handler for getting file stats without reading content
   ipcMain.handle('files:get-file-stats', async (_, filePath: string) => {
@@ -505,6 +535,46 @@ export const setupFileSystemBridge = (): void => {
       };
     } catch (error) {
       console.error('Error moving files:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  });
+
+  // Handler for getting global exclusions that exist in a directory
+  ipcMain.handle('files:get-global-exclusions', async (_, dirPath: string) => {
+    try {
+      // Expand tilde in path
+      const expandedPath = expandTilde(dirPath);
+
+      // Validate path exists
+      if (!existsSync(expandedPath)) {
+        return { success: false, error: `Path does not exist: ${expandedPath}` };
+      }
+
+      const existingExclusions: string[] = [];
+
+      // Check which global exclusions exist in this directory
+      for (const excluded of EXCLUDED_DIRS) {
+        // For simple names (no slash), check if directory exists
+        if (!excluded.includes('/')) {
+          const fullPath = path.join(expandedPath, excluded);
+          if (existsSync(fullPath)) {
+            existingExclusions.push(excluded);
+          }
+        } else {
+          // For path patterns like ".venv/bin", check if the path exists
+          const fullPath = path.join(expandedPath, excluded);
+          if (existsSync(fullPath)) {
+            existingExclusions.push(excluded);
+          }
+        }
+      }
+
+      return { success: true, data: existingExclusions };
+    } catch (error) {
+      console.error('Error getting global exclusions:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

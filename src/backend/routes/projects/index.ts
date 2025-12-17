@@ -4,6 +4,7 @@ import files from './files';
 import packages from './packages';
 import processes from './processes';
 import relatedFolders from './related-folders';
+import exclusions from './exclusions';
 import technologies from './technologies';
 import tools from './tools';
 import accounts from './accounts';
@@ -36,6 +37,9 @@ projects.route('/', files);
 
 // Related folders
 projects.route('/', relatedFolders);
+
+// Exclusions (file tree hidden directories)
+projects.route('/', exclusions);
 
 // Accounts
 projects.route('/', accounts);
