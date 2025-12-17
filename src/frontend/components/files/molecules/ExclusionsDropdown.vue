@@ -45,7 +45,7 @@ const handleRemove = (exclusionId: string) => {
         <EyeOff :size="16" />
         <span
           v-if="hasExclusions"
-          class="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-slate-500 px-1 text-[10px] text-white"
+          class="bg-secondary-400/80 absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs font-bold text-slate-100"
         >
           {{ totalCount }}
         </span>
@@ -62,30 +62,10 @@ const handleRemove = (exclusionId: string) => {
       </div>
 
       <div v-else class="max-h-60 overflow-y-auto">
-        <!-- Global exclusions (always hidden, non-removable) -->
-        <template v-if="globalExclusions.length > 0">
-          <div class="px-2 py-1">
-            <span class="text-xs font-medium text-slate-400">Always Hidden</span>
-          </div>
-          <div
-            v-for="path in globalExclusions"
-            :key="`global-${path}`"
-            class="flex items-center justify-between gap-2 rounded-sm px-2 py-1.5"
-          >
-            <span class="flex-1 truncate font-mono text-sm text-slate-400" :title="path">
-              {{ path }}
-            </span>
-            <Lock class="h-4 w-4 flex-shrink-0 text-slate-300" title="Global exclusion" />
-          </div>
-        </template>
-
         <!-- Custom exclusions (removable) -->
         <template v-if="exclusions.length > 0">
-          <div v-if="globalExclusions.length > 0" class="my-1">
-            <DropdownMenuSeparator />
-          </div>
           <div class="px-2 py-1">
-            <span class="text-xs font-medium text-slate-400">Custom Hidden</span>
+            <span class="text-xs font-medium text-slate-500">Custom Hidden</span>
           </div>
           <div
             v-for="exclusion in exclusions"
@@ -104,6 +84,25 @@ const handleRemove = (exclusionId: string) => {
             >
               <Eye class="h-4 w-4" />
             </Button>
+          </div>
+          <div v-if="globalExclusions.length > 0" class="my-1">
+            <DropdownMenuSeparator />
+          </div>
+        </template>
+        <!-- Global exclusions (always hidden, non-removable) -->
+        <template v-if="globalExclusions.length > 0">
+          <div class="px-2 py-1">
+            <span class="text-xs font-medium text-slate-500">Always Hidden</span>
+          </div>
+          <div
+            v-for="path in globalExclusions"
+            :key="`global-${path}`"
+            class="flex items-center justify-between gap-2 rounded-sm px-2 py-1.5"
+          >
+            <span class="flex-1 truncate font-mono text-sm text-slate-400" :title="path">
+              {{ path }}
+            </span>
+            <Lock class="h-4 w-4 flex-shrink-0 text-slate-300" title="Global exclusion" />
           </div>
         </template>
       </div>
