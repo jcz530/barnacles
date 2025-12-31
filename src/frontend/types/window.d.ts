@@ -43,6 +43,7 @@ declare global {
       createNewWindow: () => Promise<{ success: boolean; windowId?: number; error?: string }>;
       navigateToProject: (projectId: string) => Promise<{ success: boolean; error?: string }>;
       onNavigateToProject: (callback: (projectId: string) => void) => () => void;
+      onToggleFind: (callback: () => void) => () => void;
       quitApp: () => Promise<{ success: boolean; error?: string }>;
       cli: {
         isInstalled: () => Promise<boolean>;
@@ -100,6 +101,24 @@ declare global {
           error?: string;
         }>;
         getPathForFile: (file: File) => string;
+      };
+      find: {
+        start: (searchText: string, options?: {
+          forward?: boolean;
+          findNext?: boolean;
+          matchCase?: boolean;
+          wordStart?: boolean;
+          medialCapitalAsWordStart?: boolean;
+        }) => Promise<{ success: boolean; requestId?: number; error?: string }>;
+        stop: (action: 'clearSelection' | 'keepSelection' | 'activateSelection') => Promise<{ success: boolean; error?: string }>;
+        setupListener: () => void;
+        onResult: (callback: (result: {
+          requestId: number;
+          activeMatchOrdinal: number;
+          matches: number;
+          selectionArea: { x: number; y: number; width: number; height: number };
+          finalUpdate: boolean;
+        }) => void) => () => void;
       };
     };
   }

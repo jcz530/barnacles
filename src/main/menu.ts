@@ -69,11 +69,32 @@ export const createMenu = (): void => {
               { role: 'delete' as const },
               { role: 'selectAll' as const },
               { type: 'separator' as const },
+              {
+                label: 'Find',
+                accelerator: 'Cmd+F',
+                click: () => {
+                  const focusedWindow = BrowserWindow.getFocusedWindow();
+                  if (focusedWindow) {
+                    focusedWindow.webContents.send('toggle-find');
+                  }
+                },
+              },
             ]
           : [
               { role: 'delete' as const },
               { type: 'separator' as const },
               { role: 'selectAll' as const },
+              { type: 'separator' as const },
+              {
+                label: 'Find',
+                accelerator: 'Ctrl+F',
+                click: () => {
+                  const focusedWindow = BrowserWindow.getFocusedWindow();
+                  if (focusedWindow) {
+                    focusedWindow.webContents.send('toggle-find');
+                  }
+                },
+              },
             ]),
       ],
     },

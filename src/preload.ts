@@ -73,6 +73,11 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('navigate-to-project', handler);
     return () => ipcRenderer.removeListener('navigate-to-project', handler);
   },
+  onToggleFind: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('toggle-find', handler);
+    return () => ipcRenderer.removeListener('toggle-find', handler);
+  },
   quitApp: () => ipcRenderer.invoke('quit-app'),
   cli: {
     isInstalled: () => ipcRenderer.invoke('cli:isInstalled'),
@@ -96,5 +101,42 @@ contextBridge.exposeInMainWorld('electron', {
   },
   storage: {
     getEncryptionKey: () => ipcRenderer.invoke('storage:get-encryption-key'),
+  },
+  find: {
+    start: (
+      searchText: string,
+      options?: {
+        forward?: boolean;
+        findNext?: boolean;
+        matchCase?: boolean;
+        wordStart?: boolean;
+        medialCapitalAsWordStart?: boolean;
+      }
+    ) => ipcRenderer.invoke('find:start', searchText, options),
+    stop: (action: 'clearSelection' | 'keepSelection' | 'activateSelection') =>
+      ipcRenderer.invoke('find:stop', action),
+    setupListener: () => ipcRenderer.send('find:setup-listener'),
+    onResult: (
+      callback: (result: {
+        requestId: number;
+        activeMatchOrdinal: number;
+        matches: number;
+        selectionArea: { x: number; y: number; width: number; height: number };
+        finalUpdate: boolean;
+      }) => void
+    ) => {
+      const handler = (
+        _: unknown,
+        _result: {
+          requestId: number;
+          activeMatchOrdinal: number;
+          matches: number;
+          selectionArea: { x: number; y: number; width: number; height: number };
+          finalUpdate: boolean;
+        }
+      ) => callback(_result);
+      ipcRenderer.on('find:result', handler);
+      return () => ipcRenderer.removeListener('find:result', handler);
+    },
   },
 });
