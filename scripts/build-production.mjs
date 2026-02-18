@@ -116,7 +116,7 @@ async function build() {
 
   // Remove node_modules
   console.log('\n🗑️  Removing node_modules...');
-  rmSync('node_modules', { recursive: true, force: true });
+  rmSync('node_modules', { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 
   // Install production dependencies
   console.log('\n📥 Installing production dependencies...');
@@ -170,7 +170,7 @@ async function build() {
 
   // Restore development dependencies
   console.log('\n♻️  Restoring development dependencies...');
-  rmSync('node_modules', { recursive: true, force: true });
+  rmSync('node_modules', { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
   renameSync('package-lock.json.bak', 'package-lock.json');
   run('npm ci');
 
