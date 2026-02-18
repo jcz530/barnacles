@@ -5,6 +5,7 @@ import { db } from '@shared/database';
 import { projectRelatedFolders, projects } from '@shared/database/schema';
 import * as fs from 'fs/promises';
 import * as os from 'os';
+import * as path from 'path';
 
 // Mock the database connection module
 mockDatabaseForUnit();
@@ -141,7 +142,7 @@ describe('ProjectRelatedFoldersService', () => {
       });
 
       const homeDir = os.homedir();
-      const expandedPath = `${homeDir}/Documents/projects`;
+      const expandedPath = path.join(homeDir, 'Documents', 'projects');
 
       vi.mocked(fs.stat).mockResolvedValue({
         isDirectory: () => true,
@@ -220,7 +221,7 @@ describe('ProjectRelatedFoldersService', () => {
         path: '/test/path',
       });
 
-      const expandedPath = `${homeDir}/Documents`;
+      const expandedPath = path.join(homeDir, 'Documents');
 
       vi.mocked(fs.stat).mockResolvedValue({
         isDirectory: () => true,
