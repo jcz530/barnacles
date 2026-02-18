@@ -5,8 +5,10 @@ export const setupClipboardBridge = (): void => {
   ipcMain.handle('clipboard:write-file', async (_, filePath: string) => {
     try {
       // Write file path to clipboard in a format that file managers understand
-      // On macOS, this allows pasting the file in Finder
-      clipboard.writeBuffer('public.file-url', Buffer.from(`file://${filePath}`));
+      // macOS uses UTI (public.file-url), Linux uses MIME type (text/uri-list)
+      const fileUrl = `file://${filePath}`;
+      const mimeType = process.platform === 'linux' ? 'text/uri-list' : 'public.file-url';
+      clipboard.writeBuffer(mimeType, Buffer.from(fileUrl));
       return { success: true };
     } catch (error) {
       console.error('Failed to write file to clipboard:', error);

@@ -43,6 +43,21 @@ export function detectCurrentTerminal(): string | null {
     return 'wezterm';
   }
 
+  // GNOME Terminal
+  if (process.env.GNOME_TERMINAL_SCREEN || process.env.VTE_VERSION) {
+    return 'gnome-terminal';
+  }
+
+  // Konsole
+  if (process.env.KONSOLE_VERSION) {
+    return 'konsole';
+  }
+
+  // Generic TERM_PROGRAM fallback (covers many terminals)
+  if (termProgram) {
+    return termProgram.toLowerCase();
+  }
+
   // Could not detect
   return null;
 }
@@ -59,6 +74,9 @@ export function getTerminalName(terminalId: string | null): string {
     alacritty: 'Alacritty',
     kitty: 'Kitty',
     wezterm: 'WezTerm',
+    'gnome-terminal': 'GNOME Terminal',
+    konsole: 'Konsole',
+    xterm: 'xterm',
   };
 
   return terminalId ? names[terminalId] || 'Unknown Terminal' : 'Unknown Terminal';

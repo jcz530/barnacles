@@ -58,8 +58,11 @@ export function getClipboardCommand(text: string): string {
   if (isMac) {
     return `printf '%s' "${escapedText}" | pbcopy`;
   }
-  // Linux - try xclip first, fall back to xsel
-  return `printf '%s' "${escapedText}" | xclip -selection clipboard`;
+  // Linux - use wl-copy on Wayland, fall back to xclip then xsel on X11
+  if (process.env.WAYLAND_DISPLAY) {
+    return `printf '%s' "${escapedText}" | wl-copy`;
+  }
+  return `printf '%s' "${escapedText}" | xclip -selection clipboard 2>/dev/null || printf '%s' "${escapedText}" | xsel --clipboard --input`;
 }
 
 /**
@@ -115,4 +118,23 @@ export function getHomeDir(): string {
  */
 export function isCliSupported(): boolean {
   return !isWindows;
+}
+
+/**
+ * Get a platform-specific command to move a file with elevated privileges.
+ * - macOS: uses osascript for a GUI password prompt
+ * - Linux: uses pkexec (Polkit) with sudo fallback
+ * - Windows: not supported (use fs.copyFile directly)
+ */
+export function getElevatedMoveCommand(srcPath: string, destPath: string): string {
+  const escapedSrc = srcPath.replace(/'/g, "'\\''");
+  const escapedDest = destPath.replace(/'/g, "'\\''");
+
+  if (isMac) {
+    const script = `do shell script "mv '${escapedSrc}' '${escapedDest}'" with administrator privileges`;
+    return `osascript -e '${script}'`;
+  }
+
+  // Linux: try pkexec first (GUI prompt via Polkit), fall back to sudo
+  return `pkexec mv '${escapedSrc}' '${escapedDest}' 2>/dev/null || sudo mv '${escapedSrc}' '${escapedDest}'`;
 }

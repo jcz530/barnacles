@@ -129,8 +129,9 @@ const initialize = async (): Promise<void> => {
       console.log('🔇 Launching in background mode (no window)');
     }
 
-    // Fix PATH on macOS - Electron doesn't inherit the full shell PATH
-    if (process.platform === 'darwin') {
+    // Fix PATH on macOS/Linux - Electron doesn't inherit the full shell PATH
+    // when launched from .desktop files, AppImage, or Finder
+    if (process.platform === 'darwin' || process.platform === 'linux') {
       try {
         const { execSync } = await import('child_process');
         const shell = process.env.SHELL || '/bin/bash';

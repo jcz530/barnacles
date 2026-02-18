@@ -141,12 +141,18 @@ async function build() {
 
   // Create placeholder for missing libsql platform packages
   console.log('\n📁 Creating placeholder directories for missing libsql platform packages...');
-  const libsqlDir = join('node_modules', '@libsql', 'darwin-x64');
-  mkdirSync(libsqlDir, { recursive: true });
-  writeFileSync(
-    join(libsqlDir, 'package.json'),
-    JSON.stringify({ name: '@libsql/darwin-x64', version: '0.0.0' })
-  );
+  const libsqlPlaceholders = [
+    { dir: 'darwin-x64', name: '@libsql/darwin-x64' },
+    { dir: 'linux-x64-gnu', name: '@libsql/linux-x64-gnu' },
+  ];
+  for (const { dir, name } of libsqlPlaceholders) {
+    const libsqlDir = join('node_modules', '@libsql', dir);
+    mkdirSync(libsqlDir, { recursive: true });
+    writeFileSync(
+      join(libsqlDir, 'package.json'),
+      JSON.stringify({ name, version: '0.0.0' })
+    );
+  }
 
   // Rebuild native modules for Electron
   console.log('\n🔨 Rebuilding native modules for Electron...');

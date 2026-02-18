@@ -16,6 +16,7 @@ import { promises as fs } from 'fs';
 import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { getElevatedMoveCommand } from '../../shared/utils/platform.js';
 
 const execAsync = promisify(exec);
 
@@ -307,17 +308,11 @@ export class HostsCommand extends Command {
       await fs.copyFile(tmpPath, hostsPath);
       await fs.unlink(tmpPath);
     } else {
-      // On Unix-like systems, use osascript to prompt for admin password
+      // On macOS/Linux, use platform-specific elevated privilege command
       try {
-        // Use osascript on macOS to get GUI password prompt
-        // Escape single quotes in paths and use proper shell escaping
-        const escapedTmpPath = tmpPath.replace(/'/g, "'\\''");
-        const escapedHostsPath = hostsPath.replace(/'/g, "'\\''");
-        const script = `do shell script "mv '${escapedTmpPath}' '${escapedHostsPath}'" with administrator privileges`;
-
-        await execAsync(`osascript -e '${script}'`);
+        const command = getElevatedMoveCommand(tmpPath, hostsPath);
+        await execAsync(command);
       } catch (error) {
-        // Clean up temp file
         try {
           await fs.unlink(tmpPath);
         } catch (unlinkError) {

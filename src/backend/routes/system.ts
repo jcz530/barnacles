@@ -6,6 +6,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { expandTilde } from '../utils/path-utils';
 import { fontService } from '../services/font-service';
+import { getElevatedMoveCommand } from '../../shared/utils/platform';
 
 const execAsync = promisify(exec);
 
@@ -172,7 +173,8 @@ system.get('/directories/search', async c => {
             name === 'Library' ||
             name === 'System' ||
             name === 'Applications' ||
-            name === 'Volumes'
+            name === 'Volumes' ||
+            name === 'snap'
           ) {
             continue;
           }
@@ -319,19 +321,12 @@ system.post('/hosts', async c => {
       await fs.copyFile(tmpPath, hostsPath);
       await fs.unlink(tmpPath);
     } else {
-      // On Unix-like systems, use osascript to prompt for admin password
+      // On macOS/Linux, use platform-specific elevated privilege command
       try {
-        // Use osascript on macOS to get GUI password prompt
-        // Escape single quotes in paths and use proper shell escaping
-        const escapedTmpPath = tmpPath.replace(/'/g, "'\\''");
-        const escapedHostsPath = hostsPath.replace(/'/g, "'\\''");
-        const script = `do shell script "mv '${escapedTmpPath}' '${escapedHostsPath}'" with administrator privileges`;
-
-        //Executing osascript command to update hosts file...
-        await execAsync(`osascript -e '${script}'`);
+        const command = getElevatedMoveCommand(tmpPath, hostsPath);
+        await execAsync(command);
       } catch (error) {
-        console.error('Failed to update hosts file with osascript:', error);
-        // If osascript fails (not macOS or user cancelled), clean up temp file
+        console.error('Failed to update hosts file:', error);
         try {
           await fs.unlink(tmpPath);
         } catch (unlinkError) {
