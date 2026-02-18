@@ -1,6 +1,7 @@
 import type { IPty } from 'node-pty';
 import * as pty from 'node-pty';
 import type { ProcessStatus, ProjectProcessStatus, StartProcess } from '../../shared/types/process';
+import { isWindows, getDefaultShell } from '../../shared/utils/platform';
 
 interface RunningProcess {
   name: string;
@@ -35,22 +36,34 @@ class ProcessManagerService {
     } as Record<string, string>;
 
     // Ensure critical environment variables are set
-    if (!envVars.HOME) {
+    if (!envVars.HOME && !isWindows) {
       envVars.HOME = process.env.HOME || require('os').homedir();
     }
-    if (!envVars.USER) {
+    if (!envVars.USER && !isWindows) {
       envVars.USER = process.env.USER || require('os').userInfo().username;
     }
-    if (!envVars.SHELL) {
-      envVars.SHELL = process.env.SHELL || '/bin/bash';
-    }
+
+    const shell = getDefaultShell();
 
     // Start the process using node-pty for proper terminal emulation
-    // Use login shell (-l) to load user's PATH (npm, node, etc.)
-    // If command is provided, execute it; otherwise start an interactive shell
-    const args = command ? ['-l', '-c', command] : ['-l'];
+    let args: string[];
 
-    return pty.spawn('/bin/bash', args, {
+    if (isWindows) {
+      // Windows: Use cmd.exe or powershell with /c or -Command flag
+      if (shell.includes('powershell')) {
+        args = command ? ['-NoLogo', '-Command', command] : ['-NoLogo'];
+      } else {
+        // cmd.exe
+        args = command ? ['/c', command] : [];
+      }
+    } else {
+      // Unix: Use login shell (-l) to load user's PATH (npm, node, etc.)
+      // If command is provided, execute it; otherwise start an interactive shell
+      envVars.SHELL = shell;
+      args = command ? ['-l', '-c', command] : ['-l'];
+    }
+
+    return pty.spawn(shell, args, {
       name: 'xterm-256color',
       cols: 120,
       rows: 30,
@@ -140,9 +153,9 @@ class ProcessManagerService {
         // Join commands with && to stop on first failure
         const commandString = processConfig.commands.join(' && ');
 
-        // Determine working directory
+        // Determine working directory (use path.join for cross-platform compatibility)
         const cwd = processConfig.workingDir
-          ? `${projectPath}/${processConfig.workingDir}`
+          ? require('path').join(projectPath, processConfig.workingDir)
           : projectPath;
 
         console.log('[Process Start] Starting process:', {

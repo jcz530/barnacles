@@ -8,8 +8,13 @@ on:
 
 jobs:
   test:
-    name: Run Tests
-    runs-on: ubuntu-latest
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - name: Checkout code
@@ -21,11 +26,18 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Setup Python (for native module builds)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Install dependencies
         run: npm ci
 
       - name: Rebuild native modules for Electron
         run: npm run rebuild
+        env:
+          PYTHON: python3
 
       # Skipping type-check for now due to pre-existing frontend errors
       # - name: Run type checking
@@ -34,10 +46,85 @@ jobs:
 #      - name: Run linter
 #        run: npm run lint
 
-      - name: Run tests
+      - name: Run tests (Linux)
+        if: runner.os == 'Linux'
         env:
           NODE_ENV: test
         run: xvfb-run --auto-servernum npm test -- --run
 
+      - name: Run tests (macOS/Windows)
+        if: runner.os != 'Linux'
+        env:
+          NODE_ENV: test
+        run: npm test -- --run
+
       - name: Build project
         run: npm run build
+
+  build-distributables:
+    name: Build App (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: test
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Python (for native module builds)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Rebuild native modules for Electron
+        run: npm run rebuild
+        env:
+          PYTHON: python3
+
+      - name: Prune dev dependencies
+        run: npm prune --omit=dev
+
+      - name: Create placeholder for missing libsql platform packages
+        shell: bash
+        run: |
+          mkdir -p node_modules/@libsql/darwin-x64
+          echo '{"name":"@libsql/darwin-x64","version":"0.0.0"}' > node_modules/@libsql/darwin-x64/package.json
+
+      - name: Build distributable (macOS)
+        if: runner.os == 'macOS'
+        run: npx --yes electron-builder --mac --arm64
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Build distributable (Windows)
+        if: runner.os == 'Windows'
+        run: npx --yes electron-builder --win --x64
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-build
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.exe
+          if-no-files-found: ignore
+          retention-days: 7

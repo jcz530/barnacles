@@ -308,8 +308,8 @@ system.post('/hosts', async c => {
       newContent += `${host.ip}\t${host.hostname}\n`;
     }
 
-    // Write to a temporary file first (in /tmp which we have access to)
-    const tmpPath = `/tmp/hosts-${Date.now()}.tmp`;
+    // Write to a temporary file first
+    const tmpPath = path.join(os.tmpdir(), `hosts-${Date.now()}.tmp`);
     await fs.writeFile(tmpPath, newContent, 'utf-8');
 
     // Use sudo to move the temp file to the hosts file location

@@ -10,10 +10,19 @@ import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
 import { asc, eq } from 'drizzle-orm';
+import { isWindows } from '../../shared/utils/platform';
 
 const BARNACLES_MARKER_START = '# >>> barnacles aliases >>>';
 const BARNACLES_MARKER_END = '# <<< barnacles aliases <<<';
 const BARNACLES_SOURCE_LINE = 'source ~/.config/barnacles/aliases';
+
+/**
+ * Check if the alias feature is supported on the current platform
+ * Aliases require Unix shell profile files (bash, zsh, fish) which don't exist on Windows
+ */
+export function isAliasSupported(): boolean {
+  return !isWindows;
+}
 
 /**
  * Detect the current shell and relevant profile paths
@@ -21,6 +30,15 @@ const BARNACLES_SOURCE_LINE = 'source ~/.config/barnacles/aliases';
 export async function detectShell(): Promise<ShellInfo> {
   const homeDir = os.homedir();
   const configPath = path.join(homeDir, '.config', 'barnacles', 'aliases');
+
+  // Aliases not supported on Windows
+  if (isWindows) {
+    return {
+      shell: 'unknown',
+      profilePaths: [],
+      configPath,
+    };
+  }
 
   // Detect shell from user's default shell
   const shellEnv = os.userInfo().shell || '';
