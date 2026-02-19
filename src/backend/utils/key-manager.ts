@@ -1,14 +1,40 @@
 import { safeStorage } from 'electron';
 import { settingsService } from '../services/settings-service';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 
 const ENCRYPTION_KEY_SETTING = 'encryptionKey';
+const FALLBACK_KEY_SETTING = 'fallbackEncryptionKey';
 let cachedKey: Buffer | null = null;
+let usingFallback = false;
+
+/**
+ * Check if we're using the degraded (non-keyring) fallback mode.
+ * This is relevant on Linux systems without gnome-keyring/libsecret/kwallet.
+ */
+export function isUsingFallbackEncryption(): boolean {
+  return usingFallback;
+}
+
+/**
+ * Generate a machine-derived fallback key when safeStorage is unavailable.
+ * This is less secure than keyring-backed encryption but prevents hard crashes
+ * on Linux systems without a keyring service.
+ */
+function getFallbackKey(): Buffer {
+  // Derive a key from machine-specific values to provide some protection
+  const machineId = [
+    process.env.USER || process.env.USERNAME || 'user',
+    require('os').hostname(),
+    require('os').homedir(),
+  ].join(':');
+  return createHash('sha256').update(machineId).digest();
+}
 
 /**
  * Get or generate the encryption key
- * Uses Electron's safeStorage to securely encrypt and store the key
- * Caches the key in memory for performance
+ * Uses Electron's safeStorage to securely encrypt and store the key.
+ * Falls back to a machine-derived key on Linux when no keyring is available.
+ * Caches the key in memory for performance.
  */
 export async function getEncryptionKey(): Promise<Buffer> {
   // Return cached key if available
@@ -25,7 +51,14 @@ export async function getEncryptionKey(): Promise<Buffer> {
     }
 
     if (!safeStorage.isEncryptionAvailable()) {
-      throw new Error('SafeStorage is not available');
+      // Fallback for Linux without keyring
+      console.warn(
+        '[KeyManager] safeStorage unavailable (no keyring service). Using fallback encryption. ' +
+          'Install gnome-keyring, libsecret, or kwallet for stronger key protection.'
+      );
+      usingFallback = true;
+      cachedKey = getFallbackKey();
+      return cachedKey;
     }
 
     // Try to get existing key from settings

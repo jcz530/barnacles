@@ -1,12 +1,9 @@
 import { log, select } from '@clack/prompts';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import type { ProjectAction } from './types.js';
 import type { ProjectWithDetails } from '../../shared/types/api.js';
 import { terminalDetectorService } from '../../backend/services/terminal-detector-service.js';
 import { detectCurrentTerminal, getTerminalName } from '../utils/terminal-detector.js';
-
-const execAsync = promisify(exec);
+import { copyToClipboard } from '../../shared/utils/platform.js';
 
 /**
  * Action to open a new terminal tab/window at the project path
@@ -65,7 +62,7 @@ export class OpenInTerminalAction implements ProjectAction {
 
     if (choice === 'copy') {
       try {
-        await execAsync(`printf '%s' "${cdCommand}" | pbcopy`);
+        await copyToClipboard(cdCommand);
         log.success('Copied to clipboard! Paste it in your terminal to change directory.');
       } catch {
         log.error('Failed to copy to clipboard');

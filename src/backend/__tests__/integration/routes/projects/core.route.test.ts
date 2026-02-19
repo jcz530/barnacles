@@ -50,14 +50,24 @@ describe('Projects API Integration Tests', () => {
     it('should filter projects by search term', async () => {
       const { db, app } = context.get();
 
-      // Create projects with specific names
-      await db
-        .insert(projectsSchema)
-        .values([
-          createProjectData({ name: 'my-awesome-app', archivedAt: null }),
-          createProjectData({ name: 'another-project', archivedAt: null }),
-          createProjectData({ name: 'awesome-website', archivedAt: null }),
-        ]);
+      // Create projects with specific names and paths to ensure deterministic search
+      await db.insert(projectsSchema).values([
+        createProjectData({
+          name: 'my-awesome-app',
+          path: '/projects/my-awesome-app',
+          archivedAt: null,
+        }),
+        createProjectData({
+          name: 'another-project',
+          path: '/projects/another-project',
+          archivedAt: null,
+        }),
+        createProjectData({
+          name: 'awesome-website',
+          path: '/projects/awesome-website',
+          archivedAt: null,
+        }),
+      ]);
 
       const response = await get(app, '/api/projects?search=awesome');
 

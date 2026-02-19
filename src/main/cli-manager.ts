@@ -11,11 +11,8 @@ import {
 } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { homedir } from 'os';
-
-const execAsync = promisify(exec);
+import { isCliSupported, splitPath } from '../shared/utils/platform';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,7 +58,7 @@ async function ensureLocalBinInPath(): Promise<void> {
   }
 
   // Check if it's in PATH
-  const pathDirs = process.env.PATH?.split(':') || [];
+  const pathDirs = splitPath(process.env.PATH);
   if (pathDirs.includes(localBinDir)) {
     console.log('[CLI] ~/.local/bin is already in PATH');
     return; // Already in PATH
@@ -104,6 +101,11 @@ async function ensureLocalBinInPath(): Promise<void> {
  * Check if the CLI is currently installed
  */
 export function isCliInstalled(): boolean {
+  // CLI not supported on Windows
+  if (!isCliSupported()) {
+    return false;
+  }
+
   const symlinkPath = getSymlinkPath();
 
   if (!existsSync(symlinkPath)) {
@@ -120,8 +122,17 @@ export function isCliInstalled(): boolean {
 
 /**
  * Install the CLI by creating a symlink in ~/.local/bin (no sudo required)
+ * Note: CLI installation is not supported on Windows
  */
 export async function installCli(): Promise<{ success: boolean; error?: string }> {
+  // CLI not supported on Windows
+  if (!isCliSupported()) {
+    return {
+      success: false,
+      error: 'CLI installation is not available on Windows. Please use the desktop application.',
+    };
+  }
+
   const cliPath = getCliPath();
   const symlinkPath = getSymlinkPath();
 
@@ -185,8 +196,17 @@ export async function installCli(): Promise<{ success: boolean; error?: string }
 
 /**
  * Uninstall the CLI by removing the symlink (no sudo required)
+ * Note: CLI installation is not supported on Windows
  */
 export async function uninstallCli(): Promise<{ success: boolean; error?: string }> {
+  // CLI not supported on Windows
+  if (!isCliSupported()) {
+    return {
+      success: false,
+      error: 'CLI is not available on Windows.',
+    };
+  }
+
   const symlinkPath = getSymlinkPath();
 
   try {

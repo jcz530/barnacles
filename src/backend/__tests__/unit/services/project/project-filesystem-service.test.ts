@@ -208,7 +208,8 @@ describe('ProjectFileSystemService', () => {
       const projectPath = '/test/rust-project';
 
       vi.mocked(fs.access).mockImplementation(async (filePath: any) => {
-        if (filePath.includes('target/debug') || filePath.includes('target/release')) {
+        const normalizedPath = filePath.replace(/\\/g, '/');
+        if (normalizedPath.includes('target/debug') || normalizedPath.includes('target/release')) {
           return Promise.resolve(undefined);
         }
         throw new Error('ENOENT');
