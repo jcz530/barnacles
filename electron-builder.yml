@@ -65,6 +65,7 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   notarize: true
+  afterSign: scripts/notarize.cjs
   target:
     - target: dmg
       arch:
@@ -72,8 +73,6 @@ mac:
     - target: zip
       arch:
         - arm64
-
-afterSign: scripts/notarize.cjs
 
 # DMG configuration with custom background
 dmg:

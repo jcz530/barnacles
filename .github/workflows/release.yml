@@ -55,6 +55,7 @@ jobs:
         run: npm prune --omit=dev
 
       - name: Install @electron/notarize for code signing
+        if: startsWith(matrix.os, 'macos')
         run: npm install --no-save @electron/notarize
 
       - name: Import Code-Signing Certificates (macOS)
@@ -71,6 +72,8 @@ jobs:
           echo '{"name":"@libsql/darwin-x64","version":"0.0.0"}' > node_modules/@libsql/darwin-x64/package.json
           mkdir -p node_modules/@libsql/linux-x64-gnu
           echo '{"name":"@libsql/linux-x64-gnu","version":"0.0.0"}' > node_modules/@libsql/linux-x64-gnu/package.json
+          mkdir -p node_modules/@libsql/win32-x64-msvc
+          echo '{"name":"@libsql/win32-x64-msvc","version":"0.0.0"}' > node_modules/@libsql/win32-x64-msvc/package.json
 
       - name: Package application (macOS)
         if: startsWith(matrix.os, 'macos')
