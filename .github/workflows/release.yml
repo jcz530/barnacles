@@ -23,8 +23,8 @@ jobs:
             arch: arm64
           - os: ubuntu-latest
             arch: x64
-          # - os: windows-latest
-          #   arch: x64
+          - os: windows-latest
+            arch: x64
 
     steps:
       - name: Check out Git repository
@@ -49,7 +49,7 @@ jobs:
       - name: Rebuild native modules for Electron
         run: npm run rebuild
         env:
-          PYTHON: python3
+          PYTHON: ${{ runner.os == 'Windows' && 'python' || 'python3' }}
 
       - name: Prune dev dependencies (keep optional platform packages)
         run: npm prune --omit=dev
