@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch, ref } from 'vue';
+import { onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { onKeyStroke } from '@vueuse/core';
 import { useColorInversion } from '@/composables/useColorInversion';
@@ -8,7 +8,6 @@ import { Toaster } from '@/components/ui/sonner';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
 import { useUpdater } from '@/composables/useUpdater';
 import UpdateNotification from '@/components/organisms/UpdateNotification.vue';
-import FindOverlay from '@/components/organisms/FindOverlay.vue';
 import 'vue-sonner/style.css'; // vue-sonner v2 requires this import
 
 // App now uses router-view for rendering pages
@@ -43,12 +42,8 @@ const { connect: connectScanWebSocket } = useProjectScanWebSocket();
 // Initialize auto-updater
 const { updateState, downloadUpdate, installUpdate, dismissUpdate } = useUpdater();
 
-// Find overlay state
-const showFindOverlay = ref(false);
-
 // Listen for navigation requests from tray popup (set up immediately, not in onMounted)
 let unsubscribeNav: (() => void) | undefined;
-let unsubscribeFind: (() => void) | undefined;
 
 if (window.electron?.onNavigateToProject) {
   unsubscribeNav = window.electron.onNavigateToProject((projectId: string) => {
@@ -56,17 +51,11 @@ if (window.electron?.onNavigateToProject) {
   });
 }
 
-if (window.electron?.onToggleFind) {
-  unsubscribeFind = window.electron.onToggleFind(() => {
-    showFindOverlay.value = !showFindOverlay.value;
-  });
-}
-
-// Global keyboard shortcut for Cmd+F / Ctrl+F using VueUse
+// Global keyboard shortcut for Cmd+F / Ctrl+F - send to main process to toggle overlay
 onKeyStroke('f', e => {
   if (e.metaKey || e.ctrlKey) {
     e.preventDefault();
-    showFindOverlay.value = !showFindOverlay.value;
+    window.electron.find.toggle();
   }
 });
 
@@ -78,7 +67,6 @@ onMounted(() => {
 // Clean up listener on unmount
 onUnmounted(() => {
   unsubscribeNav?.();
-  unsubscribeFind?.();
 });
 </script>
 
@@ -91,7 +79,6 @@ onUnmounted(() => {
       @install="installUpdate"
       @dismiss="dismissUpdate"
     />
-    <FindOverlay :show="showFindOverlay" @close="showFindOverlay = false" />
     <router-view />
   </div>
 </template>

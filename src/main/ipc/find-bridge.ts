@@ -1,4 +1,5 @@
 import { BrowserWindow, ipcMain } from 'electron';
+import { closeFindOverlay, toggleFindOverlay } from '../find-overlay-manager';
 
 export interface FindInPageOptions {
   forward?: boolean;
@@ -21,16 +22,27 @@ export interface FindResult {
   finalUpdate: boolean;
 }
 
+/**
+ * Gets the target (parent) window for find operations.
+ * If the sender is a child overlay window, returns its parent.
+ * Otherwise returns the sender's own window.
+ */
+const getTargetWindow = (senderWindow: BrowserWindow | null): BrowserWindow | null => {
+  if (!senderWindow) return null;
+  return senderWindow.getParentWindow() || senderWindow;
+};
+
 export const setupFindBridge = (): void => {
-  // Start find in page
+  // Start find in page - targets parent window's webContents
   ipcMain.handle('find:start', async (event, searchText: string, options?: FindInPageOptions) => {
     try {
-      const window = BrowserWindow.fromWebContents(event.sender);
-      if (!window) {
+      const senderWindow = BrowserWindow.fromWebContents(event.sender);
+      const targetWindow = getTargetWindow(senderWindow);
+      if (!targetWindow) {
         return { success: false, error: 'Window not found' };
       }
 
-      const requestId = window.webContents.findInPage(searchText, options);
+      const requestId = targetWindow.webContents.findInPage(searchText, options);
       return { success: true, requestId };
     } catch (error) {
       console.error('Failed to start find in page:', error);
@@ -38,17 +50,18 @@ export const setupFindBridge = (): void => {
     }
   });
 
-  // Stop find in page
+  // Stop find in page - targets parent window's webContents
   ipcMain.handle(
     'find:stop',
     async (event, action: 'clearSelection' | 'keepSelection' | 'activateSelection') => {
       try {
-        const window = BrowserWindow.fromWebContents(event.sender);
-        if (!window) {
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
+        const targetWindow = getTargetWindow(senderWindow);
+        if (!targetWindow) {
           return { success: false, error: 'Window not found' };
         }
 
-        window.webContents.stopFindInPage(action);
+        targetWindow.webContents.stopFindInPage(action);
         return { success: true };
       } catch (error) {
         console.error('Failed to stop find in page:', error);
@@ -57,19 +70,39 @@ export const setupFindBridge = (): void => {
     }
   );
 
-  // Listen for find results and forward to renderer
-  // We set up a listener for each window's webContents
+  // Listen for find results on the parent window and forward to the overlay (sender)
   ipcMain.on('find:setup-listener', event => {
-    const window = BrowserWindow.fromWebContents(event.sender);
-    if (!window) return;
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    const targetWindow = getTargetWindow(senderWindow);
+    if (!targetWindow) return;
 
     // Remove any existing listener to prevent duplicates
-    window.webContents.removeAllListeners('found-in-page');
+    targetWindow.webContents.removeAllListeners('found-in-page');
 
-    // Set up new listener
-    window.webContents.on('found-in-page', (_, result: FindResult) => {
-      // Send the result back to the renderer
-      window.webContents.send('find:result', result);
+    // Set up new listener - forward results to the overlay (sender), not the target
+    targetWindow.webContents.on('found-in-page', (_, result: FindResult) => {
+      // Send results back to the sender (overlay window)
+      if (!event.sender.isDestroyed()) {
+        event.sender.send('find:result', result);
+      }
     });
+  });
+
+  // Close overlay - hides the overlay, stops find, returns focus to parent
+  ipcMain.on('find:close', event => {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    const targetWindow = getTargetWindow(senderWindow);
+    if (targetWindow) {
+      closeFindOverlay(targetWindow);
+    }
+  });
+
+  // Toggle overlay - used by menu and main window
+  ipcMain.on('find:toggle', event => {
+    const senderWindow = BrowserWindow.fromWebContents(event.sender);
+    const targetWindow = getTargetWindow(senderWindow);
+    if (targetWindow) {
+      toggleFindOverlay(targetWindow);
+    }
   });
 };

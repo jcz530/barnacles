@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, MenuItemConstructorOptions } from 'electron';
 import { createAppWindow } from './main';
+import { toggleFindOverlay } from './find-overlay-manager';
 
 export const createMenu = (): void => {
   const isMac = process.platform === 'darwin';
@@ -75,7 +76,9 @@ export const createMenu = (): void => {
                 click: () => {
                   const focusedWindow = BrowserWindow.getFocusedWindow();
                   if (focusedWindow) {
-                    focusedWindow.webContents.send('toggle-find');
+                    // If focused window is the overlay, target its parent
+                    const targetWindow = focusedWindow.getParentWindow() || focusedWindow;
+                    toggleFindOverlay(targetWindow);
                   }
                 },
               },
@@ -91,7 +94,9 @@ export const createMenu = (): void => {
                 click: () => {
                   const focusedWindow = BrowserWindow.getFocusedWindow();
                   if (focusedWindow) {
-                    focusedWindow.webContents.send('toggle-find');
+                    // If focused window is the overlay, target its parent
+                    const targetWindow = focusedWindow.getParentWindow() || focusedWindow;
+                    toggleFindOverlay(targetWindow);
                   }
                 },
               },

@@ -103,6 +103,8 @@ declare global {
         getPathForFile: (file: File) => string;
       };
       find: {
+        close: () => void;
+        toggle: () => void;
         start: (searchText: string, options?: {
           forward?: boolean;
           findNext?: boolean;

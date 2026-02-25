@@ -115,6 +115,8 @@ contextBridge.exposeInMainWorld('electron', {
     ) => ipcRenderer.invoke('find:start', searchText, options),
     stop: (action: 'clearSelection' | 'keepSelection' | 'activateSelection') =>
       ipcRenderer.invoke('find:stop', action),
+    close: () => ipcRenderer.send('find:close'),
+    toggle: () => ipcRenderer.send('find:toggle'),
     setupListener: () => ipcRenderer.send('find:setup-listener'),
     onResult: (
       callback: (result: {
