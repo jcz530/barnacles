@@ -19,6 +19,7 @@ import Themes from '../views/Themes.vue';
 import ThemeEditor from '../views/ThemeEditor.vue';
 import UpdateTest from '../views/UpdateTest.vue';
 import TrayPopup from '../views/TrayPopup.vue';
+import FindOverlayView from '../views/FindOverlayView.vue';
 import Utilities from '../views/Utilities.vue';
 import DesignSystem from '../views/DesignSystem.vue';
 import AccountForm from '../views/AccountForm.vue';
@@ -26,6 +27,7 @@ import AccountForm from '../views/AccountForm.vue';
 // Define route names as a const object for type-safe references
 export const RouteNames = {
   TrayPopup: 'TrayPopup',
+  FindOverlay: 'FindOverlay',
   Home: 'Home',
   Projects: 'Projects',
   ProjectDetail: 'ProjectDetail',
@@ -60,6 +62,12 @@ const routes: RouteRecordRaw[] = [
     path: '/tray-popup',
     name: RouteNames.TrayPopup,
     component: TrayPopup,
+  },
+  // Find overlay route (no layout)
+  {
+    path: '/find-overlay',
+    name: RouteNames.FindOverlay,
+    component: FindOverlayView,
   },
   {
     path: '/',

@@ -6,6 +6,7 @@ import { setupCliBridge } from './cli-bridge';
 import { setupFileSystemBridge } from './file-system-bridge';
 import { setupClipboardBridge } from './clipboard-bridge';
 import { setupStorageBridge } from './storage-bridge';
+import { setupFindBridge } from './find-bridge';
 
 export const setupIPC = (): void => {
   setupAPIBridge();
@@ -16,6 +17,7 @@ export const setupIPC = (): void => {
   setupFileSystemBridge();
   setupClipboardBridge();
   setupStorageBridge();
+  setupFindBridge();
 
   // Add more IPC handlers here as needed
   console.log('🔌 IPC handlers registered');

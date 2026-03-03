@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { onKeyStroke } from '@vueuse/core';
 import { useColorInversion } from '@/composables/useColorInversion';
 import { useTheme } from '@/composables/useTheme';
 import { Toaster } from '@/components/ui/sonner';
@@ -42,13 +43,21 @@ const { connect: connectScanWebSocket } = useProjectScanWebSocket();
 const { updateState, downloadUpdate, installUpdate, dismissUpdate } = useUpdater();
 
 // Listen for navigation requests from tray popup (set up immediately, not in onMounted)
-let unsubscribe: (() => void) | undefined;
+let unsubscribeNav: (() => void) | undefined;
 
 if (window.electron?.onNavigateToProject) {
-  unsubscribe = window.electron.onNavigateToProject((projectId: string) => {
+  unsubscribeNav = window.electron.onNavigateToProject((projectId: string) => {
     router.push(`/projects/${projectId}`);
   });
 }
+
+// Global keyboard shortcut for Cmd+F / Ctrl+F - send to main process to toggle overlay
+onKeyStroke('f', e => {
+  if (e.metaKey || e.ctrlKey) {
+    e.preventDefault();
+    window.electron.find.toggle();
+  }
+});
 
 onMounted(() => {
   // Connect to WebSocket to check for active scans and receive updates
@@ -57,7 +66,7 @@ onMounted(() => {
 
 // Clean up listener on unmount
 onUnmounted(() => {
-  unsubscribe?.();
+  unsubscribeNav?.();
 });
 </script>
 
