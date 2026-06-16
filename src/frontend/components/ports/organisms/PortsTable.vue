@@ -9,7 +9,10 @@ import {
 } from '@tanstack/vue-table';
 import { Folder, X } from 'lucide-vue-next';
 import { ref } from 'vue';
-import type { PortEntry } from '../../../../../shared/types/api';
+import { RouterLink } from 'vue-router';
+import type { PortEntry, ProjectWithDetails } from '../../../../../shared/types/api';
+import { RouteNames } from '@/router';
+import ProjectIcon from '../../projects/atoms/ProjectIcon.vue';
 import TableHeader from '../../molecules/TableHeader.vue';
 import { Button } from '../../ui/button';
 import PortCard from '../molecules/PortCard.vue';
@@ -18,6 +21,7 @@ const props = defineProps<{
   ports: PortEntry[];
   viewMode?: 'table' | 'card';
   sorting?: SortingState;
+  projectByPath?: Map<string, ProjectWithDetails>;
 }>();
 
 const emit = defineEmits<{
@@ -95,6 +99,7 @@ const table = useVueTable({
         v-for="port in ports"
         :key="`${port.pid}-${port.port}-card`"
         :port="port"
+        :project-by-path="props.projectByPath ?? new Map()"
         @kill="emit('kill', $event)"
       />
     </div>
@@ -131,8 +136,28 @@ const table = useVueTable({
               </template>
 
               <template v-else-if="cell.column.id === 'cwd'">
+                <template v-if="row.original.cwd && props.projectByPath?.get(row.original.cwd)">
+                  <RouterLink
+                    :to="{
+                      name: RouteNames.ProjectOverview,
+                      params: { id: props.projectByPath!.get(row.original.cwd)!.id },
+                    }"
+                    class="flex items-center gap-2 text-slate-700 hover:underline"
+                    @click.stop
+                  >
+                    <ProjectIcon
+                      :project-id="props.projectByPath!.get(row.original.cwd)!.id"
+                      :project-name="props.projectByPath!.get(row.original.cwd)!.name"
+                      :has-icon="!!props.projectByPath!.get(row.original.cwd)!.icon"
+                      size="sm"
+                    />
+                    <span class="text-sm font-medium">{{
+                      props.projectByPath!.get(row.original.cwd)!.name
+                    }}</span>
+                  </RouterLink>
+                </template>
                 <div
-                  v-if="row.original.cwd"
+                  v-else-if="row.original.cwd"
                   class="flex items-center gap-1.5 text-slate-500"
                   :title="row.original.cwd"
                 >

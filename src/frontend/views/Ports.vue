@@ -2,7 +2,7 @@
 import type { SortingState } from '@tanstack/vue-table';
 import { Code, RefreshCw, Search } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
-import type { PortEntry } from '../../shared/types/api';
+import type { PortEntry, ProjectWithDetails } from '../../shared/types/api';
 import ViewToggle from '../components/atoms/ViewToggle.vue';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -14,7 +14,7 @@ import { useViewMode } from '@/composables/useViewMode';
 const { setBreadcrumbs } = useBreadcrumbs();
 setBreadcrumbs([{ label: 'Ports' }]);
 
-const { usePortsQuery, useKillPortMutation } = useQueries();
+const { usePortsQuery, useKillPortMutation, useProjectsQuery } = useQueries();
 
 // Process name substrings (lowercase) that indicate a developer-started process.
 // Matched case-insensitively against the process name.
@@ -96,7 +96,16 @@ const cardSortField = ref<'port' | 'processName' | 'pid'>('port');
 const cardSortDirection = ref<'asc' | 'desc'>('asc');
 
 const { data: portsData, isLoading, refetch } = usePortsQuery({ enabled: true });
+const { data: projectsData } = useProjectsQuery({ enabled: true });
 const killPortMutation = useKillPortMutation();
+
+const projectByPath = computed(() => {
+  const map = new Map<string, ProjectWithDetails>();
+  for (const p of projectsData.value || []) {
+    map.set(p.path, p);
+  }
+  return map;
+});
 
 const filteredPorts = computed<PortEntry[]>(() => {
   const ports = portsData.value || [];
@@ -222,6 +231,7 @@ const handleKill = async (pid: number) => {
         :ports="filteredPorts"
         :view-mode="viewMode"
         :sorting="tableSorting"
+        :project-by-path="projectByPath"
         @update:sorting="tableSorting = $event"
         @kill="handleKill"
       />

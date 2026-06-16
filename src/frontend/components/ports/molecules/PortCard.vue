@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import { Cpu, Folder, Hash, X } from 'lucide-vue-next';
-import type { PortEntry } from '../../../../../shared/types/api';
+import { computed } from 'vue';
+import { RouterLink } from 'vue-router';
+import type { PortEntry, ProjectWithDetails } from '../../../../../shared/types/api';
+import { RouteNames } from '@/router';
+import ProjectIcon from '../../projects/atoms/ProjectIcon.vue';
 import { Button } from '../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 
 const props = defineProps<{
   port: PortEntry;
+  projectByPath: Map<string, ProjectWithDetails>;
 }>();
 
 const emit = defineEmits<{
   kill: [pid: number];
 }>();
+
+const matchedProject = computed(() => props.projectByPath.get(props.port.cwd ?? ''));
 </script>
 
 <template>
@@ -36,8 +43,21 @@ const emit = defineEmits<{
     </CardHeader>
 
     <CardContent class="mt-auto space-y-2">
+      <RouterLink
+        v-if="matchedProject"
+        :to="{ name: RouteNames.ProjectOverview, params: { id: matchedProject.id } }"
+        class="flex items-center gap-2 text-slate-700 hover:underline"
+      >
+        <ProjectIcon
+          :project-id="matchedProject.id"
+          :project-name="matchedProject.name"
+          :has-icon="!!matchedProject.icon"
+          size="sm"
+        />
+        <span class="text-sm font-medium">{{ matchedProject.name }}</span>
+      </RouterLink>
       <div
-        v-if="port.cwd"
+        v-else-if="port.cwd"
         class="flex items-center gap-1.5 text-xs text-slate-500"
         :title="port.cwd"
       >
