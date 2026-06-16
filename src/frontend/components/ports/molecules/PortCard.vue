@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Cpu, Folder, Hash, X } from 'lucide-vue-next';
+import { Folder, Hash, X } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import type { PortEntry, ProjectWithDetails } from '../../../../../shared/types/api';
@@ -63,14 +63,10 @@ const matchedProject = computed(() => props.projectByPath.get(props.port.cwd ?? 
         <Folder class="h-3.5 w-3.5 shrink-0" />
         <span class="truncate font-mono" dir="rtl">{{ port.cwd }}</span>
       </div>
-      <div class="grid grid-cols-2 gap-2 text-xs text-slate-600">
+      <div class="text-xs text-slate-600">
         <div class="flex items-center gap-1.5">
           <Hash class="h-3.5 w-3.5 shrink-0" />
           <span class="font-mono">PID {{ port.pid }}</span>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <Cpu class="h-3.5 w-3.5 shrink-0" />
-          <span>{{ port.protocol }}</span>
         </div>
       </div>
     </CardContent>

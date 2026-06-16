@@ -50,11 +50,6 @@ const columns: ColumnDef<PortEntry, any>[] = [
     enableSorting: true,
     cell: p => p.row.original.pid,
   }),
-  columnHelper.accessor('protocol', {
-    header: 'Protocol',
-    enableSorting: false,
-    cell: p => p.row.original.protocol,
-  }),
   columnHelper.accessor('cwd', {
     header: 'Directory',
     enableSorting: false,
@@ -126,14 +121,6 @@ const table = useVueTable({
 
               <template v-else-if="cell.column.id === 'pid'">
                 <span class="font-mono text-slate-500">{{ row.original.pid }}</span>
-              </template>
-
-              <template v-else-if="cell.column.id === 'protocol'">
-                <span
-                  class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
-                >
-                  {{ row.original.protocol }}
-                </span>
               </template>
 
               <template v-else-if="cell.column.id === 'cwd'">
