@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import aliases from './aliases';
 import files from './files';
 import onboarding from './onboarding';
+import ports from './ports';
 import processes from './processes';
 import projects from './projects/index';
 import settings from './settings';
@@ -54,6 +55,7 @@ api
   .route('/users', users)
   .route('/projects', projects)
   .route('/processes', processes)
+  .route('/ports', ports)
   .route('/settings', settings)
   .route('/system', system)
   .route('/themes', themes)

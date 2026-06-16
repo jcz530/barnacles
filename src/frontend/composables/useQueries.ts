@@ -13,6 +13,7 @@ import type {
   DetectedTerminal,
   GitStats,
   IDE,
+  PortEntry,
   PresetPack,
   ProjectWithDetails,
   Setting,
@@ -1617,6 +1618,31 @@ export const useQueries = () => {
     });
   };
 
+  // Ports query — lists all TCP LISTEN ports on the local machine
+  const usePortsQuery = (options?: { enabled?: boolean }) => {
+    return useQuery({
+      queryKey: ['ports'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<PortEntry[]>>('GET', API_ROUTES.PORTS);
+        if (!response) return [];
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+      refetchInterval: 5000,
+    });
+  };
+
+  const useKillPortMutation = () => {
+    return useMutation({
+      mutationFn: async (pid: number) => {
+        await apiCall('DELETE', API_ROUTES.PORTS_KILL(pid));
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['ports'] });
+      },
+    });
+  };
+
   // IP info query
   const useIpInfoQuery = (options?: { enabled?: boolean }) => {
     return useQuery({
@@ -1711,5 +1737,7 @@ export const useQueries = () => {
     useDeleteAccountMutation,
     useGitStatsQuery,
     useIpInfoQuery,
+    usePortsQuery,
+    useKillPortMutation,
   };
 };

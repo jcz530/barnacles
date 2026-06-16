@@ -24,6 +24,7 @@ import {
   FileText,
   FolderGit2,
   Network,
+  Radio,
   Sparkles,
   SquareTerminal,
   Terminal,
@@ -90,6 +91,12 @@ const data = computed(() => ({
       icon: SquareTerminal,
       count: processes.value?.length ?? 0,
       isActive: route.path.startsWith('/terminals'),
+    },
+    {
+      title: 'Ports',
+      url: '/ports',
+      icon: Radio,
+      isActive: route.path.startsWith('/ports'),
     },
     {
       title: 'Utilities',

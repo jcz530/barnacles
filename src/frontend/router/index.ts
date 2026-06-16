@@ -15,6 +15,7 @@ import ProjectDetail from '../views/ProjectDetail.vue';
 import Projects from '../views/Projects.vue';
 import Settings from '../views/Settings.vue';
 import Terminals from '../views/Terminals.vue';
+import Ports from '../views/Ports.vue';
 import Themes from '../views/Themes.vue';
 import ThemeEditor from '../views/ThemeEditor.vue';
 import UpdateTest from '../views/UpdateTest.vue';
@@ -40,6 +41,7 @@ export const RouteNames = {
   ProjectAccountNew: 'ProjectAccountNew',
   ProjectAccountEdit: 'ProjectAccountEdit',
   Terminals: 'Terminals',
+  Ports: 'Ports',
   Settings: 'Settings',
   Themes: 'Themes',
   ThemeEdit: 'ThemeEdit',
@@ -135,6 +137,11 @@ const routes: RouteRecordRaw[] = [
         path: '/terminals',
         name: RouteNames.Terminals,
         component: Terminals,
+      },
+      {
+        path: '/ports',
+        name: RouteNames.Ports,
+        component: Ports,
       },
       {
         path: '/settings',
