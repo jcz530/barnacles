@@ -232,4 +232,5 @@ export interface PortEntry {
   protocol: 'TCP';
   processName: string;
   state: 'LISTEN';
+  cwd?: string;
 }

@@ -8,6 +8,30 @@ const execAsync = promisify(exec);
 
 const ports = new Hono();
 
+async function getCwdMap(pids: number[]): Promise<Map<number, string>> {
+  const cwdMap = new Map<number, string>();
+  if (pids.length === 0) return cwdMap;
+
+  try {
+    const pidList = pids.join(',');
+    const { stdout } = await execAsync(`lsof -p "${pidList}" -a -d cwd -F pcn`);
+    // Output is line-per-field: p<pid>, c<cmd>, fcwd, n<path>
+    let currentPid = -1;
+    for (const line of stdout.trim().split('\n')) {
+      if (line.startsWith('p')) {
+        currentPid = parseInt(line.slice(1), 10);
+      } else if (line.startsWith('n') && currentPid !== -1) {
+        cwdMap.set(currentPid, line.slice(1));
+        currentPid = -1;
+      }
+    }
+  } catch {
+    // cwd lookup is best-effort
+  }
+
+  return cwdMap;
+}
+
 async function getPortsUnix(): Promise<PortEntry[]> {
   const { stdout } = await execAsync('lsof -iTCP -sTCP:LISTEN -P -n');
   const lines = stdout.trim().split('\n').slice(1); // skip header
@@ -24,6 +48,14 @@ async function getPortsUnix(): Promise<PortEntry[]> {
     if (!portMatch || isNaN(pid)) continue;
     const port = parseInt(portMatch[1], 10);
     results.push({ pid, port, protocol: 'TCP', processName, state: 'LISTEN' });
+  }
+
+  // Fetch cwds for all unique PIDs in a single lsof call
+  const uniquePids = [...new Set(results.map(r => r.pid))];
+  const cwdMap = await getCwdMap(uniquePids);
+  for (const entry of results) {
+    const cwd = cwdMap.get(entry.pid);
+    if (cwd) entry.cwd = cwd;
   }
 
   return results;

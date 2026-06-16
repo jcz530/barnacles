@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SortingState } from '@tanstack/vue-table';
-import { RefreshCw, Search } from 'lucide-vue-next';
+import { Code, RefreshCw, Search } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import type { PortEntry } from '../../shared/types/api';
 import ViewToggle from '../components/atoms/ViewToggle.vue';
@@ -16,7 +16,80 @@ setBreadcrumbs([{ label: 'Ports' }]);
 
 const { usePortsQuery, useKillPortMutation } = useQueries();
 
+// Process name substrings (lowercase) that indicate a developer-started process.
+// Matched case-insensitively against the process name.
+const DEV_PROCESS_PATTERNS = [
+  // Language runtimes
+  'node',
+  'python',
+  'ruby',
+  'php',
+  'java',
+  'go',
+  'deno',
+  'bun',
+  'dotnet',
+  'elixir',
+  'beam',
+  'erlang',
+  'perl',
+  'rust',
+  'cargo',
+  // Bundlers / dev servers
+  'webpack',
+  'vite',
+  'next',
+  'nuxt',
+  'parcel',
+  'esbuild',
+  'rollup',
+  'turbo',
+  'expo',
+  'metro',
+  // Web servers / app servers
+  'puma',
+  'unicorn',
+  'gunicorn',
+  'uvicorn',
+  'hypercorn',
+  'waitress',
+  'thin',
+  'passenger',
+  'caddy',
+  'traefik',
+  'nginx',
+  // Databases (local dev instances)
+  'postgres',
+  'mysqld',
+  'mongod',
+  'redis',
+  'elastic',
+  'qdrant',
+  'sqlite',
+  'mariadb',
+  'minio',
+  'cockroach',
+  'influx',
+  'clickhouse',
+  // Dev tooling & runtimes
+  'electron',
+  'workerd',
+  'wrangler',
+  'ollama',
+  'localai',
+  // PHP / misc frameworks (process names)
+  'artisan',
+  'symfony',
+  'laravel',
+];
+
+const isDevProcess = (processName: string): boolean => {
+  const lower = processName.toLowerCase();
+  return DEV_PROCESS_PATTERNS.some(pattern => lower.includes(pattern));
+};
+
 const searchQuery = ref('');
+const showDevOnly = ref(true);
 const viewMode = useViewMode('ports-view-mode', 'table');
 const tableSorting = ref<SortingState>([{ id: 'port', desc: false }]);
 const cardSortField = ref<'port' | 'processName' | 'pid'>('port');
@@ -29,9 +102,17 @@ const filteredPorts = computed<PortEntry[]>(() => {
   const ports = portsData.value || [];
   const q = searchQuery.value.trim().toLowerCase();
 
-  let result = q
-    ? ports.filter(p => p.processName.toLowerCase().includes(q) || String(p.port).includes(q))
-    : ports;
+  let result = ports;
+
+  if (showDevOnly.value) {
+    result = result.filter(p => isDevProcess(p.processName));
+  }
+
+  if (q) {
+    result = result.filter(
+      p => p.processName.toLowerCase().includes(q) || String(p.port).includes(q)
+    );
+  }
 
   if (viewMode.value === 'card') {
     result = [...result].sort((a, b) => {
@@ -47,6 +128,11 @@ const filteredPorts = computed<PortEntry[]>(() => {
 
   return result;
 });
+
+const totalCount = computed(() => (portsData.value || []).length);
+const devCount = computed(
+  () => (portsData.value || []).filter(p => isDevProcess(p.processName)).length
+);
 
 // Sync table sorting → card sort state
 watch(tableSorting, newSorting => {
@@ -82,7 +168,7 @@ const handleKill = async (pid: number) => {
         </Button>
       </div>
 
-      <!-- Search + View Toggle -->
+      <!-- Search + Filters + View Toggle -->
       <div class="flex items-center gap-3">
         <div class="relative flex-1">
           <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -92,6 +178,15 @@ const handleKill = async (pid: number) => {
             class="pl-9"
           />
         </div>
+        <Button
+          :variant="showDevOnly ? 'default' : 'outline'"
+          size="sm"
+          class="shrink-0 gap-2"
+          @click="showDevOnly = !showDevOnly"
+        >
+          <Code class="h-4 w-4" />
+          Dev only
+        </Button>
         <div class="ml-auto flex items-center gap-3">
           <ViewToggle :current-view="viewMode" @update:view="viewMode = $event" />
         </div>
@@ -101,6 +196,9 @@ const handleKill = async (pid: number) => {
       <div class="mt-4 text-sm text-slate-600">
         <span v-if="!isLoading">
           {{ filteredPorts.length }} {{ filteredPorts.length === 1 ? 'port' : 'ports' }}
+          <span v-if="showDevOnly && !searchQuery">
+            ({{ totalCount - devCount }} system processes hidden)</span
+          >
           <span v-if="searchQuery"> matching "{{ searchQuery }}"</span>
         </span>
         <span v-else>Loading...</span>

@@ -7,7 +7,7 @@ import {
   type SortingState,
   useVueTable,
 } from '@tanstack/vue-table';
-import { X } from 'lucide-vue-next';
+import { Folder, X } from 'lucide-vue-next';
 import { ref } from 'vue';
 import type { PortEntry } from '../../../../../shared/types/api';
 import TableHeader from '../../molecules/TableHeader.vue';
@@ -49,6 +49,11 @@ const columns: ColumnDef<PortEntry, any>[] = [
     header: 'Protocol',
     enableSorting: false,
     cell: p => p.row.original.protocol,
+  }),
+  columnHelper.accessor('cwd', {
+    header: 'Directory',
+    enableSorting: false,
+    cell: p => p.row.original.cwd,
   }),
   columnHelper.display({
     id: 'actions',
@@ -123,6 +128,20 @@ const table = useVueTable({
                 >
                   {{ row.original.protocol }}
                 </span>
+              </template>
+
+              <template v-else-if="cell.column.id === 'cwd'">
+                <div
+                  v-if="row.original.cwd"
+                  class="flex items-center gap-1.5 text-slate-500"
+                  :title="row.original.cwd"
+                >
+                  <Folder class="h-3.5 w-3.5 shrink-0" />
+                  <span class="max-w-64 truncate font-mono text-xs" dir="rtl">{{
+                    row.original.cwd
+                  }}</span>
+                </div>
+                <span v-else class="text-xs text-slate-300">—</span>
               </template>
 
               <template v-else-if="cell.column.id === 'actions'">

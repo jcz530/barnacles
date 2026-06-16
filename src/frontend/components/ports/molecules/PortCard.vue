@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Cpu, Hash, X } from 'lucide-vue-next';
+import { Cpu, Folder, Hash, X } from 'lucide-vue-next';
 import type { PortEntry } from '../../../../../shared/types/api';
 import { Button } from '../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
@@ -36,6 +36,14 @@ const emit = defineEmits<{
     </CardHeader>
 
     <CardContent class="mt-auto space-y-2">
+      <div
+        v-if="port.cwd"
+        class="flex items-center gap-1.5 text-xs text-slate-500"
+        :title="port.cwd"
+      >
+        <Folder class="h-3.5 w-3.5 shrink-0" />
+        <span class="truncate font-mono" dir="rtl">{{ port.cwd }}</span>
+      </div>
       <div class="grid grid-cols-2 gap-2 text-xs text-slate-600">
         <div class="flex items-center gap-1.5">
           <Hash class="h-3.5 w-3.5 shrink-0" />
