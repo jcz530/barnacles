@@ -10,78 +10,12 @@ import PortsTable from '../components/ports/organisms/PortsTable.vue';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
 import { useViewMode } from '@/composables/useViewMode';
+import { DEV_PROCESS_PATTERNS } from '@/constants/processEnrichment';
 
 const { setBreadcrumbs } = useBreadcrumbs();
 setBreadcrumbs([{ label: 'Ports' }]);
 
 const { usePortsQuery, useKillPortMutation, useProjectsQuery } = useQueries();
-
-// Process name substrings (lowercase) that indicate a developer-started process.
-// Matched case-insensitively against the process name.
-const DEV_PROCESS_PATTERNS = [
-  // Language runtimes
-  'node',
-  'python',
-  'ruby',
-  'php',
-  'java',
-  'go',
-  'deno',
-  'bun',
-  'dotnet',
-  'elixir',
-  'beam',
-  'erlang',
-  'perl',
-  'rust',
-  'cargo',
-  // Bundlers / dev servers
-  'webpack',
-  'vite',
-  'next',
-  'nuxt',
-  'parcel',
-  'esbuild',
-  'rollup',
-  'turbo',
-  'expo',
-  'metro',
-  // Web servers / app servers
-  'puma',
-  'unicorn',
-  'gunicorn',
-  'uvicorn',
-  'hypercorn',
-  'waitress',
-  'thin',
-  'passenger',
-  'caddy',
-  'traefik',
-  'nginx',
-  // Databases (local dev instances)
-  'postgres',
-  'mysqld',
-  'mongod',
-  'redis',
-  'elastic',
-  'qdrant',
-  'sqlite',
-  'mariadb',
-  'minio',
-  'cockroach',
-  'influx',
-  'clickhouse',
-  // Dev tooling & runtimes
-  'electron',
-  'workerd',
-  'wrangler',
-  'ollama',
-  'localai',
-  // PHP / misc frameworks (process names)
-  'artisan',
-  'symfony',
-  'laravel',
-];
 
 const isDevProcess = (processName: string): boolean => {
   const lower = processName.toLowerCase();

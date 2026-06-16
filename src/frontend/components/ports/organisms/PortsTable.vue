@@ -16,6 +16,7 @@ import ProjectIcon from '../../projects/atoms/ProjectIcon.vue';
 import TableHeader from '../../molecules/TableHeader.vue';
 import { Button } from '../../ui/button';
 import PortCard from '../molecules/PortCard.vue';
+import ProcessName from '../atoms/ProcessName.vue';
 
 const props = defineProps<{
   ports: PortEntry[];
@@ -120,7 +121,7 @@ const table = useVueTable({
               </template>
 
               <template v-else-if="cell.column.id === 'processName'">
-                <span class="text-slate-900">{{ row.original.processName }}</span>
+                <ProcessName :process-name="row.original.processName" />
               </template>
 
               <template v-else-if="cell.column.id === 'pid'">

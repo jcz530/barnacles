@@ -7,6 +7,7 @@ import { RouteNames } from '@/router';
 import ProjectIcon from '../../projects/atoms/ProjectIcon.vue';
 import { Button } from '../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import ProcessName from '../atoms/ProcessName.vue';
 
 const props = defineProps<{
   port: PortEntry;
@@ -26,9 +27,7 @@ const matchedProject = computed(() => props.projectByPath.get(props.port.cwd ?? 
       <div class="flex items-start justify-between">
         <div class="flex flex-col gap-1">
           <div class="font-mono text-3xl font-bold text-slate-900">:{{ port.port }}</div>
-          <CardTitle class="text-base font-medium text-slate-700">
-            {{ port.processName }}
-          </CardTitle>
+          <ProcessName :process-name="port.processName" />
         </div>
         <Button
           variant="ghost"
