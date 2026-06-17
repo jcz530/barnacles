@@ -102,6 +102,9 @@ declare global {
         }>;
         getPathForFile: (file: File) => string;
       };
+      screenshot: {
+        captureUrl: (url: string) => Promise<{ success: boolean; data?: { screenshot: string }; error?: string }>;
+      };
       find: {
         close: () => void;
         toggle: () => void;

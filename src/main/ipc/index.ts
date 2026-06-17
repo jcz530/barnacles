@@ -7,6 +7,7 @@ import { setupFileSystemBridge } from './file-system-bridge';
 import { setupClipboardBridge } from './clipboard-bridge';
 import { setupStorageBridge } from './storage-bridge';
 import { setupFindBridge } from './find-bridge';
+import { setupScreenshotBridge } from './screenshot-bridge';
 
 export const setupIPC = (): void => {
   setupAPIBridge();
@@ -18,6 +19,7 @@ export const setupIPC = (): void => {
   setupClipboardBridge();
   setupStorageBridge();
   setupFindBridge();
+  setupScreenshotBridge();
 
   // Add more IPC handlers here as needed
   console.log('🔌 IPC handlers registered');

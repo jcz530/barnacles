@@ -102,6 +102,9 @@ contextBridge.exposeInMainWorld('electron', {
   storage: {
     getEncryptionKey: () => ipcRenderer.invoke('storage:get-encryption-key'),
   },
+  screenshot: {
+    captureUrl: (url: string) => ipcRenderer.invoke('screenshot:capture-url', url),
+  },
   find: {
     start: (
       searchText: string,

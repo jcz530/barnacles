@@ -9,6 +9,7 @@ import api from './routes';
 import { projectScanWebSocketService } from './services/project-scan-websocket-service';
 import { projectRescanSchedulerService } from './services/project-rescan-scheduler-service';
 import { terminalWebSocketService } from './services/terminal-websocket-service';
+import { portProbeWebSocketService } from './services/port-probe-websocket-service';
 
 export const createServer = () => {
   const app = new Hono();
@@ -152,6 +153,7 @@ export const startServer = async () => {
   // Initialize WebSocket services with the HTTP server
   projectScanWebSocketService.initialize(httpServer);
   terminalWebSocketService.initialize(httpServer);
+  portProbeWebSocketService.initialize(httpServer);
 
   // Start periodic rescan scheduler
   await projectRescanSchedulerService.start();

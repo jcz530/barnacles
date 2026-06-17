@@ -10,6 +10,7 @@ import PortsTable from '../components/ports/organisms/PortsTable.vue';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
 import { useViewMode } from '@/composables/useViewMode';
+import { usePortProbeWebSocket } from '@/composables/usePortProbeWebSocket';
 import { DEV_PROCESS_PATTERNS } from '@/constants/processEnrichment';
 
 const { setBreadcrumbs } = useBreadcrumbs();
@@ -32,6 +33,22 @@ const cardSortDirection = ref<'asc' | 'desc'>('asc');
 const { data: portsData, isLoading, refetch } = usePortsQuery({ enabled: true });
 const { data: projectsData } = useProjectsQuery({ enabled: true });
 const killPortMutation = useKillPortMutation();
+
+const portNumbers = computed(() => (portsData.value || []).map(p => p.port));
+const { probeResults, isProbing } = usePortProbeWebSocket(portNumbers);
+const screenshots = ref<Map<number, string>>(new Map());
+
+watch(probeResults, results => {
+  for (const [port, info] of results.entries()) {
+    if (info.isHttp && !screenshots.value.has(port)) {
+      window.electron.screenshot.captureUrl(info.url).then(result => {
+        if (result.success && result.data) {
+          screenshots.value = new Map(screenshots.value).set(port, result.data.screenshot);
+        }
+      });
+    }
+  }
+});
 
 const projectByPath = computed(() => {
   const map = new Map<string, ProjectWithDetails>();
@@ -166,6 +183,9 @@ const handleKill = async (pid: number) => {
         :view-mode="viewMode"
         :sorting="tableSorting"
         :project-by-path="projectByPath"
+        :http-ports="probeResults"
+        :screenshots="screenshots"
+        :is-probing="isProbing"
         @update:sorting="tableSorting = $event"
         @kill="handleKill"
       />

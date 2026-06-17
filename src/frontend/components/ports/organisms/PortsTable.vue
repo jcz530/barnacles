@@ -7,7 +7,7 @@ import {
   type SortingState,
   useVueTable,
 } from '@tanstack/vue-table';
-import { Folder, X } from 'lucide-vue-next';
+import { Folder, Globe, X } from 'lucide-vue-next';
 import { ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import type { PortEntry, ProjectWithDetails } from '../../../../../shared/types/api';
@@ -15,6 +15,7 @@ import { RouteNames } from '@/router';
 import ProjectIcon from '../../projects/atoms/ProjectIcon.vue';
 import TableHeader from '../../molecules/TableHeader.vue';
 import { Button } from '../../ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/tooltip';
 import PortCard from '../molecules/PortCard.vue';
 import ProcessName from '../atoms/ProcessName.vue';
 
@@ -23,6 +24,9 @@ const props = defineProps<{
   viewMode?: 'table' | 'card';
   sorting?: SortingState;
   projectByPath?: Map<string, ProjectWithDetails>;
+  httpPorts?: Map<number, { isHttp: boolean; url: string; statusCode: number | null }>;
+  screenshots?: Map<number, string>;
+  isProbing?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -31,6 +35,17 @@ const emit = defineEmits<{
 }>();
 
 const internalSorting = ref<SortingState>(props.sorting || []);
+
+const openUrl = (url: string) => {
+  window.electron?.shell.openExternal(url);
+};
+
+const globeColor = (statusCode: number | null) => {
+  if (statusCode === null) return 'text-slate-400';
+  if (statusCode < 300) return 'text-success-500';
+  if (statusCode < 400) return 'text-secondary-500';
+  return 'text-danger-500';
+};
 
 const columnHelper = createColumnHelper<PortEntry>();
 
@@ -54,6 +69,12 @@ const columns: ColumnDef<PortEntry, any>[] = [
     header: 'Directory',
     enableSorting: false,
     cell: p => p.row.original.cwd,
+  }),
+  columnHelper.display({
+    id: 'web',
+    header: '',
+    enableSorting: false,
+    cell: p => p.row.original,
   }),
   columnHelper.display({
     id: 'actions',
@@ -96,6 +117,8 @@ const table = useVueTable({
         :key="`${port.pid}-${port.port}-card`"
         :port="port"
         :project-by-path="props.projectByPath ?? new Map()"
+        :http-info="props.httpPorts?.get(port.port)"
+        :screenshot="props.screenshots?.get(port.port)"
         @kill="emit('kill', $event)"
       />
     </div>
@@ -155,6 +178,50 @@ const table = useVueTable({
                   }}</span>
                 </div>
                 <span v-else class="text-xs text-slate-300">—</span>
+              </template>
+
+              <template v-else-if="cell.column.id === 'web'">
+                <TooltipProvider v-if="props.httpPorts?.get(row.original.port)?.isHttp">
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <button
+                        class="flex flex-col items-center gap-0.5 rounded p-1 hover:bg-slate-100"
+                        title="Open in browser"
+                        @click.stop="openUrl(props.httpPorts!.get(row.original.port)!.url)"
+                      >
+                        <Globe
+                          class="h-4 w-4"
+                          :class="globeColor(props.httpPorts!.get(row.original.port)!.statusCode)"
+                        />
+                        <span
+                          v-if="(props.httpPorts!.get(row.original.port)!.statusCode ?? 0) >= 300"
+                          class="font-mono text-[10px] leading-none"
+                          :class="globeColor(props.httpPorts!.get(row.original.port)!.statusCode)"
+                        >
+                          {{ props.httpPorts!.get(row.original.port)!.statusCode }}
+                        </span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" class="p-1">
+                      <template v-if="props.screenshots?.get(row.original.port)">
+                        <img
+                          :src="`data:image/png;base64,${props.screenshots.get(row.original.port)}`"
+                          class="h-32 w-48 rounded object-cover object-top"
+                          alt="Page preview"
+                        />
+                      </template>
+                      <template v-else>
+                        <span class="text-xs">{{
+                          props.httpPorts!.get(row.original.port)!.url
+                        }}</span>
+                      </template>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <span
+                  v-else-if="props.isProbing"
+                  class="inline-block h-2 w-2 animate-pulse rounded-full bg-slate-200"
+                />
               </template>
 
               <template v-else-if="cell.column.id === 'actions'">
