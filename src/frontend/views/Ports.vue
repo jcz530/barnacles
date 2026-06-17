@@ -27,8 +27,6 @@ const searchQuery = ref('');
 const showDevOnly = ref(true);
 const viewMode = useViewMode('ports-view-mode', 'table');
 const tableSorting = ref<SortingState>([{ id: 'port', desc: false }]);
-const cardSortField = ref<'port' | 'processName' | 'pid'>('port');
-const cardSortDirection = ref<'asc' | 'desc'>('asc');
 
 const { data: portsData, isLoading, refetch } = usePortsQuery({ enabled: true });
 const { data: projectsData } = useProjectsQuery({ enabled: true });
@@ -62,27 +60,29 @@ const filteredPorts = computed<PortEntry[]>(() => {
   const ports = portsData.value || [];
   const q = searchQuery.value.trim().toLowerCase();
 
-  let result = ports;
+  // Include ghosts in the base list so they sort into their original position
+  const ghosts = Array.from(ghostPorts.value.values()).filter(
+    g => dyingPids.value.has(g.pid) && !ports.find(p => p.pid === g.pid)
+  );
+  const all = [...ports, ...ghosts];
 
-  if (showDevOnly.value) {
-    result = result.filter(p => isDevProcess(p.processName));
-  }
+  let result = all.filter(p => {
+    if (dyingPids.value.has(p.pid)) return true; // always keep dying rows
+    if (showDevOnly.value && !isDevProcess(p.processName)) return false;
+    if (q && !p.processName.toLowerCase().includes(q) && !String(p.port).includes(q)) return false;
+    return true;
+  });
 
-  if (q) {
-    result = result.filter(
-      p => p.processName.toLowerCase().includes(q) || String(p.port).includes(q)
-    );
-  }
-
-  if (viewMode.value === 'card') {
+  if (viewMode.value === 'card' && tableSorting.value.length > 0) {
+    const { id: sortField, desc } = tableSorting.value[0];
     result = [...result].sort((a, b) => {
-      const aVal = a[cardSortField.value];
-      const bVal = b[cardSortField.value];
+      const aVal = a[sortField as keyof PortEntry];
+      const bVal = b[sortField as keyof PortEntry];
       const cmp =
         typeof aVal === 'string'
           ? aVal.localeCompare(String(bVal))
           : (aVal as number) - (bVal as number);
-      return cardSortDirection.value === 'asc' ? cmp : -cmp;
+      return desc ? -cmp : cmp;
     });
   }
 
@@ -94,22 +94,35 @@ const devCount = computed(
   () => (portsData.value || []).filter(p => isDevProcess(p.processName)).length
 );
 
-// Sync table sorting → card sort state
-watch(tableSorting, newSorting => {
-  if (newSorting.length > 0) {
-    const sort = newSorting[0];
-    cardSortField.value = sort.id as 'port' | 'processName' | 'pid';
-    cardSortDirection.value = sort.desc ? 'desc' : 'asc';
-  }
-});
-
-// Sync card sort state → table sorting
-watch([cardSortField, cardSortDirection], () => {
-  tableSorting.value = [{ id: cardSortField.value, desc: cardSortDirection.value === 'desc' }];
-});
+const killingPids = ref<Set<number>>(new Set());
+const dyingPids = ref<Set<number>>(new Set());
+const ghostPorts = ref<Map<number, PortEntry>>(new Map());
 
 const handleKill = async (pid: number) => {
-  await killPortMutation.mutateAsync(pid);
+  killingPids.value = new Set(killingPids.value).add(pid);
+
+  const entry = portsData.value?.find(p => p.pid === pid);
+  if (entry) ghostPorts.value = new Map(ghostPorts.value).set(pid, entry);
+
+  try {
+    await killPortMutation.mutateAsync(pid);
+  } finally {
+    const nextKilling = new Set(killingPids.value);
+    nextKilling.delete(pid);
+    killingPids.value = nextKilling;
+
+    dyingPids.value = new Set(dyingPids.value).add(pid);
+
+    setTimeout(() => {
+      const nextDying = new Set(dyingPids.value);
+      nextDying.delete(pid);
+      dyingPids.value = nextDying;
+
+      const nextGhosts = new Map(ghostPorts.value);
+      nextGhosts.delete(pid);
+      ghostPorts.value = nextGhosts;
+    }, 500);
+  }
 };
 </script>
 
@@ -186,6 +199,8 @@ const handleKill = async (pid: number) => {
         :http-ports="probeResults"
         :screenshots="screenshots"
         :is-probing="isProbing"
+        :killing-pids="killingPids"
+        :dying-pids="dyingPids"
         @update:sorting="tableSorting = $event"
         @kill="handleKill"
       />

@@ -1636,9 +1636,12 @@ export const useQueries = () => {
     return useMutation({
       mutationFn: async (pid: number) => {
         await apiCall('DELETE', API_ROUTES.PORTS_KILL(pid));
+        return pid;
       },
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['ports'] });
+      onSuccess: (pid: number) => {
+        queryClient.setQueryData<PortEntry[]>(['ports'], old =>
+          (old ?? []).filter(p => p.pid !== pid)
+        );
       },
     });
   };

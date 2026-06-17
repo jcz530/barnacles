@@ -58,7 +58,14 @@ async function getPortsUnix(): Promise<PortEntry[]> {
     if (cwd) entry.cwd = cwd;
   }
 
-  return results;
+  // lsof can emit multiple rows for the same pid+port (e.g. IPv4 and IPv6 sockets)
+  const seen = new Set<string>();
+  return results.filter(entry => {
+    const key = `${entry.pid}:${entry.port}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 async function getPortsWindows(): Promise<PortEntry[]> {
@@ -93,7 +100,13 @@ async function getPortsWindows(): Promise<PortEntry[]> {
     results.push({ pid, port, protocol: 'TCP', processName, state: 'LISTEN' });
   }
 
-  return results;
+  const seen = new Set<string>();
+  return results.filter(entry => {
+    const key = `${entry.pid}:${entry.port}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /**

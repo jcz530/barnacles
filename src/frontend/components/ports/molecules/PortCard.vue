@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Folder, Globe, Hash, X } from 'lucide-vue-next';
+import { Folder, Globe, Hash, Loader2, X } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
-import type { PortEntry, ProjectWithDetails } from '../../../../../shared/types/api';
+import type { PortEntry, ProjectWithDetails } from '@/shared/types/api';
 import { RouteNames } from '@/router';
 import ProjectIcon from '../../projects/atoms/ProjectIcon.vue';
 import { Button } from '../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+import { Card, CardContent, CardHeader } from '../../ui/card';
 import ProcessName from '../atoms/ProcessName.vue';
 
 const props = defineProps<{
@@ -14,6 +14,7 @@ const props = defineProps<{
   projectByPath: Map<string, ProjectWithDetails>;
   httpInfo?: { isHttp: boolean; url: string; statusCode: number | null };
   screenshot?: string;
+  isKilling?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -61,11 +62,14 @@ const globeColor = (statusCode: number | null) => {
           <Button
             variant="ghost"
             size="icon"
-            class="h-8 w-8 shrink-0 text-slate-400 hover:text-red-500"
+            class="h-8 w-8 shrink-0"
+            :class="props.isKilling ? 'cursor-default' : 'text-slate-400 hover:text-red-500'"
+            :disabled="props.isKilling"
             title="Kill process"
             @click="emit('kill', port.pid)"
           >
-            <X class="h-4 w-4" />
+            <Loader2 v-if="props.isKilling" class="h-4 w-4 animate-spin" />
+            <X v-else class="h-4 w-4" />
           </Button>
         </div>
       </div>

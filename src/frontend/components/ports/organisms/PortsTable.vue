@@ -7,10 +7,10 @@ import {
   type SortingState,
   useVueTable,
 } from '@tanstack/vue-table';
-import { Folder, Globe, X } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { Folder, Globe, Loader2, X } from 'lucide-vue-next';
+import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
-import type { PortEntry, ProjectWithDetails } from '../../../../../shared/types/api';
+import type { PortEntry, ProjectWithDetails } from '@/shared/types/api';
 import { RouteNames } from '@/router';
 import ProjectIcon from '../../projects/atoms/ProjectIcon.vue';
 import TableHeader from '../../molecules/TableHeader.vue';
@@ -27,6 +27,8 @@ const props = defineProps<{
   httpPorts?: Map<number, { isHttp: boolean; url: string; statusCode: number | null }>;
   screenshots?: Map<number, string>;
   isProbing?: boolean;
+  killingPids?: Set<number>;
+  dyingPids?: Set<number>;
 }>();
 
 const emit = defineEmits<{
@@ -34,7 +36,7 @@ const emit = defineEmits<{
   'update:sorting': [sorting: SortingState];
 }>();
 
-const internalSorting = ref<SortingState>(props.sorting || []);
+const currentSorting = computed(() => props.sorting ?? []);
 
 const openUrl = (url: string) => {
   window.electron?.shell.openExternal(url);
@@ -93,13 +95,12 @@ const table = useVueTable({
   getSortedRowModel: getSortedRowModel(),
   state: {
     get sorting() {
-      return internalSorting.value;
+      return currentSorting.value;
     },
   },
   onSortingChange: updaterOrValue => {
     const newValue =
-      typeof updaterOrValue === 'function' ? updaterOrValue(internalSorting.value) : updaterOrValue;
-    internalSorting.value = newValue;
+      typeof updaterOrValue === 'function' ? updaterOrValue(currentSorting.value) : updaterOrValue;
     emit('update:sorting', newValue);
   },
 });
@@ -112,15 +113,20 @@ const table = useVueTable({
       v-if="viewMode === 'card'"
       class="grid grid-cols-1 gap-4 px-4 md:grid-cols-2 lg:grid-cols-3"
     >
-      <PortCard
+      <div
         v-for="port in ports"
         :key="`${port.pid}-${port.port}-card`"
-        :port="port"
-        :project-by-path="props.projectByPath ?? new Map()"
-        :http-info="props.httpPorts?.get(port.port)"
-        :screenshot="props.screenshots?.get(port.port)"
-        @kill="emit('kill', $event)"
-      />
+        :class="{ 'port-dying': props.dyingPids?.has(port.pid) }"
+      >
+        <PortCard
+          :port="port"
+          :project-by-path="props.projectByPath ?? new Map()"
+          :http-info="props.httpPorts?.get(port.port)"
+          :screenshot="props.screenshots?.get(port.port)"
+          :is-killing="props.killingPids?.has(port.pid) ?? false"
+          @kill="emit('kill', $event)"
+        />
+      </div>
     </div>
 
     <!-- Table View -->
@@ -132,6 +138,7 @@ const table = useVueTable({
             v-for="row in table.getRowModel().rows"
             :key="`${row.original.pid}-${row.original.port}`"
             class="port-row border-b border-slate-100 transition-colors"
+            :class="{ 'port-dying': props.dyingPids?.has(row.original.pid) }"
           >
             <td v-for="cell in row.getVisibleCells()" :key="cell.id" class="px-4 py-3 text-sm">
               <template v-if="cell.column.id === 'port'">
@@ -228,11 +235,21 @@ const table = useVueTable({
                 <Button
                   variant="ghost"
                   size="icon"
-                  class="h-7 w-7 text-slate-400 hover:text-red-500"
+                  class="h-7 w-7"
+                  :class="
+                    props.killingPids?.has(row.original.pid)
+                      ? 'cursor-default'
+                      : 'text-slate-400 hover:text-red-500'
+                  "
+                  :disabled="props.killingPids?.has(row.original.pid)"
                   title="Kill process"
                   @click="emit('kill', row.original.pid)"
                 >
-                  <X class="h-4 w-4" />
+                  <Loader2
+                    v-if="props.killingPids?.has(row.original.pid)"
+                    class="h-4 w-4 animate-spin"
+                  />
+                  <X v-else class="h-4 w-4" />
                 </Button>
               </template>
             </td>
@@ -246,5 +263,19 @@ const table = useVueTable({
 <style scoped>
 .port-row:hover {
   background-color: var(--color-slate-50, #f8fafc);
+}
+
+.port-dying {
+  animation: port-fade-out 0.45s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes port-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 </style>
