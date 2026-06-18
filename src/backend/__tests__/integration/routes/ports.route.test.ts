@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createIntegrationTestContext } from '@test/contexts';
 import { get, del } from '@test/helpers/api-client';
 import ports from '@backend/routes/ports';
+import * as cacheService from '@backend/services/port-screenshot-cache-service';
 
 // Sample lsof output (macOS/Linux format)
 const SAMPLE_LSOF_OUTPUT = `COMMAND   PID   USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
@@ -89,6 +90,44 @@ describe('Ports API Integration Tests', () => {
       expect(response.status).toBe(200);
       const data = (response.data as any).data;
       expect(data).toEqual([]);
+    });
+  });
+
+  describe('GET /api/ports/screenshot/:fileName', () => {
+    it('returns 400 for a file name that does not match the expected pattern', async () => {
+      const { app } = context.get();
+
+      const response = await get(app, '/api/ports/screenshot/not-a-valid-name.png');
+
+      expect(response.status).toBe(400);
+      expect((response.data as any).error).toBe('Invalid file name');
+    });
+
+    it('returns 404 when no cached screenshot exists for that file name', async () => {
+      const { app } = context.get();
+      vi.spyOn(cacheService, 'getByFileName').mockResolvedValue(null);
+
+      const response = await get(app, '/api/ports/screenshot/abc123.jpg');
+
+      expect(response.status).toBe(404);
+      expect((response.data as any).error).toBe('Screenshot not found');
+    });
+
+    it('streams the cached JPEG with an immutable cache header when found', async () => {
+      const { app } = context.get();
+      const jpegBytes = Buffer.from('fake-jpeg-bytes');
+      vi.spyOn(cacheService, 'getByFileName').mockResolvedValue(jpegBytes);
+
+      const response = await app.fetch(
+        new Request('http://localhost/api/ports/screenshot/abc123.jpg')
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toBe('image/jpeg');
+      expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+
+      const body = Buffer.from(await response.arrayBuffer());
+      expect(body.equals(jpegBytes)).toBe(true);
     });
   });
 
