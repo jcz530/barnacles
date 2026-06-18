@@ -212,7 +212,7 @@ const table = useVueTable({
                     <TooltipContent side="left" class="p-1">
                       <template v-if="props.screenshots?.get(row.original.port)">
                         <img
-                          :src="`data:image/png;base64,${props.screenshots.get(row.original.port)}`"
+                          :src="props.screenshots.get(row.original.port)"
                           class="h-32 w-48 rounded object-cover object-top"
                           alt="Page preview"
                         />

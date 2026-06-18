@@ -1,9 +1,34 @@
 import { IncomingMessage, Server as HttpServer } from 'http';
 import { WebSocket, WebSocketServer } from 'ws';
+import {
+  computeContentSignature,
+  getFresh,
+  isKnownNonHttp,
+  markNonHttp,
+  clearNonHttp,
+} from './port-screenshot-cache-service';
+
+interface CachedScreenshotInfo {
+  fileName: string;
+  capturedAt: string;
+}
 
 type ProbeMessage =
-  | { type: 'probe-result'; port: number; isHttp: boolean; url: string; statusCode: number | null }
+  | {
+      type: 'probe-result';
+      port: number;
+      isHttp: boolean;
+      url: string;
+      statusCode: number | null;
+      signature: string | null;
+      cachedScreenshot: CachedScreenshotInfo | null;
+    }
   | { type: 'probe-complete' };
+
+interface ProbeTarget {
+  port: number;
+  processName: string;
+}
 
 const MAX_CONCURRENT_PROBES = 10;
 
@@ -27,8 +52,8 @@ export class PortProbeWebSocketService {
       ws.on('message', async (data: Buffer) => {
         try {
           const message = JSON.parse(data.toString());
-          if (message.action === 'probe' && Array.isArray(message.ports)) {
-            await this.handleProbeRequest(ws, message.ports as number[]);
+          if (message.action === 'probe' && Array.isArray(message.targets)) {
+            await this.handleProbeRequest(ws, message.targets as ProbeTarget[]);
           }
         } catch (error) {
           console.error('Error handling port probe WebSocket message:', error);
@@ -41,39 +66,28 @@ export class PortProbeWebSocketService {
     });
   }
 
-  private async handleProbeRequest(ws: WebSocket, ports: number[]): Promise<void> {
-    let active = 0;
+  private async handleProbeRequest(ws: WebSocket, targets: ProbeTarget[]): Promise<void> {
     let index = 0;
     const results: Promise<void>[] = [];
 
     const next = (): Promise<void> => {
-      if (index >= ports.length) return Promise.resolve();
-      const port = ports[index++];
-      active++;
+      if (index >= targets.length) return Promise.resolve();
+      const target = targets[index++];
 
-      return this.probePort(port)
-        .then(({ isHttp, statusCode }) => {
+      return this.probeTarget(target)
+        .then(msg => {
           if (ws.readyState === WebSocket.OPEN) {
-            const msg: ProbeMessage = {
-              type: 'probe-result',
-              port,
-              isHttp,
-              statusCode,
-              url: `http://127.0.0.1:${port}/`,
-            };
             ws.send(JSON.stringify(msg));
           }
         })
         .finally(() => {
-          active--;
-          if (index < ports.length) {
+          if (index < targets.length) {
             results.push(next());
           }
         });
     };
 
-    // Seed up to MAX_CONCURRENT_PROBES workers
-    const initial = Math.min(MAX_CONCURRENT_PROBES, ports.length);
+    const initial = Math.min(MAX_CONCURRENT_PROBES, targets.length);
     for (let i = 0; i < initial; i++) {
       results.push(next());
     }
@@ -85,15 +99,60 @@ export class PortProbeWebSocketService {
     }
   }
 
-  private async probePort(port: number): Promise<{ isHttp: boolean; statusCode: number | null }> {
+  private async probeTarget(target: ProbeTarget): Promise<ProbeMessage> {
+    const { port, processName } = target;
+    const url = `http://127.0.0.1:${port}/`;
+
+    if (isKnownNonHttp(port)) {
+      return {
+        type: 'probe-result',
+        port,
+        isHttp: false,
+        url,
+        statusCode: null,
+        signature: null,
+        cachedScreenshot: null,
+      };
+    }
+
     try {
-      const res = await fetch(`http://127.0.0.1:${port}/`, {
+      const res = await fetch(url, {
         signal: AbortSignal.timeout(1000),
         redirect: 'manual',
       });
-      return { isHttp: true, statusCode: res.status };
+
+      clearNonHttp(port);
+
+      const signature = computeContentSignature({
+        etag: res.headers.get('etag'),
+        lastModified: res.headers.get('last-modified'),
+        contentLength: res.headers.get('content-length'),
+      });
+
+      const cached = await getFresh(port, processName, signature);
+
+      return {
+        type: 'probe-result',
+        port,
+        isHttp: true,
+        url,
+        statusCode: res.status,
+        signature,
+        cachedScreenshot: cached
+          ? { fileName: cached.fileName, capturedAt: cached.capturedAt.toISOString() }
+          : null,
+      };
     } catch {
-      return { isHttp: false, statusCode: null };
+      markNonHttp(port);
+      return {
+        type: 'probe-result',
+        port,
+        isHttp: false,
+        url,
+        statusCode: null,
+        signature: null,
+        cachedScreenshot: null,
+      };
     }
   }
 }

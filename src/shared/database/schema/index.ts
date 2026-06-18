@@ -364,3 +364,26 @@ export const themes = sqliteTable('themes', {
     .notNull()
     .$defaultFn(() => new Date()),
 });
+
+export const portScreenshots = sqliteTable(
+  'port_screenshots',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    port: integer('port').notNull(),
+    processName: text('process_name').notNull(),
+    contentSignature: text('content_signature'), // hash of response headers/body prefix, used to detect a different app on the same port
+    fileName: text('file_name').notNull(), // '<id>.jpg', relative to the screenshot-cache dir
+    fileSize: integer('file_size').notNull(), // bytes, used for disk-budget eviction
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    capturedAt: integer('captured_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    lastAccessedAt: integer('last_accessed_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  table => [uniqueIndex('port_screenshots_port_process_idx').on(table.port, table.processName)]
+);

@@ -1,8 +1,15 @@
 import { BrowserWindow, ipcMain } from 'electron';
+import { upsert } from '../../backend/services/port-screenshot-cache-service';
 
 const MAX_CONCURRENT = 3;
 let activeCaptures = 0;
 const captureQueue: Array<() => void> = [];
+
+const CAPTURE_WIDTH = 640;
+const CAPTURE_HEIGHT = 400;
+const THUMBNAIL_WIDTH = 384;
+const THUMBNAIL_HEIGHT = 240;
+const JPEG_QUALITY = 65;
 
 function acquireSlot(): Promise<void> {
   if (activeCaptures < MAX_CONCURRENT) {
@@ -26,8 +33,17 @@ function releaseSlot(): void {
   }
 }
 
+interface CaptureRequest {
+  url: string;
+  port: number;
+  processName: string;
+  signature: string | null;
+}
+
 export const setupScreenshotBridge = (): void => {
-  ipcMain.handle('screenshot:capture-url', async (_event, url: string) => {
+  ipcMain.handle('screenshot:capture-url', async (_event, request: CaptureRequest) => {
+    const { url, port, processName, signature } = request;
+
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       return { success: false, error: 'Invalid URL: must start with http:// or https://' };
     }
@@ -35,8 +51,8 @@ export const setupScreenshotBridge = (): void => {
     await acquireSlot();
 
     const win = new BrowserWindow({
-      width: 1280,
-      height: 800,
+      width: CAPTURE_WIDTH,
+      height: CAPTURE_HEIGHT,
       show: false,
       webPreferences: {
         offscreen: true,
@@ -57,8 +73,19 @@ export const setupScreenshotBridge = (): void => {
       ]);
 
       const image = await win.webContents.capturePage();
-      const screenshot = image.toPNG().toString('base64');
-      return { success: true, data: { screenshot } };
+      const thumbnail = image.resize({ width: THUMBNAIL_WIDTH, height: THUMBNAIL_HEIGHT });
+      const jpegBuffer = thumbnail.toJPEG(JPEG_QUALITY);
+
+      const cached = await upsert({
+        port,
+        processName,
+        signature,
+        jpegBuffer,
+        width: THUMBNAIL_WIDTH,
+        height: THUMBNAIL_HEIGHT,
+      });
+
+      return { success: true, data: { fileName: cached.fileName, capturedAt: cached.capturedAt } };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     } finally {

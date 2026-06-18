@@ -74,11 +74,7 @@ const globeColor = (statusCode: number | null) => {
         </div>
       </div>
       <div v-if="screenshot" class="mt-2 overflow-hidden rounded border border-slate-100">
-        <img
-          :src="`data:image/png;base64,${screenshot}`"
-          class="h-24 w-full object-cover object-top"
-          alt="Page preview"
-        />
+        <img :src="screenshot" class="h-24 w-full object-cover object-top" alt="Page preview" />
       </div>
       <div
         v-else-if="httpInfo === undefined"

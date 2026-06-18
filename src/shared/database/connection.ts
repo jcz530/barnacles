@@ -5,19 +5,14 @@ import os from 'os';
 import { mkdirSync } from 'node:fs';
 import * as schema from './schema';
 
-// Get the standard database path for both Electron and CLI contexts
-function getDatabasePath(): string {
-  // Use in-memory database for tests
+// Standard user data location for all contexts (Electron and CLI)
+export function getAppDataDir(): string {
   if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
-    return ':memory:';
+    const tmpPath = path.join(os.tmpdir(), 'barnacles-test');
+    mkdirSync(tmpPath, { recursive: true });
+    return tmpPath;
   }
 
-  // Use development database if not in production
-  if (process.env.NODE_ENV === 'development') {
-    return './database.db';
-  }
-
-  // Standard user data location for all contexts
   const homeDir = os.homedir();
   let userDataPath: string;
 
@@ -30,10 +25,24 @@ function getDatabasePath(): string {
     userDataPath = path.join(homeDir, '.config', 'Barnacles');
   }
 
-  // Ensure the directory exists
   mkdirSync(userDataPath, { recursive: true });
 
-  return path.join(userDataPath, 'database.db');
+  return userDataPath;
+}
+
+// Get the standard database path for both Electron and CLI contexts
+function getDatabasePath(): string {
+  // Use in-memory database for tests
+  if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
+    return ':memory:';
+  }
+
+  // Use development database if not in production
+  if (process.env.NODE_ENV === 'development') {
+    return './database.db';
+  }
+
+  return path.join(getAppDataDir(), 'database.db');
 }
 
 const dbPath = getDatabasePath();

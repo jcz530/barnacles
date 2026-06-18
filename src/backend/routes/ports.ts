@@ -3,6 +3,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { isMac, isLinux, isWindows } from '../../shared/utils/platform';
 import type { PortEntry } from '../../shared/types/api';
+import { getByFileName } from '../services/port-screenshot-cache-service';
 
 const execAsync = promisify(exec);
 
@@ -128,6 +129,30 @@ ports.get('/', async c => {
     // lsof/netstat unavailable or permission issue — return empty list gracefully
     return c.json({ data: [] });
   }
+});
+
+/**
+ * GET /api/ports/screenshot/:fileName
+ * Serve a cached screenshot thumbnail by its cache file name
+ */
+ports.get('/screenshot/:fileName', async c => {
+  const fileName = c.req.param('fileName');
+
+  if (!/^[a-f0-9]+\.jpg$/.test(fileName)) {
+    return c.json({ error: 'Invalid file name' }, 400);
+  }
+
+  const data = await getByFileName(fileName);
+  if (!data) {
+    return c.json({ error: 'Screenshot not found' }, 404);
+  }
+
+  return new Response(new Uint8Array(data), {
+    headers: {
+      'Content-Type': 'image/jpeg',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    },
+  });
 });
 
 /**

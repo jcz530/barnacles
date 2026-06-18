@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { SortingState } from '@tanstack/vue-table';
+import { useDebounce } from '@vueuse/core';
 import { Code, RefreshCw, Search } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
+import { RUNTIME_CONFIG } from '../../shared/constants';
 import type { PortEntry, ProjectWithDetails } from '../../shared/types/api';
 import ViewToggle from '../components/atoms/ViewToggle.vue';
 import { Button } from '../components/ui/button';
@@ -24,6 +26,7 @@ const isDevProcess = (processName: string): boolean => {
 };
 
 const searchQuery = ref('');
+const debouncedSearchQuery = useDebounce(searchQuery, 150);
 const showDevOnly = ref(true);
 const viewMode = useViewMode('ports-view-mode', 'table');
 const tableSorting = ref<SortingState>([{ id: 'port', desc: false }]);
@@ -32,19 +35,52 @@ const { data: portsData, isLoading, refetch } = usePortsQuery({ enabled: true })
 const { data: projectsData } = useProjectsQuery({ enabled: true });
 const killPortMutation = useKillPortMutation();
 
-const portNumbers = computed(() => (portsData.value || []).map(p => p.port));
-const { probeResults, isProbing } = usePortProbeWebSocket(portNumbers);
+const screenshotUrl = (fileName: string) =>
+  `${RUNTIME_CONFIG.API_BASE_URL}/api/ports/screenshot/${fileName}`;
+
+const probeTargets = computed(() =>
+  (portsData.value || []).map(p => ({ port: p.port, processName: p.processName }))
+);
+const { probeResults, isProbing } = usePortProbeWebSocket(probeTargets);
 const screenshots = ref<Map<number, string>>(new Map());
+const capturingPorts = new Set<number>();
 
 watch(probeResults, results => {
   for (const [port, info] of results.entries()) {
-    if (info.isHttp && !screenshots.value.has(port)) {
-      window.electron.screenshot.captureUrl(info.url).then(result => {
-        if (result.success && result.data) {
-          screenshots.value = new Map(screenshots.value).set(port, result.data.screenshot);
-        }
-      });
+    if (!info.isHttp) continue;
+
+    if (info.cachedScreenshot) {
+      screenshots.value = new Map(screenshots.value).set(
+        port,
+        screenshotUrl(info.cachedScreenshot.fileName)
+      );
+      continue;
     }
+
+    if (screenshots.value.has(port) || capturingPorts.has(port)) continue;
+
+    const entry = (portsData.value || []).find(p => p.port === port);
+    if (!entry) continue;
+
+    capturingPorts.add(port);
+    window.electron.screenshot
+      .captureUrl({
+        url: info.url,
+        port,
+        processName: entry.processName,
+        signature: info.signature,
+      })
+      .then(result => {
+        if (result.success && result.data) {
+          screenshots.value = new Map(screenshots.value).set(
+            port,
+            screenshotUrl(result.data.fileName)
+          );
+        }
+      })
+      .finally(() => {
+        capturingPorts.delete(port);
+      });
   }
 });
 
@@ -58,7 +94,7 @@ const projectByPath = computed(() => {
 
 const filteredPorts = computed<PortEntry[]>(() => {
   const ports = portsData.value || [];
-  const q = searchQuery.value.trim().toLowerCase();
+  const q = debouncedSearchQuery.value.trim().toLowerCase();
 
   // Include ghosts in the base list so they sort into their original position
   const ghosts = Array.from(ghostPorts.value.values()).filter(

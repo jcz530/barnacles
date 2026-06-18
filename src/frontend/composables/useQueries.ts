@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { useDocumentVisibility } from '@vueuse/core';
 import type { MaybeRef } from 'vue';
 import { computed, unref } from 'vue';
 import { API_ROUTES } from '../../shared/constants';
@@ -1620,6 +1621,8 @@ export const useQueries = () => {
 
   // Ports query — lists all TCP LISTEN ports on the local machine
   const usePortsQuery = (options?: { enabled?: boolean }) => {
+    const visibility = useDocumentVisibility();
+
     return useQuery({
       queryKey: ['ports'],
       queryFn: async () => {
@@ -1628,7 +1631,7 @@ export const useQueries = () => {
         return response.data || [];
       },
       enabled: options?.enabled ?? true,
-      refetchInterval: 5000,
+      refetchInterval: () => (visibility.value === 'visible' ? 5000 : false),
     });
   };
 

@@ -1,3 +1,4 @@
+import { useDebounceFn } from '@vueuse/core';
 import { onUnmounted, ref, watch } from 'vue';
 import type { Ref } from 'vue';
 import { useApiPort } from './useApiPort';
@@ -6,14 +7,22 @@ interface ProbeResult {
   isHttp: boolean;
   url: string;
   statusCode: number | null;
+  signature: string | null;
+  cachedScreenshot: { fileName: string; capturedAt: string } | null;
 }
 
-export function usePortProbeWebSocket(ports: Ref<number[]>) {
+export interface ProbeTarget {
+  port: number;
+  processName: string;
+}
+
+export function usePortProbeWebSocket(targets: Ref<ProbeTarget[]>) {
   const ws = ref<WebSocket | null>(null);
   const isConnected = ref(false);
   const isProbing = ref(false);
   const error = ref<string | null>(null);
   const probeResults = ref<Map<number, ProbeResult>>(new Map());
+  const knownPorts = new Set<number>();
 
   const { wsBaseUrl, isLoaded, loadApiPort } = useApiPort();
 
@@ -26,8 +35,12 @@ export function usePortProbeWebSocket(ports: Ref<number[]>) {
     isProbing.value = false;
   };
 
-  const connect = async (portList: number[]) => {
-    if (portList.length === 0) return;
+  const sendProbe = (probeTargets: ProbeTarget[]) => {
+    ws.value?.send(JSON.stringify({ action: 'probe', targets: probeTargets }));
+  };
+
+  const connect = async (probeTargets: ProbeTarget[]) => {
+    if (probeTargets.length === 0) return;
 
     disconnect();
 
@@ -43,7 +56,7 @@ export function usePortProbeWebSocket(ports: Ref<number[]>) {
 
     socket.onopen = () => {
       isConnected.value = true;
-      socket.send(JSON.stringify({ action: 'probe', ports: portList }));
+      sendProbe(probeTargets);
     };
 
     socket.onmessage = event => {
@@ -51,11 +64,17 @@ export function usePortProbeWebSocket(ports: Ref<number[]>) {
         const message = JSON.parse(event.data);
 
         if (message.type === 'probe-result') {
-          const { port, isHttp, url, statusCode } = message;
-          probeResults.value = new Map(probeResults.value).set(port, { isHttp, url, statusCode });
+          const { port, isHttp, url, statusCode, signature, cachedScreenshot } = message;
+          probeResults.value = new Map(probeResults.value).set(port, {
+            isHttp,
+            url,
+            statusCode,
+            signature,
+            cachedScreenshot,
+          });
+          knownPorts.add(port);
         } else if (message.type === 'probe-complete') {
           isProbing.value = false;
-          disconnect();
         }
       } catch (err) {
         console.error('Error parsing port probe WebSocket message:', err);
@@ -73,13 +92,37 @@ export function usePortProbeWebSocket(ports: Ref<number[]>) {
     };
   };
 
-  // Reconnect whenever the port list changes (e.g. after a 5s poll refresh)
+  const handleTargetsChange = useDebounceFn((newTargets: ProbeTarget[]) => {
+    const newPorts = new Set(newTargets.map(t => t.port));
+
+    // Drop results for ports no longer present, keep the rest untouched
+    let removedAny = false;
+    const next = new Map(probeResults.value);
+    for (const port of next.keys()) {
+      if (!newPorts.has(port)) {
+        next.delete(port);
+        knownPorts.delete(port);
+        removedAny = true;
+      }
+    }
+    if (removedAny) probeResults.value = next;
+
+    const added = newTargets.filter(t => !knownPorts.has(t.port));
+    if (added.length === 0) return;
+
+    if (isConnected.value && ws.value) {
+      isProbing.value = true;
+      sendProbe(added);
+    } else {
+      connect(newTargets);
+    }
+  }, 300);
+
   watch(
-    ports,
-    newPorts => {
-      if (newPorts.length > 0) {
-        probeResults.value = new Map();
-        connect(newPorts);
+    targets,
+    newTargets => {
+      if (newTargets.length > 0) {
+        handleTargetsChange(newTargets);
       }
     },
     { immediate: true }
