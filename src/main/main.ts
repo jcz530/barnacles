@@ -15,6 +15,12 @@ if (started) {
   app.quit();
 }
 
+// Prevent multiple instances from running simultaneously (e.g. a stale dev process
+// left running in another terminal), since they would contend over the same database.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+}
+
 // Track all windows
 const windows = new Set<BrowserWindow>();
 let apiPort: number | undefined;
@@ -202,6 +208,23 @@ const initialize = async (): Promise<void> => {
 
 // App event handlers
 app.on('ready', initialize);
+
+// Focus the existing window instead of letting a second launch start a competing instance
+app.on('second-instance', () => {
+  const allWindows = BrowserWindow.getAllWindows();
+  const mainWindows = allWindows.filter(
+    win => !win.isDestroyed() && !win.skipTaskbar && win.isResizable() && !win.isAlwaysOnTop()
+  );
+
+  if (mainWindows.length > 0) {
+    const [existingWindow] = mainWindows;
+    if (existingWindow.isMinimized()) existingWindow.restore();
+    existingWindow.show();
+    existingWindow.focus();
+  } else {
+    createAppWindow();
+  }
+});
 
 app.on('before-quit', () => {
   // Set quitting flag so windows can close properly
