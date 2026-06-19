@@ -107,18 +107,23 @@ class ProjectTechnologyService {
    * Update technologies for a project
    */
   async updateProjectTechnologies(projectId: string, techSlugs: string[]): Promise<void> {
-    // Delete existing project technologies
-    await db.delete(projectTechnologies).where(eq(projectTechnologies.projectId, projectId));
+    // Resolve technology IDs (and dedupe slugs) before touching the junction table
+    const uniqueSlugs = [...new Set(techSlugs)];
+    const techIds = await Promise.all(uniqueSlugs.map(slug => this.ensureTechnology(slug)));
+    const uniqueTechIds = [...new Set(techIds)];
 
-    // Add technologies
-    for (const techSlug of techSlugs) {
-      const techId = await this.ensureTechnology(techSlug);
+    // Replace existing project technologies atomically so concurrent/duplicate
+    // saves for the same project can't interleave delete and insert calls.
+    db.transaction(tx => {
+      tx.delete(projectTechnologies).where(eq(projectTechnologies.projectId, projectId)).run();
 
-      await db.insert(projectTechnologies).values({
-        projectId,
-        technologyId: techId,
-      });
-    }
+      for (const technologyId of uniqueTechIds) {
+        tx.insert(projectTechnologies)
+          .values({ projectId, technologyId })
+          .onConflictDoNothing()
+          .run();
+      }
+    });
   }
 }
 
