@@ -217,5 +217,51 @@ describe('ProjectTechnologyService', () => {
       const result = await projectTechnologyService.getProjectTechnologies(projectId);
       expect(result).toHaveLength(0);
     });
+
+    it('should deduplicate repeated slugs in a single call', async () => {
+      const projectId = 'test-project-dedupe';
+
+      await db.insert(projects).values({
+        id: projectId,
+        name: 'Test Project',
+        path: '/test/path',
+      });
+
+      await projectTechnologyService.updateProjectTechnologies(projectId, [
+        'typescript',
+        'typescript',
+        'react',
+      ]);
+
+      const result = await projectTechnologyService.getProjectTechnologies(projectId);
+      expect(result).toHaveLength(2);
+      expect(result.map(t => t.slug).sort()).toEqual(['react', 'typescript']);
+    });
+
+    it('should not create duplicate rows when called concurrently for the same project', async () => {
+      const projectId = 'test-project-concurrent';
+
+      await db.insert(projects).values({
+        id: projectId,
+        name: 'Test Project',
+        path: '/test/path',
+      });
+
+      // Simulate overlapping saves (e.g. scan + rescan racing on the same project)
+      await Promise.all([
+        projectTechnologyService.updateProjectTechnologies(projectId, ['typescript', 'react']),
+        projectTechnologyService.updateProjectTechnologies(projectId, ['typescript', 'react']),
+        projectTechnologyService.updateProjectTechnologies(projectId, ['typescript', 'react']),
+      ]);
+
+      const rows = await db
+        .select()
+        .from(projectTechnologies)
+        .where(eq(projectTechnologies.projectId, projectId));
+
+      const result = await projectTechnologyService.getProjectTechnologies(projectId);
+      expect(result).toHaveLength(2);
+      expect(rows).toHaveLength(2);
+    });
   });
 });

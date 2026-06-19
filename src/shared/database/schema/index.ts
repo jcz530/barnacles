@@ -1,6 +1,6 @@
 import { createId } from '@paralleldrive/cuid2';
 import { relations } from 'drizzle-orm';
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
   id: text('id')
@@ -54,20 +54,29 @@ export const technologies = sqliteTable('technologies', {
     .$defaultFn(() => new Date()),
 });
 
-export const projectTechnologies = sqliteTable('project_technologies', {
-  id: text('id')
-    .primaryKey()
-    .$defaultFn(() => createId()),
-  projectId: text('project_id')
-    .notNull()
-    .references(() => projects.id, { onDelete: 'cascade' }),
-  technologyId: text('technology_id')
-    .notNull()
-    .references(() => technologies.id, { onDelete: 'cascade' }),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .$defaultFn(() => new Date()),
-});
+export const projectTechnologies = sqliteTable(
+  'project_technologies',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    technologyId: text('technology_id')
+      .notNull()
+      .references(() => technologies.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  table => ({
+    projectTechnologyUnique: uniqueIndex('project_technologies_project_id_technology_id_unique').on(
+      table.projectId,
+      table.technologyId
+    ),
+  })
+);
 
 export const projectStats = sqliteTable('project_stats', {
   id: text('id')

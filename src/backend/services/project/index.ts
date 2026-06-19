@@ -48,6 +48,11 @@ export interface ProjectFilters {
 }
 
 class ProjectService {
+  // Guards against concurrent/repeat saveProject calls for the same path
+  // (e.g. overlapping scan + rescan, or a symlink-heavy tree revisiting the
+  // same project) racing on the technologies delete-then-insert.
+  private saveProjectLocks: Map<string, Promise<ProjectWithDetails>> = new Map();
+
   /**
    * Get all projects with optional filters
    */
@@ -139,6 +144,22 @@ class ProjectService {
    * Save scanned project to database
    */
   async saveProject(projectInfo: ProjectInfo): Promise<ProjectWithDetails> {
+    // If a save for this path is already in flight, wait for it instead of
+    // running a concurrent save (avoids interleaved technology delete/insert).
+    const existingLock = this.saveProjectLocks.get(projectInfo.path);
+    if (existingLock) {
+      return existingLock;
+    }
+
+    const savePromise = this.saveProjectInternal(projectInfo).finally(() => {
+      this.saveProjectLocks.delete(projectInfo.path);
+    });
+
+    this.saveProjectLocks.set(projectInfo.path, savePromise);
+    return savePromise;
+  }
+
+  private async saveProjectInternal(projectInfo: ProjectInfo): Promise<ProjectWithDetails> {
     // Detect preferred IDE from project files
     const detectedIde = await ideDetectorService.detectPreferredIDE(projectInfo.path);
 

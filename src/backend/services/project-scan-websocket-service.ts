@@ -244,11 +244,21 @@ export class ProjectScanWebSocketService {
         return;
       }
 
-      if (depth > maxDepth || scanned.has(dirPath)) {
+      // Resolve symlinks so the same real directory isn't revisited under a
+      // different path (e.g. symlink-heavy pnpm workspaces), which would
+      // otherwise cause the same project to be scanned/saved many times.
+      let realDirPath: string;
+      try {
+        realDirPath = await fs.realpath(dirPath);
+      } catch {
         return;
       }
 
-      scanned.add(dirPath);
+      if (depth > maxDepth || scanned.has(realDirPath)) {
+        return;
+      }
+
+      scanned.add(realDirPath);
 
       try {
         // Check if current directory is a project
