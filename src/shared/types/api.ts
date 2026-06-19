@@ -233,4 +233,6 @@ export interface PortEntry {
   processName: string;
   state: 'LISTEN';
   cwd?: string;
+  startedAt?: string;
+  command?: string;
 }

@@ -33,6 +33,31 @@ async function getCwdMap(pids: number[]): Promise<Map<number, string>> {
   return cwdMap;
 }
 
+async function getProcessInfoMap(
+  pids: number[]
+): Promise<Map<number, { startedAt?: string; command?: string }>> {
+  const infoMap = new Map<number, { startedAt?: string; command?: string }>();
+  if (pids.length === 0) return infoMap;
+
+  try {
+    const pidList = pids.join(',');
+    const { stdout } = await execAsync(`ps -p "${pidList}" -o pid=,lstart=,command=`);
+    for (const line of stdout.split('\n')) {
+      if (!line.trim()) continue;
+      const match = line.match(/^\s*(\d+)\s+(\w+\s+\w+\s+\d+\s+\d+:\d+:\d+\s+\d+)\s+(.*)$/);
+      if (!match) continue;
+      const [, pidStr, lstart, command] = match;
+      const pid = parseInt(pidStr, 10);
+      const startedAt = new Date(lstart).toISOString();
+      infoMap.set(pid, { startedAt, command: command.trim() });
+    }
+  } catch {
+    // ps lookup is best-effort
+  }
+
+  return infoMap;
+}
+
 async function getPortsUnix(): Promise<PortEntry[]> {
   const { stdout } = await execAsync('lsof -iTCP -sTCP:LISTEN -P -n');
   const lines = stdout.trim().split('\n').slice(1); // skip header
@@ -51,12 +76,18 @@ async function getPortsUnix(): Promise<PortEntry[]> {
     results.push({ pid, port, protocol: 'TCP', processName, state: 'LISTEN' });
   }
 
-  // Fetch cwds for all unique PIDs in a single lsof call
+  // Fetch cwds and process info (start time, command) for all unique PIDs
   const uniquePids = [...new Set(results.map(r => r.pid))];
-  const cwdMap = await getCwdMap(uniquePids);
+  const [cwdMap, processInfoMap] = await Promise.all([
+    getCwdMap(uniquePids),
+    getProcessInfoMap(uniquePids),
+  ]);
   for (const entry of results) {
     const cwd = cwdMap.get(entry.pid);
     if (cwd) entry.cwd = cwd;
+    const info = processInfoMap.get(entry.pid);
+    if (info?.startedAt) entry.startedAt = info.startedAt;
+    if (info?.command) entry.command = info.command;
   }
 
   // lsof can emit multiple rows for the same pid+port (e.g. IPv4 and IPv6 sockets)
@@ -70,16 +101,31 @@ async function getPortsUnix(): Promise<PortEntry[]> {
 }
 
 async function getPortsWindows(): Promise<PortEntry[]> {
-  // Build PID -> name map from wmic
+  // Build PID -> { name, startedAt, command } map from wmic
   const pidToName = new Map<number, string>();
+  const pidToInfo = new Map<number, { startedAt?: string; command?: string }>();
   try {
-    const { stdout: wmicOut } = await execAsync('wmic process get ProcessId,Name /format:csv');
+    const { stdout: wmicOut } = await execAsync(
+      'wmic process get ProcessId,Name,CreationDate,CommandLine /format:csv'
+    );
     for (const line of wmicOut.trim().split('\n').slice(1)) {
       const parts = line.trim().split(',');
-      if (parts.length < 3) continue;
-      const name = parts[1]?.trim();
-      const pid = parseInt(parts[2]?.trim(), 10);
+      if (parts.length < 5) continue;
+      const commandLine = parts[1]?.trim();
+      const creationDate = parts[2]?.trim();
+      const name = parts[3]?.trim();
+      const pid = parseInt(parts[4]?.trim(), 10);
       if (name && !isNaN(pid)) pidToName.set(pid, name);
+      // wmic CreationDate format: yyyymmddHHMMSS.ffffff+UUU
+      const dateMatch = creationDate?.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
+      const startedAt = dateMatch
+        ? new Date(
+            `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T${dateMatch[4]}:${dateMatch[5]}:${dateMatch[6]}`
+          ).toISOString()
+        : undefined;
+      if (!isNaN(pid) && (startedAt || commandLine)) {
+        pidToInfo.set(pid, { startedAt, command: commandLine || undefined });
+      }
     }
   } catch {
     // wmic not available — continue without process names
@@ -98,7 +144,16 @@ async function getPortsWindows(): Promise<PortEntry[]> {
     if (!portMatch || isNaN(pid)) continue;
     const port = parseInt(portMatch[1], 10);
     const processName = pidToName.get(pid) || 'Unknown';
-    results.push({ pid, port, protocol: 'TCP', processName, state: 'LISTEN' });
+    const info = pidToInfo.get(pid);
+    results.push({
+      pid,
+      port,
+      protocol: 'TCP',
+      processName,
+      state: 'LISTEN',
+      startedAt: info?.startedAt,
+      command: info?.command,
+    });
   }
 
   const seen = new Set<string>();

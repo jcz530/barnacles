@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { Folder, Globe, Hash, Loader2, X } from 'lucide-vue-next';
+import { Clock, Folder, Globe, Hash, Loader2, X } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import type { PortEntry, ProjectWithDetails } from '@/shared/types/api';
 import { RouteNames } from '@/router';
+import { useFormatters } from '@/composables/useFormatters';
 import ProjectIcon from '../../projects/atoms/ProjectIcon.vue';
 import { Button } from '../../ui/button';
 import { Card, CardContent, CardHeader } from '../../ui/card';
 import ProcessName from '../atoms/ProcessName.vue';
+
+const { formatRelativeDate } = useFormatters();
 
 const props = defineProps<{
   port: PortEntry;
@@ -41,7 +44,7 @@ const globeColor = (statusCode: number | null) => {
       <div class="flex items-start justify-between">
         <div class="flex flex-col gap-1">
           <div class="font-mono text-3xl font-bold text-slate-900">:{{ port.port }}</div>
-          <ProcessName :process-name="port.processName" />
+          <ProcessName :process-name="port.processName" :command="port.command" />
         </div>
         <div class="flex items-center gap-1">
           <button
@@ -104,10 +107,14 @@ const globeColor = (statusCode: number | null) => {
         <Folder class="h-3.5 w-3.5 shrink-0" />
         <span class="truncate font-mono" dir="rtl">{{ port.cwd }}</span>
       </div>
-      <div class="text-xs text-slate-600">
+      <div class="flex items-center gap-3 text-xs text-slate-600">
         <div class="flex items-center gap-1.5">
           <Hash class="h-3.5 w-3.5 shrink-0" />
           <span class="font-mono">PID {{ port.pid }}</span>
+        </div>
+        <div v-if="port.startedAt" class="flex items-center gap-1.5">
+          <Clock class="h-3.5 w-3.5 shrink-0" />
+          <span>{{ formatRelativeDate(new Date(port.startedAt)) }}</span>
         </div>
       </div>
     </CardContent>

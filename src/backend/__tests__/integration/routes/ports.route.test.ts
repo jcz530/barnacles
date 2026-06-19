@@ -10,10 +10,30 @@ node    12345   joe   28u  IPv4 0x1234      0t0  TCP *:3000 (LISTEN)
 ruby    12346   joe   10u  IPv6 0x5678      0t0  TCP *:8080 (LISTEN)
 python  12347   joe    5u  IPv4 0xabcd      0t0  TCP 127.0.0.1:5432 (LISTEN)`;
 
+// Mutable per-test exec handler. Vitest hoists vi.mock() to module scope and
+// only keeps the last factory registered for a given module path, so all
+// child_process mocking must flow through this single indirection.
+let execHandler: (
+  cmd: string,
+  callback: (err: Error | null, result?: { stdout: string }) => void
+) => void;
+
+vi.mock('child_process', async importOriginal => {
+  const actual = await importOriginal<typeof import('child_process')>();
+  return {
+    ...actual,
+    exec: vi.fn((cmd: string, callback: (err: Error | null, result?: { stdout: string }) => void) =>
+      execHandler(cmd, callback)
+    ),
+  };
+});
+
 describe('Ports API Integration Tests', () => {
   const context = createIntegrationTestContext();
 
   beforeEach(async () => {
+    execHandler = (_cmd, callback) => callback(null, { stdout: SAMPLE_LSOF_OUTPUT });
+
     await context.setup(async () => {
       const { Hono } = await import('hono');
       const { errorHandler } = await import('@backend/middleware/error-handler');
@@ -33,16 +53,7 @@ describe('Ports API Integration Tests', () => {
     it('should return port list parsed from lsof output', async () => {
       const { app } = context.get();
 
-      // Mock child_process.exec to return sample lsof output
-      vi.mock('child_process', async importOriginal => {
-        const actual = await importOriginal<typeof import('child_process')>();
-        return {
-          ...actual,
-          exec: vi.fn((_cmd: string, callback: (err: null, result: { stdout: string }) => void) => {
-            callback(null, { stdout: SAMPLE_LSOF_OUTPUT });
-          }),
-        };
-      });
+      // execHandler defaults to SAMPLE_LSOF_OUTPUT in beforeEach
 
       const response = await get(app, '/api/ports');
 
@@ -55,15 +66,8 @@ describe('Ports API Integration Tests', () => {
     it('should return empty array when no ports found', async () => {
       const { app } = context.get();
 
-      vi.mock('child_process', async importOriginal => {
-        const actual = await importOriginal<typeof import('child_process')>();
-        return {
-          ...actual,
-          exec: vi.fn((_cmd: string, callback: (err: null, result: { stdout: string }) => void) => {
-            callback(null, { stdout: 'COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME\n' });
-          }),
-        };
-      });
+      execHandler = (_cmd, callback) =>
+        callback(null, { stdout: 'COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME\n' });
 
       const response = await get(app, '/api/ports');
 
@@ -75,21 +79,38 @@ describe('Ports API Integration Tests', () => {
     it('should return empty array when lsof is not available', async () => {
       const { app } = context.get();
 
-      vi.mock('child_process', async importOriginal => {
-        const actual = await importOriginal<typeof import('child_process')>();
-        return {
-          ...actual,
-          exec: vi.fn((_cmd: string, callback: (err: Error) => void) => {
-            callback(new Error('lsof: command not found'));
-          }),
-        };
-      });
+      execHandler = (_cmd, callback) => callback(new Error('lsof: command not found'));
 
       const response = await get(app, '/api/ports');
 
       expect(response.status).toBe(200);
       const data = (response.data as any).data;
       expect(data).toEqual([]);
+    });
+
+    it('should include startedAt and command from ps output', async () => {
+      const { app } = context.get();
+
+      execHandler = (cmd, callback) => {
+        if (cmd.startsWith('ps ')) {
+          callback(null, {
+            stdout:
+              '12345 Fri Jun 19 12:31:37 2026 node server.js --port 3000\n' +
+              '12346 Fri Jun 19 09:00:00 2026 ruby app.rb\n' +
+              '12347 Fri Jun 19 08:00:00 2026 python manage.py runserver',
+          });
+          return;
+        }
+        callback(null, { stdout: SAMPLE_LSOF_OUTPUT });
+      };
+
+      const response = await get(app, '/api/ports');
+
+      expect(response.status).toBe(200);
+      const data = (response.data as any).data;
+      const node = data.find((p: any) => p.pid === 12345);
+      expect(node.command).toBe('node server.js --port 3000');
+      expect(node.startedAt).toBe(new Date('Fri Jun 19 12:31:37 2026').toISOString());
     });
   });
 
