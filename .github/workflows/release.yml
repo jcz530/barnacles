@@ -23,7 +23,7 @@ jobs:
             arch: arm64
           - os: ubuntu-latest
             arch: x64
-          - os: windows-latest
+          - os: windows-2022
             arch: x64
 
     steps:
@@ -85,7 +85,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Package application (Windows)
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows-2022'
         run: npx --yes electron-builder --win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
