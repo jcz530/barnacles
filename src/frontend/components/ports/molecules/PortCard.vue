@@ -44,7 +44,7 @@ const globeColor = (statusCode: number | null) => {
       <div class="flex items-start justify-between">
         <div class="flex flex-col gap-1">
           <div class="font-mono text-3xl font-bold text-slate-900">:{{ port.port }}</div>
-          <ProcessName :process-name="port.processName" :command="port.command" />
+          <ProcessName :process-name="port.processName" :script-name="port.scriptName" />
         </div>
         <div class="flex items-center gap-1">
           <button
@@ -76,13 +76,15 @@ const globeColor = (statusCode: number | null) => {
           </Button>
         </div>
       </div>
-      <div v-if="screenshot" class="mt-2 overflow-hidden rounded border border-slate-100">
-        <img :src="screenshot" class="h-24 w-full object-cover object-top" alt="Page preview" />
+      <div class="mt-2 h-24 overflow-hidden rounded border border-slate-100 bg-slate-50">
+        <img
+          v-if="screenshot"
+          :src="screenshot"
+          class="h-24 w-full object-cover object-top"
+          alt="Page preview"
+        />
+        <div v-else-if="httpInfo === undefined" class="h-full w-full animate-pulse bg-slate-100" />
       </div>
-      <div
-        v-else-if="httpInfo === undefined"
-        class="mt-1 h-1 w-8 animate-pulse rounded bg-slate-100"
-      />
     </CardHeader>
 
     <CardContent class="mt-auto space-y-2">

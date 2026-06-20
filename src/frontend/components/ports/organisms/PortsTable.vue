@@ -156,7 +156,10 @@ const table = useVueTable({
                 </template>
 
                 <template v-else-if="cell.column.id === 'processName'">
-                  <ProcessName :process-name="row.original.processName" />
+                  <ProcessName
+                    :process-name="row.original.processName"
+                    :script-name="row.original.scriptName"
+                  />
                 </template>
 
                 <template v-else-if="cell.column.id === 'pid'">

@@ -235,4 +235,5 @@ export interface PortEntry {
   cwd?: string;
   startedAt?: string;
   command?: string;
+  scriptName?: string;
 }

@@ -4,10 +4,51 @@ import { promisify } from 'util';
 import { isMac, isLinux, isWindows } from '../../shared/utils/platform';
 import type { PortEntry } from '../../shared/types/api';
 import { getByFileName } from '../services/port-screenshot-cache-service';
+import { projectPackageService } from '../services/project/project-package-service';
 
 const execAsync = promisify(exec);
 
 const ports = new Hono();
+
+// Strips a leading `cross-env` wrapper and/or `VAR=value` env assignments so the
+// remaining command can be compared against a process's resolved argv (which won't
+// include the env-setting wrapper, only the program it ultimately invokes).
+function stripLeadingEnvAssignments(command: string): string {
+  let result = command.trim();
+  if (result.startsWith('cross-env ')) {
+    result = result.slice('cross-env '.length).trim();
+  }
+  return result.replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)+/, '').trim();
+}
+
+async function attachScriptNames(entries: PortEntry[]): Promise<void> {
+  const uniqueCwds = [...new Set(entries.map(e => e.cwd).filter((c): c is string => !!c))];
+  if (uniqueCwds.length === 0) return;
+
+  const scriptsByCwd = new Map<string, Record<string, string>>();
+  await Promise.all(
+    uniqueCwds.map(async cwd => {
+      scriptsByCwd.set(cwd, await projectPackageService.getPackageScripts(cwd));
+    })
+  );
+
+  for (const entry of entries) {
+    if (!entry.cwd || !entry.command) continue;
+    const scripts = scriptsByCwd.get(entry.cwd);
+    if (!scripts) continue;
+
+    const command = stripLeadingEnvAssignments(entry.command);
+    let bestMatch: { name: string; length: number } | undefined;
+    for (const [name, scriptCommand] of Object.entries(scripts)) {
+      const normalizedScript = stripLeadingEnvAssignments(scriptCommand);
+      if (!normalizedScript || !command.includes(normalizedScript)) continue;
+      if (!bestMatch || normalizedScript.length > bestMatch.length) {
+        bestMatch = { name, length: normalizedScript.length };
+      }
+    }
+    if (bestMatch) entry.scriptName = bestMatch.name;
+  }
+}
 
 async function getCwdMap(pids: number[]): Promise<Map<number, string>> {
   const cwdMap = new Map<number, string>();
@@ -178,6 +219,8 @@ ports.get('/', async c => {
     } else if (isWindows) {
       data = await getPortsWindows();
     }
+
+    await attachScriptNames(data);
 
     return c.json({ data });
   } catch {

@@ -3,6 +3,7 @@ import { createIntegrationTestContext } from '@test/contexts';
 import { get, del } from '@test/helpers/api-client';
 import ports from '@backend/routes/ports';
 import * as cacheService from '@backend/services/port-screenshot-cache-service';
+import { projectPackageService } from '@backend/services/project/project-package-service';
 
 // Sample lsof output (macOS/Linux format)
 const SAMPLE_LSOF_OUTPUT = `COMMAND   PID   USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
@@ -111,6 +112,78 @@ describe('Ports API Integration Tests', () => {
       const node = data.find((p: any) => p.pid === 12345);
       expect(node.command).toBe('node server.js --port 3000');
       expect(node.startedAt).toBe(new Date('Fri Jun 19 12:31:37 2026').toISOString());
+    });
+
+    it('should set scriptName when the command matches a package.json script for the cwd', async () => {
+      const { app } = context.get();
+
+      execHandler = (cmd, callback) => {
+        if (cmd.startsWith('ps ')) {
+          callback(null, {
+            stdout:
+              '12345 Fri Jun 19 12:31:37 2026 vite build --config vite.main.config.ts --watch',
+          });
+          return;
+        }
+        if (cmd.startsWith('lsof -p')) {
+          callback(null, { stdout: 'p12345\nn/test/project\n' });
+          return;
+        }
+        callback(null, { stdout: SAMPLE_LSOF_OUTPUT });
+      };
+
+      vi.spyOn(projectPackageService, 'getPackageScripts').mockResolvedValue({
+        'dev:main':
+          'cross-env NODE_ENV=development vite build --config vite.main.config.ts --watch',
+        build: 'vite build',
+      });
+
+      const response = await get(app, '/api/ports');
+
+      expect(response.status).toBe(200);
+      const data = (response.data as any).data;
+      const node = data.find((p: any) => p.pid === 12345);
+      expect(node.scriptName).toBe('dev:main');
+    });
+
+    it('should leave scriptName unset when no script matches the command', async () => {
+      const { app } = context.get();
+
+      execHandler = (cmd, callback) => {
+        if (cmd.startsWith('ps ')) {
+          callback(null, {
+            stdout: '12345 Fri Jun 19 12:31:37 2026 node server.js --port 3000',
+          });
+          return;
+        }
+        if (cmd.startsWith('lsof -p')) {
+          callback(null, { stdout: 'p12345\nn/test/project\n' });
+          return;
+        }
+        callback(null, { stdout: SAMPLE_LSOF_OUTPUT });
+      };
+
+      vi.spyOn(projectPackageService, 'getPackageScripts').mockResolvedValue({
+        build: 'vite build',
+      });
+
+      const response = await get(app, '/api/ports');
+
+      expect(response.status).toBe(200);
+      const data = (response.data as any).data;
+      const node = data.find((p: any) => p.pid === 12345);
+      expect(node.scriptName).toBeUndefined();
+    });
+
+    it('should not call package script lookup when no cwd is available', async () => {
+      const { app } = context.get();
+      const spy = vi.spyOn(projectPackageService, 'getPackageScripts');
+
+      // default execHandler returns SAMPLE_LSOF_OUTPUT with no cwd/command enrichment
+      const response = await get(app, '/api/ports');
+
+      expect(response.status).toBe(200);
+      expect(spy).not.toHaveBeenCalled();
     });
   });
 
