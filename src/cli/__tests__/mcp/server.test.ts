@@ -4,7 +4,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createMcpServer } from '@cli/mcp/server.js';
 
 describe('createMcpServer', () => {
-  it('registers exactly the two MVP tools', async () => {
+  it('registers all expected tools', async () => {
     const server = createMcpServer();
     const client = new Client({ name: 'test-client', version: '1.0.0' });
 
@@ -13,6 +13,13 @@ describe('createMcpServer', () => {
 
     const { tools } = await client.listTools();
 
-    expect(tools.map(t => t.name).sort()).toEqual(['get_project_status', 'list_projects']);
+    expect(tools.map(t => t.name).sort()).toEqual([
+      'get_project_status',
+      'kill_port_process',
+      'list_ports',
+      'list_projects',
+      'start_project_process',
+      'stop_project_process',
+    ]);
   });
 });

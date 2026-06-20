@@ -123,9 +123,13 @@ barnacles mcp
 
 This command is meant to be launched by an MCP client, not run interactively — it communicates over stdio and blocks for the lifetime of the process. The Barnacles app will be auto-launched if it isn't already running, same as other commands.
 
-Currently exposes two tools:
+Currently exposes these tools:
 - `list_projects` — list tracked projects, optionally filtered by search term or technology
 - `get_project_status` — git branch, uncommitted changes, last commit, and stats for one project
+- `list_ports` — list TCP ports in LISTEN state on the local machine, with PID and process name
+- `kill_port_process` — kill a process by PID (irreversible)
+- `start_project_process` — start all of a project's configured dev processes
+- `stop_project_process` — stop all of a project's running dev processes
 
 **Setup:** add an entry to your MCP client's config pointing at the `barnacles` binary:
 
