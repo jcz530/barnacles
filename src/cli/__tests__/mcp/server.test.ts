@@ -14,10 +14,13 @@ describe('createMcpServer', () => {
     const { tools } = await client.listTools();
 
     expect(tools.map(t => t.name).sort()).toEqual([
+      'get_hosts_entries',
+      'get_project_readme',
       'get_project_status',
       'kill_port_process',
       'list_ports',
       'list_projects',
+      'list_running_processes',
       'start_project_process',
       'stop_project_process',
     ]);

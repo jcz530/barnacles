@@ -130,6 +130,9 @@ Currently exposes these tools:
 - `kill_port_process` — kill a process by PID (irreversible)
 - `start_project_process` — start all of a project's configured dev processes
 - `stop_project_process` — stop all of a project's running dev processes
+- `get_project_readme` — read a project's README.md content
+- `get_hosts_entries` — list entries from the system hosts file
+- `list_running_processes` — status of dev processes across all projects
 
 **Setup:** add an entry to your MCP client's config pointing at the `barnacles` binary:
 
