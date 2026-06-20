@@ -7,6 +7,7 @@ import { ProjectsCommand } from './projects.js';
 import { AliasesCommand } from './aliases.js';
 import { HostsCommand } from './hosts.js';
 import { UtilitiesCommand } from './utilities.js';
+import { McpCommand } from './mcp.js';
 import { displayCommandHelp } from '../utils/command-help.js';
 import { compactLogo, getTitle } from '../utils/branding';
 import { intro, log, outro } from '@clack/prompts';
@@ -27,6 +28,7 @@ function registerCommands(): void {
   registry.register(new AliasesCommand());
   registry.register(new HostsCommand());
   registry.register(new UtilitiesCommand());
+  registry.register(new McpCommand());
   registry.register(new HelpCommand());
 }
 

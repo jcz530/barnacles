@@ -114,6 +114,38 @@ barnacles -h
 barnacles projects --help
 ```
 
+### `mcp`
+Start a [Model Context Protocol](https://modelcontextprotocol.io) server over stdio, letting LLM clients (Claude Desktop, Claude Code, Cursor, etc.) query your Barnacles project data.
+
+```bash
+barnacles mcp
+```
+
+This command is meant to be launched by an MCP client, not run interactively — it communicates over stdio and blocks for the lifetime of the process. The Barnacles app will be auto-launched if it isn't already running, same as other commands.
+
+Currently exposes two tools:
+- `list_projects` — list tracked projects, optionally filtered by search term or technology
+- `get_project_status` — git branch, uncommitted changes, last commit, and stats for one project
+
+**Setup:** add an entry to your MCP client's config pointing at the `barnacles` binary:
+
+```json
+{
+  "mcpServers": {
+    "barnacles": {
+      "command": "barnacles",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+- **Claude Desktop**: add this to `claude_desktop_config.json`
+- **Claude Code**: run `claude mcp add barnacles -- barnacles mcp`, or add the same JSON to `.mcp.json`
+- **Cursor**: add this to `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` (global)
+
+Restart the client after adding the config.
+
 ## Development
 
 ### Running the CLI in Development Mode
@@ -226,8 +258,9 @@ export const PROJECT_ACTIONS: ProjectAction[] = [
 The CLI is built as a standalone Node.js application that communicates with the Barnacles backend:
 
 - **Entry Point**: `src/cli/index.ts` - Main CLI entry with argument parsing and command routing
-- **Commands**: `src/cli/commands/` - Command implementations (projects, status, open, etc.)
+- **Commands**: `src/cli/commands/` - Command implementations (projects, status, open, mcp, etc.)
 - **Actions**: `src/cli/actions/` - Project-specific actions (start, stop, open in terminal, etc.)
+- **MCP**: `src/cli/mcp/` - Model Context Protocol server and tool definitions for the `mcp` command
 - **Utils**: `src/cli/utils/` - Shared utilities:
   - `app-manager.ts` - Backend connection and app launching
   - `branding.ts` - CLI branding and logos
