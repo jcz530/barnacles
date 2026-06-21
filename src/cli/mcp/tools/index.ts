@@ -8,6 +8,7 @@ import { registerStopProjectProcessTool } from './stop-project-process.js';
 import { registerGetProjectReadmeTool } from './get-project-readme.js';
 import { registerGetHostsEntriesTool } from './get-hosts-entries.js';
 import { registerListRunningProcessesTool } from './list-running-processes.js';
+import { registerGetProjectScriptsTool } from './get-project-scripts.js';
 
 export function registerTools(server: McpServer): void {
   registerListProjectsTool(server);
@@ -19,4 +20,5 @@ export function registerTools(server: McpServer): void {
   registerGetProjectReadmeTool(server);
   registerGetHostsEntriesTool(server);
   registerListRunningProcessesTool(server);
+  registerGetProjectScriptsTool(server);
 }
