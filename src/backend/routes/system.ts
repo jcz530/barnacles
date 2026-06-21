@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { BrowserWindow } from 'electron';
 import { expandTilde } from '../utils/path-utils';
 import { fontService } from '../services/font-service';
 import { getElevatedMoveCommand } from '../../shared/utils/platform';
@@ -391,6 +392,48 @@ system.get('/git-email', async c => {
     return c.json({
       data: null,
     });
+  }
+});
+
+/**
+ * POST /api/system/focus-project
+ * Focus the main app window and navigate it to a route path
+ * Body: { path: string } e.g. "/projects/123/accounts"
+ */
+system.post('/focus-project', async c => {
+  try {
+    const body = await c.req.json();
+    const targetPath: string = body.path;
+
+    if (!targetPath || typeof targetPath !== 'string' || !targetPath.startsWith('/')) {
+      return c.json({ error: 'path is required and must start with /' }, 400);
+    }
+
+    const mainWindows = BrowserWindow.getAllWindows().filter(
+      win => !win.isDestroyed() && !win.skipTaskbar && win.isResizable() && !win.isAlwaysOnTop()
+    );
+
+    if (mainWindows.length === 0) {
+      return c.json({ error: 'No main window found' }, 404);
+    }
+
+    const targetWindow = mainWindows[0];
+    if (!targetWindow.isVisible()) {
+      targetWindow.show();
+    }
+    targetWindow.focus();
+    targetWindow.webContents.send('navigate-to-project', targetPath);
+
+    return c.json({ data: { success: true } });
+  } catch (error) {
+    console.error('Error focusing project window:', error);
+    return c.json(
+      {
+        error: 'Failed to focus project window',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      500
+    );
   }
 });
 

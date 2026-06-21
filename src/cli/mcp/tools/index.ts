@@ -9,6 +9,8 @@ import { registerGetProjectReadmeTool } from './get-project-readme.js';
 import { registerGetHostsEntriesTool } from './get-hosts-entries.js';
 import { registerListRunningProcessesTool } from './list-running-processes.js';
 import { registerGetProjectScriptsTool } from './get-project-scripts.js';
+import { registerListProjectAccountsTool } from './list-project-accounts.js';
+import { registerOpenProjectAccountsTool } from './open-project-accounts.js';
 
 export function registerTools(server: McpServer): void {
   registerListProjectsTool(server);
@@ -21,4 +23,6 @@ export function registerTools(server: McpServer): void {
   registerGetHostsEntriesTool(server);
   registerListRunningProcessesTool(server);
   registerGetProjectScriptsTool(server);
+  registerListProjectAccountsTool(server);
+  registerOpenProjectAccountsTool(server);
 }

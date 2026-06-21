@@ -47,8 +47,8 @@ const { updateState, downloadUpdate, installUpdate, dismissUpdate } = useUpdater
 let unsubscribeNav: (() => void) | undefined;
 
 if (window.electron?.onNavigateToProject) {
-  unsubscribeNav = window.electron.onNavigateToProject((projectId: string) => {
-    router.push(`/projects/${projectId}`);
+  unsubscribeNav = window.electron.onNavigateToProject((path: string) => {
+    router.push(path);
   });
 }
 

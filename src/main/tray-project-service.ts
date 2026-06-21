@@ -101,8 +101,8 @@ export async function showProjectInApp(projectId: string): Promise<void> {
     mainWindow.show();
     mainWindow.focus();
 
-    // Navigate to the project (you'll need to implement IPC for this)
-    mainWindow.webContents.send('navigate-to-project', projectId);
+    // Navigate to the project
+    mainWindow.webContents.send('navigate-to-project', `/projects/${projectId}`);
   } else {
     // Create a new window if none exist
     const { createAppWindow } = await import('./main');

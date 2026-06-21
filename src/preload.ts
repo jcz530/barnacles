@@ -67,9 +67,9 @@ contextBridge.exposeInMainWorld('electron', {
   updateWindowTitle: (title: string) => ipcRenderer.send('update-window-title', title),
   showOrCreateWindow: () => ipcRenderer.invoke('show-or-create-window'),
   createNewWindow: () => ipcRenderer.invoke('create-new-window'),
-  navigateToProject: (projectId: string) => ipcRenderer.invoke('navigate-to-project', projectId),
-  onNavigateToProject: (callback: (projectId: string) => void) => {
-    const handler = (_: Electron.IpcRendererEvent, projectId: string) => callback(projectId);
+  navigateToProject: (path: string) => ipcRenderer.invoke('navigate-to-project', path),
+  onNavigateToProject: (callback: (path: string) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, path: string) => callback(path);
     ipcRenderer.on('navigate-to-project', handler);
     return () => ipcRenderer.removeListener('navigate-to-project', handler);
   },

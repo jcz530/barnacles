@@ -52,6 +52,7 @@ export const API_ROUTES = {
   SYSTEM_HOSTS_PATH: '/api/system/hosts/path',
   SYSTEM_DIRECTORIES_SEARCH: '/api/system/directories/search',
   SYSTEM_FONTS: '/api/system/fonts',
+  SYSTEM_FOCUS_PROJECT: '/api/system/focus-project',
   ALIASES: '/api/aliases',
   ALIASES_CONFIG_PATH: '/api/aliases/config-path',
   ALIASES_SYNC: '/api/aliases/sync',
