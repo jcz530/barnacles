@@ -6,6 +6,7 @@ import { useApiPort } from './useApiPort';
 interface ProbeResult {
   isHttp: boolean;
   url: string;
+  captureUrl: string;
   statusCode: number | null;
   signature: string | null;
   cachedScreenshot: { fileName: string; capturedAt: string } | null;
@@ -64,10 +65,12 @@ export function usePortProbeWebSocket(targets: Ref<ProbeTarget[]>) {
         const message = JSON.parse(event.data);
 
         if (message.type === 'probe-result') {
-          const { port, isHttp, url, statusCode, signature, cachedScreenshot } = message;
+          const { port, isHttp, url, captureUrl, statusCode, signature, cachedScreenshot } =
+            message;
           probeResults.value = new Map(probeResults.value).set(port, {
             isHttp,
             url,
+            captureUrl,
             statusCode,
             signature,
             cachedScreenshot,

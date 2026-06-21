@@ -230,7 +230,7 @@ const table = useVueTable({
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="left" class="p-1">
-                        <template v-if="!props.screenshots?.get(row.original.port)">
+                        <template v-if="props.screenshots?.get(row.original.port)">
                           <img
                             :src="props.screenshots.get(row.original.port)"
                             class="h-32 w-48 rounded-md object-cover object-top"

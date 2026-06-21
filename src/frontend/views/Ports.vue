@@ -65,7 +65,7 @@ watch(probeResults, results => {
     capturingPorts.add(port);
     window.electron.screenshot
       .captureUrl({
-        url: info.url,
+        url: info.captureUrl,
         port,
         processName: entry.processName,
         signature: info.signature,
