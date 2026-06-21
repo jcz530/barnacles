@@ -32,6 +32,7 @@ export const API_ROUTES = {
   TERMINALS: '/api/terminals',
   TERMINALS_WS: '/api/terminals/ws',
   PROCESSES: '/api/processes',
+  PROCESS_OUTPUT: (id: string) => `/api/processes/${id}/output`,
   PROJECTS_PACKAGE_SCRIPTS: (id: string) => `/api/projects/${id}/package-scripts`,
   PROJECTS_COMPOSER_SCRIPTS: (id: string) => `/api/projects/${id}/composer-scripts`,
   PROJECTS_PACKAGE_MANAGER: (id: string) => `/api/projects/${id}/package-manager`,

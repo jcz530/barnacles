@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { processManagerService } from '../services/process-manager-service';
 import { loadProcess, type ProcessContext } from '../middleware/process-loader';
+import { tailLines } from '../utils/process-output';
 
 const processes = new Hono();
 
@@ -79,11 +80,12 @@ processes.delete('/:id', loadProcess, async (c: ProcessContext) => {
 processes.get('/:id/output', loadProcess, async (c: ProcessContext) => {
   const process = c.get('process');
   const output = processManagerService.getProcessOutputById(process.processId);
+  const lines = tailLines(output, c.req.query('lines'));
 
   return c.json({
     data: {
-      output: output.join(''),
-      lines: output,
+      output: lines.join(''),
+      lines,
     },
   });
 });

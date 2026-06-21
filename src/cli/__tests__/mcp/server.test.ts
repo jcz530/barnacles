@@ -15,13 +15,16 @@ describe('createMcpServer', () => {
 
     expect(tools.map(t => t.name).sort()).toEqual([
       'get_hosts_entries',
+      'get_process_output',
       'get_project_readme',
       'get_project_scripts',
       'get_project_status',
       'kill_port_process',
       'list_ports',
+      'list_project_accounts',
       'list_projects',
       'list_running_processes',
+      'open_project_accounts',
       'start_project_process',
       'stop_project_process',
     ]);
