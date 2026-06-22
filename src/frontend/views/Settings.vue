@@ -13,12 +13,26 @@ import DefaultTerminalSetting from '../components/settings/organisms/DefaultTerm
 import ShowTrayIconSetting from '../components/settings/organisms/ShowTrayIconSetting.vue';
 import ShowDashboardStatsSetting from '../components/settings/organisms/ShowDashboardStatsSetting.vue';
 import InstallCliCommandSetting from '../components/settings/organisms/InstallCliCommandSetting.vue';
+import McpServerSetting from '../components/settings/organisms/McpServerSetting.vue';
 import ThemesSetting from '../components/settings/organisms/ThemesSetting.vue';
 import GitEmailsSetting from '../components/settings/organisms/GitEmailsSetting.vue';
 
 const { setBreadcrumbs } = useBreadcrumbs();
 const route = useRoute();
 const highlightedSetting = ref<SettingKey | null>(null);
+
+function scrollToSetting(settingKey: SettingKey) {
+  const element = document.querySelector(`[data-setting="${settingKey}"]`);
+
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    highlightedSetting.value = settingKey;
+    // Remove highlight after animation
+    setTimeout(() => {
+      highlightedSetting.value = null;
+    }, 5000);
+  }
+}
 
 onMounted(async () => {
   setBreadcrumbs([{ label: 'Settings' }]);
@@ -32,18 +46,7 @@ onMounted(async () => {
       await nextTick();
 
       // Add a small delay to ensure DOM is fully rendered
-      setTimeout(() => {
-        const element = document.querySelector(`[data-setting="${settingParam}"]`);
-
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          highlightedSetting.value = settingParam as SettingKey;
-          // Remove highlight after animation
-          setTimeout(() => {
-            highlightedSetting.value = null;
-          }, 5000);
-        }
-      }, 100);
+      setTimeout(() => scrollToSetting(settingParam as SettingKey), 100);
     }
   }
 });
@@ -172,6 +175,12 @@ onMounted(async () => {
                 :highlighted="highlightedSetting"
               >
                 <InstallCliCommandSetting />
+              </SettingWrapper>
+              <SettingWrapper
+                :setting-key="SETTING_KEYS.MCP_SERVER"
+                :highlighted="highlightedSetting"
+              >
+                <McpServerSetting @jump-to-setting="scrollToSetting" />
               </SettingWrapper>
             </div>
           </CardContent>
