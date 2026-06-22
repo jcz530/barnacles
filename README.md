@@ -11,9 +11,10 @@ Barnacles is both a desktop application and command-line tool that helps develop
 
 ## Download
 
-**[Download for macOS](https://github.com/jcz530/barnacles/releases)**
+**[Releases](https://github.com/jcz530/barnacles/releases)**
+**[Download](https://barnacles.app/download)**
 
-Available for macOS. Other platforms coming soon (get involved to speed it up).
+Available for macOS, Windows, and Linux.
 
 ![barnacles-screenshot-projects-cards.png](assets/images/screenshots/barnacles-screenshot-dashboard.png)
 
@@ -81,6 +82,8 @@ barnacles status
 # Open the app
 barnacles open
 ```
+
+Barnacles also ships an [MCP server](src/cli/README.md#mcp) so LLM clients like Claude Desktop, Claude Code, and Cursor can query your projects, ports, and processes directly.
 
 [View CLI Documentation →](src/cli/README.md)
 
