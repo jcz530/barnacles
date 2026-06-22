@@ -25,7 +25,7 @@ const isCliInstalled = computed(() => {
 
 const isAgentInstructionsOpen = ref(false);
 
-const claudeCodeCommand = 'claude mcp add barnacles -- barnacles mcp';
+const claudeCodeCommand = 'claude mcp add --scope user barnacles -- barnacles mcp';
 
 interface JsonConfigClient {
   value: string;

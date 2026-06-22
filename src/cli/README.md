@@ -148,7 +148,7 @@ Currently exposes these tools:
 ```
 
 - **Claude Desktop**: add this to `claude_desktop_config.json`
-- **Claude Code**: run `claude mcp add barnacles -- barnacles mcp`, or add the same JSON to `.mcp.json`
+- **Claude Code**: run `claude mcp add --scope user barnacles -- barnacles mcp` to install it for your user (omit `--scope user` to scope it to the current project instead), or add the same JSON to `.mcp.json` for a project-level install
 - **Cursor**: add this to `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` (global)
 
 Restart the client after adding the config.
