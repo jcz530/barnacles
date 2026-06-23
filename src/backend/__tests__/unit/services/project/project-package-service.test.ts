@@ -153,6 +153,87 @@ describe('ProjectPackageService', () => {
     });
   });
 
+  describe('getPackageScriptGroups', () => {
+    const makeDirent = (name: string) => ({
+      name,
+      isDirectory: () => true,
+    });
+
+    it('should return only the root group for a non-monorepo project', async () => {
+      const projectPath = '/test/project';
+      const packageJson = { scripts: { dev: 'vite', build: 'vite build' } };
+
+      vi.mocked(fs.readdir).mockResolvedValue([] as any);
+      vi.mocked(fs.readFile).mockImplementation(async filePath => {
+        if (filePath === path.join(projectPath, 'package.json')) {
+          return JSON.stringify(packageJson);
+        }
+        throw new Error('ENOENT');
+      });
+
+      const result = await projectPackageService.getPackageScriptGroups(projectPath);
+
+      expect(result).toEqual([{ relativeDir: '', scripts: packageJson.scripts }]);
+    });
+
+    it('should detect scripts in immediate subdirectories for monorepo layouts', async () => {
+      const projectPath = '/test/monorepo';
+      const frontendScripts = { dev: 'vite', build: 'vite build' };
+      const backendScripts = { dev: 'nodemon src/index.js', test: 'jest' };
+
+      vi.mocked(fs.readdir).mockResolvedValue([
+        makeDirent('frontend'),
+        makeDirent('backend'),
+      ] as any);
+      vi.mocked(fs.readFile).mockImplementation(async filePath => {
+        if (filePath === path.join(projectPath, 'frontend', 'package.json')) {
+          return JSON.stringify({ scripts: frontendScripts });
+        }
+        if (filePath === path.join(projectPath, 'backend', 'package.json')) {
+          return JSON.stringify({ scripts: backendScripts });
+        }
+        throw new Error('ENOENT');
+      });
+
+      const result = await projectPackageService.getPackageScriptGroups(projectPath);
+
+      expect(result).toEqual([
+        { relativeDir: 'frontend', scripts: frontendScripts },
+        { relativeDir: 'backend', scripts: backendScripts },
+      ]);
+    });
+
+    it('should skip ignored directories like node_modules and .git', async () => {
+      const projectPath = '/test/project';
+
+      vi.mocked(fs.readdir).mockResolvedValue([
+        makeDirent('node_modules'),
+        makeDirent('.git'),
+        makeDirent('dist'),
+      ] as any);
+      vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT'));
+
+      const result = await projectPackageService.getPackageScriptGroups(projectPath);
+
+      expect(result).toEqual([]);
+      expect(fs.readFile).not.toHaveBeenCalledWith(
+        path.join(projectPath, 'node_modules', 'package.json'),
+        'utf-8'
+      );
+    });
+
+    it('should omit subdirectories with no scripts', async () => {
+      const projectPath = '/test/project';
+
+      vi.mocked(fs.readdir).mockResolvedValue([makeDirent('docs')] as any);
+      vi.mocked(fs.readFile).mockRejectedValue(new Error('ENOENT'));
+
+      const result = await projectPackageService.getPackageScriptGroups(projectPath);
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('detectPackageManager', () => {
     it('should detect pnpm when pnpm-lock.yaml exists', async () => {
       const projectPath = '/test/project';
@@ -236,6 +317,17 @@ describe('ProjectPackageService', () => {
       const result = await projectPackageService.detectPackageManager(projectPath);
 
       expect(result).toBe('yarn');
+    });
+
+    it('should detect the package manager within a subdirectory when subPath is provided', async () => {
+      const projectPath = '/test/monorepo';
+
+      vi.mocked(fs.access).mockResolvedValue(undefined);
+
+      const result = await projectPackageService.detectPackageManager(projectPath, 'backend');
+
+      expect(result).toBe('pnpm');
+      expect(fs.access).toHaveBeenCalledWith(path.join(projectPath, 'backend', 'pnpm-lock.yaml'));
     });
   });
 });

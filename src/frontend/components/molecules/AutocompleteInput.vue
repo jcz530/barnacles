@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { useVModel } from '@vueuse/core';
 import { Check } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import {
   Combobox,
   ComboboxAnchor,
-  ComboboxEmpty,
   ComboboxGroup,
   ComboboxInput,
   ComboboxItem,
@@ -27,7 +25,22 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
-const searchTerm = ref('');
+// searchTerm is the free-text the user is typing; it is the source of truth
+// for the emitted value. Selecting a suggestion below also updates it.
+const searchTerm = ref(props.modelValue ?? '');
+
+watch(
+  () => props.modelValue,
+  value => {
+    if (value !== searchTerm.value) {
+      searchTerm.value = value ?? '';
+    }
+  }
+);
+
+watch(searchTerm, value => {
+  emit('update:modelValue', value);
+});
 
 const filteredSuggestions = computed(() => {
   if (!searchTerm.value) {
@@ -38,21 +51,47 @@ const filteredSuggestions = computed(() => {
   );
 });
 
-const model = useVModel(props, 'modelValue', emit);
+const handleSelect = (suggestion: string) => {
+  searchTerm.value = suggestion;
+};
+
+// Show a "use as custom value" option whenever the typed text doesn't
+// exactly match an existing suggestion, so it's clear the typed value is
+// usable rather than implying it'll be discarded like a normal "no matches".
+const showCustomValueOption = computed(
+  () => !!searchTerm.value && !props.suggestions.includes(searchTerm.value)
+);
 </script>
 
 <template>
-  <Combobox v-model="model" by="" class="w-full">
+  <Combobox :model-value="searchTerm" by="" ignore-filter class="w-full">
     <ComboboxAnchor class="w-full">
-      <ComboboxInput :display-value="val => val ?? ''" :placeholder="placeholder || 'Search...'" />
+      <ComboboxInput
+        v-model="searchTerm"
+        :display-value="val => val ?? ''"
+        :placeholder="placeholder || 'Search...'"
+      />
     </ComboboxAnchor>
     <ComboboxList>
-      <ComboboxEmpty> {{ emptyMessage || 'No matches found' }} </ComboboxEmpty>
+      <div
+        v-if="!showCustomValueOption && filteredSuggestions.length === 0"
+        class="text-muted-foreground py-6 text-center text-sm"
+      >
+        {{ emptyMessage || 'No matches found' }}
+      </div>
       <ComboboxGroup class="max-h-60 overflow-y-scroll">
+        <ComboboxItem
+          v-if="showCustomValueOption"
+          :value="searchTerm"
+          @select="handleSelect(searchTerm)"
+        >
+          Use "{{ searchTerm }}"
+        </ComboboxItem>
         <ComboboxItem
           v-for="suggestion in filteredSuggestions"
           :key="suggestion"
           :value="suggestion"
+          @select="handleSelect(suggestion)"
         >
           {{ suggestion }}
           <ComboboxItemIndicator>

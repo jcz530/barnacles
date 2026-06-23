@@ -442,24 +442,34 @@ class ProjectService {
   }
 
   /**
-   * Get package.json scripts for a project
+   * Get package.json scripts for a project, grouped by root and immediate
+   * subdirectories (one level deep) to support monorepo layouts.
    */
-  async getPackageScripts(projectPath: string): Promise<Record<string, string>> {
-    return projectPackageService.getPackageScripts(projectPath);
+  async getPackageScriptGroups(
+    projectPath: string
+  ): Promise<import('../../../shared/types/process').DetectedScriptGroup[]> {
+    return projectPackageService.getPackageScriptGroups(projectPath);
   }
 
   /**
-   * Get composer.json scripts for a project
+   * Get composer.json scripts for a project, grouped by root and immediate
+   * subdirectories (one level deep) to support monorepo layouts.
    */
-  async getComposerScripts(projectPath: string): Promise<Record<string, string>> {
-    return projectPackageService.getComposerScripts(projectPath);
+  async getComposerScriptGroups(
+    projectPath: string
+  ): Promise<import('../../../shared/types/process').DetectedScriptGroup[]> {
+    return projectPackageService.getComposerScriptGroups(projectPath);
   }
 
   /**
-   * Detect package manager from lock files
+   * Detect package manager from lock files. Pass `subPath` to detect the
+   * package manager used by a specific workspace subdirectory.
    */
-  async detectPackageManager(projectPath: string): Promise<'npm' | 'yarn' | 'pnpm'> {
-    return projectPackageService.detectPackageManager(projectPath);
+  async detectPackageManager(
+    projectPath: string,
+    subPath?: string
+  ): Promise<'npm' | 'yarn' | 'pnpm'> {
+    return projectPackageService.detectPackageManager(projectPath, subPath);
   }
 
   /**
