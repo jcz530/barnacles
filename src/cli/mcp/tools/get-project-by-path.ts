@@ -4,22 +4,22 @@ import { apiClient } from '../../utils/api-client.js';
 import { API_ROUTES } from '../../../shared/constants/index.js';
 import type { ProjectWithDetails } from '../../../shared/types/api.js';
 
-export function registerGetProjectStatusTool(server: McpServer): RegisteredTool {
+export function registerGetProjectByPathTool(server: McpServer): RegisteredTool {
   return server.registerTool(
-    'get_project_status',
+    'get_project_by_path',
     {
-      title: 'Get Project Status',
+      title: 'Get Project By Path',
       description:
-        'Get the status of a single Barnacles project by ID: git branch, uncommitted changes, last commit, and stats. Use get_project_by_path if you know the project directory, or list_projects otherwise, to find the project ID.',
+        'Resolve a filesystem path (e.g. the current working directory) to the Barnacles project that contains it. Use this instead of list_projects when you already know the path you are working in — it is much cheaper and avoids scanning every tracked project.',
       inputSchema: {
-        projectId: z.string().describe('The ID of the project to look up'),
+        path: z
+          .string()
+          .describe('Absolute filesystem path to resolve, e.g. the current working directory'),
       },
     },
-    async ({ projectId }) => {
+    async ({ path }) => {
       try {
-        const project = await apiClient.get<ProjectWithDetails>(
-          `${API_ROUTES.PROJECTS}/${projectId}`
-        );
+        const project = await apiClient.get<ProjectWithDetails>(API_ROUTES.PROJECTS_BY_PATH(path));
 
         return {
           content: [{ type: 'text', text: JSON.stringify(project, null, 2) }],

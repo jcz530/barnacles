@@ -7,6 +7,7 @@ export function registerListRunningProcessesTool(server: McpServer): RegisteredT
   return server.registerTool(
     'list_running_processes',
     {
+      title: 'List Running Processes',
       description:
         'List the status of dev processes across all projects (running, stopped, or failed).',
       inputSchema: {},

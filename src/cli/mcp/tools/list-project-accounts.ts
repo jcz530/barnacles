@@ -8,8 +8,9 @@ export function registerListProjectAccountsTool(server: McpServer): RegisteredTo
   return server.registerTool(
     'list_project_accounts',
     {
+      title: 'List Project Accounts',
       description:
-        'List the accounts (logins) stored for a project, e.g. hosting or service credentials. Passwords are never included — use open_project_accounts to view a password in the app. Use list_projects first to find the project ID.',
+        'List the accounts (logins) stored for a project, e.g. hosting or service credentials. Passwords are never included — use open_project_accounts to view a password in the app. Use get_project_by_path if you know the project directory, or list_projects otherwise, to find the project ID.',
       inputSchema: {
         projectId: z.string().describe('The ID of the project to list accounts for'),
       },

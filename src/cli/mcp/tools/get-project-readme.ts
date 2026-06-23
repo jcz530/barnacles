@@ -7,8 +7,9 @@ export function registerGetProjectReadmeTool(server: McpServer): RegisteredTool 
   return server.registerTool(
     'get_project_readme',
     {
+      title: 'Get Project Readme',
       description:
-        'Get the README.md content for a project. Use list_projects first to find the project ID.',
+        'Get the README.md content for a project. Use get_project_by_path if you know the project directory, or list_projects otherwise, to find the project ID.',
       inputSchema: {
         projectId: z.string().describe('The ID of the project to read the README for'),
       },

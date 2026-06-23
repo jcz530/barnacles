@@ -7,8 +7,9 @@ export function registerStopProjectProcessTool(server: McpServer): RegisteredToo
   return server.registerTool(
     'stop_project_process',
     {
+      title: 'Stop Project Process',
       description:
-        "Stop all of a project's running dev processes (the same processes stopped by the 'Stop Processes' action in the app). Use list_projects first to find the project ID.",
+        "Stop all of a project's running dev processes (the same processes stopped by the 'Stop Processes' action in the app). Use get_project_by_path if you know the project directory, or list_projects otherwise, to find the project ID.",
       inputSchema: {
         projectId: z.string().describe('The ID of the project to stop processes for'),
       },

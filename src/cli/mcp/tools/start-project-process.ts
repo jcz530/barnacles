@@ -7,8 +7,9 @@ export function registerStartProjectProcessTool(server: McpServer): RegisteredTo
   return server.registerTool(
     'start_project_process',
     {
+      title: 'Start Project Process',
       description:
-        "Start all of a project's configured dev processes (the same processes started by the 'Start Processes' action in the app). Use list_projects first to find the project ID.",
+        "Start all of a project's configured dev processes (the same processes started by the 'Start Processes' action in the app). Use get_project_by_path if you know the project directory, or list_projects otherwise, to find the project ID.",
       inputSchema: {
         projectId: z.string().describe('The ID of the project to start processes for'),
       },

@@ -7,6 +7,7 @@ export function registerKillPortProcessTool(server: McpServer): RegisteredTool {
   return server.registerTool(
     'kill_port_process',
     {
+      title: 'Kill Port Process',
       description:
         'Kill the process holding a given PID (e.g. to free up a port). Use list_ports first to find the PID. This is irreversible.',
       inputSchema: {

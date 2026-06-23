@@ -12,6 +12,7 @@ export function registerGetProcessOutputTool(server: McpServer): RegisteredTool 
   return server.registerTool(
     'get_process_output',
     {
+      title: 'Get Process Output',
       description:
         'Get the recent output (stdout/stderr) of a running or stopped dev process. Use list_running_processes first to find the process ID. Defaults to the last 200 lines; pass lines to change how many.',
       inputSchema: {

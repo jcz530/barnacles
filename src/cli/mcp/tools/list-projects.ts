@@ -8,6 +8,7 @@ export function registerListProjectsTool(server: McpServer): RegisteredTool {
   return server.registerTool(
     'list_projects',
     {
+      title: 'List Projects',
       description:
         'List projects tracked by Barnacles, optionally filtered by a search term or technology slugs.',
       inputSchema: {

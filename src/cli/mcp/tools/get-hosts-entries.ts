@@ -12,6 +12,7 @@ export function registerGetHostsEntriesTool(server: McpServer): RegisteredTool {
   return server.registerTool(
     'get_hosts_entries',
     {
+      title: 'Get Hosts Entries',
       description:
         "List entries from the system's hosts file (e.g. local domain overrides like myapp.local).",
       inputSchema: {},

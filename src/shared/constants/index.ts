@@ -25,6 +25,7 @@ export const API_ROUTES = {
   USERS_CURRENT: '/api/users/current',
   PROJECTS: '/api/projects',
   PROJECTS_TECHNOLOGIES: '/api/projects/meta/technologies',
+  PROJECTS_BY_PATH: (path: string) => `/api/projects/meta/by-path?path=${encodeURIComponent(path)}`,
   PROJECTS_IDES_DETECTED: '/api/projects/ides/detected',
   PROJECTS_IDES_AVAILABLE: '/api/projects/ides/available',
   PROJECTS_TERMINALS_DETECTED: '/api/projects/terminals/detected',

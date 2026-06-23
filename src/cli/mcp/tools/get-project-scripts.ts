@@ -7,8 +7,9 @@ export function registerGetProjectScriptsTool(server: McpServer): RegisteredTool
   return server.registerTool(
     'get_project_scripts',
     {
+      title: 'Get Project Scripts',
       description:
-        "Get a project's available run scripts: package.json scripts, composer.json scripts, and the detected package manager (npm, yarn, or pnpm). Use list_projects first to find the project ID.",
+        "Get a project's available run scripts: package.json scripts, composer.json scripts, and the detected package manager (npm, yarn, or pnpm). Use get_project_by_path if you know the project directory, or list_projects otherwise, to find the project ID.",
       inputSchema: {
         projectId: z.string().describe('The ID of the project to look up scripts for'),
       },

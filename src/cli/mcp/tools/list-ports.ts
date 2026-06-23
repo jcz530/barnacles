@@ -7,6 +7,7 @@ export function registerListPortsTool(server: McpServer): RegisteredTool {
   return server.registerTool(
     'list_ports',
     {
+      title: 'List Ports',
       description:
         'List TCP ports currently in LISTEN state on the local machine, including PID, process name, and start time.',
       inputSchema: {},
