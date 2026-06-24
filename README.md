@@ -11,7 +11,7 @@ Barnacles is both a desktop application and command-line tool that helps develop
 
 ## Download
 
-**[Releases](https://github.com/jcz530/barnacles/releases)**
+**[Releases](https://github.com/jcz530/barnacles/releases)**  
 **[Download](https://barnacles.app/download)**
 
 Available for macOS, Windows, and Linux.
@@ -107,7 +107,7 @@ You don't have to remember which directory a project lives in or alt-tab to a te
 
 ### Installation
 
-1. **Download** the app for your platform from the [Releases page](https://github.com/jcz530/barnacles/releases)
+1. **Download** the app for your platform from the [Releases page](https://github.com/jcz530/barnacles/releases) or from the website **[Download page](https://barnacles.app/download)**
 2. **Install** by opening the downloaded file and following the prompts
 3. **Launch** Barnacles from your Applications folder or Start menu
 
