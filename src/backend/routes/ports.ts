@@ -54,21 +54,26 @@ async function getCwdMap(pids: number[]): Promise<Map<number, string>> {
   const cwdMap = new Map<number, string>();
   if (pids.length === 0) return cwdMap;
 
+  // lsof exits non-zero if ANY of the requested pids is inaccessible (e.g.
+  // owned by another user), even though it still prints valid lines for the
+  // pids it could read - so we must parse stdout from the thrown error too,
+  // not just bail out on a non-zero exit.
+  let stdout = '';
   try {
-    const pidList = pids.join(',');
-    const { stdout } = await execAsync(`lsof -p "${pidList}" -a -d cwd -F pcn`);
-    // Output is line-per-field: p<pid>, c<cmd>, fcwd, n<path>
-    let currentPid = -1;
-    for (const line of stdout.trim().split('\n')) {
-      if (line.startsWith('p')) {
-        currentPid = parseInt(line.slice(1), 10);
-      } else if (line.startsWith('n') && currentPid !== -1) {
-        cwdMap.set(currentPid, line.slice(1));
-        currentPid = -1;
-      }
+    stdout = (await execAsync(`lsof -p "${pids.join(',')}" -a -d cwd -F pcn`)).stdout;
+  } catch (err: unknown) {
+    stdout = (err as { stdout?: string }).stdout ?? '';
+  }
+
+  // Output is line-per-field: p<pid>, c<cmd>, fcwd, n<path>
+  let currentPid = -1;
+  for (const line of stdout.trim().split('\n')) {
+    if (line.startsWith('p')) {
+      currentPid = parseInt(line.slice(1), 10);
+    } else if (line.startsWith('n') && currentPid !== -1) {
+      cwdMap.set(currentPid, line.slice(1));
+      currentPid = -1;
     }
-  } catch {
-    // cwd lookup is best-effort
   }
 
   return cwdMap;
@@ -80,20 +85,25 @@ async function getProcessInfoMap(
   const infoMap = new Map<number, { startedAt?: string; command?: string }>();
   if (pids.length === 0) return infoMap;
 
+  // ps -p exits non-zero if ANY requested pid no longer exists (e.g. the
+  // process exited between the port scan and this lookup), even though it
+  // still prints valid lines for the pids that do exist - so we must parse
+  // stdout from the thrown error too, not just bail out on a non-zero exit.
+  let stdout = '';
   try {
-    const pidList = pids.join(',');
-    const { stdout } = await execAsync(`ps -p "${pidList}" -o pid=,lstart=,command=`);
-    for (const line of stdout.split('\n')) {
-      if (!line.trim()) continue;
-      const match = line.match(/^\s*(\d+)\s+(\w+\s+\w+\s+\d+\s+\d+:\d+:\d+\s+\d+)\s+(.*)$/);
-      if (!match) continue;
-      const [, pidStr, lstart, command] = match;
-      const pid = parseInt(pidStr, 10);
-      const startedAt = new Date(lstart).toISOString();
-      infoMap.set(pid, { startedAt, command: command.trim() });
-    }
-  } catch {
-    // ps lookup is best-effort
+    stdout = (await execAsync(`ps -p "${pids.join(',')}" -o pid=,lstart=,command=`)).stdout;
+  } catch (err: unknown) {
+    stdout = (err as { stdout?: string }).stdout ?? '';
+  }
+
+  for (const line of stdout.split('\n')) {
+    if (!line.trim()) continue;
+    const match = line.match(/^\s*(\d+)\s+(\w+\s+\w+\s+\d+\s+\d+:\d+:\d+\s+\d+)\s+(.*)$/);
+    if (!match) continue;
+    const [, pidStr, lstart, command] = match;
+    const pid = parseInt(pidStr, 10);
+    const startedAt = new Date(lstart).toISOString();
+    infoMap.set(pid, { startedAt, command: command.trim() });
   }
 
   return infoMap;
