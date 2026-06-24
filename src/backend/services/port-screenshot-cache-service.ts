@@ -115,6 +115,11 @@ export async function upsert(params: {
   const { port, processName, signature, jpegBuffer, width, height } = params;
   const dir = await ensureCacheDir();
 
+  // Pick the id/fileName before the write so a screenshot is captured for an
+  // existing row's id when one exists - but the insert/update itself must be
+  // a single atomic statement keyed off the (port, processName) unique index,
+  // not a separate read-then-write, otherwise two concurrent captures for the
+  // same port can both see no existing row and race to insert.
   const existing = await findRow(port, processName);
 
   const id = existing?.id ?? randomBytes(12).toString('hex');
@@ -126,34 +131,23 @@ export async function upsert(params: {
   await fs.rename(tmpPath, finalPath);
 
   const capturedAt = new Date();
+  const fields = {
+    contentSignature: signature,
+    fileName,
+    fileSize: jpegBuffer.length,
+    width,
+    height,
+    capturedAt,
+    lastAccessedAt: capturedAt,
+  };
 
-  if (existing) {
-    await db
-      .update(portScreenshots)
-      .set({
-        contentSignature: signature,
-        fileName,
-        fileSize: jpegBuffer.length,
-        width,
-        height,
-        capturedAt,
-        lastAccessedAt: capturedAt,
-      })
-      .where(eq(portScreenshots.id, existing.id));
-  } else {
-    await db.insert(portScreenshots).values({
-      id,
-      port,
-      processName,
-      contentSignature: signature,
-      fileName,
-      fileSize: jpegBuffer.length,
-      width,
-      height,
-      capturedAt,
-      lastAccessedAt: capturedAt,
+  await db
+    .insert(portScreenshots)
+    .values({ id, port, processName, ...fields })
+    .onConflictDoUpdate({
+      target: [portScreenshots.port, portScreenshots.processName],
+      set: fields,
     });
-  }
 
   await evict();
 
