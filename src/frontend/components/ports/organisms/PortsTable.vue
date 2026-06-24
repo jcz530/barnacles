@@ -13,6 +13,7 @@ import { RouterLink } from 'vue-router';
 import type { PortEntry, ProjectWithDetails } from '@/shared/types/api';
 import { RouteNames } from '@/router';
 import { useFormatters } from '@/composables/useFormatters';
+import { statusColorClass } from '@/constants/portStatusColor';
 import ProjectIcon from '../../projects/atoms/ProjectIcon.vue';
 import TableHeader from '../../molecules/TableHeader.vue';
 import { Button } from '../../ui/button';
@@ -43,13 +44,6 @@ const currentSorting = computed(() => props.sorting ?? []);
 
 const openUrl = (url: string) => {
   window.electron?.shell.openExternal(url);
-};
-
-const globeColor = (statusCode: number | null) => {
-  if (statusCode === null) return 'text-slate-400';
-  if (statusCode < 300) return 'text-success-500';
-  if (statusCode < 400) return 'text-secondary-500';
-  return 'text-danger-500';
 };
 
 const columnHelper = createColumnHelper<PortEntry>();
@@ -218,12 +212,16 @@ const table = useVueTable({
                         >
                           <Globe
                             class="h-4 w-4"
-                            :class="globeColor(props.httpPorts!.get(row.original.port)!.statusCode)"
+                            :class="
+                              statusColorClass(props.httpPorts!.get(row.original.port)!.statusCode)
+                            "
                           />
                           <span
                             v-if="(props.httpPorts!.get(row.original.port)!.statusCode ?? 0) >= 300"
                             class="font-mono text-[10px] leading-none"
-                            :class="globeColor(props.httpPorts!.get(row.original.port)!.statusCode)"
+                            :class="
+                              statusColorClass(props.httpPorts!.get(row.original.port)!.statusCode)
+                            "
                           >
                             {{ props.httpPorts!.get(row.original.port)!.statusCode }}
                           </span>

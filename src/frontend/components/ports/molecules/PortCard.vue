@@ -5,6 +5,7 @@ import { RouterLink } from 'vue-router';
 import type { PortEntry, ProjectWithDetails } from '@/shared/types/api';
 import { RouteNames } from '@/router';
 import { useFormatters } from '@/composables/useFormatters';
+import { statusColorClass } from '@/constants/portStatusColor';
 import ProjectIcon from '../../projects/atoms/ProjectIcon.vue';
 import { Button } from '../../ui/button';
 import { Card, CardContent, CardHeader } from '../../ui/card';
@@ -29,13 +30,6 @@ const matchedProject = computed(() => props.projectByPath.get(props.port.cwd ?? 
 const openUrl = (url: string) => {
   window.electron?.shell.openExternal(url);
 };
-
-const globeColor = (statusCode: number | null) => {
-  if (statusCode === null) return 'text-slate-400';
-  if (statusCode < 300) return 'text-success-500';
-  if (statusCode < 400) return 'text-secondary-500';
-  return 'text-danger-500';
-};
 </script>
 
 <template>
@@ -53,11 +47,11 @@ const globeColor = (statusCode: number | null) => {
             title="Open in browser"
             @click="openUrl(httpInfo.url)"
           >
-            <Globe class="h-4 w-4" :class="globeColor(httpInfo.statusCode)" />
+            <Globe class="h-4 w-4" :class="statusColorClass(httpInfo.statusCode)" />
             <span
               v-if="(httpInfo.statusCode ?? 0) >= 300"
               class="font-mono text-[10px] leading-none"
-              :class="globeColor(httpInfo.statusCode)"
+              :class="statusColorClass(httpInfo.statusCode)"
             >
               {{ httpInfo.statusCode }}
             </span>
