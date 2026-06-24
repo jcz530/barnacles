@@ -5,7 +5,7 @@ import type { ProcessStatus } from '@shared/types/process';
 
 export type ProcessContext = Context<{
   Variables: {
-    process: ProcessStatus & { createdAt?: Date };
+    process: ProcessStatus;
   };
 }>;
 

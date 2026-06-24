@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { Trash2 } from 'lucide-vue-next';
+import { RotateCw, Trash2 } from 'lucide-vue-next';
+import { computed } from 'vue';
+import { useTimeAgo } from '@vueuse/core';
 import { Button } from '../../ui/button';
 import { useQueries } from '@/composables/useQueries';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,6 +16,7 @@ interface Process {
   projectId?: string;
   cwd?: string;
   status: 'running' | 'stopped' | 'failed';
+  createdAt?: string;
 }
 
 interface Props {
@@ -30,6 +33,7 @@ const emit = defineEmits<{
   select: [process: Process];
   kill: [processId: string];
   delete: [processId: string];
+  restart: [process: Process];
 }>();
 
 const handleSelect = () => {
@@ -46,11 +50,21 @@ const handleDelete = (event: MouseEvent) => {
   emit('delete', props.process.processId);
 };
 
+const handleRestart = (event: MouseEvent) => {
+  event.stopPropagation();
+  emit('restart', props.process);
+};
+
 const isStopped = props.process.status === 'stopped' || props.process.status === 'failed';
 
 const { data: project } = useProjectQuery(props.process.projectId, {
   enabled: props.showProjectLink && !!props.process.projectId,
 });
+
+const startedAt = computed(() =>
+  props.process.createdAt ? new Date(props.process.createdAt) : null
+);
+const startedAgo = useTimeAgo(computed(() => startedAt.value ?? new Date()));
 </script>
 
 <template>
@@ -84,14 +98,26 @@ const { data: project } = useProjectQuery(props.process.projectId, {
         >
           {{ process.cwd }}
         </p>
+        <p v-if="process.status === 'running' && startedAt" class="mt-1 text-xs text-slate-400">
+          Started {{ startedAgo }}
+        </p>
         <p v-if="isStopped" class="mt-1 text-xs text-slate-400">
           {{ process.status === 'failed' ? 'Failed' : 'Stopped' }}
+          <template v-if="startedAt"> &middot; started {{ startedAgo }}</template>
         </p>
       </div>
       <div v-if="process.status === 'running'" class="ml-2 flex-shrink-0">
         <Button variant="ghost" size="sm" class="h-6 w-6 p-0" @click="handleKill"> × </Button>
       </div>
-      <div v-if="isStopped" class="ml-2 flex-shrink-0">
+      <div v-if="isStopped" class="ml-2 flex flex-shrink-0 items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="hover:text-success-600 h-6 w-6 p-0 text-slate-500"
+          @click="handleRestart"
+        >
+          <RotateCw title="Restart" class="h-3.5 w-3.5" />
+        </Button>
         <Button
           variant="ghost"
           size="sm"

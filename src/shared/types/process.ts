@@ -25,6 +25,7 @@ export interface ProcessStatus {
   error?: string;
   url?: string; // detected or configured URL
   detectedUrl?: string; // URL detected from stdout
+  createdAt?: string; // ISO timestamp when the process was started
 }
 
 export interface ProjectProcessStatus {

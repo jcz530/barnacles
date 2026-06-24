@@ -12,16 +12,25 @@ interface Process {
   cwd?: string;
 }
 
+interface CreateProcessParams {
+  cwd?: string;
+  projectId?: string;
+  command?: string;
+  title?: string;
+}
+
 interface UseProcessManagementOptions {
   processes: Ref<Process[] | undefined> | ComputedRef<Process[] | undefined>;
   selectedProcess: Ref<string | null>;
   killProcessMutation: UseMutationReturnType<void, Error, string, unknown>;
+  createProcessMutation?: UseMutationReturnType<unknown, Error, CreateProcessParams, unknown>;
 }
 
 export function useProcessManagement({
   processes,
   selectedProcess,
   killProcessMutation,
+  createProcessMutation,
 }: UseProcessManagementOptions) {
   const runningProcesses = computed(() => {
     return processes.value?.filter(p => p.status === 'running') || [];
@@ -57,6 +66,25 @@ export function useProcessManagement({
     }
   };
 
+  const handleRestartProcess = async (process: Process) => {
+    if (!createProcessMutation) return;
+
+    try {
+      const newProcess = await createProcessMutation.mutateAsync({
+        projectId: process.projectId,
+        cwd: process.cwd,
+        command: process.command,
+        title: process.title || process.name,
+      });
+
+      if (newProcess && typeof newProcess === 'object' && 'processId' in newProcess) {
+        selectedProcess.value = (newProcess as { processId: string }).processId;
+      }
+    } catch (error) {
+      console.error('Failed to restart process:', error);
+    }
+  };
+
   const handleClearAllStopped = async () => {
     try {
       const promises = stoppedProcesses.value.map(p =>
@@ -80,6 +108,7 @@ export function useProcessManagement({
     stoppedProcesses,
     handleKillProcess,
     handleDeleteProcess,
+    handleRestartProcess,
     handleClearAllStopped,
   };
 }

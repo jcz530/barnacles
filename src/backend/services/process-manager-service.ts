@@ -213,6 +213,7 @@ class ProcessManagerService {
           name: processConfig.name,
           status: 'running',
           bashId,
+          createdAt: runningProcess.createdAt.toISOString(),
         });
       } catch (error) {
         console.error('[Process Start] Failed to start process:', {
@@ -330,6 +331,7 @@ class ProcessManagerService {
         error: runningProcess.error,
         url: runningProcess.configuredUrl || runningProcess.detectedUrl,
         detectedUrl: runningProcess.detectedUrl,
+        createdAt: runningProcess.createdAt.toISOString(),
       });
     }
 
@@ -448,6 +450,7 @@ class ProcessManagerService {
       command: params.command,
       status: 'running',
       bashId,
+      createdAt: runningProcess.createdAt.toISOString(),
     };
   }
 
@@ -472,6 +475,7 @@ class ProcessManagerService {
           error: runningProcess.error,
           url: runningProcess.configuredUrl || runningProcess.detectedUrl,
           detectedUrl: runningProcess.detectedUrl,
+          createdAt: runningProcess.createdAt.toISOString(),
         });
       }
     }
@@ -482,7 +486,7 @@ class ProcessManagerService {
   /**
    * Get a single process by ID across all projects
    */
-  getProcess(processId: string): (ProcessStatus & { createdAt?: Date }) | null {
+  getProcess(processId: string): ProcessStatus | null {
     for (const [projectId, projectProcesses] of this.runningProcesses.entries()) {
       if (projectProcesses.has(processId)) {
         const runningProcess = projectProcesses.get(processId)!;
@@ -499,7 +503,7 @@ class ProcessManagerService {
           error: runningProcess.error,
           url: runningProcess.configuredUrl || runningProcess.detectedUrl,
           detectedUrl: runningProcess.detectedUrl,
-          createdAt: runningProcess.createdAt,
+          createdAt: runningProcess.createdAt.toISOString(),
         };
       }
     }

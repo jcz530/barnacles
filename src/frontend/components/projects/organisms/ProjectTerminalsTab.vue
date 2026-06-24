@@ -66,11 +66,13 @@ const {
   stoppedProcesses,
   handleKillProcess,
   handleDeleteProcess,
+  handleRestartProcess,
   handleClearAllStopped,
 } = useProcessManagement({
   processes,
   selectedProcess,
   killProcessMutation,
+  createProcessMutation,
 });
 
 // Convert processes to the format needed for display - show all processes
@@ -320,6 +322,7 @@ autoSelectProcess();
                 @select="selectedProcess = process.processId"
                 @kill="handleKillProcess"
                 @delete="handleDeleteProcess"
+                @restart="handleRestartProcess"
               />
             </div>
           </div>
