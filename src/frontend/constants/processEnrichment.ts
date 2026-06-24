@@ -79,12 +79,24 @@ const PROCESS_ENRICHMENT: Array<{ pattern: string } & ProcessInfo> = [
   { pattern: 'laravel', label: 'Laravel', description: 'PHP framework' },
 ];
 
+// Matches `pattern` in `text` only at a word boundary, so short patterns like
+// "go" or "java" don't false-positive inside unrelated names ("Google Chrome
+// Helper", "javascript-something").
+function matchesPattern(text: string, pattern: string): boolean {
+  return new RegExp(`(?:^|[^a-z0-9])${pattern}(?:[^a-z0-9]|$)`).test(text);
+}
+
 export function getProcessInfo(processName: string): ProcessInfo | null {
   const lower = processName.toLowerCase();
-  const match = PROCESS_ENRICHMENT.find(e => lower.includes(e.pattern));
+  const match = PROCESS_ENRICHMENT.find(e => matchesPattern(lower, e.pattern));
   if (!match) return null;
   return { label: match.label, description: match.description };
 }
 
 // All patterns, for use in dev-process filtering (replaces the inline list in Ports.vue)
 export const DEV_PROCESS_PATTERNS: string[] = PROCESS_ENRICHMENT.map(e => e.pattern);
+
+export function isDevProcess(processName: string): boolean {
+  const lower = processName.toLowerCase();
+  return DEV_PROCESS_PATTERNS.some(pattern => matchesPattern(lower, pattern));
+}

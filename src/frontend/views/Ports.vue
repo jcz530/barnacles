@@ -13,17 +13,12 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
 import { useViewMode } from '@/composables/useViewMode';
 import { usePortProbeWebSocket } from '@/composables/usePortProbeWebSocket';
-import { DEV_PROCESS_PATTERNS } from '@/constants/processEnrichment';
+import { isDevProcess } from '@/constants/processEnrichment';
 
 const { setBreadcrumbs } = useBreadcrumbs();
 setBreadcrumbs([{ label: 'Ports' }]);
 
 const { usePortsQuery, useKillPortMutation, useProjectsQuery } = useQueries();
-
-const isDevProcess = (processName: string): boolean => {
-  const lower = processName.toLowerCase();
-  return DEV_PROCESS_PATTERNS.some(pattern => lower.includes(pattern));
-};
 
 const searchQuery = ref('');
 const debouncedSearchQuery = useDebounce(searchQuery, 150);
