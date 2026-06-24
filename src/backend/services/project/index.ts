@@ -150,7 +150,9 @@ class ProjectService {
     for (const project of allProjects) {
       const projectPath = project.path.replace(/[/\\]+$/, '');
       const isMatch =
-        normalizedPath === projectPath || normalizedPath.startsWith(projectPath + '/');
+        normalizedPath === projectPath ||
+        normalizedPath.startsWith(projectPath + '/') ||
+        normalizedPath.startsWith(projectPath + '\\');
 
       if (isMatch && (!bestMatch || projectPath.length > bestMatch.path.length)) {
         bestMatch = project;
