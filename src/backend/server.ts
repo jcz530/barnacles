@@ -1,4 +1,3 @@
-import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { APP_CONFIG, updateRuntimeConfig } from '../shared/constants';
 import { runMigrations } from '../shared/database/migrate';

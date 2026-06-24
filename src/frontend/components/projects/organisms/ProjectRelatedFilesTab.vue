@@ -28,7 +28,6 @@ const isAddDialogOpen = ref(false);
 const sortBy = ref<'alphabetical' | 'lastModified'>('alphabetical');
 
 const handleRemoveFolder = async (folderId: string) => {
-  // eslint-disable-next-line no-undef
   if (!confirm('Are you sure you want to remove this folder?')) {
     return;
   }

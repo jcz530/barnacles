@@ -173,7 +173,6 @@ export const exifViewerCli = {
         intro(`${compactLogo} EXIF Viewer`);
         log.info('Enter image paths to analyze. Press Ctrl+C or type "exit" to quit.\n');
 
-        // eslint-disable-next-line no-constant-condition
         while (true) {
           const input = await text({
             message: 'Enter image file path:',

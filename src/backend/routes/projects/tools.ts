@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { projectService } from '../../services/project';
 import { loadProject } from '../../middleware/project-loader';
 import type { ProjectContext } from '../../types/hono';
+import { PermissionError } from '../../../shared/errors/permission-error';
 
 const tools = new Hono();
 
@@ -94,13 +95,13 @@ tools.post('/:id/open', loadProject, async (c: ProjectContext) => {
     console.error('Error opening project:', error);
 
     // Check if this is a permission error and return structured response
-    if (error instanceof Error && error.name === 'PermissionError') {
+    if (error instanceof PermissionError) {
       return c.json(
         {
           error: error.message,
-          code: (error as any).code,
-          targetApp: (error as any).targetApp,
-          instructions: (error as any).instructions,
+          code: error.code,
+          targetApp: error.targetApp,
+          instructions: error.instructions,
         },
         403
       );
@@ -204,13 +205,13 @@ tools.post('/:id/open-terminal', loadProject, async (c: ProjectContext) => {
     console.error('Error opening terminal:', error);
 
     // Check if this is a permission error and return structured response
-    if (error instanceof Error && error.name === 'PermissionError') {
+    if (error instanceof PermissionError) {
       return c.json(
         {
           error: error.message,
-          code: (error as any).code,
-          targetApp: (error as any).targetApp,
-          instructions: (error as any).instructions,
+          code: error.code,
+          targetApp: error.targetApp,
+          instructions: error.instructions,
         },
         403
       );

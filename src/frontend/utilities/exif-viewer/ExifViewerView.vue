@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { Download, FileJson, Trash2 } from 'lucide-vue-next';
+import { FileJson, Trash2 } from 'lucide-vue-next';
 import { toast } from 'vue-sonner';
 import ImageDropZone from './ImageDropZone.vue';
 import ImagePreview from './ImagePreview.vue';

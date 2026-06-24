@@ -5,8 +5,6 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import '@xterm/xterm/css/xterm.css';
 
-/* global ResizeObserver, HTMLDivElement */
-
 const props = defineProps<{
   output: string;
 }>();

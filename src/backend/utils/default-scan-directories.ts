@@ -47,7 +47,7 @@ export async function discoverExistingDirectories(): Promise<
       try {
         await fs.access(dirPath, fs.constants.R_OK);
         return { path: dirPath, exists: true, readable: true };
-      } catch (_error) {
+      } catch {
         // Check if directory exists but is not readable
         try {
           await fs.access(dirPath, fs.constants.F_OK);

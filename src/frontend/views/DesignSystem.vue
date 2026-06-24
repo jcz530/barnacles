@@ -10,7 +10,6 @@ const variants = [
   'ghost',
   'link',
 ] as const;
-const sizes = ['default', 'sm', 'lg', 'icon'] as const;
 
 const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
 </script>
@@ -64,6 +63,7 @@ const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" 
           <h3 class="mb-4 text-lg font-medium">Icon Size</h3>
           <div class="flex flex-wrap gap-4">
             <div v-for="variant in variants" :key="variant" class="flex flex-col items-start gap-2">
+              <!-- eslint-disable-next-line vue/no-v-html -->
               <Button :variant="variant" size="icon" v-html="iconSvg" />
               <span class="text-muted-foreground text-xs">{{ variant }}</span>
             </div>
@@ -96,6 +96,7 @@ const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" 
               class="flex flex-col items-start gap-2"
             >
               <Button :variant="variant">
+                <!-- eslint-disable-next-line vue/no-v-html -->
                 <span v-html="iconSvg"></span>
                 {{ variant }}
               </Button>
@@ -114,6 +115,7 @@ const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" 
             >
               <Button :variant="variant">
                 {{ variant }}
+                <!-- eslint-disable-next-line vue/no-v-html -->
                 <span v-html="iconSvg"></span>
               </Button>
               <span class="text-muted-foreground text-xs">{{ variant }}</span>
@@ -140,6 +142,7 @@ const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" 
           <span class="text-muted-foreground text-xs">lg</span>
         </div>
         <div class="flex flex-col items-center gap-2">
+          <!-- eslint-disable-next-line vue/no-v-html -->
           <Button size="icon" v-html="iconSvg" />
           <span class="text-muted-foreground text-xs">icon</span>
         </div>

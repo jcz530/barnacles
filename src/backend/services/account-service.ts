@@ -1,5 +1,5 @@
 import { db, projectAccounts } from '../../shared/database';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { encrypt, decrypt } from '../utils/encryption';
 import { getEncryptionKey } from '../utils/key-manager';
 

@@ -7,8 +7,8 @@ interface UseFileTreeNavigationOptions {
   nodes: Ref<FileNode[]>;
   expandedPaths: Ref<Set<string>>;
   selectedPath: Ref<string | null>;
-  onToggle: (node: FileNode) => void; // eslint-disable-line no-unused-vars
-  onSelect: (node: FileNode) => void; // eslint-disable-line no-unused-vars
+  onToggle: (node: FileNode) => void;
+  onSelect: (node: FileNode) => void;
   enabled?: Ref<boolean>;
 }
 

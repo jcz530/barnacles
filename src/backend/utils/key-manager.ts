@@ -3,7 +3,6 @@ import { settingsService } from '../services/settings-service';
 import { randomBytes, createHash } from 'crypto';
 
 const ENCRYPTION_KEY_SETTING = 'encryptionKey';
-const FALLBACK_KEY_SETTING = 'fallbackEncryptionKey';
 let cachedKey: Buffer | null = null;
 let usingFallback = false;
 

@@ -105,7 +105,7 @@ class TerminalService {
   /**
    * Resize a terminal (placeholder for future PTY implementation)
    */
-  resizeTerminal(id: string, cols: number, rows: number): boolean {
+  resizeTerminal(id: string, _cols: number, _rows: number): boolean {
     const terminal = this.terminals.get(id);
     if (!terminal || terminal.status === 'exited') {
       return false;
@@ -165,7 +165,7 @@ class TerminalService {
    * Clean up all terminals on shutdown
    */
   cleanup(): void {
-    for (const [id, terminal] of this.terminals.entries()) {
+    for (const [, terminal] of this.terminals.entries()) {
       if (terminal.status === 'running') {
         terminal.process.kill();
       }

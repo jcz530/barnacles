@@ -315,7 +315,7 @@ export class HostsCommand extends Command {
       } catch (error) {
         try {
           await fs.unlink(tmpPath);
-        } catch (unlinkError) {
+        } catch {
           // Ignore cleanup errors
         }
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';

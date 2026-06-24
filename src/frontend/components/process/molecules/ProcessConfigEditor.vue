@@ -54,7 +54,7 @@ const { data: packageScriptGroups } = useProjectPackageScriptsQuery(props.projec
 const { data: composerScriptGroups } = useProjectComposerScriptsQuery(props.projectId, {
   enabled: true,
 });
-const { data: project } = useProjectQuery(props.projectId);
+const { data: _project } = useProjectQuery(props.projectId);
 const { data: hosts } = useHostsQuery({ enabled: true });
 const { data: startProcesses } = useStartProcessesQuery(props.projectId);
 const updateProcessesMutation = useUpdateStartProcessesMutation();

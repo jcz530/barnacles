@@ -118,7 +118,6 @@ export const shadeGeneratorCli = {
         'Generate color palettes for design systems. Press Ctrl+C or type "exit" to quit.\n'
       );
 
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         // Get base color
         const colorPrompt = await text({

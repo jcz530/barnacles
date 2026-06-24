@@ -39,6 +39,9 @@ export interface ParsedExifData {
  * Parse EXIF data from an image buffer
  */
 export function parseExifData(buffer: ArrayBuffer): ParsedExifData {
+  // ExifReader's expanded-mode types don't match its actual runtime shape
+  // (e.g. gps.* tags are typed as `number` but actually have .description/.value)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tags = ExifReader.load(buffer, { expanded: true }) as any;
 
   const categories: ExifCategory[] = [];
