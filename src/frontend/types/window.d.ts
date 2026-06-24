@@ -41,8 +41,8 @@ declare global {
         error?: string;
       }>;
       createNewWindow: () => Promise<{ success: boolean; windowId?: number; error?: string }>;
-      navigateToProject: (projectId: string) => Promise<{ success: boolean; error?: string }>;
-      onNavigateToProject: (callback: (projectId: string) => void) => () => void;
+      navigateToProject: (path: string) => Promise<{ success: boolean; error?: string }>;
+      onNavigateToProject: (callback: (path: string) => void) => () => void;
       onToggleFind: (callback: () => void) => () => void;
       quitApp: () => Promise<{ success: boolean; error?: string }>;
       cli: {

@@ -57,15 +57,19 @@ export const setupWindowBridge = (): void => {
     }
   });
 
-  // Handle navigating to a project in the main window
-  ipcMain.handle('navigate-to-project', async (_, projectId: string) => {
+  // Handle navigating to a route path in the main window (e.g. "/projects/123/accounts")
+  ipcMain.handle('navigate-to-project', async (_, path: string) => {
     try {
       const mainWindows = getMainWindows();
 
       if (mainWindows.length > 0) {
         const targetWindow = mainWindows[0];
+        if (!targetWindow.isVisible()) {
+          targetWindow.show();
+        }
+        targetWindow.focus();
         // Send navigation command to the renderer
-        targetWindow.webContents.send('navigate-to-project', projectId);
+        targetWindow.webContents.send('navigate-to-project', path);
         return { success: true };
       }
 

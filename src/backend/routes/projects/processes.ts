@@ -4,6 +4,7 @@ import { processManagerService } from '../../services/process-manager-service';
 import { projectService } from '../../services/project';
 import { loadProject } from '../../middleware/project-loader';
 import type { ProjectContext } from '../../types/hono';
+import { tailLines } from '../../utils/process-output';
 
 const processes = new Hono();
 
@@ -208,10 +209,12 @@ processes.get('/:id/processes/:processId/output', loadProject, async (c: Project
       );
     }
 
+    const lines = tailLines(output, c.req.query('lines'));
+
     return c.json({
       data: {
-        output: output.join(''),
-        lines: output,
+        output: lines.join(''),
+        lines,
       },
     });
   } catch (error) {

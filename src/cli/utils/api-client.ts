@@ -5,6 +5,23 @@ import { ensureBackendRunning, getBackendUrl } from './app-manager.js';
  * Provides a simple interface for making API calls to the Barnacles backend
  */
 
+/**
+ * Build an Error from a failed response, preferring the backend's own
+ * `{ error }` / `{ message }` body over the generic status text.
+ */
+async function buildApiError(response: Response): Promise<Error> {
+  try {
+    const body = (await response.json()) as { error?: string; message?: string };
+    const detail = body?.error ?? body?.message;
+    if (typeof detail === 'string' && detail.length > 0) {
+      return new Error(detail);
+    }
+  } catch {
+    // Response body wasn't JSON (or was empty) — fall back below
+  }
+  return new Error(`API error: ${response.status} ${response.statusText}`);
+}
+
 export class ApiClient {
   private baseUrl: string | null = null;
 
@@ -33,7 +50,7 @@ export class ApiClient {
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
+      throw await buildApiError(response);
     }
 
     const result = await response.json();
@@ -54,7 +71,7 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
+      throw await buildApiError(response);
     }
 
     const result = await response.json();
@@ -75,7 +92,7 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
+      throw await buildApiError(response);
     }
 
     const result = await response.json();
@@ -96,7 +113,7 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
+      throw await buildApiError(response);
     }
 
     const result = await response.json();
@@ -115,7 +132,7 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
+      throw await buildApiError(response);
     }
 
     const result = await response.json();

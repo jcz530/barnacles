@@ -44,6 +44,8 @@ Output will be in the `dist/` directory.
 - `npm run format:check` - Check code formatting with Prettier
 - `npm run type-check` - Run TypeScript type checking without emitting files
 
+**Important:** Always run `npm run format` after making code changes, before considering the work done.
+
 ### Testing
 
 - `npm test` - Run all tests in watch mode
@@ -51,6 +53,8 @@ Output will be in the `dist/` directory.
 - `npm run test:integration` - Run backend integration tests
 - `npm run test:cli` - Run CLI tests
 - `npm run test:coverage` - Run tests with coverage report
+
+**Important:** Always run tests through one of the `npm test*` scripts above (or `npx cross-env ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs run <path>` for a single file). Never invoke `npx vitest` or `vitest` directly. Native modules like `better-sqlite3` are built against Electron's Node ABI (via the `postinstall` hook), not the system Node ABI, so the npm scripts run vitest inside Electron itself (`ELECTRON_RUN_AS_NODE=1 electron ...`) to match. Running bare `vitest` with system Node will crash with a `NODE_MODULE_VERSION` mismatch — do not "fix" this by running `npm rebuild`, which would rebuild the module for system Node and break the actual Electron app.
 
 ## Architecture Overview
 

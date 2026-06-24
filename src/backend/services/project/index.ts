@@ -134,6 +134,39 @@ class ProjectService {
   }
 
   /**
+   * Find the project whose root path matches or contains the given path.
+   * Used to resolve "the project I'm currently in" from a cwd, without
+   * requiring the caller to already know the project ID.
+   */
+  async getProjectByPath(path: string): Promise<ProjectWithDetails | null> {
+    const allProjects = await db
+      .select()
+      .from(projects)
+      .where(sql`${projects.archivedAt} IS NULL`);
+
+    const normalizedPath = path.replace(/[/\\]+$/, '');
+
+    let bestMatch: (typeof allProjects)[number] | null = null;
+    for (const project of allProjects) {
+      const projectPath = project.path.replace(/[/\\]+$/, '');
+      const isMatch =
+        normalizedPath === projectPath ||
+        normalizedPath.startsWith(projectPath + '/') ||
+        normalizedPath.startsWith(projectPath + '\\');
+
+      if (isMatch && (!bestMatch || projectPath.length > bestMatch.path.length)) {
+        bestMatch = project;
+      }
+    }
+
+    if (!bestMatch) {
+      return null;
+    }
+
+    return this.getProjectById(bestMatch.id);
+  }
+
+  /**
    * Get all technologies
    */
   async getTechnologies() {

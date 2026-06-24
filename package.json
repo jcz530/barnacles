@@ -44,7 +44,8 @@
     "test:ui": "cross-env ELECTRON_RUN_AS_NODE=1 electron node_modules/vitest/vitest.mjs --ui",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "cross-env ELECTRON_RUN_AS_NODE=1 electron node_modules/tsx/dist/cli.mjs scripts/migrate.ts",
-    "rebuild": "electron-builder install-app-deps"
+    "rebuild": "electron-builder install-app-deps",
+    "postinstall": "electron-builder install-app-deps"
   },
   "keywords": [],
   "author": {
@@ -112,6 +113,7 @@
   "dependencies": {
     "@clack/prompts": "^1.0.0-alpha.6",
     "@hono/node-server": "^1.19.4",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@noble/hashes": "^2.0.1",
     "@paralleldrive/cuid2": "^3.0.4",
     "@types/better-sqlite3": "^7.6.13",
@@ -131,6 +133,7 @@
     "shiki": "^3.14.0",
     "sisteransi": "^1.0.5",
     "vue-sonner": "^2.0.9",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "zod": "^4.4.3"
   }
 }

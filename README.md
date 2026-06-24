@@ -11,9 +11,10 @@ Barnacles is both a desktop application and command-line tool that helps develop
 
 ## Download
 
-**[Download for macOS](https://github.com/jcz530/barnacles/releases)**
+**[Releases](https://github.com/jcz530/barnacles/releases)**
+**[Download](https://barnacles.app/download)**
 
-Available for macOS. Other platforms coming soon (get involved to speed it up).
+Available for macOS, Windows, and Linux.
 
 ![barnacles-screenshot-projects-cards.png](assets/images/screenshots/barnacles-screenshot-dashboard.png)
 
@@ -26,6 +27,7 @@ If you're juggling multiple projects across different directories, Barnacles kee
 - **Launch faster** with quick access to terminals, IDEs, and favorite projects
 - **Stay organized** with automatic technology detection and filtering
 - **Work from anywhere** with both a GUI app and command-line interface
+- **Let your LLM drive** with an MCP server so Claude, Cursor, and other AI clients can find, start, stop, and debug any project on your machine
 
 <!-- Screenshot: Project detail view showing Git info, stats, and quick actions -->
 ![barnacles-screenshot-project-details.png](assets/images/screenshots/barnacles-screenshot-project-details.png)
@@ -82,9 +84,24 @@ barnacles status
 barnacles open
 ```
 
+Barnacles also ships an [MCP server](src/cli/README.md#mcp) so LLM clients like Claude Desktop, Claude Code, and Cursor can query your projects, ports, and processes directly.
+
 [View CLI Documentation →](src/cli/README.md)
 
 <!-- Screenshot: CLI in action -->
+
+### 🤖 Give Your LLM Access to Every Project on Your Machine (via MCP)
+
+Most AI coding assistants only know what's in the file it has open. With Barnacles' MCP server, your assistant knows about every project on your machine, and can start, stop, and read the output of any of them, without you ever opening a terminal. Ask it things like:
+
+- *"Start the `api-gateway` project and tell me once it's up."*
+- *"Why is `marketing-site` crashing on startup?"* — the assistant starts it, reads the process output, and sees the stack trace itself.
+- *"Stop whatever's running on port 5173."*
+- *"What does `old-client-site` even do?"* — it reads the project's README, no need to go find the folder.
+
+You don't have to remember which directory a project lives in or alt-tab to a terminal to launch it. The assistant already knows your projects and can run them itself, including watching the live output to debug what's actually happening.
+
+[Set it up →](src/cli/README.md#mcp)
 
 ## Getting Started
 

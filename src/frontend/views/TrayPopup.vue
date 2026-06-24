@@ -47,7 +47,7 @@ const openProject = async (projectId: string) => {
     const windowResult = await window.electron?.showOrCreateWindow();
     if (windowResult?.success) {
       // Navigate the main window to the project
-      await window.electron?.navigateToProject(projectId);
+      await window.electron?.navigateToProject(`/projects/${projectId}`);
       // Close the tray popup
       window.close();
     }

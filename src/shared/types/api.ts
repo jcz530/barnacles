@@ -141,6 +141,7 @@ export const SETTING_KEYS = {
   DEFAULT_TERMINAL: 'defaultTerminal',
   GIT_EMAILS: 'gitEmails',
   INSTALL_CLI_COMMAND: 'installCliCommand',
+  MCP_SERVER: 'mcpServer',
   SCAN_EXCLUDED_DIRECTORIES: 'scanExcludedDirectories',
   SCAN_INCLUDED_DIRECTORIES: 'scanIncludedDirectories',
   SCAN_MAX_DEPTH: 'scanMaxDepth',

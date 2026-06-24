@@ -9,6 +9,7 @@ import technologies from './technologies';
 import tools from './tools';
 import accounts from './accounts';
 import gitStats from './git-stats';
+import byPath from './by-path';
 
 const projects = new Hono();
 
@@ -19,6 +20,9 @@ const projects = new Hono();
 
 // Technologies (must be before /:id routes)
 projects.route('/', technologies);
+
+// By-path lookup (must be before /:id routes)
+projects.route('/', byPath);
 
 // Tools - IDE and Terminal management (must be before /:id routes)
 projects.route('/', tools);

@@ -32,7 +32,7 @@ vi.mock('@backend/services/process-manager-service', () => ({
     }),
     getAllProcessStatuses: vi.fn().mockReturnValue([]),
     stopProcess: vi.fn().mockResolvedValue(undefined),
-    getProcessOutput: vi.fn().mockReturnValue(['test output']),
+    getProcessOutput: vi.fn().mockReturnValue(['line1\n', 'line2\n', 'line3\n']),
   },
 }));
 
@@ -266,6 +266,19 @@ describe('Projects Processes API Integration Tests', () => {
       expect((response.data as any).data).toBeDefined();
       expect((response.data as any).data.output).toBeDefined();
       expect((response.data as any).data.lines).toBeDefined();
+      expect((response.data as any).data.lines).toEqual(['line1\n', 'line2\n', 'line3\n']);
+    });
+
+    it('should tail output to the requested number of lines', async () => {
+      const { db, app } = context.get();
+
+      const [project] = await db.insert(projectsSchema).values(createProjectData()).returning();
+
+      const response = await get(app, `/api/projects/${project.id}/processes/dev/output?lines=2`);
+
+      expect(response.status).toBe(200);
+      expect((response.data as any).data.lines).toEqual(['line2\n', 'line3\n']);
+      expect((response.data as any).data.output).toBe('line2\nline3\n');
     });
 
     it('should return 404 for non-existent project', async () => {
