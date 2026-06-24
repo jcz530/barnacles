@@ -261,7 +261,7 @@ ports.delete('/:pid', async c => {
   const pidParam = c.req.param('pid');
   const pid = parseInt(pidParam, 10);
 
-  if (isNaN(pid) || String(pid) !== pidParam) {
+  if (isNaN(pid) || String(pid) !== pidParam || pid <= 0) {
     return c.json({ error: 'Invalid PID' }, 400);
   }
 

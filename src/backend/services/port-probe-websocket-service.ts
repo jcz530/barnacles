@@ -70,31 +70,19 @@ export class PortProbeWebSocketService {
 
   private async handleProbeRequest(ws: WebSocket, targets: ProbeTarget[]): Promise<void> {
     let index = 0;
-    const results: Promise<void>[] = [];
 
-    const next = (): Promise<void> => {
-      if (index >= targets.length) return Promise.resolve();
-      const target = targets[index++];
-
-      return this.probeTarget(target)
-        .then(msg => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify(msg));
-          }
-        })
-        .finally(() => {
-          if (index < targets.length) {
-            results.push(next());
-          }
-        });
+    const worker = async (): Promise<void> => {
+      while (index < targets.length) {
+        const target = targets[index++];
+        const msg = await this.probeTarget(target);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify(msg));
+        }
+      }
     };
 
-    const initial = Math.min(MAX_CONCURRENT_PROBES, targets.length);
-    for (let i = 0; i < initial; i++) {
-      results.push(next());
-    }
-
-    await Promise.all(results);
+    const workerCount = Math.min(MAX_CONCURRENT_PROBES, targets.length);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'probe-complete' }));
