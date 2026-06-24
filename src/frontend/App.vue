@@ -5,6 +5,7 @@ import { onKeyStroke } from '@vueuse/core';
 import { useColorInversion } from '@/composables/useColorInversion';
 import { useTheme } from '@/composables/useTheme';
 import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
 import { useUpdater } from '@/composables/useUpdater';
 import UpdateNotification from '@/components/organisms/UpdateNotification.vue';
@@ -71,16 +72,18 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div id="app">
-    <Toaster position="bottom-center" :closeButton="true" />
-    <UpdateNotification
-      :update-state="updateState"
-      @download="downloadUpdate"
-      @install="installUpdate"
-      @dismiss="dismissUpdate"
-    />
-    <router-view />
-  </div>
+  <TooltipProvider :delay-duration="300">
+    <div id="app">
+      <Toaster position="bottom-center" :closeButton="true" />
+      <UpdateNotification
+        :update-state="updateState"
+        @download="downloadUpdate"
+        @install="installUpdate"
+        @dismiss="dismissUpdate"
+      />
+      <router-view />
+    </div>
+  </TooltipProvider>
 </template>
 
 <style>

@@ -225,3 +225,15 @@ export interface GitStats {
   period: 'week' | 'month' | 'last-week';
   totals: GitStatsTotals;
 }
+
+export interface PortEntry {
+  pid: number;
+  port: number;
+  protocol: 'TCP';
+  processName: string;
+  state: 'LISTEN';
+  cwd?: string;
+  startedAt?: string;
+  command?: string;
+  scriptName?: string;
+}

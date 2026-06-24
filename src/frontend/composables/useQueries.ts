@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { useDocumentVisibility } from '@vueuse/core';
 import type { MaybeRef } from 'vue';
 import { computed, unref } from 'vue';
 import { API_ROUTES } from '../../shared/constants';
@@ -13,6 +14,7 @@ import type {
   DetectedTerminal,
   GitStats,
   IDE,
+  PortEntry,
   PresetPack,
   ProjectWithDetails,
   Setting,
@@ -1617,6 +1619,36 @@ export const useQueries = () => {
     });
   };
 
+  // Ports query — lists all TCP LISTEN ports on the local machine
+  const usePortsQuery = (options?: { enabled?: boolean }) => {
+    const visibility = useDocumentVisibility();
+
+    return useQuery({
+      queryKey: ['ports'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<PortEntry[]>>('GET', API_ROUTES.PORTS);
+        if (!response) return [];
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+      refetchInterval: () => (visibility.value === 'visible' ? 5000 : false),
+    });
+  };
+
+  const useKillPortMutation = () => {
+    return useMutation({
+      mutationFn: async (pid: number) => {
+        await apiCall('DELETE', API_ROUTES.PORTS_KILL(pid));
+        return pid;
+      },
+      onSuccess: (pid: number) => {
+        queryClient.setQueryData<PortEntry[]>(['ports'], old =>
+          (old ?? []).filter(p => p.pid !== pid)
+        );
+      },
+    });
+  };
+
   // IP info query
   const useIpInfoQuery = (options?: { enabled?: boolean }) => {
     return useQuery({
@@ -1711,5 +1743,7 @@ export const useQueries = () => {
     useDeleteAccountMutation,
     useGitStatsQuery,
     useIpInfoQuery,
+    usePortsQuery,
+    useKillPortMutation,
   };
 };

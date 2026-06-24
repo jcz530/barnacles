@@ -110,3 +110,4 @@ out/
 #Phpstorm
 /.idea/*
 .run
+.gstack/
