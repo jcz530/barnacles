@@ -25,6 +25,7 @@ import type {
   User,
 } from '../../shared/types/api';
 import type { Theme } from '../../shared/types/theme';
+import type { DetectedScriptGroup } from '../../shared/types/process';
 import type { IpInfo } from '../../shared/utilities/ip-info';
 import { useApi } from './useApi';
 
@@ -530,7 +531,7 @@ export const useQueries = () => {
     });
   };
 
-  // Project package.json scripts query
+  // Project package.json scripts query (grouped by root + immediate subdirectories)
   const useProjectPackageScriptsQuery = (
     projectId: MaybeRef<string>,
     options?: { enabled?: boolean }
@@ -538,23 +539,23 @@ export const useQueries = () => {
     return useQuery({
       queryKey: ['project-package-scripts', unref(projectId)],
       queryFn: async () => {
-        const response = await apiCall<ApiResponse<Record<string, string>>>(
+        const response = await apiCall<ApiResponse<DetectedScriptGroup[]>>(
           'GET',
           `${API_ROUTES.PROJECTS}/${unref(projectId)}/package-scripts`
         );
 
         if (!response) {
-          return {};
+          return [];
         }
 
-        return response.data || {};
+        return response.data || [];
       },
       enabled: options?.enabled ?? true,
       staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     });
   };
 
-  // Project composer.json scripts query
+  // Project composer.json scripts query (grouped by root + immediate subdirectories)
   const useProjectComposerScriptsQuery = (
     projectId: MaybeRef<string>,
     options?: { enabled?: boolean }
@@ -562,33 +563,36 @@ export const useQueries = () => {
     return useQuery({
       queryKey: ['project-composer-scripts', unref(projectId)],
       queryFn: async () => {
-        const response = await apiCall<ApiResponse<Record<string, string>>>(
+        const response = await apiCall<ApiResponse<DetectedScriptGroup[]>>(
           'GET',
           `${API_ROUTES.PROJECTS}/${unref(projectId)}/composer-scripts`
         );
 
         if (!response) {
-          return {};
+          return [];
         }
 
-        return response.data || {};
+        return response.data || [];
       },
       enabled: options?.enabled ?? true,
       staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     });
   };
 
-  // Project package manager detection query
+  // Project package manager detection query. Pass subPath to detect the
+  // package manager used by a specific workspace subdirectory.
   const useProjectPackageManagerQuery = (
     projectId: MaybeRef<string>,
-    options?: { enabled?: boolean }
+    options?: { enabled?: boolean; subPath?: MaybeRef<string | undefined> }
   ) => {
     return useQuery({
-      queryKey: ['project-package-manager', unref(projectId)],
+      queryKey: ['project-package-manager', unref(projectId), unref(options?.subPath)],
       queryFn: async () => {
+        const subPath = unref(options?.subPath);
+        const query = subPath ? `?subPath=${encodeURIComponent(subPath)}` : '';
         const response = await apiCall<ApiResponse<'npm' | 'yarn' | 'pnpm'>>(
           'GET',
-          `${API_ROUTES.PROJECTS}/${unref(projectId)}/package-manager`
+          `${API_ROUTES.PROJECTS}/${unref(projectId)}/package-manager${query}`
         );
 
         if (!response) {

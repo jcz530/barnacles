@@ -7,15 +7,16 @@ const packages = new Hono();
 
 /**
  * GET /:id/package-scripts
- * Get package.json scripts for a project
+ * Get package.json scripts for a project, grouped by root and immediate
+ * subdirectories (one level deep) to support monorepo layouts.
  */
 packages.get('/:id/package-scripts', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
-    const scripts = await projectService.getPackageScripts(project.path);
+    const scriptGroups = await projectService.getPackageScriptGroups(project.path);
 
     return c.json({
-      data: scripts,
+      data: scriptGroups,
     });
   } catch (error) {
     console.error('Error fetching package scripts:', error);
@@ -30,15 +31,16 @@ packages.get('/:id/package-scripts', loadProject, async (c: ProjectContext) => {
 
 /**
  * GET /:id/composer-scripts
- * Get composer.json scripts for a project
+ * Get composer.json scripts for a project, grouped by root and immediate
+ * subdirectories (one level deep) to support monorepo layouts.
  */
 packages.get('/:id/composer-scripts', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
-    const scripts = await projectService.getComposerScripts(project.path);
+    const scriptGroups = await projectService.getComposerScriptGroups(project.path);
 
     return c.json({
-      data: scripts,
+      data: scriptGroups,
     });
   } catch (error) {
     console.error('Error fetching composer scripts:', error);
@@ -53,12 +55,14 @@ packages.get('/:id/composer-scripts', loadProject, async (c: ProjectContext) => 
 
 /**
  * GET /:id/package-manager
- * Detect the package manager used by a project (npm, yarn, or pnpm)
+ * Detect the package manager used by a project (npm, yarn, or pnpm).
+ * Pass ?subPath=backend to detect the package manager for a workspace subdirectory.
  */
 packages.get('/:id/package-manager', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
-    const packageManager = await projectService.detectPackageManager(project.path);
+    const subPath = c.req.query('subPath') || undefined;
+    const packageManager = await projectService.detectPackageManager(project.path, subPath);
 
     return c.json({
       data: packageManager,

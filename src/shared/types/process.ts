@@ -7,6 +7,11 @@ export interface StartProcess {
   url?: string; // optional URL where the process will be accessible
 }
 
+export interface DetectedScriptGroup {
+  relativeDir: string; // '' for project root, e.g. 'backend' for a subdirectory
+  scripts: Record<string, string>;
+}
+
 export interface ProcessStatus {
   processId: string;
   projectId?: string; // Project ID this process belongs to

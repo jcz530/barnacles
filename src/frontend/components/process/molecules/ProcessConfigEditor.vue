@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { Plus, Trash2, Wrench, X, Zap } from 'lucide-vue-next';
-import { computed, onMounted, ref } from 'vue';
-import type { StartProcess } from '../../../../shared/types/process';
+import { Link, Plus, Terminal, Trash2, Wrench, X, Zap } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
+import type { DetectedScriptGroup, StartProcess } from '../../../../shared/types/process';
+import type { ApiResponse } from '../../../../shared/types/api';
+import { API_ROUTES } from '../../../../shared/constants';
+import { useApi } from '../../../composables/useApi';
 import { useQueries } from '../../../composables/useQueries';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -32,7 +35,8 @@ const emit = defineEmits<Emits>();
 
 const processes = ref<StartProcess[]>([]);
 const configMode = ref<'quick' | 'advanced'>('quick');
-const selectedScripts = ref<string[]>([]); // Format: "type:scriptName" e.g., "npm:dev" or "composer:install"
+// Format: "type:relativeDir:scriptName" e.g., "npm::dev" (root) or "npm:backend:dev" (subdir)
+const selectedScripts = ref<string[]>([]);
 
 // Fetch package scripts, composer scripts, hosts, package manager, and project details for autocomplete
 const {
@@ -44,47 +48,79 @@ const {
   useStartProcessesQuery,
   useUpdateStartProcessesMutation,
 } = useQueries();
-const { data: packageScripts } = useProjectPackageScriptsQuery(props.projectId, {
+const { data: packageScriptGroups } = useProjectPackageScriptsQuery(props.projectId, {
   enabled: true,
 });
-const { data: composerScripts } = useProjectComposerScriptsQuery(props.projectId, {
+const { data: composerScriptGroups } = useProjectComposerScriptsQuery(props.projectId, {
   enabled: true,
 });
 const { data: project } = useProjectQuery(props.projectId);
 const { data: hosts } = useHostsQuery({ enabled: true });
 const { data: startProcesses } = useStartProcessesQuery(props.projectId);
 const updateProcessesMutation = useUpdateStartProcessesMutation();
+const { apiCall } = useApi();
 
-// Detect package manager from backend API
+// Detect the root package manager (used for the root script group's command suggestions)
 const { data: detectedPackageManager } = useProjectPackageManagerQuery(props.projectId, {
   enabled: true,
 });
 
-// Generate command suggestions from detected package scripts and composer scripts
+// Package manager per subdirectory, resolved lazily as groups are discovered.
+// Falls back to the root-detected package manager until resolved.
+const subdirPackageManagers = ref<Record<string, 'npm' | 'yarn' | 'pnpm'>>({});
+
+const packageManagerForDir = (relativeDir: string): 'npm' | 'yarn' | 'pnpm' => {
+  if (!relativeDir) return detectedPackageManager.value || 'npm';
+  return subdirPackageManagers.value[relativeDir] || detectedPackageManager.value || 'npm';
+};
+
+// When new package script subdirectories are detected, look up each one's
+// package manager so generated commands (yarn/pnpm/npm) are correct per workspace.
+watch(
+  packageScriptGroups,
+  groups => {
+    (groups || []).forEach(group => {
+      if (!group.relativeDir || subdirPackageManagers.value[group.relativeDir]) return;
+      apiCall<ApiResponse<'npm' | 'yarn' | 'pnpm'>>(
+        'GET',
+        `${API_ROUTES.PROJECTS}/${props.projectId}/package-manager?subPath=${encodeURIComponent(group.relativeDir)}`
+      ).then(response => {
+        if (response?.data) {
+          subdirPackageManagers.value[group.relativeDir] = response.data;
+        }
+      });
+    });
+  },
+  { immediate: true }
+);
+
+const commandForScript = (relativeDir: string, scriptName: string, isComposer: boolean) => {
+  if (isComposer) {
+    return `composer ${scriptName}`;
+  }
+  const pkgManager = packageManagerForDir(relativeDir);
+  return pkgManager === 'yarn'
+    ? `yarn ${scriptName}`
+    : pkgManager === 'pnpm'
+      ? `pnpm ${scriptName}`
+      : `npm run ${scriptName}`;
+};
+
+// Generate command suggestions from all detected package script groups and composer script groups
 const commandSuggestions = computed(() => {
   const suggestions: string[] = [];
-  const pkgManager = detectedPackageManager.value || 'npm';
 
-  if (packageScripts.value) {
-    Object.keys(packageScripts.value).forEach(scriptName => {
-      switch (pkgManager) {
-        case 'yarn':
-          suggestions.push(`yarn ${scriptName}`);
-          break;
-        case 'pnpm':
-          suggestions.push(`pnpm ${scriptName}`);
-          break;
-        default:
-          suggestions.push(`npm run ${scriptName}`);
-      }
+  (packageScriptGroups.value || []).forEach((group: DetectedScriptGroup) => {
+    Object.keys(group.scripts).forEach(scriptName => {
+      suggestions.push(commandForScript(group.relativeDir, scriptName, false));
     });
-  }
+  });
 
-  if (composerScripts.value) {
-    Object.keys(composerScripts.value).forEach(scriptName => {
-      suggestions.push(`composer ${scriptName}`);
+  (composerScriptGroups.value || []).forEach((group: DetectedScriptGroup) => {
+    Object.keys(group.scripts).forEach(scriptName => {
+      suggestions.push(commandForScript(group.relativeDir, scriptName, true));
     });
-  }
+  });
 
   return suggestions;
 });
@@ -107,36 +143,51 @@ const urlSuggestions = computed(() => {
 // Color palette for quick setup
 const colorPalette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
 
-// Generate process config from script key (format: "type:scriptName")
-const generateProcessFromScript = (scriptKey: string): StartProcess => {
-  const [type, scriptName] = scriptKey.split(':');
-  const colorIndex = selectedScripts.value.length % colorPalette.length;
-  const pkgManager = detectedPackageManager.value || 'npm';
+// Build a script key from its parts (format: "type:relativeDir:scriptName").
+// relativeDir never contains a colon (it's a folder name), so the remainder
+// after the first two colons is always the script name, even if the script
+// name itself contains colons (e.g. npm script "test:unit").
+const makeScriptKey = (type: 'npm' | 'composer', relativeDir: string, scriptName: string) =>
+  `${type}:${relativeDir}:${scriptName}`;
 
-  let command: string;
-  if (type === 'composer') {
-    command = `composer ${scriptName}`;
-  } else {
-    // npm/yarn/pnpm
-    command =
-      pkgManager === 'yarn'
-        ? `yarn ${scriptName}`
-        : pkgManager === 'pnpm'
-          ? `pnpm ${scriptName}`
-          : `npm run ${scriptName}`;
-  }
-
+const parseScriptKey = (scriptKey: string) => {
+  const firstColon = scriptKey.indexOf(':');
+  const secondColon = scriptKey.indexOf(':', firstColon + 1);
   return {
-    id: `process-${Date.now()}-${scriptName}`,
-    name: scriptName.charAt(0).toUpperCase() + scriptName.slice(1).replace(/-/g, ' '),
-    commands: [command],
-    color: colorPalette[colorIndex],
+    type: scriptKey.slice(0, firstColon) as 'npm' | 'composer',
+    relativeDir: scriptKey.slice(firstColon + 1, secondColon),
+    scriptName: scriptKey.slice(secondColon + 1),
   };
 };
 
-// Initialize processes when the sheet opens
-onMounted(() => {
-  if (props.isOpen) {
+// Generate process config from a script key
+const generateProcessFromScript = (scriptKey: string): StartProcess => {
+  const { type, relativeDir, scriptName } = parseScriptKey(scriptKey);
+  const colorIndex = selectedScripts.value.length % colorPalette.length;
+  const command = commandForScript(relativeDir, scriptName, type === 'composer');
+
+  const label = relativeDir
+    ? `${relativeDir} ${scriptName}`
+    : scriptName.charAt(0).toUpperCase() + scriptName.slice(1).replace(/-/g, ' ');
+
+  return {
+    id: `process-${Date.now()}-${scriptName}`,
+    name: label,
+    commands: [command],
+    color: colorPalette[colorIndex],
+    ...(relativeDir ? { workingDir: relativeDir } : {}),
+  };
+};
+
+// Initialize processes every time the sheet opens. The editor is mounted
+// once by its parent and toggled via the isOpen prop, so this can't be
+// onMounted-only — that would only load the data on the very first open
+// and show stale state on every subsequent reopen.
+watch(
+  () => props.isOpen,
+  isOpen => {
+    if (!isOpen) return;
+
     // Determine mode based on whether we have existing processes
     const hasExistingProcesses = startProcesses.value && startProcesses.value.length > 0;
     configMode.value = hasExistingProcesses ? 'advanced' : 'quick';
@@ -145,8 +196,9 @@ onMounted(() => {
 
     // Reset selected scripts
     selectedScripts.value = [];
-  }
-});
+  },
+  { immediate: true }
+);
 
 const addProcess = () => {
   processes.value.push({
@@ -274,8 +326,8 @@ const handleClose = () => {
 
           <div
             v-if="
-              (!packageScripts || Object.keys(packageScripts).length === 0) &&
-              (!composerScripts || Object.keys(composerScripts).length === 0)
+              (!packageScriptGroups || packageScriptGroups.length === 0) &&
+              (!composerScriptGroups || composerScriptGroups.length === 0)
             "
           >
             <div class="rounded-lg border border-dashed p-8 text-center text-slate-500">
@@ -285,68 +337,82 @@ const handleClose = () => {
           </div>
 
           <div v-else class="space-y-4">
-            <!-- NPM/Yarn/PNPM Scripts Section -->
-            <div v-if="packageScripts && Object.keys(packageScripts).length > 0" class="space-y-2">
+            <!-- NPM/Yarn/PNPM Scripts Sections (root + any detected subdirectories) -->
+            <div
+              v-for="group in packageScriptGroups || []"
+              :key="`npm-group:${group.relativeDir}`"
+              class="space-y-2"
+            >
               <div class="text-xs font-semibold tracking-wide text-slate-500 uppercase">
                 {{
-                  (detectedPackageManager || 'npm') === 'yarn'
-                    ? 'Yarn'
-                    : (detectedPackageManager || 'npm') === 'pnpm'
-                      ? 'PNPM'
-                      : 'NPM'
+                  group.relativeDir
+                    ? `${group.relativeDir}/package.json`
+                    : packageManagerForDir('') === 'yarn'
+                      ? 'Yarn'
+                      : packageManagerForDir('') === 'pnpm'
+                        ? 'PNPM'
+                        : 'NPM'
                 }}
                 Scripts
               </div>
               <div class="space-y-0">
                 <Label
-                  v-for="scriptName in Object.keys(packageScripts)"
-                  :key="`npm:${scriptName}`"
+                  v-for="scriptName in Object.keys(group.scripts)"
+                  :key="makeScriptKey('npm', group.relativeDir, scriptName)"
                   class="flex cursor-pointer items-center space-x-3 rounded-lg border px-4 py-2 hover:bg-slate-100"
                 >
                   <Checkbox
-                    :id="`script-npm-${scriptName}`"
-                    :model-value="selectedScripts.includes(`npm:${scriptName}`)"
-                    @update:model-value="toggleScriptSelection(`npm:${scriptName}`)"
+                    :id="`script-${makeScriptKey('npm', group.relativeDir, scriptName)}`"
+                    :model-value="
+                      selectedScripts.includes(makeScriptKey('npm', group.relativeDir, scriptName))
+                    "
+                    @update:model-value="
+                      toggleScriptSelection(makeScriptKey('npm', group.relativeDir, scriptName))
+                    "
                   />
                   <div class="flex-1 cursor-pointer">
                     <div class="font-medium">{{ scriptName }}</div>
                     <div class="text-xs text-slate-500">
-                      {{
-                        (detectedPackageManager || 'npm') === 'yarn'
-                          ? 'yarn'
-                          : (detectedPackageManager || 'npm') === 'pnpm'
-                            ? 'pnpm'
-                            : 'npm run'
-                      }}
-                      {{ scriptName }}
+                      {{ commandForScript(group.relativeDir, scriptName, false) }}
                     </div>
                   </div>
                 </Label>
               </div>
             </div>
 
-            <!-- Composer Scripts Section -->
+            <!-- Composer Scripts Sections (root + any detected subdirectories) -->
             <div
-              v-if="composerScripts && Object.keys(composerScripts).length > 0"
+              v-for="group in composerScriptGroups || []"
+              :key="`composer-group:${group.relativeDir}`"
               class="space-y-2"
             >
               <div class="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                Composer Scripts
+                {{ group.relativeDir ? `${group.relativeDir}/composer.json` : 'Composer' }} Scripts
               </div>
               <div class="space-y-0">
                 <Label
-                  v-for="scriptName in Object.keys(composerScripts)"
-                  :key="`composer:${scriptName}`"
+                  v-for="scriptName in Object.keys(group.scripts)"
+                  :key="makeScriptKey('composer', group.relativeDir, scriptName)"
                   class="flex cursor-pointer items-center space-x-3 rounded-lg border px-4 py-2 hover:bg-slate-100"
                 >
                   <Checkbox
-                    :id="`script-composer-${scriptName}`"
-                    :model-value="selectedScripts.includes(`composer:${scriptName}`)"
-                    @update:model-value="toggleScriptSelection(`composer:${scriptName}`)"
+                    :id="`script-${makeScriptKey('composer', group.relativeDir, scriptName)}`"
+                    :model-value="
+                      selectedScripts.includes(
+                        makeScriptKey('composer', group.relativeDir, scriptName)
+                      )
+                    "
+                    @update:model-value="
+                      toggleScriptSelection(
+                        makeScriptKey('composer', group.relativeDir, scriptName)
+                      )
+                    "
                   />
                   <div class="flex-1 cursor-pointer">
                     <div class="font-medium">{{ scriptName }}</div>
-                    <div class="text-xs text-slate-500">composer {{ scriptName }}</div>
+                    <div class="text-xs text-slate-500">
+                      {{ commandForScript(group.relativeDir, scriptName, true) }}
+                    </div>
                   </div>
                 </Label>
               </div>
@@ -365,9 +431,7 @@ const handleClose = () => {
 
           <div
             v-if="
-              packageScripts &&
-              Object.keys(packageScripts).length > 0 &&
-              selectedScripts.length === 0
+              packageScriptGroups && packageScriptGroups.length > 0 && selectedScripts.length === 0
             "
             class="rounded-lg bg-amber-50 p-4"
           >
@@ -433,6 +497,7 @@ const handleClose = () => {
                 v-model="process.url"
                 :suggestions="urlSuggestions"
                 placeholder="e.g., http://localhost:3000"
+                :icon="Link"
               />
               <p class="text-xs text-slate-500">
                 The URL where this process will be accessible. If not provided, we'll try to detect
@@ -453,6 +518,7 @@ const handleClose = () => {
                     v-model="process.commands[commandIndex]"
                     :suggestions="commandSuggestions"
                     placeholder="e.g., npm install, npm run dev"
+                    :icon="Terminal"
                   />
                 </div>
                 <Button
