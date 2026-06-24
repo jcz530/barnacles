@@ -97,27 +97,14 @@ const filteredPorts = computed<PortEntry[]>(() => {
   );
   const all = [...ports, ...ghosts];
 
-  let result = all.filter(p => {
+  // Sorting (for both table and card view) is handled by PortsTable's
+  // TanStack Table instance, driven by the tableSorting state below.
+  return all.filter(p => {
     if (dyingPids.value.has(p.pid)) return true; // always keep dying rows
     if (showDevOnly.value && !isDevProcess(p.processName)) return false;
     if (q && !p.processName.toLowerCase().includes(q) && !String(p.port).includes(q)) return false;
     return true;
   });
-
-  if (viewMode.value === 'card' && tableSorting.value.length > 0) {
-    const { id: sortField, desc } = tableSorting.value[0];
-    result = [...result].sort((a, b) => {
-      const aVal = a[sortField as keyof PortEntry];
-      const bVal = b[sortField as keyof PortEntry];
-      const cmp =
-        typeof aVal === 'string'
-          ? aVal.localeCompare(String(bVal))
-          : (aVal as number) - (bVal as number);
-      return desc ? -cmp : cmp;
-    });
-  }
-
-  return result;
 });
 
 const totalCount = computed(() => (portsData.value || []).length);

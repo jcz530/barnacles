@@ -116,16 +116,16 @@ const table = useVueTable({
       class="grid grid-cols-1 gap-4 px-4 md:grid-cols-2 lg:grid-cols-3"
     >
       <div
-        v-for="port in ports"
-        :key="`${port.pid}-${port.port}-card`"
-        :class="{ 'port-dying': props.dyingPids?.has(port.pid) }"
+        v-for="row in table.getRowModel().rows"
+        :key="`${row.original.pid}-${row.original.port}-card`"
+        :class="{ 'port-dying': props.dyingPids?.has(row.original.pid) }"
       >
         <PortCard
-          :port="port"
+          :port="row.original"
           :project-by-path="props.projectByPath ?? new Map()"
-          :http-info="props.httpPorts?.get(port.port)"
-          :screenshot="props.screenshots?.get(port.port)"
-          :is-killing="props.killingPids?.has(port.pid) ?? false"
+          :http-info="props.httpPorts?.get(row.original.port)"
+          :screenshot="props.screenshots?.get(row.original.port)"
+          :is-killing="props.killingPids?.has(row.original.pid) ?? false"
           @kill="emit('kill', $event)"
         />
       </div>
