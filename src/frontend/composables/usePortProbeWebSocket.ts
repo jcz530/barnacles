@@ -1,5 +1,5 @@
-import { useDebounceFn } from '@vueuse/core';
-import { onUnmounted, ref, watch } from 'vue';
+import { useDebounceFn, useWebSocket } from '@vueuse/core';
+import { computed, ref, watch } from 'vue';
 import type { Ref } from 'vue';
 import { useApiPort } from './useApiPort';
 
@@ -18,49 +18,18 @@ export interface ProbeTarget {
 }
 
 export function usePortProbeWebSocket(targets: Ref<ProbeTarget[]>) {
-  const ws = ref<WebSocket | null>(null);
-  const isConnected = ref(false);
   const isProbing = ref(false);
   const error = ref<string | null>(null);
   const probeResults = ref<Map<number, ProbeResult>>(new Map());
-  const knownPorts = new Set<number>();
 
-  const { wsBaseUrl, isLoaded, loadApiPort } = useApiPort();
+  const { wsBaseUrl } = useApiPort();
+  const wsUrl = computed(() => `${wsBaseUrl.value}/api/ports/probe/ws`);
 
-  const disconnect = () => {
-    if (ws.value) {
-      ws.value.close();
-      ws.value = null;
-    }
-    isConnected.value = false;
-    isProbing.value = false;
-  };
-
-  const sendProbe = (probeTargets: ProbeTarget[]) => {
-    ws.value?.send(JSON.stringify({ action: 'probe', targets: probeTargets }));
-  };
-
-  const connect = async (probeTargets: ProbeTarget[]) => {
-    if (probeTargets.length === 0) return;
-
-    disconnect();
-
-    if (!isLoaded.value) {
-      await loadApiPort();
-    }
-
-    const wsUrl = `${wsBaseUrl.value}/api/ports/probe/ws`;
-    const socket = new WebSocket(wsUrl);
-    ws.value = socket;
-    isProbing.value = true;
-    error.value = null;
-
-    socket.onopen = () => {
-      isConnected.value = true;
-      sendProbe(probeTargets);
-    };
-
-    socket.onmessage = event => {
+  const { status, send, open } = useWebSocket(wsUrl, {
+    immediate: false,
+    autoConnect: false,
+    autoReconnect: false,
+    onMessage: (_ws, event) => {
       try {
         const message = JSON.parse(event.data);
 
@@ -75,24 +44,24 @@ export function usePortProbeWebSocket(targets: Ref<ProbeTarget[]>) {
             signature,
             cachedScreenshot,
           });
-          knownPorts.add(port);
         } else if (message.type === 'probe-complete') {
           isProbing.value = false;
         }
       } catch (err) {
         console.error('Error parsing port probe WebSocket message:', err);
       }
-    };
-
-    socket.onerror = () => {
+    },
+    onError: () => {
       error.value = 'Port probe WebSocket connection error';
-      isConnected.value = false;
       isProbing.value = false;
-    };
+    },
+  });
 
-    socket.onclose = () => {
-      isConnected.value = false;
-    };
+  const isConnected = computed(() => status.value === 'OPEN');
+
+  const sendProbe = (probeTargets: ProbeTarget[]) => {
+    isProbing.value = true;
+    send(JSON.stringify({ action: 'probe', targets: probeTargets }));
   };
 
   const handleTargetsChange = useDebounceFn((newTargets: ProbeTarget[]) => {
@@ -104,21 +73,21 @@ export function usePortProbeWebSocket(targets: Ref<ProbeTarget[]>) {
     for (const port of next.keys()) {
       if (!newPorts.has(port)) {
         next.delete(port);
-        knownPorts.delete(port);
         removedAny = true;
       }
     }
     if (removedAny) probeResults.value = next;
 
-    const added = newTargets.filter(t => !knownPorts.has(t.port));
+    const added = newTargets.filter(t => !probeResults.value.has(t.port));
     if (added.length === 0) return;
 
-    if (isConnected.value && ws.value) {
-      isProbing.value = true;
-      sendProbe(added);
-    } else {
-      connect(newTargets);
+    error.value = null;
+    if (status.value === 'CLOSED') {
+      open();
     }
+    // useWebSocket buffers send() until the connection is OPEN, so this is
+    // safe to call immediately after open() too.
+    sendProbe(added);
   }, 300);
 
   watch(
@@ -130,10 +99,6 @@ export function usePortProbeWebSocket(targets: Ref<ProbeTarget[]>) {
     },
     { immediate: true }
   );
-
-  onUnmounted(() => {
-    disconnect();
-  });
 
   return {
     probeResults,
