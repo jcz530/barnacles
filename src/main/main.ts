@@ -44,6 +44,13 @@ contextMenu({
   showInspectElement: !app.isPackaged,
 });
 
+// Main windows are resizable and not always-on-top; this excludes the tray
+// popup and other utility windows from window-focus/activation logic.
+const getMainWindows = (): BrowserWindow[] =>
+  BrowserWindow.getAllWindows().filter(
+    win => !win.isDestroyed() && !win.skipTaskbar && win.isResizable() && !win.isAlwaysOnTop()
+  );
+
 // Function to create and track a new window
 export const createAppWindow = async (): Promise<BrowserWindow> => {
   const newWindow = await createWindow(apiPort);
@@ -210,11 +217,12 @@ const initialize = async (): Promise<void> => {
 app.on('ready', initialize);
 
 // Focus the existing window instead of letting a second launch start a competing instance
-app.on('second-instance', () => {
-  const allWindows = BrowserWindow.getAllWindows();
-  const mainWindows = allWindows.filter(
-    win => !win.isDestroyed() && !win.skipTaskbar && win.isResizable() && !win.isAlwaysOnTop()
-  );
+app.on('second-instance', (_event, commandLine) => {
+  // A second launch with --background (e.g. the CLI starting the API when no
+  // instance is running) shouldn't pop the window of an already-running instance.
+  if (commandLine.includes('--background')) return;
+
+  const mainWindows = getMainWindows();
 
   if (mainWindows.length > 0) {
     const [existingWindow] = mainWindows;
@@ -255,20 +263,12 @@ app.on('activate', async () => {
   }
 
   // On macOS, show or create a window when the dock icon is clicked
-  // Exclude tray popup and other utility windows
-  const allWindows = BrowserWindow.getAllWindows();
-  const mainWindows = allWindows.filter(
-    win =>
-      !win.isDestroyed() &&
-      !win.skipTaskbar &&
-      win.isResizable() && // Main windows are resizable, tray popup is not
-      !win.isAlwaysOnTop() // Main windows are not always on top, tray popup is
-  );
+  const mainWindows = getMainWindows();
   const visibleMainWindows = mainWindows.filter(win => win.isVisible());
 
   if (process.env.NODE_ENV === 'development') {
     console.log('[App] Window counts:', {
-      total: allWindows.length,
+      total: BrowserWindow.getAllWindows().length,
       mainWindows: mainWindows.length,
       visibleMainWindows: visibleMainWindows.length,
     });
