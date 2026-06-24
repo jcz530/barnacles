@@ -29,6 +29,13 @@ vi.mock('child_process', async importOriginal => {
   };
 });
 
+// These tests assert on lsof/ps output parsing, so force the Unix code path
+// regardless of the OS actually running the test (e.g. Windows CI runners).
+vi.mock('@shared/utils/platform', async importOriginal => {
+  const actual = await importOriginal<typeof import('@shared/utils/platform')>();
+  return { ...actual, isMac: true, isWindows: false, isLinux: false };
+});
+
 describe('Ports API Integration Tests', () => {
   const context = createIntegrationTestContext();
 
