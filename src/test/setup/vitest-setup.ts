@@ -27,7 +27,6 @@ vi.mock('node-pty', () => ({
 let migrationsRun = false;
 
 if (!migrationsRun) {
-  // eslint-disable-next-line no-undef
   const migrationsPath = path.join(process.cwd(), 'migrations');
   await migrate(db, { migrationsFolder: migrationsPath });
   migrationsRun = true;

@@ -21,7 +21,6 @@ export function createTestDb() {
  * Runs migrations on the test database
  */
 export async function runMigrations(db: ReturnType<typeof drizzle>) {
-  // eslint-disable-next-line no-undef
   const migrationsPath = path.join(process.cwd(), 'migrations');
   await migrate(db, { migrationsFolder: migrationsPath });
 }

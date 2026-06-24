@@ -193,12 +193,12 @@ system.get('/directories/search', async c => {
           if (currentDepth < maxDepth) {
             try {
               await searchDir(fullPath, currentDepth + 1);
-            } catch (err) {
+            } catch {
               // Skip directories we don't have permission to read
             }
           }
         }
-      } catch (error) {
+      } catch {
         // Skip directories we can't read
         return;
       }
@@ -330,7 +330,7 @@ system.post('/hosts', async c => {
         console.error('Failed to update hosts file:', error);
         try {
           await fs.unlink(tmpPath);
-        } catch (unlinkError) {
+        } catch {
           // Ignore cleanup errors
         }
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';

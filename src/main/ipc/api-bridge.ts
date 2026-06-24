@@ -37,7 +37,7 @@ export const setupAPIBridge = (): void => {
           const error = new Error(
             data.error || data.message || `HTTP ${response.status}: ${response.statusText}`
           ) as Error & {
-            response?: { status: number; data: any };
+            response?: { status: number; data: unknown };
           };
 
           // Attach response details so frontend can access them

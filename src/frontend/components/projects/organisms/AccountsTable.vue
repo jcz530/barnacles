@@ -61,7 +61,7 @@ const handleDelete = async (account: Account, e: Event) => {
       accountId: account.id,
     });
     toast.success('Account deleted successfully');
-  } catch (error) {
+  } catch {
     toast.error('Failed to delete account');
   }
 };

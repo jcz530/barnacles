@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, type ComputedRef, inject, type Ref, ref, watch } from 'vue';
+import { computed, type ComputedRef, inject, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ArrowLeft } from 'lucide-vue-next';
 import { useQueries } from '@/composables/useQueries';
@@ -9,14 +9,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RouteNames } from '@/router';
 import { toast } from 'vue-sonner';
-import type { ProjectWithDetails } from '../../../shared/types/api';
-
 const route = useRoute();
 const router = useRouter();
 
 // Inject project data from parent (ProjectDetail)
 const projectId = inject<ComputedRef<string>>('projectId');
-const project = inject<Ref<ProjectWithDetails | undefined>>('project');
 
 if (!projectId) {
   throw new Error('AccountForm must be used within a project detail page');

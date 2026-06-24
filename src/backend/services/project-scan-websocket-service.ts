@@ -1,9 +1,10 @@
 import { IncomingMessage, Server as HttpServer } from 'http';
 import { WebSocket, WebSocketServer } from 'ws';
-import { projectScannerService } from './project-scanner-service';
+import { projectScannerService, type ProjectInfo } from './project-scanner-service';
 import { projectService } from './project';
 import { settingsService } from './settings-service';
 import { getDefaultScanDirectories } from '../utils/default-scan-directories';
+import type { ProjectWithDetails } from '../../shared/types/api';
 
 export interface ScanProgress {
   type:
@@ -14,7 +15,7 @@ export interface ScanProgress {
     | 'scan-error'
     | 'scan-status';
   projectPath?: string;
-  projectData?: any;
+  projectData?: ProjectInfo | ProjectWithDetails;
   totalDiscovered?: number;
   error?: string;
   isScanning?: boolean;
@@ -40,7 +41,7 @@ export class ProjectScanWebSocketService {
       }
     });
 
-    this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+    this.wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
       console.log('Project scan WebSocket connection established');
       this.connections.add(ws);
 
@@ -82,7 +83,7 @@ export class ProjectScanWebSocketService {
 
         // If there's an active scan, notify the client
         if (this.activeScans.size > 0) {
-          const [scanId, scanState] = Array.from(this.activeScans.entries())[0];
+          const [, scanState] = Array.from(this.activeScans.entries())[0];
           ws.send(
             JSON.stringify({
               type: 'scan-status',
@@ -213,7 +214,7 @@ export class ProjectScanWebSocketService {
    */
   private handleStopRequest(ws: WebSocket): void {
     // Cancel all active scans
-    for (const [scanId, scanState] of this.activeScans) {
+    for (const [, scanState] of this.activeScans) {
       scanState.cancelled = true;
     }
 
@@ -229,7 +230,7 @@ export class ProjectScanWebSocketService {
   private async scanDirectoriesIncremental(
     basePaths: string[],
     maxDepth: number,
-    onProjectDiscovered: (projectInfo: any) => Promise<void>,
+    onProjectDiscovered: (projectInfo: ProjectInfo) => Promise<void>,
     scanId: string
   ): Promise<void> {
     const fs = await import('fs/promises');

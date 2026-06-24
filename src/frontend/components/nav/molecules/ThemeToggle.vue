@@ -8,11 +8,10 @@ import {
 } from '@/components/ui/sidebar';
 import { RouteNames } from '@/router';
 import { useDark, useLocalStorage } from '@vueuse/core';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { Moon, Palette, Sun, SunMoon } from 'lucide-vue-next';
 import { computed } from 'vue';
 
-const router = useRouter();
 const route = useRoute();
 
 const isDark = useDark({

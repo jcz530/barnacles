@@ -1,7 +1,6 @@
 import { compactLogo } from '../utils/branding.js';
 import { autocomplete, intro, isCancel, log, outro } from '@clack/prompts';
 import { Command } from '../core/Command.js';
-import pc from 'picocolors';
 import { cliUtilityRegistry, registerCliUtilities } from '../utilities/registry.js';
 
 /**

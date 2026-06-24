@@ -25,6 +25,8 @@ export default [
       prettier: prettierPlugin,
     },
     rules: {
+      'no-unused-vars': 'off',
+      'no-undef': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -54,7 +56,11 @@ export default [
       '@typescript-eslint': tsEslint,
       prettier: prettierPlugin,
     },
+    processor: 'vue/vue',
     rules: {
+      'no-unused-vars': 'off',
+      'no-undef': 'off',
+      'vue/comment-directive': 'error',
       'vue/multi-word-component-names': 'off',
       'vue/no-v-html': 'warn',
       'vue/no-ref-as-operand': 'error',
@@ -115,6 +121,7 @@ export default [
         Blob: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
+        AbortSignal: 'readonly',
 
         // Electron Forge globals
         MAIN_WINDOW_VITE_DEV_SERVER_URL: 'readonly',
@@ -123,7 +130,6 @@ export default [
     },
     rules: {
       'no-console': 'off',
-      'no-undef': 'error',
     },
   },
 
@@ -158,6 +164,8 @@ export default [
         Event: 'readonly',
         CustomEvent: 'readonly',
         HTMLElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        HTMLDivElement: 'readonly',
         Element: 'readonly',
         Node: 'readonly',
         NodeList: 'readonly',
@@ -173,6 +181,8 @@ export default [
         FileReader: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
+        WebSocket: 'readonly',
+        AbortSignal: 'readonly',
         localStorage: 'readonly',
         sessionStorage: 'readonly',
         navigator: 'readonly',
@@ -182,6 +192,9 @@ export default [
         // Animation
         requestAnimationFrame: 'readonly',
         cancelAnimationFrame: 'readonly',
+
+        // Observers
+        ResizeObserver: 'readonly',
       },
     },
   },

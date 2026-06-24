@@ -25,11 +25,10 @@ import type {
   User,
 } from '../../shared/types/api';
 import type { Theme } from '../../shared/types/theme';
-import type { DetectedScriptGroup } from '../../shared/types/process';
+import type { DetectedScriptGroup, ProcessStatus } from '../../shared/types/process';
 import type { IpInfo } from '../../shared/utilities/ip-info';
+import type { RelatedFolder } from '../../backend/services/project/project-related-folders-service';
 import { useApi } from './useApi';
-
-/* global URLSearchParams */
 
 export const useQueries = () => {
   const { apiCall } = useApi();
@@ -155,7 +154,7 @@ export const useQueries = () => {
     return useQuery({
       queryKey: ['projects', unref(projectId), 'related-folders'],
       queryFn: async () => {
-        const response = await apiCall<ApiResponse<any[]>>(
+        const response = await apiCall<ApiResponse<RelatedFolder[]>>(
           'GET',
           `${API_ROUTES.PROJECTS}/${unref(projectId)}/related-folders`
         );
@@ -174,7 +173,7 @@ export const useQueries = () => {
   const useAddRelatedFolderMutation = () => {
     return useMutation({
       mutationFn: async ({ projectId, folderPath }: { projectId: string; folderPath: string }) => {
-        const response = await apiCall<ApiResponse<any>>(
+        const response = await apiCall<ApiResponse<RelatedFolder>>(
           'POST',
           `${API_ROUTES.PROJECTS}/${projectId}/related-folders`,
           { folderPath }
@@ -925,7 +924,7 @@ export const useQueries = () => {
         if (pid) params.append('projectId', pid);
 
         const query = params.toString() ? `?${params.toString()}` : '';
-        const response = await apiCall<ApiResponse<any[]>>(
+        const response = await apiCall<ApiResponse<ProcessStatus[]>>(
           'GET',
           `${API_ROUTES.PROCESSES}${query}`
         );
@@ -946,7 +945,7 @@ export const useQueries = () => {
     return useQuery({
       queryKey: ['process', unref(processId)],
       queryFn: async () => {
-        const response = await apiCall<ApiResponse<any>>(
+        const response = await apiCall<ApiResponse<ProcessStatus>>(
           'GET',
           `${API_ROUTES.PROCESSES}/${unref(processId)}`
         );
@@ -970,7 +969,11 @@ export const useQueries = () => {
         command?: string;
         title?: string;
       }) => {
-        const response = await apiCall<ApiResponse<any>>('POST', API_ROUTES.PROCESSES, params);
+        const response = await apiCall<ApiResponse<ProcessStatus>>(
+          'POST',
+          API_ROUTES.PROCESSES,
+          params
+        );
 
         if (!response) {
           throw new Error('Failed to create process');

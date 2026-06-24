@@ -67,7 +67,6 @@ export const colorConverterCli = {
       intro(`${compactLogo} CSS Color Converter`);
       log.info('Enter colors to convert. Press Ctrl+C or type "exit" to quit.\n');
 
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         const input = await text({
           message: 'Enter a color value:',

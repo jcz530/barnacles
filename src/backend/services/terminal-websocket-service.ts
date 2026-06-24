@@ -124,7 +124,7 @@ export class TerminalWebSocketService {
    * Cleanup all connections
    */
   cleanup(): void {
-    for (const [terminalId, ws] of this.connections.entries()) {
+    for (const [, ws] of this.connections.entries()) {
       ws.close(1000, 'Server shutting down');
     }
     this.connections.clear();

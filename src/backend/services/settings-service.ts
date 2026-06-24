@@ -209,7 +209,7 @@ class SettingsService {
    */
   getDefaultSettings(): Record<string, unknown> {
     const defaults: Record<string, unknown> = {};
-    for (const [key, setting] of Object.entries(DEFAULT_SETTINGS)) {
+    for (const [key] of Object.entries(DEFAULT_SETTINGS)) {
       defaults[key] = this.getDefaultValue(key);
     }
     return defaults;

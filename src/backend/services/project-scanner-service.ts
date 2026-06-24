@@ -26,13 +26,13 @@ export interface ProjectInfo {
   description?: string;
   technologies: string[];
   stats: {
-    fileCount: number;
-    directoryCount: number;
-    size: number;
+    fileCount?: number;
+    directoryCount?: number;
+    size?: number;
     lastModified: Date;
-    languageStats: LanguageStats;
-    linesOfCode: number;
-    thirdPartySize: number;
+    languageStats?: LanguageStats;
+    linesOfCode?: number;
+    thirdPartySize?: number;
   };
   gitInfo?: {
     branch: string;

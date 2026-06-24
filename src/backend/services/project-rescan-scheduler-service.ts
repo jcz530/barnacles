@@ -1,7 +1,7 @@
 import { projectService } from './project';
 import { projectScanWebSocketService } from './project-scan-websocket-service';
 import { settingsService } from './settings-service';
-import { projectScannerService } from './project-scanner-service';
+import { projectScannerService, type ProjectInfo } from './project-scanner-service';
 
 export class ProjectRescanSchedulerService {
   private intervalId: NodeJS.Timeout | null = null;
@@ -103,9 +103,8 @@ export class ProjectRescanSchedulerService {
    * Perform a lightweight scan of a project (only essential information)
    * This is faster than a full scan and suitable for periodic updates
    */
-  private async lightweightProjectScan(projectPath: string): Promise<any | null> {
+  private async lightweightProjectScan(projectPath: string): Promise<ProjectInfo | null> {
     const fs = await import('fs/promises');
-    const path = await import('path');
 
     try {
       // Check if project still exists
@@ -145,7 +144,7 @@ export class ProjectRescanSchedulerService {
         },
         gitInfo,
       };
-    } catch (error) {
+    } catch {
       // Project no longer exists or can't be accessed
       return null;
     }

@@ -77,6 +77,7 @@ class ProcessManagerService {
    */
   private detectUrl(output: string): string | undefined {
     // First, strip all ANSI escape codes from the entire output
+    // eslint-disable-next-line no-control-regex -- \x1B matches the ANSI escape character
     const cleanOutput = output.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
 
     // Common URL patterns in development server output
@@ -538,7 +539,7 @@ class ProcessManagerService {
    * Get output from a process by ID (search across all projects)
    */
   getProcessOutputById(processId: string): string[] | null {
-    for (const [projectId, projectProcesses] of this.runningProcesses.entries()) {
+    for (const [, projectProcesses] of this.runningProcesses.entries()) {
       if (projectProcesses.has(processId)) {
         const runningProcess = projectProcesses.get(processId)!;
         return runningProcess.output;

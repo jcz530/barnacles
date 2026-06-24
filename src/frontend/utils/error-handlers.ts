@@ -14,10 +14,25 @@ export function getPermissionErrorMessage(appType: 'terminal' | 'IDE'): string {
   );
 }
 
+interface PermissionErrorResponse {
+  response?: {
+    status?: number;
+    data?: {
+      code?: string;
+      targetApp?: string;
+      instructions?: string;
+    };
+  };
+  message?: string;
+}
+
 /**
  * Checks if an error is a permission error and returns formatted message
  */
-export function handlePermissionError(error: any, appType: 'terminal' | 'IDE'): string | null {
+export function handlePermissionError(
+  error: PermissionErrorResponse,
+  appType: 'terminal' | 'IDE'
+): string | null {
   // Check for structured permission error response
   if (error?.response?.status === 403 && error?.response?.data?.code) {
     const { targetApp, instructions } = error.response.data;
