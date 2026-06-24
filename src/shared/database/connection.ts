@@ -8,7 +8,9 @@ import * as schema from './schema';
 // Standard user data location for all contexts (Electron and CLI)
 export function getAppDataDir(): string {
   if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
-    const tmpPath = path.join(os.tmpdir(), 'barnacles-test');
+    // Namespaced by pid so parallel vitest worker processes don't share (and race
+    // on) the same on-disk directory for file-backed caches like screenshots.
+    const tmpPath = path.join(os.tmpdir(), `barnacles-test-${process.pid}`);
     mkdirSync(tmpPath, { recursive: true });
     return tmpPath;
   }
