@@ -62,7 +62,11 @@ export const startServer = async () => {
   const { seedDatabase } = await import('../shared/database/seed');
   await seedDatabase();
 
-  await sweepOrphans();
+  try {
+    await sweepOrphans();
+  } catch (error) {
+    console.error('Failed to sweep orphaned screenshot cache entries:', error);
+  }
 
   // Find an available port
   console.log(`🔍 Finding available port (preferred: ${APP_CONFIG.API_PORT_PREFERRED})...`);
