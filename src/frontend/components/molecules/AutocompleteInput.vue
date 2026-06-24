@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Check } from 'lucide-vue-next';
+import type { Component } from 'vue';
 import { computed, ref, watch } from 'vue';
 import {
   Combobox,
@@ -16,6 +17,7 @@ interface Props {
   suggestions: string[];
   placeholder?: string;
   emptyMessage?: string;
+  icon?: Component;
 }
 
 interface Emits {
@@ -70,6 +72,7 @@ const showCustomValueOption = computed(
         v-model="searchTerm"
         :display-value="val => val ?? ''"
         :placeholder="placeholder || 'Search...'"
+        :icon="icon"
       />
     </ComboboxAnchor>
     <ComboboxList>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus, Trash2, Wrench, X, Zap } from 'lucide-vue-next';
+import { Link, Plus, Terminal, Trash2, Wrench, X, Zap } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import type { DetectedScriptGroup, StartProcess } from '../../../../shared/types/process';
 import type { ApiResponse } from '../../../../shared/types/api';
@@ -497,6 +497,7 @@ const handleClose = () => {
                 v-model="process.url"
                 :suggestions="urlSuggestions"
                 placeholder="e.g., http://localhost:3000"
+                :icon="Link"
               />
               <p class="text-xs text-slate-500">
                 The URL where this process will be accessible. If not provided, we'll try to detect
@@ -517,6 +518,7 @@ const handleClose = () => {
                     v-model="process.commands[commandIndex]"
                     :suggestions="commandSuggestions"
                     placeholder="e.g., npm install, npm run dev"
+                    :icon="Terminal"
                   />
                 </div>
                 <Button
