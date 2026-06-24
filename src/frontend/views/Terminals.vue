@@ -9,10 +9,16 @@ import { useQueries } from '../composables/useQueries';
 import { useProcessManagement } from '../composables/useProcessManagement';
 
 const { setBreadcrumbs } = useBreadcrumbs();
-const { useProcessesQuery, useKillProcessMutation, useProcessOutputByIdQuery } = useQueries();
+const {
+  useProcessesQuery,
+  useKillProcessMutation,
+  useCreateProcessMutation,
+  useProcessOutputByIdQuery,
+} = useQueries();
 
 const { data: processes, isLoading } = useProcessesQuery();
 const killProcessMutation = useKillProcessMutation();
+const createProcessMutation = useCreateProcessMutation();
 
 const selectedProcess = ref<string | null>(null);
 
@@ -30,11 +36,13 @@ const {
   stoppedProcesses,
   handleKillProcess,
   handleDeleteProcess,
+  handleRestartProcess,
   handleClearAllStopped,
 } = useProcessManagement({
   processes,
   selectedProcess,
   killProcessMutation,
+  createProcessMutation,
 });
 
 onMounted(() => {
@@ -120,6 +128,7 @@ const selectProcess = (process: any) => {
                 @select="selectProcess"
                 @kill="handleKillProcess"
                 @delete="handleDeleteProcess"
+                @restart="handleRestartProcess"
               />
             </div>
           </div>

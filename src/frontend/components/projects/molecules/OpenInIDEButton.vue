@@ -84,7 +84,7 @@ const handleMainButtonClick = () => {
 </script>
 
 <template>
-  <div v-if="installedIDEs.length > 0" class="inline-flex">
+  <div class="inline-flex">
     <!-- Main button - Opens IDE if preferred IDE is set, otherwise opens dropdown -->
     <Button
       variant="default"

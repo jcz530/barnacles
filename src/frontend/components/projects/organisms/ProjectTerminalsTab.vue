@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ChevronDown, ChevronRight, Play, Terminal as TerminalIcon } from 'lucide-vue-next';
 import type { ComputedRef, Ref } from 'vue';
-import { computed, inject, ref } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
+import type { DetectedScriptGroup } from '../../../../shared/types/process';
+import type { ApiResponse } from '../../../../shared/types/api';
+import { API_ROUTES } from '../../../../shared/constants';
+import { useApi } from '../../../composables/useApi';
 import { useQueries } from '../../../composables/useQueries';
 import { useProcessManagement } from '../../../composables/useProcessManagement';
 import { Skeleton } from '../../ui/skeleton';
@@ -10,8 +14,10 @@ import ProcessCard from '../../process/molecules/ProcessCard.vue';
 
 const projectId = inject<ComputedRef<string>>('projectId');
 const projectPath = inject<ComputedRef<string | undefined>>('projectPath');
-const packageJsonScripts = inject<Ref<Record<string, string> | undefined>>('packageScripts');
-const composerJsonScripts = inject<Ref<Record<string, string> | undefined>>('composerScripts');
+const packageScriptGroups = inject<Ref<DetectedScriptGroup[] | undefined>>('packageScripts');
+const composerScriptGroups = inject<Ref<DetectedScriptGroup[] | undefined>>('composerScripts');
+
+const { apiCall } = useApi();
 
 const {
   useProcessesQuery,
@@ -32,8 +38,19 @@ const selectedProcess = ref<string | null>(null);
 
 // Collapsible sections state
 const scriptsExpanded = ref(true);
-const npmScriptsExpanded = ref(true);
-const composerScriptsExpanded = ref(true);
+const expandedGroups = ref<Set<string>>(new Set());
+
+const isGroupExpanded = (groupKey: string) => {
+  return !expandedGroups.value.has(groupKey);
+};
+
+const toggleGroup = (groupKey: string) => {
+  if (expandedGroups.value.has(groupKey)) {
+    expandedGroups.value.delete(groupKey);
+  } else {
+    expandedGroups.value.add(groupKey);
+  }
+};
 
 // Fetch process output for selected process
 const { data: processOutput } = useProcessOutputByIdQuery(
@@ -49,11 +66,13 @@ const {
   stoppedProcesses,
   handleKillProcess,
   handleDeleteProcess,
+  handleRestartProcess,
   handleClearAllStopped,
 } = useProcessManagement({
   processes,
   selectedProcess,
   killProcessMutation,
+  createProcessMutation,
 });
 
 // Convert processes to the format needed for display - show all processes
@@ -68,11 +87,13 @@ const autoSelectProcess = () => {
   }
 };
 
-const handleCreateProcess = async (command?: string, title?: string) => {
+const handleCreateProcess = async (command?: string, title?: string, relativeDir?: string) => {
   try {
+    const basePath = projectPath!.value;
+    const cwd = relativeDir && basePath ? `${basePath}/${relativeDir}` : basePath;
     const newProcess = await createProcessMutation.mutateAsync({
       projectId: projectId!.value,
-      cwd: projectPath!.value,
+      cwd,
       command,
       title: title || command || 'Process',
     });
@@ -85,16 +106,53 @@ const handleCreateProcess = async (command?: string, title?: string) => {
   }
 };
 
-// Computed property for package manager label
+// Package manager per subdirectory, resolved lazily as groups are discovered.
+// Falls back to the root-detected package manager until resolved.
+const subdirPackageManagers = ref<Record<string, 'npm' | 'yarn' | 'pnpm'>>({});
+
+const packageManagerForDir = (relativeDir: string): 'npm' | 'yarn' | 'pnpm' => {
+  if (!relativeDir) return detectedPackageManager.value || 'npm';
+  return subdirPackageManagers.value[relativeDir] || detectedPackageManager.value || 'npm';
+};
+
+// When new package script subdirectories are detected, look up each one's
+// package manager so generated commands (yarn/pnpm/npm) are correct per workspace.
+watch(
+  packageScriptGroups,
+  groups => {
+    (groups || []).forEach(group => {
+      if (!group.relativeDir || subdirPackageManagers.value[group.relativeDir]) return;
+      apiCall<ApiResponse<'npm' | 'yarn' | 'pnpm'>>(
+        'GET',
+        `${API_ROUTES.PROJECTS}/${projectId!.value}/package-manager?subPath=${encodeURIComponent(group.relativeDir)}`
+      ).then(response => {
+        if (response?.data) {
+          subdirPackageManagers.value[group.relativeDir] = response.data;
+        }
+      });
+    });
+  },
+  { immediate: true }
+);
+
+// Computed property for the root package manager label
 const packageManagerLabel = computed(() => {
-  const pm = detectedPackageManager.value || 'npm';
+  const pm = packageManagerForDir('');
   return pm === 'yarn' ? 'Yarn' : pm === 'pnpm' ? 'PNPM' : 'NPM';
 });
 
-const runScript = (scriptName: string, type: 'npm' | 'composer' = 'npm') => {
+const groupLabel = (relativeDir: string, type: 'npm' | 'composer') => {
+  if (type === 'composer') {
+    return relativeDir ? `${relativeDir}/composer.json` : 'Composer';
+  }
+  if (relativeDir) return `${relativeDir}/package.json`;
+  return packageManagerLabel.value;
+};
+
+const runScript = (relativeDir: string, scriptName: string, type: 'npm' | 'composer' = 'npm') => {
   let command: string;
   if (type === 'npm') {
-    const pm = detectedPackageManager.value || 'npm';
+    const pm = packageManagerForDir(relativeDir);
     command =
       pm === 'yarn'
         ? `yarn ${scriptName}`
@@ -104,7 +162,7 @@ const runScript = (scriptName: string, type: 'npm' | 'composer' = 'npm') => {
   } else {
     command = `composer run-script ${scriptName}`;
   }
-  handleCreateProcess(command, command);
+  handleCreateProcess(command, command, relativeDir);
 };
 
 // Auto-select on load
@@ -118,8 +176,8 @@ autoSelectProcess();
       <!-- Scripts Section -->
       <div
         v-if="
-          (packageJsonScripts && Object.keys(packageJsonScripts).length > 0) ||
-          (composerJsonScripts && Object.keys(composerJsonScripts).length > 0)
+          (packageScriptGroups && packageScriptGroups.length > 0) ||
+          (composerScriptGroups && composerScriptGroups.length > 0)
         "
         class="border-b border-slate-200"
       >
@@ -133,25 +191,32 @@ autoSelectProcess();
         </div>
 
         <div v-if="scriptsExpanded" class="p-2">
-          <!-- Package Manager Scripts -->
-          <div v-if="packageJsonScripts && Object.keys(packageJsonScripts).length > 0" class="mb-2">
+          <!-- Package Manager Scripts (root + any detected subdirectories) -->
+          <div
+            v-for="group in packageScriptGroups || []"
+            :key="`npm-group:${group.relativeDir}`"
+            class="mb-2"
+          >
             <div
               class="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 hover:bg-slate-100"
-              @click="npmScriptsExpanded = !npmScriptsExpanded"
+              @click="toggleGroup(`npm:${group.relativeDir}`)"
             >
               <span class="text-sm font-medium text-slate-700"
-                >{{ packageManagerLabel }} Scripts</span
+                >{{ groupLabel(group.relativeDir, 'npm') }} Scripts</span
               >
-              <ChevronDown v-if="npmScriptsExpanded" class="h-3 w-3 text-slate-500" />
+              <ChevronDown
+                v-if="isGroupExpanded(`npm:${group.relativeDir}`)"
+                class="h-3 w-3 text-slate-500"
+              />
               <ChevronRight v-else class="h-3 w-3 text-slate-500" />
             </div>
 
-            <div v-if="npmScriptsExpanded" class="mt-1 space-y-1">
+            <div v-if="isGroupExpanded(`npm:${group.relativeDir}`)" class="mt-1 space-y-1">
               <button
-                v-for="(command, name) in packageJsonScripts"
+                v-for="(command, name) in group.scripts"
                 :key="name"
                 class="flex w-full cursor-pointer items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
-                @click="() => runScript(String(name), 'npm')"
+                @click="() => runScript(group.relativeDir, String(name), 'npm')"
               >
                 <Play class="text-success-600 mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
                 <div class="min-w-0 flex-1">
@@ -162,23 +227,31 @@ autoSelectProcess();
             </div>
           </div>
 
-          <!-- Composer Scripts -->
-          <div v-if="composerJsonScripts && Object.keys(composerJsonScripts).length > 0">
+          <!-- Composer Scripts (root + any detected subdirectories) -->
+          <div
+            v-for="group in composerScriptGroups || []"
+            :key="`composer-group:${group.relativeDir}`"
+          >
             <div
               class="flex cursor-pointer items-center justify-between rounded px-2 py-1.5 hover:bg-slate-100"
-              @click="composerScriptsExpanded = !composerScriptsExpanded"
+              @click="toggleGroup(`composer:${group.relativeDir}`)"
             >
-              <span class="text-sm font-medium text-slate-700">Composer Scripts</span>
-              <ChevronDown v-if="composerScriptsExpanded" class="h-3 w-3 text-slate-500" />
+              <span class="text-sm font-medium text-slate-700"
+                >{{ groupLabel(group.relativeDir, 'composer') }} Scripts</span
+              >
+              <ChevronDown
+                v-if="isGroupExpanded(`composer:${group.relativeDir}`)"
+                class="h-3 w-3 text-slate-500"
+              />
               <ChevronRight v-else class="h-3 w-3 text-slate-500" />
             </div>
 
-            <div v-if="composerScriptsExpanded" class="mt-1 space-y-1">
+            <div v-if="isGroupExpanded(`composer:${group.relativeDir}`)" class="mt-1 space-y-1">
               <button
-                v-for="(command, name) in composerJsonScripts"
+                v-for="(command, name) in group.scripts"
                 :key="name"
                 class="flex w-full items-start gap-2 rounded px-2 py-1.5 text-left transition-colors hover:bg-slate-100"
-                @click="() => runScript(String(name), 'composer')"
+                @click="() => runScript(group.relativeDir, String(name), 'composer')"
               >
                 <Play class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-purple-600" />
                 <div class="min-w-0 flex-1">
@@ -249,6 +322,7 @@ autoSelectProcess();
                 @select="selectedProcess = process.processId"
                 @kill="handleKillProcess"
                 @delete="handleDeleteProcess"
+                @restart="handleRestartProcess"
               />
             </div>
           </div>

@@ -85,7 +85,7 @@ const handleMainButtonClick = () => {
 </script>
 
 <template>
-  <div v-if="installedTerminals.length > 0" class="inline-flex">
+  <div class="inline-flex">
     <!-- Main button - Opens terminal if preferred terminal is set, otherwise opens dropdown -->
     <Button
       variant="outline"
