@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const checkViteDevServer = async (): Promise<boolean> => {
   try {
-    const response = await fetch('http://localhost:5173');
+    const response = await fetch(`http://localhost:${APP_CONFIG.VITE_DEV_SERVER_PORT}`);
     return response.ok;
   } catch {
     return false;
@@ -21,7 +21,7 @@ export const createWindow = async (apiPort?: number): Promise<BrowserWindow> => 
   // Set Content Security Policy
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     // Build connect-src with specific ports if available
-    const viteDevServer = 'ws://localhost:5173';
+    const viteDevServer = `ws://localhost:${APP_CONFIG.VITE_DEV_SERVER_PORT}`;
     const apiServer = apiPort
       ? `http://localhost:${apiPort} ws://localhost:${apiPort}`
       : 'http://localhost:* ws://localhost:*';
@@ -81,7 +81,7 @@ export const createWindow = async (apiPort?: number): Promise<BrowserWindow> => 
   // Load the appropriate content
   const isDevServer = await checkViteDevServer();
   if (isDevServer) {
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL(`http://localhost:${APP_CONFIG.VITE_DEV_SERVER_PORT}`);
     // Open DevTools only in development (not in production build)
     if (!app.isPackaged) {
       mainWindow.webContents.openDevTools();

@@ -18,4 +18,9 @@ export default defineConfig({
       '@': path.resolve('./src/frontend'),
     },
   },
+  server: {
+    // Keep in sync with APP_CONFIG.VITE_DEV_SERVER_PORT in src/shared/constants/index.ts
+    port: 5734,
+    strictPort: true,
+  },
 });

@@ -1,6 +1,7 @@
 export const APP_CONFIG = {
   API_PORT_PREFERRED: 51000,
   API_HOST: 'localhost',
+  VITE_DEV_SERVER_PORT: 5734,
   WINDOW_SIZE: {
     width: 1200,
     height: 800,
