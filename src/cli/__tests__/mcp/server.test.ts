@@ -14,6 +14,8 @@ describe('createMcpServer', () => {
     const { tools } = await client.listTools();
 
     expect(tools.map(t => t.name).sort()).toEqual([
+      'convert_color',
+      'generate_color_shades',
       'get_hosts_entries',
       'get_process_output',
       'get_project_by_path',
@@ -26,9 +28,11 @@ describe('createMcpServer', () => {
       'list_projects',
       'list_running_processes',
       'open_project_accounts',
+      'read_exif_data',
       'remove_project_process',
       'start_project_process',
       'stop_project_process',
+      'strip_exif_data',
       'upsert_project_process',
     ]);
   });
