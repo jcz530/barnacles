@@ -1,3 +1,5 @@
+import os from 'os';
+import path from 'path';
 import type { IPty } from 'node-pty';
 import * as pty from 'node-pty';
 import type { ProcessStatus, ProjectProcessStatus, StartProcess } from '../../shared/types/process';
@@ -37,10 +39,10 @@ class ProcessManagerService {
 
     // Ensure critical environment variables are set
     if (!envVars.HOME && !isWindows) {
-      envVars.HOME = process.env.HOME || require('os').homedir();
+      envVars.HOME = process.env.HOME || os.homedir();
     }
     if (!envVars.USER && !isWindows) {
-      envVars.USER = process.env.USER || require('os').userInfo().username;
+      envVars.USER = process.env.USER || os.userInfo().username;
     }
 
     const shell = getDefaultShell();
@@ -156,7 +158,7 @@ class ProcessManagerService {
 
         // Determine working directory (use path.join for cross-platform compatibility)
         const cwd = processConfig.workingDir
-          ? require('path').join(projectPath, processConfig.workingDir)
+          ? path.join(projectPath, processConfig.workingDir)
           : projectPath;
 
         console.log('[Process Start] Starting process:', {
