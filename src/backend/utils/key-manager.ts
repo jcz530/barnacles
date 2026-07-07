@@ -1,3 +1,4 @@
+import os from 'os';
 import { safeStorage } from 'electron';
 import { settingsService } from '../services/settings-service';
 import { randomBytes, createHash } from 'crypto';
@@ -23,8 +24,8 @@ function getFallbackKey(): Buffer {
   // Derive a key from machine-specific values to provide some protection
   const machineId = [
     process.env.USER || process.env.USERNAME || 'user',
-    require('os').hostname(),
-    require('os').homedir(),
+    os.hostname(),
+    os.homedir(),
   ].join(':');
   return createHash('sha256').update(machineId).digest();
 }
