@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import fs from 'fs/promises';
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { parseExifData } from '../../../shared/utilities/exif-reader.js';
+import { MAX_FILE_SIZE, parseExifData } from '../../../shared/utilities/exif-reader.js';
 
 export function registerReadExifDataTool(server: McpServer): RegisteredTool {
   return server.registerTool(
@@ -16,6 +16,19 @@ export function registerReadExifDataTool(server: McpServer): RegisteredTool {
     },
     async ({ imagePath }) => {
       try {
+        const { size } = await fs.stat(imagePath);
+        if (size > MAX_FILE_SIZE) {
+          return {
+            isError: true,
+            content: [
+              {
+                type: 'text',
+                text: `File is too large (${size} bytes). Maximum supported size is ${MAX_FILE_SIZE} bytes.`,
+              },
+            ],
+          };
+        }
+
         const buffer = await fs.readFile(imagePath);
         const arrayBuffer = new Uint8Array(buffer).buffer;
         const exifData = parseExifData(arrayBuffer);

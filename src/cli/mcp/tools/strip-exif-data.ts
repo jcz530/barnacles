@@ -2,7 +2,7 @@ import { z } from 'zod';
 import fs from 'fs/promises';
 import path from 'path';
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { stripExifData } from '../../../shared/utilities/exif-reader.js';
+import { MAX_FILE_SIZE, stripExifData } from '../../../shared/utilities/exif-reader.js';
 
 export function registerStripExifDataTool(server: McpServer): RegisteredTool {
   return server.registerTool(
@@ -28,6 +28,19 @@ export function registerStripExifDataTool(server: McpServer): RegisteredTool {
       }
 
       try {
+        const { size } = await fs.stat(imagePath);
+        if (size > MAX_FILE_SIZE) {
+          return {
+            isError: true,
+            content: [
+              {
+                type: 'text',
+                text: `File is too large (${size} bytes). Maximum supported size is ${MAX_FILE_SIZE} bytes.`,
+              },
+            ],
+          };
+        }
+
         const buffer = await fs.readFile(imagePath);
         const arrayBuffer = new Uint8Array(buffer).buffer;
         const result = await stripExifData(arrayBuffer, 'image/jpeg');
@@ -39,6 +52,7 @@ export function registerStripExifDataTool(server: McpServer): RegisteredTool {
           };
         }
 
+        await fs.mkdir(path.dirname(outputPath), { recursive: true });
         await fs.writeFile(outputPath, Buffer.from(result.buffer));
 
         const originalSize = buffer.length;
