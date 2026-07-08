@@ -67,6 +67,28 @@ describe('IdeDetectorService.detectInstalledIDEs (macOS)', () => {
     expect(detected.find(ide => ide.id === 'xcode')?.installed).toBe(true);
   });
 
+  it('detects the additional JetBrains, native, and AI editors', async () => {
+    installedBundles([
+      '/Users/tester/Applications/DataGrip.app',
+      '/Applications/Nova.app',
+      '/Applications/Trae.app',
+    ]);
+
+    const detected = await ideDetectorService.detectInstalledIDEs();
+
+    expect(detected.find(ide => ide.id === 'datagrip')?.installed).toBe(true);
+    expect(detected.find(ide => ide.id === 'nova')?.installed).toBe(true);
+    expect(detected.find(ide => ide.id === 'trae')?.installed).toBe(true);
+  });
+
+  it('no longer includes the discontinued Atom editor', async () => {
+    installedBundles([]);
+
+    const detected = await ideDetectorService.detectInstalledIDEs();
+
+    expect(detected.find(ide => ide.id === 'atom')).toBeUndefined();
+  });
+
   it('reports an IDE as not installed when no bundle exists and it is not on PATH', async () => {
     installedBundles([]);
 
