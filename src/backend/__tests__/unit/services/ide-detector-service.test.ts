@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs/promises';
+import path from 'path';
+
+const TEST_HOME = '/Users/tester';
 
 // Force macOS behavior so the .app-bundle detection path runs deterministically
 // regardless of the host platform running the test suite.
@@ -8,7 +11,7 @@ vi.mock('@shared/utils/platform', () => ({
   isWindows: false,
   isLinux: false,
   commandExists: vi.fn().mockResolvedValue(false),
-  getHomeDir: () => '/Users/tester',
+  getHomeDir: () => TEST_HOME,
 }));
 
 vi.mock('fs/promises', () => ({
@@ -23,12 +26,18 @@ import { ideDetectorService } from '@backend/services/ide-detector-service';
 
 const mockedAccess = vi.mocked(fs.access);
 
+// The directories findMacAppBundle() searches, mirrored here so expected
+// bundle paths are built with path.join (matching the OS separator the
+// service uses) rather than hardcoded POSIX strings.
+const APPLICATIONS = '/Applications';
+const HOME_APPLICATIONS = path.join(TEST_HOME, 'Applications');
+
 /**
- * Helper: make fs.access resolve only for the given set of absolute bundle
- * paths, and reject (ENOENT) for everything else.
+ * Helper: make fs.access resolve only for the given (dir, bundleName) pairs,
+ * joined the same way the service joins them, and reject (ENOENT) otherwise.
  */
-function installedBundles(paths: string[]) {
-  const installed = new Set(paths);
+function installedBundles(bundles: Array<[dir: string, bundleName: string]>) {
+  const installed = new Set(bundles.map(([dir, name]) => path.join(dir, name)));
   mockedAccess.mockImplementation(async (p: any) => {
     if (installed.has(String(p))) return undefined;
     throw new Error('ENOENT');
@@ -41,7 +50,7 @@ describe('IdeDetectorService.detectInstalledIDEs (macOS)', () => {
   });
 
   it('detects JetBrains IDEs installed via Toolbox in ~/Applications', async () => {
-    installedBundles(['/Users/tester/Applications/PhpStorm.app']);
+    installedBundles([[HOME_APPLICATIONS, 'PhpStorm.app']]);
 
     const detected = await ideDetectorService.detectInstalledIDEs();
     const phpstorm = detected.find(ide => ide.id === 'phpstorm');
@@ -50,7 +59,7 @@ describe('IdeDetectorService.detectInstalledIDEs (macOS)', () => {
   });
 
   it('detects PyCharm via an alternate (Community Edition) bundle name', async () => {
-    installedBundles(['/Users/tester/Applications/PyCharm Community Edition.app']);
+    installedBundles([[HOME_APPLICATIONS, 'PyCharm Community Edition.app']]);
 
     const detected = await ideDetectorService.detectInstalledIDEs();
     const pycharm = detected.find(ide => ide.id === 'pycharm');
@@ -59,7 +68,10 @@ describe('IdeDetectorService.detectInstalledIDEs (macOS)', () => {
   });
 
   it('detects Android Studio and Xcode in /Applications', async () => {
-    installedBundles(['/Applications/Android Studio.app', '/Applications/Xcode.app']);
+    installedBundles([
+      [APPLICATIONS, 'Android Studio.app'],
+      [APPLICATIONS, 'Xcode.app'],
+    ]);
 
     const detected = await ideDetectorService.detectInstalledIDEs();
 
@@ -69,9 +81,9 @@ describe('IdeDetectorService.detectInstalledIDEs (macOS)', () => {
 
   it('detects the additional JetBrains, native, and AI editors', async () => {
     installedBundles([
-      '/Users/tester/Applications/DataGrip.app',
-      '/Applications/Nova.app',
-      '/Applications/Trae.app',
+      [HOME_APPLICATIONS, 'DataGrip.app'],
+      [APPLICATIONS, 'Nova.app'],
+      [APPLICATIONS, 'Trae.app'],
     ]);
 
     const detected = await ideDetectorService.detectInstalledIDEs();
