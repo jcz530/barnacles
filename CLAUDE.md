@@ -126,6 +126,24 @@ This is an Electron application with a Vue.js frontend and Hono API backend that
   </style>
   ```
 
+### Colors and Theming
+
+- **Never use color values that are not in our theme.** Do not use Tailwind's
+  built-in color palettes (e.g. `text-green-600`, `bg-red-500`) or raw hex/rgb/hsl
+  values in components. Always use the theme's color scales defined in
+  `src/frontend/assets/css/main.css`.
+- **Use `success` for green values** (e.g. `text-success-500`, `bg-success-500`,
+  `border-success-500`).
+- **Use `danger` for red values** (e.g. `text-danger-500`, `bg-danger-500`,
+  `border-danger-500`).
+- **`slate` is part of our theme** and should be used for neutral/gray values
+  (e.g. `text-slate-500`).
+- **Never use black or white** (no `text-black`, `bg-white`, `#000`, `#fff`,
+  etc.). Always use a variant of `slate` instead (e.g. `bg-slate-50`,
+  `text-slate-900`).
+- **Exception**: brand identity colors (e.g. an IDE's or vendor's official
+  color rendered as data, not theme styling) may use raw hex values.
+
 ### Libraries and Patterns
 
 - **Composables**: Use VueUse for common functionality instead of recreating utilities

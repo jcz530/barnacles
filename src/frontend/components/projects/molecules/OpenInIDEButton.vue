@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown, ExternalLink, Globe, Play, Star } from 'lucide-vue-next';
+import { Check, ChevronDown, ExternalLink, Globe, Play, Star } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { type DetectedIDE, SETTING_KEYS } from '../../../../shared/types/api';
 import { useQueries } from '../../../composables/useQueries';
@@ -39,6 +39,17 @@ const installedIDEs = computed(() => {
 const defaultIdeId = computed(() => {
   const setting = settingsQuery.data.value?.find(s => s.key === 'defaultIde');
   return setting?.value || null;
+});
+
+const defaultIDE = computed(() => {
+  if (!defaultIdeId.value) return null;
+  return installedIDEs.value.find(ide => ide.id === defaultIdeId.value) || null;
+});
+
+const globeTitle = computed(() => {
+  if (defaultIDE.value) return `Global preferred IDE: ${defaultIDE.value.name}`;
+  if (defaultIdeId.value) return `Global preferred IDE: ${defaultIdeId.value}`;
+  return 'Set a global preferred IDE';
 });
 
 const preferredIDE = computed(() => {
@@ -107,10 +118,14 @@ const handleMainButtonClick = () => {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel class="flex items-center">
           <span class="flex-1">Select IDE</span>
-          <Button variant="ghost" as-child title="Set a global preferred IDE"
+          <Button variant="ghost" as-child :title="globeTitle"
             ><RouterLink
               :to="{ name: RouteNames.Settings, query: { setting: SETTING_KEYS.DEFAULT_IDE } }"
-              ><Globe class="text-slate-500" /></RouterLink
+              class="relative"
+              ><Globe class="text-slate-500" /><Check
+                v-if="defaultIdeId"
+                class="bg-background text-success-500 absolute right-0 bottom-0 size-3 rounded-full"
+                :stroke-width="3" /></RouterLink
           ></Button>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

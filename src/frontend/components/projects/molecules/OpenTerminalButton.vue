@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronDown, Globe, Play, Star, Terminal as TerminalIcon } from 'lucide-vue-next';
+import { Check, ChevronDown, Globe, Play, Star, Terminal as TerminalIcon } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { DetectedTerminal, SETTING_KEYS } from '../../../../shared/types/api';
 import { useQueries } from '../../../composables/useQueries';
@@ -40,6 +40,17 @@ const installedTerminals = computed(() => {
 const defaultTerminalId = computed(() => {
   const setting = settingsQuery.data.value?.find(s => s.key === 'defaultTerminal');
   return setting?.value || null;
+});
+
+const defaultTerminal = computed(() => {
+  if (!defaultTerminalId.value) return null;
+  return installedTerminals.value.find(terminal => terminal.id === defaultTerminalId.value) || null;
+});
+
+const globeTitle = computed(() => {
+  if (defaultTerminal.value) return `Global preferred terminal: ${defaultTerminal.value.name}`;
+  if (defaultTerminalId.value) return `Global preferred terminal: ${defaultTerminalId.value}`;
+  return 'Set a global preferred terminal';
 });
 
 const preferredTerminal = computed(() => {
@@ -108,10 +119,14 @@ const handleMainButtonClick = () => {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel class="flex items-center">
           <span class="flex-1">Select Terminal</span>
-          <Button variant="ghost" as-child title="Set a global preferred IDE"
+          <Button variant="ghost" as-child :title="globeTitle"
             ><RouterLink
               :to="{ name: RouteNames.Settings, query: { setting: SETTING_KEYS.DEFAULT_TERMINAL } }"
-              ><Globe class="text-slate-500" /></RouterLink
+              class="relative"
+              ><Globe class="text-slate-500" /><Check
+                v-if="defaultTerminalId"
+                class="bg-background text-success-500 absolute right-0 bottom-0 size-3 rounded-full"
+                :stroke-width="3" /></RouterLink
           ></Button>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
