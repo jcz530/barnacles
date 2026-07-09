@@ -53,10 +53,17 @@ const globeTitle = computed(() => {
 });
 
 const preferredIDE = computed(() => {
-  // Use project-specific preference first, then fall back to default setting
-  const ideId = props.preferredIdeId || defaultIdeId.value;
-  if (!ideId) return null;
-  return installedIDEs.value.find(ide => ide.id === ideId);
+  // Use the project-specific preference if it points to an installed IDE,
+  // otherwise fall back to the global default setting. A project can hold a
+  // preference for an IDE that is no longer installed (e.g. after uninstalling
+  // it), in which case we should still surface the global default.
+  const projectIde = props.preferredIdeId
+    ? installedIDEs.value.find(ide => ide.id === props.preferredIdeId)
+    : null;
+  if (projectIde) return projectIde;
+
+  if (!defaultIdeId.value) return null;
+  return installedIDEs.value.find(ide => ide.id === defaultIdeId.value) || null;
 });
 
 const handleOpenInIDE = async (ideId?: string) => {
