@@ -20,7 +20,6 @@ import { useConfigs } from '@/composables/useConfigs';
 import { useQueries } from '@/composables/useQueries';
 import { useQuery } from '@tanstack/vue-query';
 import {
-  Cog,
   FileText,
   FolderGit2,
   Network,
@@ -129,12 +128,6 @@ const data = computed(() => ({
       icon: FileText,
       isActive: route.path.startsWith('/configs'),
     },
-    {
-      title: 'Settings',
-      url: '/settings',
-      icon: Cog,
-      isActive: route.path.startsWith('/settings'),
-    },
   ],
   // projects: [
   //   {
@@ -170,10 +163,10 @@ const data = computed(() => ({
     <SidebarContent>
       <NavMain :items="data.navMain" />
       <!--      <NavProjects :projects="data.projects" />-->
-      <NavSecondary :items="data.navSecondary" class="mt-auto" />
+      <NavSecondary :items="data.navSecondary" label="System" class="mt-auto" />
+      <ThemeToggle />
     </SidebarContent>
     <SidebarFooter>
-      <ThemeToggle />
       <NavUser :user="data.user" />
     </SidebarFooter>
   </Sidebar>
