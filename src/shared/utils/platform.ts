@@ -3,6 +3,7 @@
  * Centralizes platform-specific logic to keep code DRY
  */
 
+import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
@@ -109,7 +110,7 @@ export async function commandExists(command: string): Promise<boolean> {
  * Handles both HOME (Unix) and USERPROFILE (Windows)
  */
 export function getHomeDir(): string {
-  return process.env.HOME || process.env.USERPROFILE || require('os').homedir();
+  return process.env.HOME || process.env.USERPROFILE || os.homedir();
 }
 
 /**
