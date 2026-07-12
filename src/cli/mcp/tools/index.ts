@@ -15,6 +15,10 @@ import { registerListProjectAccountsTool } from './list-project-accounts.js';
 import { registerOpenProjectAccountsTool } from './open-project-accounts.js';
 import { registerUpsertProjectProcessTool } from './upsert-project-process.js';
 import { registerRemoveProjectProcessTool } from './remove-project-process.js';
+import { registerConvertColorTool } from './convert-color.js';
+import { registerGenerateColorShadesTool } from './generate-color-shades.js';
+import { registerReadExifDataTool } from './read-exif-data.js';
+import { registerStripExifDataTool } from './strip-exif-data.js';
 
 export function registerTools(server: McpServer): void {
   registerListProjectsTool(server);
@@ -33,4 +37,8 @@ export function registerTools(server: McpServer): void {
   registerOpenProjectAccountsTool(server);
   registerUpsertProjectProcessTool(server);
   registerRemoveProjectProcessTool(server);
+  registerConvertColorTool(server);
+  registerGenerateColorShadesTool(server);
+  registerReadExifDataTool(server);
+  registerStripExifDataTool(server);
 }
