@@ -115,15 +115,29 @@ const defaultIdeId = computed(() => {
 });
 
 const preferredTerminal = computed(() => {
-  const terminalId = props.preferredTerminalId || defaultTerminalId.value;
-  if (!terminalId) return null;
-  return installedTerminals.value.find(terminal => terminal.id === terminalId);
+  // Use the project preference if it points to an installed terminal, otherwise
+  // fall back to the global default (the project may reference a terminal that
+  // is no longer installed).
+  const projectTerminal = props.preferredTerminalId
+    ? installedTerminals.value.find(terminal => terminal.id === props.preferredTerminalId)
+    : null;
+  if (projectTerminal) return projectTerminal;
+
+  if (!defaultTerminalId.value) return null;
+  return installedTerminals.value.find(terminal => terminal.id === defaultTerminalId.value) || null;
 });
 
 const preferredIDE = computed(() => {
-  const ideId = props.preferredIdeId || defaultIdeId.value;
-  if (!ideId) return null;
-  return installedIDEs.value.find(ide => ide.id === ideId);
+  // Use the project preference if it points to an installed IDE, otherwise fall
+  // back to the global default (the project may reference an IDE that is no
+  // longer installed).
+  const projectIde = props.preferredIdeId
+    ? installedIDEs.value.find(ide => ide.id === props.preferredIdeId)
+    : null;
+  if (projectIde) return projectIde;
+
+  if (!defaultIdeId.value) return null;
+  return installedIDEs.value.find(ide => ide.id === defaultIdeId.value) || null;
 });
 
 const handleDelete = () => {

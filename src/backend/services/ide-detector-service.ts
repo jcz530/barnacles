@@ -15,7 +15,9 @@ export interface IDE {
   icon?: string;
   color?: string;
   macAppName?: string; // Name of the .app bundle on macOS (e.g., "Cursor.app")
+  macAppNames?: string[]; // Alternate .app bundle names on macOS (e.g., Community/Pro editions)
   winPaths?: string[]; // Common Windows installation paths (relative to Program Files or user home)
+  macOnly?: boolean; // IDE only exists on macOS (e.g., Xcode)
 }
 
 export interface DetectedIDE extends IDE {
@@ -64,6 +66,7 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'webstorm',
     icon: 'webstorm',
     color: '#00CDD7',
+    macAppName: 'WebStorm.app',
     winPaths: ['JetBrains\\WebStorm*\\bin\\webstorm64.exe'],
   },
   {
@@ -73,6 +76,7 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'phpstorm',
     icon: 'phpstorm',
     color: '#B345F1',
+    macAppName: 'PhpStorm.app',
     winPaths: ['JetBrains\\PhpStorm*\\bin\\phpstorm64.exe'],
   },
   {
@@ -82,6 +86,8 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'pycharm',
     icon: 'pycharm',
     color: '#21D789',
+    macAppName: 'PyCharm.app',
+    macAppNames: ['PyCharm.app', 'PyCharm Community Edition.app', 'PyCharm CE.app'],
     winPaths: ['JetBrains\\PyCharm*\\bin\\pycharm64.exe'],
   },
   {
@@ -91,6 +97,12 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'idea',
     icon: 'intellij',
     color: '#000000',
+    macAppName: 'IntelliJ IDEA.app',
+    macAppNames: [
+      'IntelliJ IDEA.app',
+      'IntelliJ IDEA Community Edition.app',
+      'IntelliJ IDEA CE.app',
+    ],
     winPaths: ['JetBrains\\IntelliJ IDEA*\\bin\\idea64.exe'],
   },
   {
@@ -100,6 +112,7 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'goland',
     icon: 'goland',
     color: '#087CFA',
+    macAppName: 'GoLand.app',
     winPaths: ['JetBrains\\GoLand*\\bin\\goland64.exe'],
   },
   {
@@ -109,6 +122,7 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'rubymine',
     icon: 'rubymine',
     color: '#FC801D',
+    macAppName: 'RubyMine.app',
     winPaths: ['JetBrains\\RubyMine*\\bin\\rubymine64.exe'],
   },
   {
@@ -118,6 +132,7 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'clion',
     icon: 'clion',
     color: '#22D88F',
+    macAppName: 'CLion.app',
     winPaths: ['JetBrains\\CLion*\\bin\\clion64.exe'],
   },
   {
@@ -127,7 +142,88 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'rider',
     icon: 'rider',
     color: '#C90F5E',
+    macAppName: 'Rider.app',
     winPaths: ['JetBrains\\Rider*\\bin\\rider64.exe'],
+  },
+  {
+    id: 'datagrip',
+    name: 'DataGrip',
+    executable: 'datagrip',
+    command: 'datagrip',
+    icon: 'datagrip',
+    color: '#22D88F',
+    macAppName: 'DataGrip.app',
+    winPaths: ['JetBrains\\DataGrip*\\bin\\datagrip64.exe'],
+  },
+  {
+    id: 'rustrover',
+    name: 'RustRover',
+    executable: 'rustrover',
+    command: 'rustrover',
+    icon: 'rustrover',
+    color: '#DEA584',
+    macAppName: 'RustRover.app',
+    winPaths: ['JetBrains\\RustRover*\\bin\\rustrover64.exe'],
+  },
+  {
+    id: 'aqua',
+    name: 'Aqua',
+    executable: 'aqua',
+    command: 'aqua',
+    icon: 'aqua',
+    color: '#00B2FF',
+    macAppName: 'Aqua.app',
+    winPaths: ['JetBrains\\Aqua*\\bin\\aqua64.exe'],
+  },
+  {
+    id: 'dataspell',
+    name: 'DataSpell',
+    executable: 'dataspell',
+    command: 'dataspell',
+    icon: 'dataspell',
+    color: '#21D789',
+    macAppName: 'DataSpell.app',
+    winPaths: ['JetBrains\\DataSpell*\\bin\\dataspell64.exe'],
+  },
+  {
+    id: 'fleet',
+    name: 'Fleet',
+    executable: 'fleet',
+    command: 'fleet',
+    icon: 'fleet',
+    color: '#087CFA',
+    macAppName: 'Fleet.app',
+    winPaths: ['JetBrains\\Fleet*\\bin\\Fleet.exe'],
+  },
+  {
+    id: 'android-studio',
+    name: 'Android Studio',
+    executable: 'studio',
+    command: 'studio',
+    icon: 'android-studio',
+    color: '#3DDC84',
+    macAppName: 'Android Studio.app',
+    winPaths: ['Android\\Android Studio\\bin\\studio64.exe'],
+  },
+  {
+    id: 'xcode',
+    name: 'Xcode',
+    executable: 'xed',
+    command: 'xed',
+    icon: 'xcode',
+    color: '#1575F9',
+    macAppName: 'Xcode.app',
+    macOnly: true,
+  },
+  {
+    id: 'zed',
+    name: 'Zed',
+    executable: 'zed',
+    command: 'zed',
+    icon: 'zed',
+    color: '#084CCF',
+    macAppName: 'Zed.app',
+    winPaths: ['Zed\\Zed.exe'],
   },
   {
     id: 'sublime',
@@ -139,13 +235,54 @@ const IDE_DEFINITIONS: IDE[] = [
     winPaths: ['Sublime Text\\sublime_text.exe', 'Sublime Text 3\\sublime_text.exe'],
   },
   {
-    id: 'atom',
-    name: 'Atom',
-    executable: 'atom',
-    command: 'atom',
-    icon: 'atom',
-    color: '#66595C',
-    winPaths: ['atom\\atom.exe'],
+    id: 'nova',
+    name: 'Nova',
+    executable: 'nova',
+    command: 'nova',
+    icon: 'nova',
+    color: '#F62E97',
+    macAppName: 'Nova.app',
+    macOnly: true,
+  },
+  {
+    id: 'bbedit',
+    name: 'BBEdit',
+    executable: 'bbedit',
+    command: 'bbedit',
+    icon: 'bbedit',
+    color: '#000000',
+    macAppName: 'BBEdit.app',
+    macOnly: true,
+  },
+  {
+    id: 'textmate',
+    name: 'TextMate',
+    executable: 'mate',
+    command: 'mate',
+    icon: 'textmate',
+    color: '#0A7CFF',
+    macAppName: 'TextMate.app',
+    macOnly: true,
+  },
+  {
+    id: 'trae',
+    name: 'Trae',
+    executable: 'trae',
+    command: 'trae',
+    icon: 'trae',
+    color: '#EF4444',
+    macAppName: 'Trae.app',
+    winPaths: ['Trae\\Trae.exe', 'Programs\\Trae\\Trae.exe'],
+  },
+  {
+    id: 'void',
+    name: 'Void',
+    executable: 'void',
+    command: 'void',
+    icon: 'void',
+    color: '#000000',
+    macAppName: 'Void.app',
+    winPaths: ['Void\\Void.exe', 'Programs\\Void\\Void.exe'],
   },
   {
     id: 'vim',
@@ -203,15 +340,11 @@ class IdeDetectorService {
   private async checkIfInstalled(ide: IDE): Promise<boolean> {
     try {
       if (isMac) {
-        // On macOS, first check if the .app bundle exists
-        if (ide.macAppName) {
-          try {
-            await fs.access(`/Applications/${ide.macAppName}`);
-            return true;
-          } catch {
-            // App bundle not found, fall through to check PATH
-          }
-        }
+        // On macOS, first check if the .app bundle exists in any known location
+        const bundle = await this.findMacAppBundle(ide);
+        if (bundle) return true;
+        // Xcode-style IDEs only ship as an .app bundle; don't fall back to PATH
+        if (ide.macOnly) return false;
         // Check if the command exists in PATH
         return await commandExists(ide.executable);
       } else if (isWindows) {
@@ -229,6 +362,35 @@ class IdeDetectorService {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Finds the full path to an IDE's .app bundle on macOS, searching the
+   * standard install locations including ~/Applications (used by JetBrains
+   * Toolbox and per-user installs). Returns the path, or null if not found.
+   */
+  private async findMacAppBundle(ide: IDE): Promise<string | null> {
+    const bundleNames = ide.macAppNames ?? (ide.macAppName ? [ide.macAppName] : []);
+    if (bundleNames.length === 0) return null;
+
+    const searchDirs = [
+      '/Applications',
+      path.join(getHomeDir(), 'Applications'),
+      path.join(getHomeDir(), 'Applications', 'JetBrains Toolbox'),
+    ];
+
+    for (const dir of searchDirs) {
+      for (const bundleName of bundleNames) {
+        const fullPath = path.join(dir, bundleName);
+        try {
+          await fs.access(fullPath);
+          return fullPath;
+        } catch {
+          // Not here, keep looking
+        }
+      }
+    }
+    return null;
   }
 
   /**
@@ -316,7 +478,6 @@ class IdeDetectorService {
       const ideMarkers: { [key: string]: string } = {
         '.vscode': 'vscode',
         '.idea': 'intellij',
-        '.atom': 'atom',
         '.sublime-project': 'sublime',
       };
 
@@ -363,18 +524,21 @@ class IdeDetectorService {
 
     try {
       // On macOS, if the app bundle exists but command isn't in PATH, use open command
-      if (isMac && ide.macAppName) {
-        try {
-          await fs.access(`/Applications/${ide.macAppName}`);
-          // Use 'open' command with the app bundle
-          await execAsync(`open -a "${ide.macAppName}" "${projectPath}"`);
-          return;
-        } catch (error) {
-          // Check if this is a permission error
-          if (PermissionError.isAppleEventsError(error)) {
-            throw PermissionError.createIDEPermissionError(ide.name);
+      if (isMac) {
+        const bundlePath = await this.findMacAppBundle(ide);
+        if (bundlePath) {
+          try {
+            // Use 'open' command with the full app bundle path (handles
+            // ~/Applications and JetBrains Toolbox locations)
+            await execAsync(`open -a "${bundlePath}" "${projectPath}"`);
+            return;
+          } catch (error) {
+            // Check if this is a permission error
+            if (PermissionError.isAppleEventsError(error)) {
+              throw PermissionError.createIDEPermissionError(ide.name);
+            }
+            // Fall through to try the command
           }
-          // Fall through to try the command
         }
       }
 
