@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'fs/promises';
 import path from 'path';
+import { commandExists } from '@shared/utils/platform';
 
 const TEST_HOME = '/Users/tester';
 
@@ -25,6 +26,7 @@ vi.mock('fs/promises', () => ({
 import { ideDetectorService } from '@backend/services/ide-detector-service';
 
 const mockedAccess = vi.mocked(fs.access);
+const mockedCommandExists = vi.mocked(commandExists);
 
 // The directories findMacAppBundle() searches, mirrored here so expected
 // bundle paths are built with path.join (matching the OS separator the
@@ -108,5 +110,18 @@ describe('IdeDetectorService.detectInstalledIDEs (macOS)', () => {
 
     expect(detected.find(ide => ide.id === 'phpstorm')?.installed).toBe(false);
     expect(detected.find(ide => ide.id === 'webstorm')?.installed).toBe(false);
+  });
+
+  it('does not fall back to PATH for macOnly IDEs when the .app bundle is missing', async () => {
+    // No bundles installed, but every command resolves on PATH. A regular IDE
+    // should be reported as installed via PATH, while a macOnly IDE (e.g. Xcode)
+    // must not — it only ships as an .app bundle.
+    installedBundles([]);
+    mockedCommandExists.mockResolvedValue(true);
+
+    const detected = await ideDetectorService.detectInstalledIDEs();
+
+    expect(detected.find(ide => ide.id === 'xcode')?.installed).toBe(false);
+    expect(detected.find(ide => ide.id === 'webstorm')?.installed).toBe(true);
   });
 });
