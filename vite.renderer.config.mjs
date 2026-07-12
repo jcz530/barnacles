@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
+import { APP_CONFIG } from './src/shared/constants/index.ts';
 
 // https://vitejs.dev/config
 export default defineConfig({
@@ -19,8 +20,7 @@ export default defineConfig({
     },
   },
   server: {
-    // Keep in sync with APP_CONFIG.VITE_DEV_SERVER_PORT in src/shared/constants/index.ts
-    port: 5734,
+    port: APP_CONFIG.VITE_DEV_SERVER_PORT,
     strictPort: true,
   },
 });
