@@ -32,7 +32,7 @@ const { isMobile } = useSidebar();
         <!-- <DropdownMenuTrigger as-child> -->
         <SidebarMenuButton
           size="lg"
-          class="data-[state=open]:bg-sidebar-accent/80 data-[state=open]:text-sidebar-accent-foreground"
+          class="cursor-default hover:bg-transparent hover:text-current active:scale-100 active:bg-transparent active:text-current"
         >
           <Avatar class="h-8 w-8 rounded-lg">
             <AvatarImage :src="user.avatar" :alt="user.name" />
