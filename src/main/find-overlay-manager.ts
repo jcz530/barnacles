@@ -1,13 +1,14 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { APP_CONFIG } from '../shared/constants';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const checkViteDevServer = async (): Promise<boolean> => {
   try {
-    const response = await fetch('http://localhost:5173');
+    const response = await fetch(`http://localhost:${APP_CONFIG.VITE_DEV_SERVER_PORT}`);
     return response.ok;
   } catch {
     return false;
@@ -84,7 +85,7 @@ export const toggleFindOverlay = async (parentWindow: BrowserWindow): Promise<vo
   // Load the find-overlay route
   const isDevServer = !app.isPackaged && (await checkViteDevServer());
   if (isDevServer) {
-    overlay.loadURL('http://localhost:5173/find-overlay');
+    overlay.loadURL(`http://localhost:${APP_CONFIG.VITE_DEV_SERVER_PORT}/find-overlay`);
   } else {
     overlay.loadFile(path.join(__dirname, '../renderer/index.html'), {
       hash: '/find-overlay',

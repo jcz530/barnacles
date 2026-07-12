@@ -96,7 +96,7 @@ Most AI coding assistants only know what's in the file it has open. With Barnacl
 
 - *"Start the `api-gateway` project and tell me once it's up."*
 - *"Why is `marketing-site` crashing on startup?"* — the assistant starts it, reads the process output, and sees the stack trace itself.
-- *"Stop whatever's running on port 5173."*
+- *"Stop whatever's running on port 5734."*
 - *"What does `old-client-site` even do?"* — it reads the project's README, no need to go find the folder.
 
 You don't have to remember which directory a project lives in or alt-tab to a terminal to launch it. The assistant already knows your projects and can run them itself, including watching the live output to debug what's actually happening.
