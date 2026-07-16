@@ -110,19 +110,19 @@ jobs:
 
       - name: Build distributable (macOS)
         if: runner.os == 'macOS'
-        run: npx --yes electron-builder --mac --arm64
+        run: npx --yes electron-builder --mac --arm64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Build distributable (Windows)
         if: runner.os == 'Windows'
-        run: npx --yes electron-builder --win --x64
+        run: npx --yes electron-builder --win --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Build distributable (Linux)
         if: runner.os == 'Linux'
-        run: npx --yes electron-builder --linux --x64
+        run: npx --yes electron-builder --linux --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
