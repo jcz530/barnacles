@@ -2,6 +2,7 @@
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -9,7 +10,7 @@ import {
 import { RouteNames } from '@/router';
 import { useDark, useLocalStorage } from '@vueuse/core';
 import { useRoute } from 'vue-router';
-import { Moon, Palette, Sun, SunMoon } from 'lucide-vue-next';
+import { Cog, Moon, Palette, Sun, SunMoon } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const route = useRoute();
@@ -50,12 +51,22 @@ function cycleTheme() {
   }
 }
 const isActive = computed(() => route.path.startsWith('/theme'));
+const isSettingsActive = computed(() => route.path.startsWith('/settings'));
 </script>
 
 <template>
   <SidebarGroup>
     <SidebarGroupContent>
+      <SidebarGroupLabel>Settings</SidebarGroupLabel>
       <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="sm" :is-active="isSettingsActive" as-child>
+            <RouterLink to="/settings">
+              <Cog />
+              <span>Settings</span>
+            </RouterLink>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
         <SidebarMenuItem>
           <SidebarMenuButton size="sm" @click="cycleTheme">
             <component :is="currentIcon" />

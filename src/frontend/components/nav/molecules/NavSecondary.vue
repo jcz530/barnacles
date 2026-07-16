@@ -4,12 +4,14 @@ import type { LucideIcon } from 'lucide-vue-next';
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 
 defineProps<{
+  label?: string;
   items: {
     title: string;
     url: string;
@@ -22,6 +24,7 @@ defineProps<{
 <template>
   <SidebarGroup>
     <SidebarGroupContent>
+      <SidebarGroupLabel v-if="label">{{ label }}</SidebarGroupLabel>
       <SidebarMenu>
         <SidebarMenuItem v-for="item in items" :key="item.title">
           <SidebarMenuButton as-child size="sm" :is-active="item.isActive">
