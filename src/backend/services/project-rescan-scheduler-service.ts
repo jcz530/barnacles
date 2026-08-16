@@ -1,3 +1,4 @@
+import { isDemoMode } from '../../shared/config/runtime-mode';
 import { projectService } from './project';
 import { projectScanWebSocketService } from './project-scan-websocket-service';
 import { settingsService } from './settings-service';
@@ -12,6 +13,15 @@ export class ProjectRescanSchedulerService {
    * Start the periodic rescan scheduler
    */
   async start(): Promise<void> {
+    // Guarded here rather than at the call site because updateInterval() calls
+    // start() again — a call-site-only guard would be re-armed by toggling the
+    // rescan interval setting. Demo projects point at paths that do not exist,
+    // so rescanning them only produces churn and error logs.
+    if (isDemoMode()) {
+      console.log('🎭 Demo mode: project rescan scheduler disabled');
+      return;
+    }
+
     if (this.isRunning) {
       console.log('⚠️ Rescan scheduler is already running');
       return;

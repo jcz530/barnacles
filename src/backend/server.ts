@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { APP_CONFIG, updateRuntimeConfig } from '../shared/constants';
 import { runMigrations } from '../shared/database/migrate';
+import { isDemoMode } from '../shared/config/runtime-mode';
 import { findAvailablePortInRange } from '../shared/utils/port-finder';
 import { corsMiddleware } from './middleware/cors';
 import { cspMiddleware } from './middleware/csp';
@@ -60,6 +61,12 @@ export const startServer = async () => {
   console.log('🌱 Seeding database...');
   const { seedDatabase } = await import('../shared/database/seed');
   await seedDatabase();
+
+  // Dynamically imported so demo fixtures stay out of the normal startup path.
+  if (isDemoMode()) {
+    const { seedDemoDatabase } = await import('../shared/database/demo');
+    await seedDemoDatabase();
+  }
 
   try {
     await sweepOrphans();

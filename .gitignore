@@ -118,3 +118,6 @@ out/
 .beads-credential-key
 .beads/proxieddb/
 *.gate.lock*
+
+# Disposable demo profile (npm run dev:demo)
+.demo-data/
