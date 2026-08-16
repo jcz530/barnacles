@@ -3,14 +3,12 @@ import type { Alias } from '@/shared/types/api';
 import {
   type ColumnDef,
   createColumnHelper,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
   type SortingState,
-  useVueTable,
+  useTable,
 } from '@tanstack/vue-table';
 import { ref } from 'vue';
-import TableHeader from '../../molecules/TableHeader.vue';
+import { type DataTableFeatures, features } from '../../tables/features';
+import TableHeader from '../../tables/TableHeader.vue';
 import AliasesTableRow from '../molecules/AliasesTableRow.vue';
 
 interface Props {
@@ -39,47 +37,27 @@ const emit = defineEmits<{
   'remove:newAlias': [id: string];
 }>();
 
-// TanStack Table setup
-const columnHelper = createColumnHelper<Alias>();
+// Rows are fully custom editable inputs rendered by AliasesTableRow, so this
+// table drives its own markup rather than DataTable's cell slots; TanStack
+// supplies the header, sorting and filtering only.
+const columnHelper = createColumnHelper<DataTableFeatures, Alias>();
 
-const columns: ColumnDef<Alias, unknown>[] = [
-  columnHelper.accessor('visible', {
-    header: '',
-    enableSorting: false,
-    cell: props => props.row.original,
-  }),
-  columnHelper.accessor('name', {
-    header: 'Alias Name',
-    enableSorting: true,
-    cell: props => props.row.original,
-  }),
-  columnHelper.accessor('command', {
-    header: 'Command',
-    enableSorting: false,
-    cell: props => props.row.original,
-  }),
-  columnHelper.accessor('category', {
-    header: 'Category',
-    enableSorting: true,
-    cell: props => props.row.original,
-  }),
-  columnHelper.accessor('id', {
-    header: '',
-    enableSorting: false,
-    cell: props => props.row.original,
-  }),
+const columns: ColumnDef<DataTableFeatures, Alias, any>[] = [
+  columnHelper.accessor('visible', { header: '', enableSorting: false }),
+  columnHelper.accessor('name', { header: 'Alias Name', enableSorting: true }),
+  columnHelper.accessor('command', { header: 'Command', enableSorting: false }),
+  columnHelper.accessor('category', { header: 'Category', enableSorting: true }),
+  columnHelper.accessor('id', { header: '', enableSorting: false }),
 ];
 
 const localSorting = ref<SortingState>(props.sorting);
 
-const table = useVueTable({
+const table = useTable({
+  features,
   get data() {
     return props.aliases;
   },
   columns,
-  getCoreRowModel: getCoreRowModel(),
-  getSortedRowModel: getSortedRowModel(),
-  getFilteredRowModel: getFilteredRowModel(),
   state: {
     get sorting() {
       return localSorting.value;
@@ -95,16 +73,16 @@ const table = useVueTable({
     emit('update:sorting', newValue);
   },
   onGlobalFilterChange: value => {
-    emit('update:searchQuery', value);
+    emit('update:searchQuery', String(value ?? ''));
   },
-  globalFilterFn: (row, columnId, filterValue) => {
+  globalFilterFn: (row, _columnId, filterValue) => {
     const alias = row.original;
-    const search = filterValue.toLowerCase();
+    const search = String(filterValue).toLowerCase();
     return (
       alias.name.toLowerCase().includes(search) ||
       alias.command.toLowerCase().includes(search) ||
       alias.category.toLowerCase().includes(search) ||
-      (alias.description && alias.description.toLowerCase().includes(search))
+      Boolean(alias.description && alias.description.toLowerCase().includes(search))
     );
   },
 });
@@ -143,7 +121,7 @@ const table = useVueTable({
         <div class="bg-muted h-px flex-1"></div>
       </div>
 
-      <div class="rounded-lg border border-dashed border-yellow-300 bg-yellow-50/50">
+      <div class="border-tertiary-300 bg-tertiary-50/50 rounded-lg border border-dashed">
         <table class="w-full border-collapse">
           <tbody>
             <AliasesTableRow
