@@ -110,10 +110,15 @@ describe('screenshot manifest', () => {
   });
 
   it('does not capture pages that expose the real machine', () => {
-    // /configs renders the home directory and /hosts renders /etc/hosts, so
-    // neither can be published. This asserts the exclusion stays in place.
+    // These pages read live OS state rather than the database, so demo data
+    // cannot mask them and a published screenshot would leak the capturing
+    // machine's username, paths, or network config:
+    //   /configs renders the home directory
+    //   /hosts   renders /etc/hosts
+    //   /ports   renders each listening process's real working directory
     const routes = SHOTS.map(s => s.route);
-    expect(routes).not.toContain('/configs');
-    expect(routes).not.toContain('/hosts');
+    for (const route of ['/configs', '/hosts', '/ports']) {
+      expect(routes, `${route} must not be captured`).not.toContain(route);
+    }
   });
 });

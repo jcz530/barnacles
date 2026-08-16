@@ -155,17 +155,11 @@ export const SHOTS = [
   },
   // NOTE: /terminals is not captured. It lists *live* running processes, so it
   // renders an empty state unless real processes are spawned during capture.
-  {
-    name: 'ports',
-    route: '/ports',
-    title: 'See What’s Listening',
-    description:
-      'Find the process behind any local port and stop it without hunting through lsof output.',
-    alt: 'Ports page listing local listening processes',
-    targets: {
-      readme: { marker: 'ports' },
-    },
-  },
+  // NOTE: /ports is deliberately not captured, for the same reason as /configs
+  // and /hosts: it reports live OS state via lsof, including the real working
+  // directory of every listening process — which puts the capturing machine's
+  // username and project paths into a published screenshot. Demo data cannot
+  // mask it, because the page reads the process table rather than the database.
   {
     name: 'settings',
     route: '/settings',
