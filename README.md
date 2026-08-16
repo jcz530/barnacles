@@ -16,7 +16,9 @@ Barnacles is both a desktop application and command-line tool that helps develop
 
 Available for macOS, Windows, and Linux.
 
-![barnacles-screenshot-projects-cards.png](assets/images/screenshots/barnacles-screenshot-dashboard.png)
+<!-- screenshot:dashboard -->
+![Barnacles dashboard showing discovered projects at a glance](assets/images/screenshots/barnacles-screenshot-dashboard.png)
+<!-- /screenshot:dashboard -->
 
 ## Why Barnacles?
 
@@ -29,8 +31,9 @@ If you're juggling multiple projects across different directories, Barnacles kee
 - **Work from anywhere** with both a GUI app and command-line interface
 - **Let your LLM drive** with an MCP server so Claude, Cursor, and other AI clients can find, start, stop, and debug any project on your machine
 
-<!-- Screenshot: Project detail view showing Git info, stats, and quick actions -->
-![barnacles-screenshot-project-details.png](assets/images/screenshots/barnacles-screenshot-project-details.png)
+<!-- screenshot:project-details -->
+![Project overview tab showing Git information and quick actions](assets/images/screenshots/barnacles-screenshot-project-details.png)
+<!-- /screenshot:project-details -->
 
 ## Features
 
@@ -52,8 +55,9 @@ See at a glance:
 - Git branch, commits, and repository status
 - Last modified date and activity
 
-<!-- Screenshot: Technology detection and analytics view -->
-![barnacles-screenshot-project-file-stats.png](assets/images/screenshots/barnacles-screenshot-project-file-stats.png)
+<!-- screenshot:project-file-stats -->
+![Language breakdown and file statistics for a project](assets/images/screenshots/barnacles-screenshot-project-file-stats.png)
+<!-- /screenshot:project-file-stats -->
 
 ### ⚡ Quick Actions
 
@@ -63,11 +67,19 @@ Launch what you need instantly:
 - Start and stop project processes with saved configurations
 - Mark favorites for quick access
 
+<!-- screenshot:processes -->
+![Detected npm scripts with one-click run, IDE, and terminal actions](assets/images/screenshots/barnacles-screenshot-processes.png)
+<!-- /screenshot:processes -->
+
 ### 🎯 Powerful Search
 
 - Fuzzy search finds projects by name instantly
 - Filter by technology, language, or framework
 - Sort by last modified, name, or creation date
+
+<!-- screenshot:projects-cards -->
+![Projects list in card view with technology badges](assets/images/screenshots/barnacles-screenshot-projects-cards.png)
+<!-- /screenshot:projects-cards -->
 
 ### 💻 Command Line Interface
 
@@ -130,7 +142,9 @@ When you first open Barnacles:
    - Mark favorites for quick access
    - Launch terminals, IDEs, and processes with one click
 
-<!-- Screenshot: Settings page -->
+<!-- screenshot:settings -->
+![Barnacles settings page](assets/images/screenshots/barnacles-screenshot-settings.png)
+<!-- /screenshot:settings -->
 
 ## How It Works
 
