@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerKillPortProcessTool } from '@cli/mcp/tools/kill-port-process.js';
 import { apiClient } from '@cli/utils/api-client.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 vi.mock('@cli/utils/api-client.js', () => ({
   apiClient: {
@@ -22,7 +23,7 @@ describe('kill_port_process tool', () => {
     vi.mocked(apiClient.delete).mockResolvedValue(undefined);
     const tool = registerKillPortProcessTool(createServer());
 
-    const result = await tool.handler({ pid: 1234 }, {} as never);
+    const result = await toolHandler(tool)({ pid: 1234 }, {} as never);
 
     expect(apiClient.delete).toHaveBeenCalledWith('/api/ports/1234');
     expect(result.isError).toBeFalsy();
@@ -33,7 +34,7 @@ describe('kill_port_process tool', () => {
     vi.mocked(apiClient.delete).mockRejectedValue(new Error('Process not found'));
     const tool = registerKillPortProcessTool(createServer());
 
-    const result = await tool.handler({ pid: 9999 }, {} as never);
+    const result = await toolHandler(tool)({ pid: 9999 }, {} as never);
 
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({ type: 'text', text: 'Process not found' });

@@ -69,7 +69,7 @@ const handleStartProcesses = async () => {
 
     // Check auto-open setting
     const autoOpenSetting = settingsQuery.data.value?.find(s => s.key === 'autoOpenProcessUrls');
-    const shouldAutoOpen = autoOpenSetting?.value === 'true' || autoOpenSetting?.value === true;
+    const shouldAutoOpen = autoOpenSetting?.value === 'true';
 
     if (shouldAutoOpen) {
       // Wait a bit for URLs to be detected

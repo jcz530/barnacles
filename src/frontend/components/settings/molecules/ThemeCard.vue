@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Theme } from '@/../../shared/types/theme';
+import type { Theme } from '../../../../shared/types/theme';
 import { RouteNames } from '@/router';
 import { Check, Trash2 } from 'lucide-vue-next';
 import { Badge } from '@/components/ui/badge';

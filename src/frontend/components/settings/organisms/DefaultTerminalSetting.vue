@@ -14,7 +14,7 @@ const { useSettingsQuery, useUpdateSettingMutation, useDetectedTerminalsQuery } 
 
 const settingsQuery = useSettingsQuery({ enabled: true });
 const updateSettingMutation = useUpdateSettingMutation();
-const terminalsQuery = useDetectedTerminalsQuery({ enabled: true });
+const terminalsQuery = useDetectedTerminalsQuery();
 
 const defaultTerminalId = ref<string>('');
 const isInitialized = ref(false);

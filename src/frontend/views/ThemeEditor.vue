@@ -23,7 +23,7 @@ import CardTitle from '@/components/ui/card/CardTitle.vue';
 import CardDescription from '@/components/ui/card/CardDescription.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
 import FontPicker from '@/components/settings/molecules/FontPicker.vue';
-import type { Theme } from '@/shared/types/theme';
+import type { Theme } from '../../shared/types/theme';
 
 const route = useRoute();
 const router = useRouter();

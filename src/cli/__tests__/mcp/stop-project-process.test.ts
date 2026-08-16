@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerStopProjectProcessTool } from '@cli/mcp/tools/stop-project-process.js';
 import { apiClient } from '@cli/utils/api-client.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 vi.mock('@cli/utils/api-client.js', () => ({
   apiClient: {
@@ -22,7 +23,7 @@ describe('stop_project_process tool', () => {
     vi.mocked(apiClient.post).mockResolvedValue(undefined);
     const tool = registerStopProjectProcessTool(createServer());
 
-    const result = await tool.handler({ projectId: 'proj-1' }, {} as never);
+    const result = await toolHandler(tool)({ projectId: 'proj-1' }, {} as never);
 
     expect(apiClient.post).toHaveBeenCalledWith('/api/projects/proj-1/stop');
     expect(result.isError).toBeFalsy();
@@ -36,7 +37,7 @@ describe('stop_project_process tool', () => {
     vi.mocked(apiClient.post).mockRejectedValue(new Error('Project not found'));
     const tool = registerStopProjectProcessTool(createServer());
 
-    const result = await tool.handler({ projectId: 'missing' }, {} as never);
+    const result = await toolHandler(tool)({ projectId: 'missing' }, {} as never);
 
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({ type: 'text', text: 'Project not found' });

@@ -192,15 +192,17 @@ class SettingsService {
     const defaultSetting = DEFAULT_SETTINGS[key as keyof typeof DEFAULT_SETTINGS];
     if (!defaultSetting) return null;
 
+    const { value } = defaultSetting;
+
     switch (defaultSetting.type) {
       case 'number':
-        return Number(defaultSetting.value) as T;
+        return Number(value) as T;
       case 'boolean':
-        return (defaultSetting.value === 'true') as T;
+        return (value === 'true') as T;
       case 'json':
-        return JSON.parse(defaultSetting.value) as T;
+        return JSON.parse(value) as T;
       default:
-        return defaultSetting.value as T;
+        return value as T;
     }
   }
 

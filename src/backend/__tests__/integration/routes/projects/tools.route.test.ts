@@ -116,7 +116,7 @@ describe('Projects Tools API Integration Tests', () => {
       // Create a project without a preferred IDE
       const [project] = await db
         .insert(projectsSchema)
-        .values(createProjectData({ preferredIdeId: null }))
+        .values(createProjectData({ preferredIde: null }))
         .returning();
 
       const response = await post(app, `/api/projects/${project.id}/open`, {});
@@ -210,7 +210,7 @@ describe('Projects Tools API Integration Tests', () => {
       // Create a project without a preferred terminal
       const [project] = await db
         .insert(projectsSchema)
-        .values(createProjectData({ preferredTerminalId: null }))
+        .values(createProjectData({ preferredTerminal: null }))
         .returning();
 
       const response = await post(app, `/api/projects/${project.id}/open-terminal`, {});

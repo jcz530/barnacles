@@ -1,12 +1,18 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    // vitest.config.ts runs these in the `node` environment, so no DOM lib.
+    "lib": ["ESNext"],
+    "types": ["node", "vitest/globals"],
+    "tsBuildInfoFile": "node_modules/.cache/tsc/test.tsbuildinfo"
   },
   "include": [
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
-    "src/test/**/*.ts"
+    "src/test/**/*.ts",
+    "src/**/__tests__/**/*.ts",
+    "types/**/*.d.ts"
   ],
   "exclude": []
 }

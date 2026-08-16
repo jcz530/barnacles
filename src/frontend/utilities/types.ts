@@ -19,8 +19,11 @@ export interface UtilityMetadata {
   /** Route path for the utility page (e.g., '/utilities/color-converter') */
   route: string;
 
-  /** Vue component for the utility page */
-  component: () => Promise<Component>;
+  /**
+   * Lazy loader for the utility page. Registrations use `() => import('./X.vue')`,
+   * which resolves to the module namespace rather than the component itself.
+   */
+  component: () => Promise<{ default: Component }>;
 
   /** Whether this utility has CLI support */
   cli: boolean;

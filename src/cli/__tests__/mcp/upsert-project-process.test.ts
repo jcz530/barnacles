@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerUpsertProjectProcessTool } from '@cli/mcp/tools/upsert-project-process.js';
 import { apiClient } from '@cli/utils/api-client.js';
 import type { StartProcess } from '@shared/types/process.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 vi.mock('@cli/utils/api-client.js', () => ({
   apiClient: {
@@ -32,7 +33,7 @@ describe('upsert_project_process tool', () => {
     vi.mocked(apiClient.patch).mockResolvedValue(undefined);
     const tool = registerUpsertProjectProcessTool(createServer());
 
-    const result = await tool.handler(
+    const result = await toolHandler(tool)(
       { projectId: 'proj-1', name: 'worker', commands: ['npm run worker'] },
       {} as never
     );
@@ -51,7 +52,7 @@ describe('upsert_project_process tool', () => {
     vi.mocked(apiClient.patch).mockResolvedValue(undefined);
     const tool = registerUpsertProjectProcessTool(createServer());
 
-    const result = await tool.handler(
+    const result = await toolHandler(tool)(
       {
         projectId: 'proj-1',
         processId: 'proc-1',
@@ -76,7 +77,7 @@ describe('upsert_project_process tool', () => {
     vi.mocked(apiClient.get).mockResolvedValue([existingProcess]);
     const tool = registerUpsertProjectProcessTool(createServer());
 
-    const result = await tool.handler(
+    const result = await toolHandler(tool)(
       { projectId: 'proj-1', processId: 'missing', name: 'dev', commands: ['npm run dev'] },
       {} as never
     );
@@ -93,7 +94,7 @@ describe('upsert_project_process tool', () => {
     vi.mocked(apiClient.get).mockRejectedValue(new Error('Project not found'));
     const tool = registerUpsertProjectProcessTool(createServer());
 
-    const result = await tool.handler(
+    const result = await toolHandler(tool)(
       { projectId: 'missing', name: 'dev', commands: ['npm run dev'] },
       {} as never
     );

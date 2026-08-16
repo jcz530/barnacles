@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerGenerateColorShadesTool } from '@cli/mcp/tools/generate-color-shades.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 function createServer(): McpServer {
   return new McpServer({ name: 'test', version: '1.0.0' });
@@ -10,7 +11,7 @@ describe('generate_color_shades tool', () => {
   it('generates a palette with a swatch preview and JSON content', async () => {
     const tool = registerGenerateColorShadesTool(createServer());
 
-    const result = await tool.handler({ baseColor: '#3b82f6' }, {} as never);
+    const result = await toolHandler(tool)({ baseColor: '#3b82f6' }, {} as never);
 
     expect(result.isError).toBeFalsy();
     expect(result.content).toHaveLength(2);
@@ -26,7 +27,7 @@ describe('generate_color_shades tool', () => {
   it('respects a custom count and includes an export block when requested', async () => {
     const tool = registerGenerateColorShadesTool(createServer());
 
-    const result = await tool.handler(
+    const result = await toolHandler(tool)(
       { baseColor: '#3b82f6', count: 5, exportFormat: 'css', colorName: 'brand' },
       {} as never
     );
@@ -42,7 +43,7 @@ describe('generate_color_shades tool', () => {
   it('returns an error result for unparseable input', async () => {
     const tool = registerGenerateColorShadesTool(createServer());
 
-    const result = await tool.handler({ baseColor: 'not-a-color' }, {} as never);
+    const result = await toolHandler(tool)({ baseColor: 'not-a-color' }, {} as never);
 
     expect(result.isError).toBe(true);
     expect((result.content[0] as { text: string }).text).toContain('Could not parse color');

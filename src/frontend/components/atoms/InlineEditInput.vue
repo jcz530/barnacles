@@ -82,7 +82,7 @@ const handleKeydown = (event: KeyboardEvent) => {
       :class="{
         'border-danger-500': isInvalid,
       }"
-      @update:model-value="val => emit('update:modelValue', val)"
+      @update:model-value="val => emit('update:modelValue', String(val))"
       @blur="stopEditing"
       @keydown="handleKeydown"
     />

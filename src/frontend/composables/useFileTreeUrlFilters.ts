@@ -1,6 +1,6 @@
 import { watch, type Ref } from 'vue';
 import { useUrlSearchParams, useDebounceFn } from '@vueuse/core';
-import type { FilterValue } from '@/utils/file-types';
+import type { FilterValue } from '@/components/files/molecules/FileTypeFilter.vue';
 
 export interface FileTreeFilters {
   searchQuery: Ref<string>;

@@ -6,6 +6,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerStripExifDataTool } from '@cli/mcp/tools/strip-exif-data.js';
 import { registerReadExifDataTool } from '@cli/mcp/tools/read-exif-data.js';
 import { buildTestJpegWithExif } from './fixtures/test-jpeg.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 function createServer(): McpServer {
   return new McpServer({ name: 'test', version: '1.0.0' });
@@ -33,7 +34,7 @@ describe('strip_exif_data tool', () => {
     await fs.writeFile(imagePath, buildTestJpegWithExif());
 
     const tool = registerStripExifDataTool(createServer());
-    const result = await tool.handler({ imagePath, outputPath }, {} as never);
+    const result = await toolHandler(tool)({ imagePath, outputPath }, {} as never);
 
     expect(result.isError).toBeFalsy();
     const summary = JSON.parse((result.content[0] as { text: string }).text);
@@ -42,7 +43,7 @@ describe('strip_exif_data tool', () => {
 
     // Verify the stripped file no longer has EXIF data
     const readTool = registerReadExifDataTool(createServer());
-    const readResult = await readTool.handler({ imagePath: outputPath }, {} as never);
+    const readResult = await toolHandler(readTool)({ imagePath: outputPath }, {} as never);
     const parsed = JSON.parse((readResult.content[0] as { text: string }).text);
     expect(parsed.categories.some((c: { name: string }) => c.name === 'Camera & EXIF')).toBe(false);
   });
@@ -52,7 +53,7 @@ describe('strip_exif_data tool', () => {
     await fs.writeFile(imagePath, buildTestJpegWithExif());
 
     const tool = registerStripExifDataTool(createServer());
-    const result = await tool.handler({ imagePath, outputPath: imagePath }, {} as never);
+    const result = await toolHandler(tool)({ imagePath, outputPath: imagePath }, {} as never);
 
     expect(result.isError).toBe(true);
     expect((result.content[0] as { text: string }).text).toContain('must be different');
@@ -61,7 +62,7 @@ describe('strip_exif_data tool', () => {
   it('returns an error result when the source file does not exist', async () => {
     const tool = registerStripExifDataTool(createServer());
 
-    const result = await tool.handler(
+    const result = await toolHandler(tool)(
       { imagePath: '/nonexistent/source.jpg', outputPath: tempPath('out.jpg') },
       {} as never
     );

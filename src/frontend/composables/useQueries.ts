@@ -18,14 +18,18 @@ import type {
   PresetPack,
   ProjectWithDetails,
   Setting,
-  ShellInfo,
+  AliasesConfigPath,
   Technology,
   Terminal,
   UpdateAccountInput,
   User,
 } from '../../shared/types/api';
 import type { Theme } from '../../shared/types/theme';
-import type { DetectedScriptGroup, ProcessStatus } from '../../shared/types/process';
+import type {
+  DetectedScriptGroup,
+  ProcessStatus,
+  ProjectProcessStatus,
+} from '../../shared/types/process';
 import type { IpInfo } from '../../shared/utilities/ip-info';
 import type { RelatedFolder } from '../../backend/services/project/project-related-folders-service';
 import { useApi } from './useApi';
@@ -35,7 +39,7 @@ export const useQueries = () => {
   const queryClient = useQueryClient();
 
   // Users API query
-  const useUsersQuery = (options?: { enabled?: boolean }) => {
+  const useUsersQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['users'],
       queryFn: () => apiCall<User[]>('GET', API_ROUTES.USERS),
@@ -54,7 +58,7 @@ export const useQueries = () => {
 
   // Projects API query
   const useProjectsQuery = (options?: {
-    enabled?: boolean;
+    enabled?: MaybeRef<boolean>;
     search?: MaybeRef<string>;
     technologies?: MaybeRef<string[]>;
     includeArchived?: MaybeRef<boolean>;
@@ -109,7 +113,10 @@ export const useQueries = () => {
   };
 
   // Single project query
-  const useProjectQuery = (projectId: MaybeRef<string>, options?: { enabled?: boolean }) => {
+  const useProjectQuery = (
+    projectId: MaybeRef<string>,
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
     return useQuery({
       queryKey: ['project', unref(projectId)],
       queryFn: async () => {
@@ -130,7 +137,7 @@ export const useQueries = () => {
   };
 
   // Technologies query
-  const useTechnologiesQuery = (options?: { enabled?: boolean }) => {
+  const useTechnologiesQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['technologies'],
       queryFn: async () => {
@@ -150,7 +157,10 @@ export const useQueries = () => {
   };
 
   // Related folders query
-  const useRelatedFoldersQuery = (projectId: MaybeRef<string>, options?: { enabled?: boolean }) => {
+  const useRelatedFoldersQuery = (
+    projectId: MaybeRef<string>,
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
     return useQuery({
       queryKey: ['projects', unref(projectId), 'related-folders'],
       queryFn: async () => {
@@ -210,7 +220,7 @@ export const useQueries = () => {
   // Project exclusions query (file tree hidden directories)
   const useProjectExclusionsQuery = (
     projectId: MaybeRef<string>,
-    options?: { enabled?: boolean }
+    options?: { enabled?: MaybeRef<boolean> }
   ) => {
     return useQuery({
       queryKey: computed(() => ['projects', unref(projectId), 'exclusions'] as const),
@@ -510,7 +520,10 @@ export const useQueries = () => {
   };
 
   // Project README query
-  const useProjectReadmeQuery = (projectId: MaybeRef<string>, options?: { enabled?: boolean }) => {
+  const useProjectReadmeQuery = (
+    projectId: MaybeRef<string>,
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
     return useQuery({
       queryKey: ['project-readme', unref(projectId)],
       queryFn: async () => {
@@ -533,7 +546,7 @@ export const useQueries = () => {
   // Project package.json scripts query (grouped by root + immediate subdirectories)
   const useProjectPackageScriptsQuery = (
     projectId: MaybeRef<string>,
-    options?: { enabled?: boolean }
+    options?: { enabled?: MaybeRef<boolean> }
   ) => {
     return useQuery({
       queryKey: ['project-package-scripts', unref(projectId)],
@@ -557,7 +570,7 @@ export const useQueries = () => {
   // Project composer.json scripts query (grouped by root + immediate subdirectories)
   const useProjectComposerScriptsQuery = (
     projectId: MaybeRef<string>,
-    options?: { enabled?: boolean }
+    options?: { enabled?: MaybeRef<boolean> }
   ) => {
     return useQuery({
       queryKey: ['project-composer-scripts', unref(projectId)],
@@ -582,7 +595,7 @@ export const useQueries = () => {
   // package manager used by a specific workspace subdirectory.
   const useProjectPackageManagerQuery = (
     projectId: MaybeRef<string>,
-    options?: { enabled?: boolean; subPath?: MaybeRef<string | undefined> }
+    options?: { enabled?: MaybeRef<boolean>; subPath?: MaybeRef<string | undefined> }
   ) => {
     return useQuery({
       queryKey: ['project-package-manager', unref(projectId), unref(options?.subPath)],
@@ -606,7 +619,7 @@ export const useQueries = () => {
   };
 
   // Settings queries
-  const useSettingsQuery = (options?: { enabled?: boolean }) => {
+  const useSettingsQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['settings'],
       queryFn: async () => {
@@ -622,7 +635,7 @@ export const useQueries = () => {
     });
   };
 
-  const useSettingQuery = (key: MaybeRef<string>, options?: { enabled?: boolean }) => {
+  const useSettingQuery = (key: MaybeRef<string>, options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['setting', unref(key)],
       queryFn: async () => {
@@ -641,7 +654,7 @@ export const useQueries = () => {
     });
   };
 
-  const useDefaultSettingsQuery = (options?: { enabled?: boolean }) => {
+  const useDefaultSettingsQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['settings', 'defaults'],
       queryFn: async () => {
@@ -661,7 +674,10 @@ export const useQueries = () => {
     });
   };
 
-  const useDefaultSettingQuery = (key: MaybeRef<string>, options?: { enabled?: boolean }) => {
+  const useDefaultSettingQuery = (
+    key: MaybeRef<string>,
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
     return useQuery({
       queryKey: ['settings', 'defaults', unref(key)],
       queryFn: async () => {
@@ -736,7 +752,10 @@ export const useQueries = () => {
   };
 
   // Get start processes configuration query
-  const useStartProcessesQuery = (projectId: MaybeRef<string>, options?: { enabled?: boolean }) => {
+  const useStartProcessesQuery = (
+    projectId: MaybeRef<string>,
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
     return useQuery({
       queryKey: computed(() => ['project', unref(projectId), 'start-processes'] as const),
       queryFn: async () => {
@@ -829,9 +848,11 @@ export const useQueries = () => {
   };
 
   // Get process status query (optionally filtered by projectId)
-  const useProcessStatusQuery = (
+  const useProcessStatusQuery = <
+    T extends ProjectProcessStatus | ProjectProcessStatus[] = ProjectProcessStatus[],
+  >(
     projectId?: MaybeRef<string>,
-    options?: { enabled?: boolean; refetchInterval?: number }
+    options?: { enabled?: MaybeRef<boolean>; refetchInterval?: number }
   ) => {
     return useQuery({
       queryKey: computed(() =>
@@ -845,7 +866,9 @@ export const useQueries = () => {
         if (pid) params.append('projectId', pid);
 
         const query = params.toString() ? `?${params.toString()}` : '';
-        const response = await apiCall<ApiResponse<unknown>>(
+        // Returns a single status when projectId is supplied, the full list
+        // otherwise; the overloads above pick the right one per call site.
+        const response = await apiCall<ApiResponse<T>>(
           'GET',
           `${API_ROUTES.PROJECTS_PROCESS_STATUS}${query}`
         );
@@ -915,7 +938,10 @@ export const useQueries = () => {
   };
 
   // Get all processes or filter by project (new unified API)
-  const useProcessesQuery = (projectId?: MaybeRef<string>, options?: { enabled?: boolean }) => {
+  const useProcessesQuery = (
+    projectId?: MaybeRef<string>,
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
     return useQuery({
       queryKey: projectId ? ['processes', unref(projectId)] : ['processes'],
       queryFn: async () => {
@@ -941,7 +967,10 @@ export const useQueries = () => {
   };
 
   // Get a single process by ID
-  const useProcessQuery = (processId: MaybeRef<string>, options?: { enabled?: boolean }) => {
+  const useProcessQuery = (
+    processId: MaybeRef<string>,
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
     return useQuery({
       queryKey: ['process', unref(processId)],
       queryFn: async () => {
@@ -1067,7 +1096,7 @@ export const useQueries = () => {
   };
 
   // Get hosts file entries
-  const useHostsQuery = (options?: { enabled?: boolean }) => {
+  const useHostsQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['hosts'],
       queryFn: async () => {
@@ -1086,7 +1115,7 @@ export const useQueries = () => {
   };
 
   // Get hosts file path
-  const useHostsPathQuery = (options?: { enabled?: boolean }) => {
+  const useHostsPathQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['hosts-path'],
       queryFn: async () => {
@@ -1127,7 +1156,7 @@ export const useQueries = () => {
   };
 
   // Get system fonts
-  const useSystemFontsQuery = (options?: { enabled?: boolean }) => {
+  const useSystemFontsQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['system-fonts'],
       queryFn: async () => {
@@ -1145,7 +1174,7 @@ export const useQueries = () => {
   };
 
   // Get all aliases
-  const useAliasesQuery = (options?: { enabled?: boolean }) => {
+  const useAliasesQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['aliases'],
       queryFn: async () => {
@@ -1163,11 +1192,11 @@ export const useQueries = () => {
   };
 
   // Get aliases config path
-  const useAliasesConfigPathQuery = (options?: { enabled?: boolean }) => {
+  const useAliasesConfigPathQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['aliases-config-path'],
       queryFn: async () => {
-        const response = await apiCall<ApiResponse<ShellInfo>>(
+        const response = await apiCall<ApiResponse<AliasesConfigPath>>(
           'GET',
           API_ROUTES.ALIASES_CONFIG_PATH
         );
@@ -1184,7 +1213,7 @@ export const useQueries = () => {
   };
 
   // Detect existing aliases from shell profiles
-  const useDetectAliasesQuery = (options?: { enabled?: boolean }) => {
+  const useDetectAliasesQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['aliases-detect'],
       queryFn: async () => {
@@ -1204,7 +1233,7 @@ export const useQueries = () => {
   };
 
   // Get preset alias packs
-  const usePresetsQuery = (options?: { enabled?: boolean }) => {
+  const usePresetsQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['alias-presets'],
       queryFn: async () => {
@@ -1224,7 +1253,7 @@ export const useQueries = () => {
   };
 
   // Get alias themes
-  const useAliasThemesQuery = (options?: { enabled?: boolean }) => {
+  const useAliasThemesQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['alias-themes'],
       queryFn: async () => {
@@ -1373,7 +1402,7 @@ export const useQueries = () => {
   };
 
   // Get all themes query
-  const useThemesQuery = (options?: { enabled?: boolean }) => {
+  const useThemesQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['themes'],
       queryFn: async () => {
@@ -1390,7 +1419,7 @@ export const useQueries = () => {
   };
 
   // Get active theme query
-  const useActiveThemeQuery = (options?: { enabled?: boolean }) => {
+  const useActiveThemeQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['themes', 'active'],
       queryFn: async () => {
@@ -1514,7 +1543,10 @@ export const useQueries = () => {
   };
 
   // Accounts query
-  const useAccountsQuery = (projectId: MaybeRef<string>, options?: { enabled?: boolean }) => {
+  const useAccountsQuery = (
+    projectId: MaybeRef<string>,
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
     return useQuery({
       queryKey: ['projects', unref(projectId), 'accounts'],
       queryFn: async () => {
@@ -1600,7 +1632,7 @@ export const useQueries = () => {
   // Git stats query
   const useGitStatsQuery = (
     period: MaybeRef<'week' | 'month' | 'last-week'>,
-    options?: { enabled?: boolean }
+    options?: { enabled?: MaybeRef<boolean> }
   ) => {
     return useQuery({
       queryKey: computed(() => ['git-stats', unref(period)] as const),
@@ -1627,7 +1659,7 @@ export const useQueries = () => {
   };
 
   // Ports query — lists all TCP LISTEN ports on the local machine
-  const usePortsQuery = (options?: { enabled?: boolean }) => {
+  const usePortsQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     const visibility = useDocumentVisibility();
 
     return useQuery({
@@ -1657,7 +1689,7 @@ export const useQueries = () => {
   };
 
   // IP info query
-  const useIpInfoQuery = (options?: { enabled?: boolean }) => {
+  const useIpInfoQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     return useQuery({
       queryKey: ['ip-info'],
       queryFn: async () => {

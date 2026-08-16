@@ -7,7 +7,7 @@ import { createAppWindow } from '../main';
  */
 const getMainWindows = (): BrowserWindow[] => {
   return BrowserWindow.getAllWindows().filter(
-    win => !win.isDestroyed() && !win.skipTaskbar && win.isResizable() && !win.isAlwaysOnTop()
+    win => !win.isDestroyed() && win.isResizable() && !win.isAlwaysOnTop()
   );
 };
 

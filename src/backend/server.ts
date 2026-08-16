@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import type { TLSSocket } from 'tls';
 import { APP_CONFIG, updateRuntimeConfig } from '../shared/constants';
 import { runMigrations } from '../shared/database/migrate';
 import { isDemoMode, isDemoModeMisconfigured } from '../shared/config/runtime-mode';
@@ -107,7 +108,7 @@ export const startServer = async () => {
   httpServer.on('request', async (req, res) => {
     try {
       // Convert Node.js IncomingMessage to Fetch API Request
-      const protocol = req.socket.encrypted ? 'https' : 'http';
+      const protocol = (req.socket as TLSSocket).encrypted ? 'https' : 'http';
       const url = `${protocol}://${req.headers.host || `${APP_CONFIG.API_HOST}:${availablePort}`}${req.url}`;
 
       // Collect request body for non-GET/HEAD requests

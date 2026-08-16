@@ -35,7 +35,7 @@ onMounted(async () => {
     utilityName.value = registration.metadata.name;
     const componentModule = await registration.metadata.component();
     // Use markRaw to prevent Vue from making the component reactive
-    utilityComponent.value = markRaw(componentModule.default || componentModule);
+    utilityComponent.value = markRaw(componentModule.default);
 
     // Set breadcrumbs
     setBreadcrumbs([{ label: 'Utilities', href: '/utilities' }, { label: utilityName.value }]);

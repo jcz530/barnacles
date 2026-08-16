@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerListProjectAccountsTool } from '@cli/mcp/tools/list-project-accounts.js';
 import { apiClient } from '@cli/utils/api-client.js';
 import type { Account } from '@shared/types/api.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 vi.mock('@cli/utils/api-client.js', () => ({
   apiClient: {
@@ -36,7 +37,7 @@ describe('list_project_accounts tool', () => {
     vi.mocked(apiClient.get).mockResolvedValue([fakeAccount]);
     const tool = registerListProjectAccountsTool(createServer());
 
-    const result = await tool.handler({ projectId: 'proj-1' }, {} as never);
+    const result = await toolHandler(tool)({ projectId: 'proj-1' }, {} as never);
 
     expect(apiClient.get).toHaveBeenCalledWith('/api/projects/proj-1/accounts');
     expect(result.isError).toBeFalsy();
@@ -61,7 +62,7 @@ describe('list_project_accounts tool', () => {
     vi.mocked(apiClient.get).mockRejectedValue(new Error('Project not found'));
     const tool = registerListProjectAccountsTool(createServer());
 
-    const result = await tool.handler({ projectId: 'missing' }, {} as never);
+    const result = await toolHandler(tool)({ projectId: 'missing' }, {} as never);
 
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({ type: 'text', text: 'Project not found' });

@@ -5,6 +5,7 @@ import path from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerReadExifDataTool } from '@cli/mcp/tools/read-exif-data.js';
 import { buildTestJpegWithExif } from './fixtures/test-jpeg.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 function createServer(): McpServer {
   return new McpServer({ name: 'test', version: '1.0.0' });
@@ -31,7 +32,7 @@ describe('read_exif_data tool', () => {
     const imagePath = await writeTempJpeg();
     const tool = registerReadExifDataTool(createServer());
 
-    const result = await tool.handler({ imagePath }, {} as never);
+    const result = await toolHandler(tool)({ imagePath }, {} as never);
 
     expect(result.isError).toBeFalsy();
     const parsed = JSON.parse((result.content[0] as { text: string }).text);
@@ -41,7 +42,10 @@ describe('read_exif_data tool', () => {
   it('returns an error result when the file does not exist', async () => {
     const tool = registerReadExifDataTool(createServer());
 
-    const result = await tool.handler({ imagePath: '/nonexistent/path/to/image.jpg' }, {} as never);
+    const result = await toolHandler(tool)(
+      { imagePath: '/nonexistent/path/to/image.jpg' },
+      {} as never
+    );
 
     expect(result.isError).toBe(true);
   });

@@ -15,8 +15,11 @@ export default defineConfig({
     },
   },
   resolve: {
+    // Keep these in sync with `paths` in tsconfig.base.json, otherwise an
+    // alias can type-check but fail to resolve at build time.
     alias: {
       '@': path.resolve('./src/frontend'),
+      '@shared': path.resolve('./src/shared'),
     },
   },
   server: {

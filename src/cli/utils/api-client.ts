@@ -5,6 +5,11 @@ import { ensureBackendRunning, getBackendUrl } from './app-manager.js';
  * Provides a simple interface for making API calls to the Barnacles backend
  */
 
+/** Envelope the backend wraps every successful JSON payload in. */
+interface ApiEnvelope<T> {
+  data: T;
+}
+
 /**
  * Build an Error from a failed response, preferring the backend's own
  * `{ error }` / `{ message }` body over the generic status text.
@@ -53,8 +58,8 @@ export class ApiClient {
       throw await buildApiError(response);
     }
 
-    const result = await response.json();
-    return result.data as T;
+    const result = (await response.json()) as ApiEnvelope<T>;
+    return result.data;
   }
 
   /**
@@ -74,8 +79,8 @@ export class ApiClient {
       throw await buildApiError(response);
     }
 
-    const result = await response.json();
-    return result.data as T;
+    const result = (await response.json()) as ApiEnvelope<T>;
+    return result.data;
   }
 
   /**
@@ -95,8 +100,8 @@ export class ApiClient {
       throw await buildApiError(response);
     }
 
-    const result = await response.json();
-    return result.data as T;
+    const result = (await response.json()) as ApiEnvelope<T>;
+    return result.data;
   }
 
   /**
@@ -116,8 +121,8 @@ export class ApiClient {
       throw await buildApiError(response);
     }
 
-    const result = await response.json();
-    return result.data as T;
+    const result = (await response.json()) as ApiEnvelope<T>;
+    return result.data;
   }
 
   /**
@@ -135,8 +140,8 @@ export class ApiClient {
       throw await buildApiError(response);
     }
 
-    const result = await response.json();
-    return result.data as T;
+    const result = (await response.json()) as ApiEnvelope<T>;
+    return result.data;
   }
 
   /**

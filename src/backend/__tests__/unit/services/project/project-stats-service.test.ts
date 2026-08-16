@@ -228,6 +228,7 @@ describe('ProjectStatsService', () => {
         gitInfo: {
           branch: 'feature',
           status: 'modified',
+          hasUncommittedChanges: true,
         },
       };
 

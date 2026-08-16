@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerGetProjectScriptsTool } from '@cli/mcp/tools/get-project-scripts.js';
 import { apiClient } from '@cli/utils/api-client.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 vi.mock('@cli/utils/api-client.js', () => ({
   apiClient: {
@@ -33,7 +34,7 @@ describe('get_project_scripts tool', () => {
     });
     const tool = registerGetProjectScriptsTool(createServer());
 
-    const result = await tool.handler({ projectId: 'proj-1' }, {} as never);
+    const result = await toolHandler(tool)({ projectId: 'proj-1' }, {} as never);
 
     expect(apiClient.get).toHaveBeenCalledWith('/api/projects/proj-1/package-scripts');
     expect(apiClient.get).toHaveBeenCalledWith('/api/projects/proj-1/composer-scripts');
@@ -57,7 +58,7 @@ describe('get_project_scripts tool', () => {
     vi.mocked(apiClient.get).mockRejectedValue(new Error('Project not found'));
     const tool = registerGetProjectScriptsTool(createServer());
 
-    const result = await tool.handler({ projectId: 'proj-1' }, {} as never);
+    const result = await toolHandler(tool)({ projectId: 'proj-1' }, {} as never);
 
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({ type: 'text', text: 'Project not found' });

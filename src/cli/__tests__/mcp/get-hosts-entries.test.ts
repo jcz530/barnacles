@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerGetHostsEntriesTool } from '@cli/mcp/tools/get-hosts-entries.js';
 import { apiClient } from '@cli/utils/api-client.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 vi.mock('@cli/utils/api-client.js', () => ({
   apiClient: {
@@ -24,7 +25,7 @@ describe('get_hosts_entries tool', () => {
     vi.mocked(apiClient.get).mockResolvedValue(fakeEntries);
     const tool = registerGetHostsEntriesTool(createServer());
 
-    const result = await tool.handler({}, {} as never);
+    const result = await toolHandler(tool)({}, {} as never);
 
     expect(apiClient.get).toHaveBeenCalledWith('/api/system/hosts');
     expect(result.isError).toBeFalsy();
@@ -35,7 +36,7 @@ describe('get_hosts_entries tool', () => {
     vi.mocked(apiClient.get).mockRejectedValue(new Error('Failed to read hosts file'));
     const tool = registerGetHostsEntriesTool(createServer());
 
-    const result = await tool.handler({}, {} as never);
+    const result = await toolHandler(tool)({}, {} as never);
 
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({ type: 'text', text: 'Failed to read hosts file' });

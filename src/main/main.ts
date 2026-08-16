@@ -48,7 +48,7 @@ contextMenu({
 // popup and other utility windows from window-focus/activation logic.
 const getMainWindows = (): BrowserWindow[] =>
   BrowserWindow.getAllWindows().filter(
-    win => !win.isDestroyed() && !win.skipTaskbar && win.isResizable() && !win.isAlwaysOnTop()
+    win => !win.isDestroyed() && win.isResizable() && !win.isAlwaysOnTop()
   );
 
 // Function to create and track a new window

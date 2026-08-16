@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Alias } from '@/shared/types/api';
+import type { Alias } from '../../../../shared/types/api';
 import {
   type ColumnDef,
   createColumnHelper,
@@ -43,7 +43,7 @@ const emit = defineEmits<{
 const columnHelper = createColumnHelper<DataTableFeatures, Alias>();
 
 const columns: ColumnDef<DataTableFeatures, Alias, any>[] = [
-  columnHelper.accessor('visible', { header: '', enableSorting: false }),
+  columnHelper.display({ id: 'visible', header: '', enableSorting: false }),
   columnHelper.accessor('name', { header: 'Alias Name', enableSorting: true }),
   columnHelper.accessor('command', { header: 'Command', enableSorting: false }),
   columnHelper.accessor('category', { header: 'Category', enableSorting: true }),

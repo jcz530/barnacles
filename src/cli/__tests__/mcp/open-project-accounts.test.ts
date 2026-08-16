@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerOpenProjectAccountsTool } from '@cli/mcp/tools/open-project-accounts.js';
 import { apiClient } from '@cli/utils/api-client.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 vi.mock('@cli/utils/api-client.js', () => ({
   apiClient: {
@@ -22,7 +23,7 @@ describe('open_project_accounts tool', () => {
     vi.mocked(apiClient.post).mockResolvedValue(undefined);
     const tool = registerOpenProjectAccountsTool(createServer());
 
-    const result = await tool.handler({ projectId: 'proj-1' }, {} as never);
+    const result = await toolHandler(tool)({ projectId: 'proj-1' }, {} as never);
 
     expect(apiClient.post).toHaveBeenCalledWith('/api/system/focus-project', {
       path: '/projects/proj-1/accounts',
@@ -38,7 +39,7 @@ describe('open_project_accounts tool', () => {
     vi.mocked(apiClient.post).mockRejectedValue(new Error('No main window found'));
     const tool = registerOpenProjectAccountsTool(createServer());
 
-    const result = await tool.handler({ projectId: 'proj-1' }, {} as never);
+    const result = await toolHandler(tool)({ projectId: 'proj-1' }, {} as never);
 
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({ type: 'text', text: 'No main window found' });

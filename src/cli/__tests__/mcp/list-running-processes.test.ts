@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerListRunningProcessesTool } from '@cli/mcp/tools/list-running-processes.js';
 import { apiClient } from '@cli/utils/api-client.js';
 import type { ProjectProcessStatus } from '@shared/types/process.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 vi.mock('@cli/utils/api-client.js', () => ({
   apiClient: {
@@ -30,7 +31,7 @@ describe('list_running_processes tool', () => {
     vi.mocked(apiClient.get).mockResolvedValue(fakeStatuses);
     const tool = registerListRunningProcessesTool(createServer());
 
-    const result = await tool.handler({}, {} as never);
+    const result = await toolHandler(tool)({}, {} as never);
 
     expect(apiClient.get).toHaveBeenCalledWith('/api/projects/process-status');
     expect(result.isError).toBeFalsy();
@@ -44,7 +45,7 @@ describe('list_running_processes tool', () => {
     vi.mocked(apiClient.get).mockRejectedValue(new Error('Failed to fetch process status'));
     const tool = registerListRunningProcessesTool(createServer());
 
-    const result = await tool.handler({}, {} as never);
+    const result = await toolHandler(tool)({}, {} as never);
 
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({ type: 'text', text: 'Failed to fetch process status' });

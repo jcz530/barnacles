@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import * as LucideIcons from 'lucide-vue-next';
+import type { LucideIcon } from 'lucide-vue-next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { UtilityMetadata } from '@/utilities/types';
@@ -11,10 +12,11 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Dynamically get the icon component
-const IconComponent = computed(() => {
+// Dynamically get the icon component. The lucide namespace also exports
+// non-component helpers, so narrow to LucideIcon for rendering.
+const IconComponent = computed<LucideIcon>(() => {
   const iconName = props.utility.icon as keyof typeof LucideIcons;
-  return LucideIcons[iconName] || LucideIcons.Wrench;
+  return (LucideIcons[iconName] as LucideIcon) || LucideIcons.Wrench;
 });
 </script>
 
