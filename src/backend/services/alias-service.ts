@@ -9,6 +9,8 @@ import type {
 import { promises as fs } from 'fs';
 import os from 'os';
 import path from 'path';
+import { isDemoMode } from '../../shared/config/runtime-mode';
+import { getAppDataDir } from '../../shared/database/paths';
 import { asc, eq } from 'drizzle-orm';
 import { isWindows } from '../../shared/utils/platform';
 
@@ -28,7 +30,10 @@ export function isAliasSupported(): boolean {
  * Detect the current shell and relevant profile paths
  */
 export async function detectShell(): Promise<ShellInfo> {
-  const homeDir = os.homedir();
+  // Demo mode redirects to the disposable profile: the real path contains the
+  // user's username (visible in screenshots), and a demo run must never write
+  // to the real shell configuration.
+  const homeDir = isDemoMode() ? getAppDataDir() : os.homedir();
   const configPath = path.join(homeDir, '.config', 'barnacles', 'aliases');
 
   // Aliases not supported on Windows
@@ -423,7 +428,9 @@ async function generateAliasFileContent(): Promise<string> {
  * Ensure the barnacles config directory exists
  */
 async function ensureConfigDirectory(): Promise<string> {
-  const homeDir = os.homedir();
+  // Mirrors detectShell: demo mode writes inside the disposable profile rather
+  // than the user's real ~/.config.
+  const homeDir = isDemoMode() ? getAppDataDir() : os.homedir();
   const configDir = path.join(homeDir, '.config', 'barnacles');
 
   try {

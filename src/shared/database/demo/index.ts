@@ -16,7 +16,8 @@ import {
 } from '../schema';
 import { TECHNOLOGY_DETECTORS } from '../../../backend/services/technology-detectors';
 import { createAccount } from '../../../backend/services/account-service';
-import { DEMO_PROJECTS, DEMO_PATH_ROOT } from './data/projects';
+import { DEMO_PROJECTS } from './data/projects';
+import { createDemoWorkspace, demoProjectPath } from './workspace';
 import { DEMO_STATS } from './data/stats';
 import { DEMO_PROCESSES } from './data/processes';
 import { DEMO_ACCOUNTS } from './data/accounts';
@@ -88,7 +89,9 @@ async function seedProjects(): Promise<void> {
     await db.insert(projects).values({
       id: project.id,
       name: project.name,
-      path: project.path,
+      // Real on-disk path: the README/Files tabs read the filesystem, not the
+      // database, so a cosmetic /Users/dev path renders empty states.
+      path: demoProjectPath(project.name),
       description: project.description,
       lastModified: daysAgo(project.lastModifiedDaysAgo),
       size: project.size,
@@ -186,9 +189,9 @@ async function seedProcesses(): Promise<void> {
 
 async function seedRelatedFolders(): Promise<void> {
   const related = [
-    { projectId: 'demo-proj-01', folderPath: `${DEMO_PATH_ROOT}/harbor-infra` },
-    { projectId: 'demo-proj-01', folderPath: `${DEMO_PATH_ROOT}/harbor-docs` },
-    { projectId: 'demo-proj-02', folderPath: `${DEMO_PATH_ROOT}/tidepool-icons` },
+    { projectId: 'demo-proj-01', folderPath: demoProjectPath('lighthouse-web') },
+    { projectId: 'demo-proj-01', folderPath: demoProjectPath('sextant') },
+    { projectId: 'demo-proj-02', folderPath: demoProjectPath('seaglass') },
   ];
 
   for (const folder of related) {
@@ -235,6 +238,7 @@ export async function seedDemoDatabase(): Promise<void> {
   console.log('🎭 Seeding demo data...');
 
   await clearExistingDemoData();
+  await createDemoWorkspace();
   await seedProjects();
   await seedTechnologies();
   await seedStats();

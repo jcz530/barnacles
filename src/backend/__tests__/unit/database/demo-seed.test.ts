@@ -71,9 +71,25 @@ describe('demo seed', () => {
     });
 
     it('never leaks a real home directory into a fixture path', () => {
+      // Seeded rows use an on-disk path under the demo profile (see
+      // workspace.ts); the fixture path is the cosmetic fallback. Neither may
+      // reference the capturing machine's home directory.
       for (const project of DEMO_PROJECTS) {
         expect(project.path.startsWith('/Users/dev/')).toBe(true);
       }
+    });
+
+    it('places the on-disk workspace inside the app data dir, under the project name', async () => {
+      // Test mode keeps getAppDataDir pointed at a tmp dir, so this asserts the
+      // workspace is nested inside whatever profile is active — not a hardcoded
+      // .demo-data string.
+      const { demoProjectPath, getDemoWorkspaceRoot } = await import(
+        '@shared/database/demo/workspace'
+      );
+
+      const resolved = demoProjectPath('harbor-api');
+      expect(resolved.startsWith(getDemoWorkspaceRoot())).toBe(true);
+      expect(resolved.endsWith('harbor-api')).toBe(true);
     });
 
     it('only references technology slugs the app knows about', () => {

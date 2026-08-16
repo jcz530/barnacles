@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
 import { userInfo } from 'os';
+import { isDemoMode } from '../../shared/config/runtime-mode';
+import { DEMO_USER_NAME } from '../../shared/database/demo/data/user';
 import { userService } from '../services/user-service';
 import { loadUser, type UserContext } from '../middleware/user-loader';
 import { BadRequestException } from '../exceptions/http-exceptions';
@@ -8,8 +10,9 @@ const users = new Hono();
 
 users
   .get('/current', async c => {
-    const osUser = userInfo();
-    const username = osUser.username;
+    // Demo mode substitutes a fake identity: this route reads the OS user
+    // directly, so without this the real username appears in screenshots.
+    const username = isDemoMode() ? DEMO_USER_NAME : userInfo().username;
 
     // Generate initials from username (first 2 chars uppercase)
     const initials = username.slice(0, 2).toUpperCase();
