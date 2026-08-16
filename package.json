@@ -10,7 +10,12 @@
     "barnacles-dev": "./dist/cli/index.js"
   },
   "scripts": {
-    "dev": "cross-env NODE_ENV=development concurrently \"npm run dev:main\" \"npm run dev:preload\" \"npm run dev:renderer\" \"npm run dev:electron\"",
+    "dev": "cross-env NODE_ENV=development npm run dev:all",
+    "dev:all": "concurrently \"npm run dev:main\" \"npm run dev:preload\" \"npm run dev:renderer\" \"npm run dev:electron\"",
+    "dev:demo": "npm run demo:reset && cross-env NODE_ENV=development BARNACLES_DEMO=1 BARNACLES_DATA_DIR=.demo-data npm run dev:all",
+    "demo:reset": "node scripts/reset-demo-data.mjs",
+    "screenshots": "npm run demo:reset && npm run build && npm run build:screenshots && node scripts/run-screenshots.mjs",
+    "build:screenshots": "cross-env NODE_ENV=production vite build --config vite.screenshots.config.ts",
     "dev:main": "cross-env NODE_ENV=development vite build --config vite.main.config.ts --watch",
     "dev:preload": "cross-env NODE_ENV=development vite build --config vite.preload.config.ts --watch",
     "dev:renderer": "cross-env NODE_ENV=development vite --config vite.renderer.config.mjs",

@@ -4,6 +4,7 @@ import type { IPty } from 'node-pty';
 import * as pty from 'node-pty';
 import type { ProcessStatus, ProjectProcessStatus, StartProcess } from '../../shared/types/process';
 import { isWindows, getDefaultShell } from '../../shared/utils/platform';
+import { isDemoMode } from '../../shared/config/runtime-mode';
 
 interface RunningProcess {
   name: string;
@@ -24,6 +25,23 @@ interface RunningProcess {
 class ProcessManagerService {
   // Map of projectId -> Map of processId -> RunningProcess
   private runningProcesses: Map<string, Map<string, RunningProcess>> = new Map();
+
+  /** Populated only in demo mode, by loadDemoProcesses(). */
+  private demoProcesses: ProjectProcessStatus[] = [];
+
+  /**
+   * Load the mocked demo processes.
+   *
+   * Called from server startup behind an isDemoMode() check. The dynamic import
+   * keeps the fixtures in their own chunk instead of the main bundle that every
+   * packaged build loads.
+   */
+  async loadDemoProcesses(): Promise<void> {
+    const { getDemoRunningProcesses } = await import(
+      '../../shared/database/demo/data/running-processes'
+    );
+    this.demoProcesses = getDemoRunningProcesses();
+  }
 
   /**
    * Spawn a process with properly configured environment
@@ -302,7 +320,25 @@ class ProcessManagerService {
       allStatuses.push(this.getProcessStatus(projectId));
     }
 
+    // Demo mode reports a couple of projects as live without spawning anything,
+    // so the dashboard shows real localhost URLs. Anything genuinely running
+    // still wins, so starting a process in demo mode behaves normally.
+    const running = new Set(allStatuses.map(status => status.projectId));
+    for (const mocked of this.getMockedProcesses()) {
+      if (!running.has(mocked.projectId)) allStatuses.push(mocked);
+    }
+
     return allStatuses;
+  }
+
+  /**
+   * Mocked "running" processes, empty outside demo mode.
+   *
+   * Loaded via `loadDemoProcesses()` at startup rather than imported here, so
+   * the fixtures are code-split out of the chunk every packaged build loads.
+   */
+  private getMockedProcesses(): ProjectProcessStatus[] {
+    return isDemoMode() ? this.demoProcesses : [];
   }
 
   /**
@@ -312,6 +348,9 @@ class ProcessManagerService {
     const projectProcesses = this.runningProcesses.get(projectId);
 
     if (!projectProcesses) {
+      const mocked = this.getMockedProcesses().find(status => status.projectId === projectId);
+      if (mocked) return mocked;
+
       return {
         projectId,
         processes: [],

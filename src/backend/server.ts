@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { APP_CONFIG, updateRuntimeConfig } from '../shared/constants';
 import { runMigrations } from '../shared/database/migrate';
+import { isDemoMode, isDemoModeMisconfigured } from '../shared/config/runtime-mode';
 import { findAvailablePortInRange } from '../shared/utils/port-finder';
 import { corsMiddleware } from './middleware/cors';
 import { cspMiddleware } from './middleware/csp';
@@ -10,6 +11,7 @@ import { projectRescanSchedulerService } from './services/project-rescan-schedul
 import { terminalWebSocketService } from './services/terminal-websocket-service';
 import { portProbeWebSocketService } from './services/port-probe-websocket-service';
 import { sweepOrphans } from './services/port-screenshot-cache-service';
+import { processManagerService } from './services/process-manager-service';
 
 export const createServer = () => {
   const app = new Hono();
@@ -54,12 +56,29 @@ export const createServer = () => {
 };
 
 export const startServer = async () => {
+  // Fail before touching the database: BARNACLES_DEMO without a demo profile
+  // would otherwise open the real database while demo mode stays inactive,
+  // which is a confusing half-state rather than an obvious error.
+  if (isDemoModeMisconfigured()) {
+    throw new Error(
+      'BARNACLES_DEMO=1 requires BARNACLES_DATA_DIR to point at a ".demo-data" directory. ' +
+        'Run `npm run dev:demo` or `npm run screenshots` instead of setting the flag by hand.'
+    );
+  }
+
   console.log('🔧 Running database migrations...');
   await runMigrations();
 
   console.log('🌱 Seeding database...');
   const { seedDatabase } = await import('../shared/database/seed');
   await seedDatabase();
+
+  // Dynamically imported so demo fixtures stay out of the normal startup path.
+  if (isDemoMode()) {
+    const { seedDemoDatabase } = await import('../shared/database/demo');
+    await seedDemoDatabase();
+    await processManagerService.loadDemoProcesses();
+  }
 
   try {
     await sweepOrphans();

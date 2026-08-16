@@ -4,6 +4,7 @@ import path from 'path';
 import { promisify } from 'util';
 import dayjs from 'dayjs';
 import type { GitStats, GitStatsByDay, GitStatsTotals } from '@shared/types/api';
+import { isDemoMode } from '../../../shared/config/runtime-mode';
 
 const execAsync = promisify(exec);
 
@@ -37,6 +38,14 @@ class ProjectGitStatsService {
     additionalEmails: string[] = []
   ): Promise<GitStats> {
     const { sinceDate, untilDate } = this.getPeriodDates(period);
+
+    // Demo projects are plain directories with no git history, so the real
+    // `git log` path returns zeros for every stat. Serve synthetic activity
+    // instead, using the same date range the caller asked for.
+    if (isDemoMode()) {
+      const { buildDemoGitStats } = await import('../../../shared/database/demo/data/git-stats');
+      return buildDemoGitStats(period, this.getDateRange(sinceDate, untilDate));
+    }
 
     // Get user info from git config
     const globalEmail = await this.getGlobalEmail();
