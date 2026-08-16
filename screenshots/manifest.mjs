@@ -2,7 +2,7 @@
  * Screenshot manifest — the single source of truth shared by the capture script
  * (scripts/capture-screenshots.mjs) and the update-screenshots skill.
  *
- * `name`/`route`/`prepare` drive capture. `title`/`description`/`alt`/`targets`
+ * `name`/`route`/`storage` drive capture. `title`/`description`/`alt`/`targets`
  * drive publication, so a screenshot and the copy describing it stay together
  * instead of drifting apart in two repos.
  *
@@ -20,8 +20,8 @@
  * @typedef {Object} ShotSpec
  * @property {string} name          File stem: <name>-<theme>.png
  * @property {string} route         Hash route, without the leading '#'.
- * @property {string} [prepare]     JS evaluated BEFORE the load — seeds state the app reads at startup (e.g. view mode).
- * @property {string} [afterLoad]   JS evaluated AFTER data settles — acts on rendered UI (e.g. scroll, click).
+ * @property {Object<string,string>} [storage]  localStorage seeded BEFORE the captured load (bare string values).
+ * @property {string} [afterLoad]   JS evaluated AFTER data settles — acts on rendered UI (e.g. scroll).
  * @property {number} [settleMs]    Extra settle time for heavy views.
  * @property {boolean} [manual]     Captured by hand; the script skips it.
  * @property {string} title
@@ -33,19 +33,20 @@
 const FEATURED = 'demo-proj-01';
 
 /**
- * localStorage writes are more reliable than clicking a toggle by DOM position.
- * Set explicitly on every shot that renders the projects list, so a shot never
- * inherits the view mode left behind by the one before it.
+ * localStorage state seeded before the captured load. More reliable than
+ * clicking a toggle by DOM position, and set explicitly on every shot that
+ * renders the projects list so none inherits the view left by the shot before.
+ *
+ * Values are bare strings, matching what the app persists — a JSON-quoted value
+ * fails to parse and silently falls back to the default.
  */
-const setProjectsView = view =>
-  `localStorage.setItem('projects-view-mode', JSON.stringify('${view}'))`;
+const projectsView = view => ({ 'projects-view-mode': view });
 
 /** @type {ShotSpec[]} */
 export const SHOTS = [
   {
     name: 'dashboard',
     route: '/',
-    prepare: setProjectsView('card'),
     title: 'Instant Project Discovery',
     description:
       'Stop digging through nested folders. Barnacles automatically scans your file system and catalogs all your development projects in one searchable interface.',
@@ -58,7 +59,7 @@ export const SHOTS = [
   {
     name: 'projects-table',
     route: '/projects',
-    prepare: setProjectsView('table'),
+    storage: projectsView('table'),
     title: 'Every Project in One Table',
     description:
       'Scan your entire catalog at a glance — language, framework, Git branch, and last modified date, sortable by any column.',
@@ -70,7 +71,7 @@ export const SHOTS = [
   {
     name: 'projects-cards',
     route: '/projects',
-    prepare: setProjectsView('card'),
+    storage: projectsView('card'),
     title: 'Smart Filtering & Organization',
     description:
       'Working on React projects today? Python tomorrow? Filter your entire project catalog by technology, language, or framework. Sort by last modified to jump back into recent work.',
@@ -230,14 +231,10 @@ export const SHOTS = [
   },
 ];
 
-/**
- * Output filename for a shot.
- *
- * Captured on the default theme only. Barnacles has no true light/dark
- * duality — themes are colour palettes generated from the active theme in the
- * database, and the `.dark` class only remaps a few slate variables on top, so
- * a "dark" pass produced near-identical images.
- */
-export function outputFileName(shot) {
-  return `${shot.name}.png`;
+/** Themes captured for every non-manual shot. */
+export const THEMES = ['light', 'dark'];
+
+/** Output filename for a shot in a given theme. */
+export function outputFileName(shot, theme) {
+  return `${shot.name}-${theme}.png`;
 }

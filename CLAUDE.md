@@ -40,7 +40,8 @@ Output will be in the `dist/` directory.
 
 - `npm run dev:demo` - Run the app against a disposable database seeded with fake
   projects. Useful for demos and for working on UI without your real data.
-- `npm run screenshots` - Capture product screenshots into `screenshots/out/`
+- `npm run screenshots` - Capture product screenshots into `screenshots/out/`, one
+  light and one dark PNG per page (`<name>-<theme>.png`)
 - `npm run demo:reset` - Delete the local `.demo-data` profile
 
 Demo mode is controlled by two env vars: `BARNACLES_DEMO=1` enables fake-data

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { SHOTS, outputFileName } from '../../../../../screenshots/manifest.mjs';
+import { SHOTS, THEMES, outputFileName } from '../../../../../screenshots/manifest.mjs';
 import { DEMO_PROJECTS } from '@shared/database/demo/data/projects';
 
 /**
@@ -17,11 +17,39 @@ describe('screenshot manifest', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('produces a distinct output filename per shot', () => {
-    const files = SHOTS.filter(s => !s.manual).map(s => outputFileName(s));
+  it('produces a distinct output filename per shot and theme', () => {
+    const files = THEMES.flatMap(theme =>
+      SHOTS.filter(s => !s.manual).map(s => outputFileName(s, theme))
+    );
+
     expect(new Set(files).size).toBe(files.length);
     for (const file of files) {
       expect(file.endsWith('.png')).toBe(true);
+    }
+  });
+
+  it('captures both themes', () => {
+    // Barnacles has a real dark mode: useColorInversion inverts the whole
+    // Tailwind scale, so both variants are worth publishing.
+    expect(THEMES).toContain('light');
+    expect(THEMES).toContain('dark');
+  });
+
+  it('only seeds view mode on routes that render the projects list', () => {
+    // The capture script drives the ViewToggle, which only exists on /projects.
+    for (const shot of SHOTS) {
+      if (!shot.storage?.['projects-view-mode']) continue;
+      expect(shot.route, `${shot.name} sets view mode off the projects page`).toBe('/projects');
+    }
+  });
+
+  it('seeds localStorage values as bare strings', () => {
+    // The app persists bare values; a JSON-quoted value fails to parse and
+    // silently falls back to the default.
+    for (const shot of SHOTS) {
+      for (const value of Object.values(shot.storage ?? {})) {
+        expect(value, `${shot.name} has a JSON-quoted storage value`).not.toMatch(/^".*"$/);
+      }
     }
   });
 
