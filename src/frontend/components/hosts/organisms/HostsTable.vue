@@ -2,14 +2,12 @@
 import {
   type ColumnDef,
   createColumnHelper,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
   type SortingState,
-  useVueTable,
+  useTable,
 } from '@tanstack/vue-table';
 import { ref } from 'vue';
-import TableHeader from '../../molecules/TableHeader.vue';
+import { type DataTableFeatures, features } from '../../tables/features';
+import TableHeader from '../../tables/TableHeader.vue';
 import HostsTableRow from '../molecules/HostsTableRow.vue';
 
 interface HostEntry {
@@ -38,37 +36,25 @@ const emit = defineEmits<{
   'remove:host': [id: string];
 }>();
 
-// TanStack Table setup
-const columnHelper = createColumnHelper<HostEntry>();
+// Rows are fully custom editable inputs rendered by HostsTableRow, so this
+// table drives its own markup rather than DataTable's cell slots; TanStack
+// supplies the header, sorting and filtering only.
+const columnHelper = createColumnHelper<DataTableFeatures, HostEntry>();
 
-const columns: ColumnDef<HostEntry, any>[] = [
-  columnHelper.accessor('ip', {
-    header: 'IP Address',
-    enableSorting: true,
-    cell: props => props.row.original,
-  }),
-  columnHelper.accessor('hostname', {
-    header: 'Hostname',
-    enableSorting: true,
-    cell: props => props.row.original,
-  }),
-  columnHelper.accessor('id', {
-    header: 'Actions',
-    enableSorting: false,
-    cell: props => props.row.original,
-  }),
+const columns: ColumnDef<DataTableFeatures, HostEntry, any>[] = [
+  columnHelper.accessor('ip', { header: 'IP Address', enableSorting: true }),
+  columnHelper.accessor('hostname', { header: 'Hostname', enableSorting: true }),
+  columnHelper.accessor('id', { header: 'Actions', enableSorting: false }),
 ];
 
 const localSorting = ref<SortingState>(props.sorting);
 
-const table = useVueTable({
+const table = useTable({
+  features,
   get data() {
     return props.hosts;
   },
   columns,
-  getCoreRowModel: getCoreRowModel(),
-  getSortedRowModel: getSortedRowModel(),
-  getFilteredRowModel: getFilteredRowModel(),
   state: {
     get sorting() {
       return localSorting.value;
@@ -84,11 +70,11 @@ const table = useVueTable({
     emit('update:sorting', newValue);
   },
   onGlobalFilterChange: value => {
-    emit('update:searchQuery', value);
+    emit('update:searchQuery', String(value ?? ''));
   },
-  globalFilterFn: (row, columnId, filterValue) => {
+  globalFilterFn: (row, _columnId, filterValue) => {
     const host = row.original;
-    const search = filterValue.toLowerCase();
+    const search = String(filterValue).toLowerCase();
     return host.ip.toLowerCase().includes(search) || host.hostname.toLowerCase().includes(search);
   },
 });

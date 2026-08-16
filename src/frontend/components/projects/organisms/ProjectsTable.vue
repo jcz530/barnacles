@@ -3,10 +3,8 @@ import { useFormatters } from '@/composables/useFormatters';
 import {
   type ColumnDef,
   createColumnHelper,
-  getCoreRowModel,
-  getSortedRowModel,
   type SortingState,
-  useVueTable,
+  useTable,
 } from '@tanstack/vue-table';
 import { Calendar, GitBranch, HardDrive, Star } from 'lucide-vue-next';
 import { type Ref, ref, toRef } from 'vue';
@@ -14,7 +12,8 @@ import type { ProjectWithDetails } from '../../../../shared/types/api';
 import ProjectIcon from '../atoms/ProjectIcon.vue';
 import ProjectActionsDropdown from '../molecules/ProjectActionsDropdown.vue';
 import ProjectCard from '../molecules/ProjectCard.vue';
-import TableHeader from '../../molecules/TableHeader.vue';
+import { type DataTableFeatures, features } from '../../tables/features';
+import TableHeader from '../../tables/TableHeader.vue';
 import { Button } from '../../ui/button';
 import { provideProcessStatusContext } from '@/composables/useProcessStatusContext';
 
@@ -38,7 +37,11 @@ const emit = defineEmits<{
 
 const internalSorting = ref<SortingState>(props.sorting || []);
 
-const columnHelper = createColumnHelper<ProjectWithDetails>();
+// Each project renders as a pair of rows — the project itself plus a linked
+// "technologies" row with shared hover styling — which DataTable's one-row-per
+// -record template cannot express, so this table keeps its own markup and uses
+// TanStack for the header and sorting only.
+const columnHelper = createColumnHelper<DataTableFeatures, ProjectWithDetails>();
 const { formatSize, formatShortDate, formatRelativeDate } = useFormatters();
 
 const handleOpen = (project: ProjectWithDetails) => {
@@ -50,53 +53,21 @@ const handleToggleFavorite = (project: ProjectWithDetails, e: Event) => {
   emit('toggle-favorite', project.id);
 };
 
-const columns: ColumnDef<ProjectWithDetails, any>[] = [
-  columnHelper.accessor('isFavorite', {
-    header: '',
-    enableSorting: false,
-    cell: props => props.row.original,
-  }),
-  columnHelper.accessor('name', {
-    header: 'Project',
-    enableSorting: true,
-    cell: props => {
-      const project = props.row.original;
-      return {
-        name: project.name,
-        description: project.description,
-        path: project.path,
-      };
-    },
-  }),
-  columnHelper.accessor('lastModified', {
-    header: 'Last Modified',
-    enableSorting: true,
-    cell: props => props.row.original.lastModified,
-  }),
-  columnHelper.accessor('size', {
-    header: 'Size',
-    enableSorting: true,
-    cell: props => props.row.original.size,
-  }),
-  columnHelper.accessor('stats', {
-    header: 'Git',
-    enableSorting: false,
-    cell: props => props.row.original.stats,
-  }),
-  columnHelper.accessor('id', {
-    header: '',
-    enableSorting: false,
-    cell: props => props.row.original,
-  }),
+const columns: ColumnDef<DataTableFeatures, ProjectWithDetails, any>[] = [
+  columnHelper.accessor('isFavorite', { header: '', enableSorting: false }),
+  columnHelper.accessor('name', { header: 'Project', enableSorting: true }),
+  columnHelper.accessor('lastModified', { header: 'Last Modified', enableSorting: true }),
+  columnHelper.accessor('size', { header: 'Size', enableSorting: true }),
+  columnHelper.accessor('stats', { header: 'Git', enableSorting: false }),
+  columnHelper.accessor('id', { header: '', enableSorting: false }),
 ];
 
-const table = useVueTable({
+const table = useTable({
+  features,
   get data() {
     return props.projects;
   },
   columns,
-  getCoreRowModel: getCoreRowModel(),
-  getSortedRowModel: getSortedRowModel(),
   state: {
     get sorting() {
       return internalSorting.value;
@@ -162,7 +133,7 @@ const table = useVueTable({
                       variant="ghost"
                       size="sm"
                       class="h-8 w-8 p-0"
-                      :class="row.original.isFavorite ? 'text-yellow-500' : 'text-slate-300'"
+                      :class="row.original.isFavorite ? 'text-tertiary-500' : 'text-slate-300'"
                       @click="handleToggleFavorite(row.original, $event)"
                     >
                       <Star
@@ -234,7 +205,7 @@ const table = useVueTable({
                       </div>
                       <span
                         v-if="row.original.stats.hasUncommittedChanges"
-                        class="inline-flex rounded bg-orange-100 px-1.5 py-0.5 text-xs font-medium text-orange-700"
+                        class="bg-tertiary-100 text-tertiary-700 inline-flex rounded px-1.5 py-0.5 text-xs font-medium"
                       >
                         Uncommitted
                       </span>
