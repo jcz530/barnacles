@@ -4,6 +4,8 @@ import type { IPty } from 'node-pty';
 import * as pty from 'node-pty';
 import type { ProcessStatus, ProjectProcessStatus, StartProcess } from '../../shared/types/process';
 import { isWindows, getDefaultShell } from '../../shared/utils/platform';
+import { isDemoMode } from '../../shared/config/runtime-mode';
+import { getDemoRunningProcesses } from '../../shared/database/demo/data/running-processes';
 
 interface RunningProcess {
   name: string;
@@ -302,6 +304,16 @@ class ProcessManagerService {
       allStatuses.push(this.getProcessStatus(projectId));
     }
 
+    // Demo mode reports a couple of projects as live without spawning anything,
+    // so the dashboard shows real localhost URLs. Anything genuinely running
+    // still wins, so starting a process in demo mode behaves normally.
+    if (isDemoMode()) {
+      const running = new Set(allStatuses.map(status => status.projectId));
+      for (const mocked of getDemoRunningProcesses()) {
+        if (!running.has(mocked.projectId)) allStatuses.push(mocked);
+      }
+    }
+
     return allStatuses;
   }
 
@@ -312,6 +324,11 @@ class ProcessManagerService {
     const projectProcesses = this.runningProcesses.get(projectId);
 
     if (!projectProcesses) {
+      if (isDemoMode()) {
+        const mocked = getDemoRunningProcesses().find(status => status.projectId === projectId);
+        if (mocked) return mocked;
+      }
+
       return {
         projectId,
         processes: [],
