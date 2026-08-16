@@ -10,7 +10,7 @@
  * 384px port thumbnails in src/main/ipc/screenshot-bridge.ts but tends to
  * produce blank canvases and missing fonts at the 2x sizes published here.
  */
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeImage } from 'electron';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,6 +26,24 @@ const SCALE = 2;
 const IDLE_SETTLE_MS = 400;
 const READY_TIMEOUT_MS = 15_000;
 const PAINT_SETTLE_MS = 250;
+
+/**
+ * Window-chrome framing.
+ *
+ * capturePage() records only the web contents, so macOS's rounded corners,
+ * drop shadow, and the transparent margin around a window never appear —
+ * captures come out flat and square, unlike a window grab from the macOS
+ * screenshot tool.
+ *
+ * Rather than add an image library for one effect, the finished capture is
+ * re-drawn in a small offscreen page that supplies the radius and shadow (see
+ * addShadow). Nothing is injected into the app itself: the sidebar is
+ * "fixed inset-y-0" so it escapes any padded wrapper, and making the capture
+ * window transparent lets the app's own background composite away.
+ */
+const CHROME_PAD = 20; // CSS px of transparent margin for the shadow to fall into
+const CHROME_RADIUS = 10; // macOS window corner radius in CSS px
+const CHROME_SHADOW = '0 22px 60px rgba(0, 0, 0, 0.30), 0 6px 18px rgba(0, 0, 0, 0.18)';
 
 // 2x output that does not depend on the capturing machine's display.
 app.commandLine.appendSwitch('force-device-scale-factor', String(SCALE));
@@ -170,7 +188,47 @@ async function uiStateApplied(win, theme, timeoutMs = 3000) {
   return false;
 }
 
-async function capture(win, shot, theme, outputFileName) {
+/**
+ * Composite rounded corners and a drop shadow around a finished capture.
+ *
+ * The PNG is drawn into a transparent offscreen page as a data URI and
+ * re-captured, so the result has the soft shadow and transparent margin a
+ * macOS window grab has — without pulling in an image-processing dependency.
+ */
+async function addShadow(shadowWin, pngBuffer, deviceWidth, deviceHeight) {
+  const dataUri = `data:image/png;base64,${pngBuffer.toString('base64')}`;
+
+  // capturePage() reports device pixels, but this page lays out in CSS pixels
+  // and is itself captured at SCALE — lay out at CSS size or the output comes
+  // back doubled.
+  const contentWidth = deviceWidth / SCALE;
+  const contentHeight = deviceHeight / SCALE;
+  const outerWidth = contentWidth + CHROME_PAD * 2;
+  const outerHeight = contentHeight + CHROME_PAD * 2;
+
+  const html = `<!doctype html><meta charset="utf-8"><style>
+    html, body { margin: 0; padding: 0; background: transparent; }
+    body {
+      width: ${outerWidth}px; height: ${outerHeight}px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    img {
+      width: ${contentWidth}px; height: ${contentHeight}px;
+      display: block;
+      border-radius: ${CHROME_RADIUS}px;
+      box-shadow: ${CHROME_SHADOW};
+    }
+  </style><img src="${dataUri}">`;
+
+  shadowWin.setContentSize(Math.round(outerWidth), Math.round(outerHeight));
+  await shadowWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  // The image is inline data, so a short settle is enough for it to paint.
+  await sleep(180);
+
+  return (await shadowWin.webContents.capturePage()).toPNG();
+}
+
+async function capture(win, shadowWin, shot, theme, outputFileName) {
   const target = rendererUrl(shot.route);
 
   const state = { 'vueuse-color-scheme': theme, ...(shot.storage ?? {}) };
@@ -207,10 +265,13 @@ async function capture(win, shot, theme, outputFileName) {
 
   const image = await win.webContents.capturePage();
   const file = path.join(OUT_DIR, outputFileName(shot, theme));
-  await writeFile(file, image.toPNG());
 
   const { width, height } = image.getSize();
-  return { file, width, height };
+  const framed = await addShadow(shadowWin, image.toPNG(), width, height);
+  await writeFile(file, framed);
+
+  const size = nativeImage.createFromBuffer(framed).getSize();
+  return { file, width: size.width, height: size.height };
 }
 
 async function main() {
@@ -253,6 +314,17 @@ async function main() {
     frame: process.platform !== 'darwin',
   });
 
+  // Offscreen compositor used only to draw the rounded corners and drop shadow.
+  const shadowWin = new BrowserWindow({
+    width: WIDTH + CHROME_PAD * 2,
+    height: HEIGHT + CHROME_PAD * 2,
+    show: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    frame: false,
+    webPreferences: { contextIsolation: true, nodeIntegration: false },
+  });
+
   const captured = [];
   const failed = [];
   const shots = SHOTS.filter(s => !s.manual);
@@ -265,7 +337,7 @@ async function main() {
   for (const theme of THEMES) {
     for (const shot of shots) {
       try {
-        const result = await capture(win, shot, theme, outputFileName);
+        const result = await capture(win, shadowWin, shot, theme, outputFileName);
         captured.push({ shot: shot.name, theme, ...result });
         console.log(`  ✓ ${outputFileName(shot, theme)} (${result.width}x${result.height})`);
       } catch (error) {
@@ -286,6 +358,7 @@ async function main() {
   }
 
   win.destroy();
+  shadowWin.destroy();
   app.exit(failed.length ? 1 : 0);
 }
 
