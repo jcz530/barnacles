@@ -1,7 +1,7 @@
 <script setup lang="ts" generic="TData extends RowData">
 import { type ColumnDef, type RowData, type SortingState, useTable } from '@tanstack/vue-table';
 import { ChevronDown, ChevronRight } from 'lucide-vue-next';
-import { computed, onMounted, ref, useAttrs, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, useAttrs, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useBulkSelection, type SelectionState } from '@/composables/useBulkSelection';
@@ -37,7 +37,14 @@ export interface DataTableProps<TData extends RowData> {
   /** Display mode: table or card view. */
   viewMode?: 'table' | 'card';
 
-  /** Current sorting state. */
+  /**
+   * Current sorting state. Omit it and the table sorts itself.
+   *
+   * Passing it makes sorting controlled: this value becomes the source of
+   * truth, so the caller must also handle `update:sorting` and write the new
+   * value back (`v-model:sorting` does both). A `sorting` prop that never
+   * changes leaves the table unable to re-sort.
+   */
   sorting?: SortingState;
 
   /** Global filter string, matched by each column's filter function. */
@@ -59,6 +66,12 @@ export interface DataTableProps<TData extends RowData> {
    * Per-row classes, for state a row carries that its cells do not — a pending
    * removal animation, a muted style for a disabled record. Receives the row
    * and returns anything Vue's `:class` accepts.
+   *
+   * Styling these from the calling component's `<style scoped>` needs
+   * `:deep(.your-class)`. The row is rendered here, so it carries *this*
+   * component's scope id — a plain scoped selector compiles to
+   * `.your-class[data-v-<caller>]` and silently never matches. See
+   * PortsTable.vue for a worked example.
    */
   rowClass?: (row: TData) => string | string[] | Record<string, boolean> | undefined;
 
@@ -196,6 +209,24 @@ const internalSorting = ref<SortingState>(props.sorting ?? []);
 
 const currentSorting = computed(() => props.sorting ?? internalSorting.value);
 
+// A controlled table whose caller drops `update:sorting` can never re-sort: the
+// click emits, nothing writes the value back, and the prop pins the state
+// forever. That failure looks like "sorting is broken" rather than a wiring
+// mistake, so say so out loud in dev.
+function warnIfSortingIgnored(emitted: SortingState) {
+  if (!import.meta.env.DEV || props.sorting === undefined) return;
+  const emittedJson = JSON.stringify(emitted);
+  nextTick(() => {
+    if (props.sorting !== undefined && JSON.stringify(props.sorting) !== emittedJson) {
+      console.warn(
+        '[DataTable] `sorting` was passed but did not change after `update:sorting`. ' +
+          'Controlled sorting requires writing the emitted value back — use ' +
+          '`v-model:sorting`, or handle `@update:sorting`. The table cannot re-sort until then.'
+      );
+    }
+  });
+}
+
 const hasSelectColumn = computed(() => props.columns.some(col => col.id === 'select'));
 
 const enableSelection = computed(
@@ -247,6 +278,7 @@ const table = useTable({
       typeof updaterOrValue === 'function' ? updaterOrValue(currentSorting.value) : updaterOrValue;
     internalSorting.value = newValue;
     emit('update:sorting', newValue);
+    warnIfSortingIgnored(newValue);
   },
 });
 
