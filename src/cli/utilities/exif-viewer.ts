@@ -101,8 +101,15 @@ async function processImageFile(
 
     log.info(`Reading: ${pc.cyan(path.basename(resolvedPath))}`);
 
+    // Node pools small Buffers into a shared ArrayBuffer, so slice out just
+    // this file's bytes rather than passing the (possibly larger) backing store.
+    const fileBytes = buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength
+    ) as ArrayBuffer;
+
     // Parse EXIF data
-    const exifData = parseExifData(buffer.buffer);
+    const exifData = parseExifData(fileBytes);
 
     // Handle different output modes
     if (flags.gps) {
@@ -117,7 +124,7 @@ async function processImageFile(
       await exportToJson(exifData, outputPath);
     } else if (flags.strip) {
       // Strip EXIF data
-      const result = await stripExifData(buffer.buffer, 'image/jpeg');
+      const result = await stripExifData(fileBytes, 'image/jpeg');
 
       if (!result.success) {
         log.error(result.error || 'Failed to strip EXIF data');

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Alias } from '@/shared/types/api';
+import type { Alias } from '../../../../shared/types/api';
 import { Button } from '../../ui/button';
 import { Eye, EyeOff, Trash2 } from 'lucide-vue-next';
 import InlineEditInput from '../../atoms/InlineEditInput.vue';

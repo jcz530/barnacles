@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
-import type { PresetPack } from '@/shared/types/api';
+import type { PresetPack } from '../../shared/types/api';
 import { AlertCircle, ArrowLeft, Check, Package, Sparkles } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';

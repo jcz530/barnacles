@@ -11,6 +11,7 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import type { LucideIcon } from 'lucide-vue-next';
+import type { RouteLocationRaw } from 'vue-router';
 import { ChevronRight } from 'lucide-vue-next';
 
 defineProps<{
@@ -22,7 +23,7 @@ defineProps<{
     count?: number;
     items?: {
       title: string;
-      url: string | { name: string; params: Record<string, unknown> };
+      url: RouteLocationRaw;
     }[];
   }[];
 }>();

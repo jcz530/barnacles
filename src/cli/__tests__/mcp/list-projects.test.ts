@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerListProjectsTool } from '@cli/mcp/tools/list-projects.js';
 import { apiClient } from '@cli/utils/api-client.js';
 import type { ProjectWithDetails } from '@shared/types/api.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 vi.mock('@cli/utils/api-client.js', () => ({
   apiClient: {
@@ -35,7 +36,7 @@ describe('list_projects tool', () => {
     vi.mocked(apiClient.get).mockResolvedValue(fakeProjects);
     const tool = registerListProjectsTool(createServer());
 
-    const result = await tool.handler({}, {} as never);
+    const result = await toolHandler(tool)({}, {} as never);
 
     expect(apiClient.get).toHaveBeenCalledWith('/api/projects');
     expect(result.isError).toBeFalsy();
@@ -49,7 +50,7 @@ describe('list_projects tool', () => {
     vi.mocked(apiClient.get).mockResolvedValue(fakeProjects);
     const tool = registerListProjectsTool(createServer());
 
-    await tool.handler({ search: 'barn', technologies: ['vue', 'rust'] }, {} as never);
+    await toolHandler(tool)({ search: 'barn', technologies: ['vue', 'rust'] }, {} as never);
 
     expect(apiClient.get).toHaveBeenCalledWith('/api/projects?search=barn&technologies=vue%2Crust');
   });
@@ -58,7 +59,7 @@ describe('list_projects tool', () => {
     vi.mocked(apiClient.get).mockRejectedValue(new Error('API error: 500 Internal Server Error'));
     const tool = registerListProjectsTool(createServer());
 
-    const result = await tool.handler({}, {} as never);
+    const result = await toolHandler(tool)({}, {} as never);
 
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({

@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": false,
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    // These projects are only ever type-checked -- Vite does the actual
+    // building -- so never emit anything.
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./src/frontend/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@backend/*": ["./src/backend/*"],
+      "@cli/*": ["./src/cli/*"],
+      "@test/*": ["./src/test/*"]
+    }
+  }
+}

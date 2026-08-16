@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "types": ["node"],
+    "tsBuildInfoFile": "node_modules/.cache/tsc/node.tsbuildinfo"
+  },
+  "include": [
+    "src/main/**/*.ts",
+    "src/backend/**/*.ts",
+    "src/cli/**/*.ts",
+    "src/shared/**/*.ts",
+    "src/preload.ts",
+    "types/**/*.d.ts"
+  ],
+  "exclude": ["**/*.test.ts", "**/*.spec.ts", "src/**/__tests__/**"]
+}

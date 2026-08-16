@@ -47,7 +47,7 @@ describe('StatusCommand', () => {
 
       // The command execution will call the real functions, not mocks
       // since the StatusCommand uses actual prompts
-      await expect(command.execute({}, [])).resolves.toBeUndefined();
+      await expect(command.execute()).resolves.toBeUndefined();
     });
 
     it('should display project count from database', async () => {
@@ -58,14 +58,14 @@ describe('StatusCommand', () => {
       await db.insert(projectsSchema).values(projectsData);
 
       // Execute command - it will use real prompts but we can verify it doesn't throw
-      await expect(command.execute({}, [])).resolves.toBeUndefined();
+      await expect(command.execute()).resolves.toBeUndefined();
     });
 
     it('should show app as offline when backend is not running', async () => {
       const { command } = context.get();
 
       // Execute command - backend is offline by default in our setup
-      await expect(command.execute({}, [])).resolves.toBeUndefined();
+      await expect(command.execute()).resolves.toBeUndefined();
     });
 
     it('should handle database errors gracefully', async () => {
@@ -77,7 +77,7 @@ describe('StatusCommand', () => {
       });
 
       // Should not throw even with broken database
-      await expect(command.execute({}, [])).resolves.toBeUndefined();
+      await expect(command.execute()).resolves.toBeUndefined();
 
       // Restore the mock
       selectMock.mockRestore();

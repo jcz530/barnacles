@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerGetProjectStatusTool } from '@cli/mcp/tools/get-project-status.js';
 import { apiClient } from '@cli/utils/api-client.js';
 import type { ProjectWithDetails } from '@shared/types/api.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 vi.mock('@cli/utils/api-client.js', () => ({
   apiClient: {
@@ -40,7 +41,7 @@ describe('get_project_status tool', () => {
     vi.mocked(apiClient.get).mockResolvedValue(fakeProject);
     const tool = registerGetProjectStatusTool(createServer());
 
-    const result = await tool.handler({ projectId: 'proj-1' }, {} as never);
+    const result = await toolHandler(tool)({ projectId: 'proj-1' }, {} as never);
 
     expect(apiClient.get).toHaveBeenCalledWith('/api/projects/proj-1');
     expect(result.isError).toBeFalsy();
@@ -51,7 +52,7 @@ describe('get_project_status tool', () => {
     vi.mocked(apiClient.get).mockRejectedValue(new Error('API error: 404 Not Found'));
     const tool = registerGetProjectStatusTool(createServer());
 
-    const result = await tool.handler({ projectId: 'missing' }, {} as never);
+    const result = await toolHandler(tool)({ projectId: 'missing' }, {} as never);
 
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({ type: 'text', text: 'API error: 404 Not Found' });

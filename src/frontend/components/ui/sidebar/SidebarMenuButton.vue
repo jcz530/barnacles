@@ -29,13 +29,19 @@ const delegatedProps = reactiveOmit(props, 'tooltip');
 </script>
 
 <template>
-  <SidebarMenuButtonChild v-if="!tooltip" v-bind="{ ...delegatedProps, ...$attrs }">
+  <!--
+    The `as any` casts below work around a shadcn-vue/reka-ui typing quirk:
+    `withDefaults(..., { as: 'button' })` in SidebarMenuButtonChild narrows the
+    `as` prop to the string literal type, so spreading our wider
+    `AsTag | Component` prop into it fails to type-check. Runtime is correct.
+  -->
+  <SidebarMenuButtonChild v-if="!tooltip" v-bind="{ ...delegatedProps, ...$attrs } as any">
     <slot />
   </SidebarMenuButtonChild>
 
   <Tooltip v-else>
     <TooltipTrigger as-child>
-      <SidebarMenuButtonChild v-bind="{ ...delegatedProps, ...$attrs }">
+      <SidebarMenuButtonChild v-bind="{ ...delegatedProps, ...$attrs } as any">
         <slot />
       </SidebarMenuButtonChild>
     </TooltipTrigger>

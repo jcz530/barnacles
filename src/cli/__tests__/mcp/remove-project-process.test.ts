@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerRemoveProjectProcessTool } from '@cli/mcp/tools/remove-project-process.js';
 import { apiClient } from '@cli/utils/api-client.js';
 import type { StartProcess } from '@shared/types/process.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 vi.mock('@cli/utils/api-client.js', () => ({
   apiClient: {
@@ -31,7 +32,10 @@ describe('remove_project_process tool', () => {
     vi.mocked(apiClient.patch).mockResolvedValue(undefined);
     const tool = registerRemoveProjectProcessTool(createServer());
 
-    const result = await tool.handler({ projectId: 'proj-1', processId: 'proc-1' }, {} as never);
+    const result = await toolHandler(tool)(
+      { projectId: 'proj-1', processId: 'proc-1' },
+      {} as never
+    );
 
     expect(apiClient.get).toHaveBeenCalledWith('/api/projects/proj-1/start-processes');
     expect(apiClient.patch).toHaveBeenCalledWith('/api/projects/proj-1/start-processes', {
@@ -48,7 +52,10 @@ describe('remove_project_process tool', () => {
     vi.mocked(apiClient.get).mockResolvedValue(existingProcesses);
     const tool = registerRemoveProjectProcessTool(createServer());
 
-    const result = await tool.handler({ projectId: 'proj-1', processId: 'missing' }, {} as never);
+    const result = await toolHandler(tool)(
+      { projectId: 'proj-1', processId: 'missing' },
+      {} as never
+    );
 
     expect(apiClient.patch).not.toHaveBeenCalled();
     expect(result.isError).toBe(true);
@@ -62,7 +69,10 @@ describe('remove_project_process tool', () => {
     vi.mocked(apiClient.get).mockRejectedValue(new Error('Project not found'));
     const tool = registerRemoveProjectProcessTool(createServer());
 
-    const result = await tool.handler({ projectId: 'missing', processId: 'proc-1' }, {} as never);
+    const result = await toolHandler(tool)(
+      { projectId: 'missing', processId: 'proc-1' },
+      {} as never
+    );
 
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({ type: 'text', text: 'Project not found' });

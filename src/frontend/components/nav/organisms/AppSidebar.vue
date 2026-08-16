@@ -44,7 +44,11 @@ const route = useRoute();
 // Fetch current OS user
 const { data: currentUser } = useQuery({
   queryKey: ['currentUser'],
-  queryFn: () => apiCall('GET', API_ROUTES.USERS_CURRENT),
+  queryFn: () =>
+    apiCall<{ name: string; email: string; avatar: string; initials: string }>(
+      'GET',
+      API_ROUTES.USERS_CURRENT
+    ),
 });
 
 // Fetch projects and processes for counts

@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerGetProjectByPathTool } from '@cli/mcp/tools/get-project-by-path.js';
 import { apiClient } from '@cli/utils/api-client.js';
 import type { ProjectWithDetails } from '@shared/types/api.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 vi.mock('@cli/utils/api-client.js', () => ({
   apiClient: {
@@ -33,7 +34,7 @@ describe('get_project_by_path tool', () => {
     vi.mocked(apiClient.get).mockResolvedValue(fakeProject);
     const tool = registerGetProjectByPathTool(createServer());
 
-    const result = await tool.handler({ path: '/Users/dev/barnacles/src' }, {} as never);
+    const result = await toolHandler(tool)({ path: '/Users/dev/barnacles/src' }, {} as never);
 
     expect(apiClient.get).toHaveBeenCalledWith(
       '/api/projects/meta/by-path?path=' + encodeURIComponent('/Users/dev/barnacles/src')
@@ -51,7 +52,7 @@ describe('get_project_by_path tool', () => {
     );
     const tool = registerGetProjectByPathTool(createServer());
 
-    const result = await tool.handler({ path: '/nowhere' }, {} as never);
+    const result = await toolHandler(tool)({ path: '/nowhere' }, {} as never);
 
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({

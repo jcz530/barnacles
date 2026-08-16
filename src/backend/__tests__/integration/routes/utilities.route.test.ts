@@ -185,7 +185,7 @@ describe('Utilities API Integration Tests', () => {
       });
 
       expect(response.status).toBe(501);
-      const data = await response.json();
+      const data = (await response.json()) as { message: string };
       expect(data.message).toBe('Not implemented yet');
     });
   });

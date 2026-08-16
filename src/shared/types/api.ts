@@ -183,6 +183,16 @@ export interface ShellInfo {
   configPath: string; // ~/.config/barnacles/aliases
 }
 
+/**
+ * Response shape of GET /api/aliases/config-path, which renames
+ * ShellInfo's `configPath` to `path`.
+ */
+export interface AliasesConfigPath {
+  shell: ShellInfo['shell'];
+  profilePaths: string[];
+  path: string;
+}
+
 export interface DetectedAlias {
   name: string;
   command: string;

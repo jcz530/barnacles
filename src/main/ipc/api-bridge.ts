@@ -30,12 +30,15 @@ export const setupAPIBridge = (): void => {
           body: body ? JSON.stringify(body) : undefined,
         });
 
-        const data = await response.json();
+        const data: unknown = await response.json();
 
         if (!response.ok) {
           // Create an error with the full response data
+          const errorBody = (data ?? {}) as { error?: string; message?: string };
           const error = new Error(
-            data.error || data.message || `HTTP ${response.status}: ${response.statusText}`
+            errorBody.error ||
+              errorBody.message ||
+              `HTTP ${response.status}: ${response.statusText}`
           ) as Error & {
             response?: { status: number; data: unknown };
           };

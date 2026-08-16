@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Theme } from '@/../../shared/types/theme';
+import type { Theme } from '../../../../shared/types/theme';
 
 defineProps<{
   theme: Theme;

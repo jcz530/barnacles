@@ -410,7 +410,7 @@ system.post('/focus-project', async c => {
     }
 
     const mainWindows = BrowserWindow.getAllWindows().filter(
-      win => !win.isDestroyed() && !win.skipTaskbar && win.isResizable() && !win.isAlwaysOnTop()
+      win => !win.isDestroyed() && win.isResizable() && !win.isAlwaysOnTop()
     );
 
     if (mainWindows.length === 0) {

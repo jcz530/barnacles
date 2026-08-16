@@ -1,24 +1,28 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": "../..",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
     "jsx": "preserve",
-    "moduleResolution": "bundler"
+    "tsBuildInfoFile": "../../node_modules/.cache/tsc/frontend.tsbuildinfo"
   },
   "include": [
     "./**/*.ts",
     "./**/*.tsx",
     "./**/*.vue",
     "./env.d.ts",
-    "../shared/**/*.ts"
+    "./vite-env.d.ts",
+    "../shared/**/*.ts",
+    "../../types/*.d.ts"
   ],
   "exclude": [
-    "../backend/**/*",
-    "../main/**/*",
-    "../cli/**/*",
-    "../test/**/*",
-    "../../**/*.test.ts",
-    "../../**/*.spec.ts"
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__tests__/**",
+    // Node-only seeding code that reaches into src/backend; never bundled
+    // into the renderer.
+    "../shared/database/demo/**",
+    "../shared/database/seeds/**"
   ]
 }

@@ -15,8 +15,10 @@ export const useApi = () => {
       loading.value = true;
       error.value = '';
 
+      // The IPC bridge hands back an untyped payload; callers declare the
+      // shape they expect via T.
       const response = await window.electronAPI.apiCall(method, path, body);
-      return response;
+      return response as T;
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Unknown error';
       // Re-throw the error so TanStack Query can handle it properly

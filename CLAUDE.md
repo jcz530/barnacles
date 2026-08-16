@@ -67,6 +67,24 @@ Stop `npm run dev` before capturing — the app takes a single-instance lock.
 - `npm run format:check` - Check code formatting with Prettier
 - `npm run type-check` - Run TypeScript type checking without emitting files
 
+**Type checking is split into three projects**, because the node, renderer, and
+test code need different `lib`/`types` settings. `npm run type-check` runs all
+three; run one directly when iterating:
+
+- `npm run type-check:node` (`tsconfig.node.json`) - main, backend, cli, shared.
+  No DOM lib.
+- `npm run type-check:frontend` (`src/frontend/tsconfig.json`) - renderer and
+  `.vue` files. Uses `vue-tsc`, which is the only checker that reads `.vue`
+  single-file components — plain `tsc` silently skips them.
+- `npm run type-check:test` (`tsconfig.test.json`) - test suites, node
+  environment to match `vitest.config.ts`.
+
+Shared options live in `tsconfig.base.json`. All three set `noEmit` — Vite does
+the building, so type-checking must never write `.d.ts` files next to sources.
+Keep the `paths` aliases in `tsconfig.base.json` in sync with the `resolve.alias`
+entries in `vite.renderer.config.mjs`; an alias present in only one of them will
+type-check but fail to resolve at build time (or vice versa).
+
 **Important:** Always run `npm run format` after making code changes, before considering the work done.
 
 ### Testing

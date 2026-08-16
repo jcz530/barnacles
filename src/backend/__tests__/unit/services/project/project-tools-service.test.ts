@@ -43,8 +43,14 @@ describe('ProjectToolsService', () => {
     describe('getDetectedIDEs', () => {
       it('should return detected IDEs from detector service', async () => {
         const mockIDEs = [
-          { id: 'vscode', name: 'VS Code', isInstalled: true },
-          { id: 'cursor', name: 'Cursor', isInstalled: true },
+          { id: 'vscode', name: 'VS Code', executable: 'code', command: 'code', installed: true },
+          {
+            id: 'cursor',
+            name: 'Cursor',
+            executable: 'cursor',
+            command: 'cursor',
+            installed: true,
+          },
         ];
 
         vi.mocked(ideDetectorService.detectInstalledIDEs).mockResolvedValue(mockIDEs);
@@ -59,8 +65,8 @@ describe('ProjectToolsService', () => {
     describe('getAvailableIDEs', () => {
       it('should return available IDEs from detector service', () => {
         const mockIDEs = [
-          { id: 'vscode', name: 'VS Code', paths: ['/Applications/Visual Studio Code.app'] },
-          { id: 'sublime', name: 'Sublime Text', paths: ['/Applications/Sublime Text.app'] },
+          { id: 'vscode', name: 'VS Code', executable: 'code', command: 'code' },
+          { id: 'sublime', name: 'Sublime Text', executable: 'subl', command: 'subl' },
         ];
 
         vi.mocked(ideDetectorService.getAvailableIDEs).mockReturnValue(mockIDEs);
@@ -159,8 +165,22 @@ describe('ProjectToolsService', () => {
     describe('getDetectedTerminals', () => {
       it('should return detected terminals from detector service', async () => {
         const mockTerminals = [
-          { id: 'iterm', name: 'iTerm', isInstalled: true },
-          { id: 'terminal', name: 'Terminal', isInstalled: true },
+          {
+            id: 'iterm',
+            name: 'iTerm',
+            executable: 'iTerm',
+            command: 'iTerm',
+            platform: 'darwin' as const,
+            installed: true,
+          },
+          {
+            id: 'terminal',
+            name: 'Terminal',
+            executable: 'Terminal',
+            command: 'Terminal',
+            platform: 'darwin' as const,
+            installed: true,
+          },
         ];
 
         vi.mocked(terminalDetectorService.detectInstalledTerminals).mockResolvedValue(
@@ -177,8 +197,20 @@ describe('ProjectToolsService', () => {
     describe('getAvailableTerminals', () => {
       it('should return available terminals from detector service', () => {
         const mockTerminals = [
-          { id: 'iterm', name: 'iTerm', paths: ['/Applications/iTerm.app'] },
-          { id: 'warp', name: 'Warp', paths: ['/Applications/Warp.app'] },
+          {
+            id: 'iterm',
+            name: 'iTerm',
+            executable: 'iTerm',
+            command: 'iTerm',
+            platform: 'darwin' as const,
+          },
+          {
+            id: 'warp',
+            name: 'Warp',
+            executable: 'Warp',
+            command: 'Warp',
+            platform: 'darwin' as const,
+          },
         ];
 
         vi.mocked(terminalDetectorService.getAvailableTerminals).mockReturnValue(mockTerminals);

@@ -2,7 +2,7 @@
 import { Clock, Folder, Globe, Hash, Loader2, X } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
-import type { PortEntry, ProjectWithDetails } from '@/shared/types/api';
+import type { PortEntry, ProjectWithDetails } from '../../../../shared/types/api';
 import { RouteNames } from '@/router';
 import { useFormatters } from '@/composables/useFormatters';
 import { statusColorClass } from '@/constants/portStatusColor';

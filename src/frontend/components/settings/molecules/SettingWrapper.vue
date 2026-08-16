@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { SettingKey } from '@/shared/types/api';
+import type { SettingKey } from '../../../../shared/types/api';
 
 interface Props {
   settingKey: SettingKey;

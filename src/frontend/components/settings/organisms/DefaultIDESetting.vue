@@ -14,7 +14,7 @@ const { useSettingsQuery, useUpdateSettingMutation, useDetectedIDEsQuery } = use
 
 const settingsQuery = useSettingsQuery({ enabled: true });
 const updateSettingMutation = useUpdateSettingMutation();
-const idesQuery = useDetectedIDEsQuery({ enabled: true });
+const idesQuery = useDetectedIDEsQuery();
 
 const defaultIdeId = ref<string>('');
 const isInitialized = ref(false);

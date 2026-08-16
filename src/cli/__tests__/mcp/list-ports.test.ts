@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerListPortsTool } from '@cli/mcp/tools/list-ports.js';
 import { apiClient } from '@cli/utils/api-client.js';
 import type { PortEntry } from '@shared/types/api.js';
+import { toolHandler } from '@test/helpers/mcp-tool';
 
 vi.mock('@cli/utils/api-client.js', () => ({
   apiClient: {
@@ -33,7 +34,7 @@ describe('list_ports tool', () => {
     vi.mocked(apiClient.get).mockResolvedValue(fakePorts);
     const tool = registerListPortsTool(createServer());
 
-    const result = await tool.handler({}, {} as never);
+    const result = await toolHandler(tool)({}, {} as never);
 
     expect(apiClient.get).toHaveBeenCalledWith('/api/ports');
     expect(result.isError).toBeFalsy();
@@ -44,7 +45,7 @@ describe('list_ports tool', () => {
     vi.mocked(apiClient.get).mockRejectedValue(new Error('lsof unavailable'));
     const tool = registerListPortsTool(createServer());
 
-    const result = await tool.handler({}, {} as never);
+    const result = await toolHandler(tool)({}, {} as never);
 
     expect(result.isError).toBe(true);
     expect(result.content[0]).toEqual({ type: 'text', text: 'lsof unavailable' });

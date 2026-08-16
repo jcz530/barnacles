@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowRight, ExternalLink } from 'lucide-vue-next';
-import { computed, type MaybeRefOrGetter } from 'vue';
+import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import { Button } from '../ui/button';
 import { useRunningProcesses } from '../../composables/useRunningProcesses';
 
@@ -11,7 +11,7 @@ const props = defineProps<{
 }>();
 
 // Get running processes for this project
-const runningProcesses = useRunningProcesses(() => props.projectId);
+const runningProcesses = useRunningProcesses(() => toValue(props.projectId));
 
 // Get the first running process (if any)
 const process = computed(() => runningProcesses.value[0]);

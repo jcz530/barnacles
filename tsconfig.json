@@ -1,29 +1,13 @@
 {
+  // Aggregate config for editors/tooling that expect a root tsconfig.
+  // `npm run type-check` checks each project separately, because the node,
+  // renderer, and test code need different `lib`/`types` settings:
+  //   tsconfig.node.json        - main, backend, cli, shared (no DOM)
+  //   src/frontend/tsconfig.json - renderer + .vue files (DOM, checked by vue-tsc)
+  //   tsconfig.test.json        - test suites
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "lib": ["ESNext"],
-    "module": "ESNext",
-    "allowJs": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "noImplicitAny": true,
-    "sourceMap": true,
-    "baseUrl": ".",
-    "outDir": "dist",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "paths": {
-      "@/*": ["./src/frontend/*"],
-      "@shared/*": ["./src/shared/*"],
-      "@backend/*": ["./src/backend/*"],
-      "@cli/*": ["./src/cli/*"],
-      "@test/*": ["./src/test/*"]
-    }
+    "lib": ["ESNext", "DOM", "DOM.Iterable"]
   },
-  "exclude": [
-    "src/frontend",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.vue", "types/**/*.d.ts"]
 }

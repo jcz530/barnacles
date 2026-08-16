@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
-import type { Alias } from '@/shared/types/api';
+import type { Alias } from '../../shared/types/api';
 import type { SortingState } from '@tanstack/vue-table';
 import { RouteNames } from '@/router';
 import {
