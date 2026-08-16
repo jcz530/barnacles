@@ -36,6 +36,28 @@ Output will be in the `dist/` directory.
 - The build script uses `CSC_IDENTITY_AUTO_DISCOVERY=false` to skip signing on local builds
 - Notarization is skipped when `SKIP_NOTARIZE=true` environment variable is set
 
+### Demo Mode and Screenshots
+
+- `npm run dev:demo` - Run the app against a disposable database seeded with fake
+  projects. Useful for demos and for working on UI without your real data.
+- `npm run screenshots` - Capture product screenshots into `screenshots/out/`
+- `npm run demo:reset` - Delete the local `.demo-data` profile
+
+Demo mode is controlled by two env vars: `BARNACLES_DEMO=1` enables fake-data
+seeding, and `BARNACLES_DATA_DIR` redirects the database and file caches to a
+disposable profile. **`BARNACLES_DATA_DIR` is checked before the
+`NODE_ENV=development` branch**, which otherwise resolves to `./database.db` —
+the real dev database. The seeder additionally refuses to run unless the resolved
+path is inside a `.demo-data` directory.
+
+Demo fixtures live in `src/shared/database/demo/` and are hand-authored rather
+than generated, so screenshots stay byte-stable between runs. `screenshots/manifest.mjs`
+lists every captured page along with the title, description, and alt text used
+when publishing. To publish new screenshots to the README and the marketing site,
+use the `update-screenshots` skill.
+
+Stop `npm run dev` before capturing — the app takes a single-instance lock.
+
 ### Code Quality
 
 - `npm run lint` - Run ESLint on the source code
