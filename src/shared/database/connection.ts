@@ -1,54 +1,23 @@
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import path from 'node:path';
-import os from 'os';
-import { mkdirSync } from 'node:fs';
 import * as schema from './schema';
+import { getAppDataDir, getDatabasePath } from './paths';
 
-// Standard user data location for all contexts (Electron and CLI)
-export function getAppDataDir(): string {
-  if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
-    // Namespaced by pid so parallel vitest worker processes don't share (and race
-    // on) the same on-disk directory for file-backed caches like screenshots.
-    const tmpPath = path.join(os.tmpdir(), `barnacles-test-${process.pid}`);
-    mkdirSync(tmpPath, { recursive: true });
-    return tmpPath;
-  }
-
-  const homeDir = os.homedir();
-  let userDataPath: string;
-
-  if (process.platform === 'darwin') {
-    userDataPath = path.join(homeDir, 'Library', 'Application Support', 'Barnacles');
-  } else if (process.platform === 'win32') {
-    userDataPath = path.join(homeDir, 'AppData', 'Roaming', 'Barnacles');
-  } else {
-    // Linux
-    userDataPath = path.join(homeDir, '.config', 'Barnacles');
-  }
-
-  mkdirSync(userDataPath, { recursive: true });
-
-  return userDataPath;
-}
-
-// Get the standard database path for both Electron and CLI contexts
-function getDatabasePath(): string {
-  // Use in-memory database for tests
-  if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
-    return ':memory:';
-  }
-
-  // Use development database if not in production
-  if (process.env.NODE_ENV === 'development') {
-    return './database.db';
-  }
-
-  return path.join(getAppDataDir(), 'database.db');
-}
+// Re-exported so existing consumers (e.g. port-screenshot-cache-service) keep
+// importing it from here; the implementation lives in ./paths for testability.
+export { getAppDataDir };
 
 const dbPath = getDatabasePath();
 const sqlite = new Database(dbPath);
+
+/**
+ * The database path this process actually opened. Demo seeding asserts on this
+ * before writing anything, so it must reflect the resolved path rather than
+ * re-deriving it from the environment.
+ */
+export function getResolvedDatabasePath(): string {
+  return dbPath;
+}
 
 // Enable WAL mode for better concurrency
 if (dbPath !== ':memory:') {
