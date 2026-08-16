@@ -177,7 +177,12 @@ async function capture(win, shot, theme, outputFileName) {
 
   await seedUiState(win, state);
   await win.loadURL(target);
-  await waitForData(win);
+
+  // A shot whose queries never settle would otherwise be captured mid-skeleton
+  // and published as a loading spinner.
+  if (!(await waitForData(win))) {
+    throw new Error('data did not settle before the capture timeout');
+  }
 
   await forceTheme(win, theme);
 

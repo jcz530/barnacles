@@ -31,8 +31,21 @@ describe('demo seed', () => {
       await expect(seedDemoDatabase()).rejects.toThrow(/outside demo mode/i);
     });
 
-    it('refuses to seed a database outside a .demo-data directory', async () => {
+    it('throws when the demo flag is set without a demo profile', async () => {
+      // The flag alone must not enable demo mode: the other demo guards would
+      // otherwise show fabricated data on top of the real database.
       vi.stubEnv('BARNACLES_DEMO', '1');
+      vi.stubEnv('BARNACLES_DATA_DIR', '');
+
+      const { seedDemoDatabase } = await import('@shared/database/demo');
+      await expect(seedDemoDatabase()).rejects.toThrow(/outside demo mode/i);
+    });
+
+    it('refuses to seed a database outside a .demo-data directory', async () => {
+      // Defense in depth: demo mode is on, but the resolved database path is not
+      // inside the profile.
+      vi.stubEnv('BARNACLES_DEMO', '1');
+      vi.stubEnv('BARNACLES_DATA_DIR', '/tmp/barnacles-guard-test/.demo-data');
       vi.doMock('@shared/database/connection', async () => {
         const actual = await vi.importActual<typeof import('@shared/database/connection')>(
           '@shared/database/connection'
@@ -46,6 +59,7 @@ describe('demo seed', () => {
 
     it('names the offending path so the failure is diagnosable', async () => {
       vi.stubEnv('BARNACLES_DEMO', '1');
+      vi.stubEnv('BARNACLES_DATA_DIR', '/tmp/barnacles-guard-test/.demo-data');
       vi.doMock('@shared/database/connection', async () => {
         const actual = await vi.importActual<typeof import('@shared/database/connection')>(
           '@shared/database/connection'
@@ -55,6 +69,16 @@ describe('demo seed', () => {
 
       const { seedDemoDatabase } = await import('@shared/database/demo');
       await expect(seedDemoDatabase()).rejects.toThrow(/\/tmp\/somewhere\/database\.db/);
+    });
+
+    it('does not mistake a lookalike directory for a demo profile', async () => {
+      // ".demo-database" contains ".demo-data" as a substring but is not a
+      // demo profile — the check must be path-component aware.
+      vi.stubEnv('BARNACLES_DEMO', '1');
+      vi.stubEnv('BARNACLES_DATA_DIR', '/Users/dev/projects/my.demo-database');
+
+      const { seedDemoDatabase } = await import('@shared/database/demo');
+      await expect(seedDemoDatabase()).rejects.toThrow(/outside demo mode/i);
     });
   });
 

@@ -1,8 +1,10 @@
-import { eq } from 'drizzle-orm';
+import { eq, like } from 'drizzle-orm';
+import { realpathSync } from 'node:fs';
+import path from 'node:path';
 import { db } from '../connection';
 import { getResolvedDatabasePath } from '../connection';
 import { DEMO_DATA_DIRNAME } from '../paths';
-import { isDemoMode } from '../../config/runtime-mode';
+import { isDemoMode, isDemoProfilePath } from '../../config/runtime-mode';
 import {
   projects,
   projectLanguageStats,
@@ -46,8 +48,20 @@ function assertSafeToSeed(): void {
     throw new Error('seedDemoDatabase called outside demo mode (BARNACLES_DEMO is not set)');
   }
 
+  // Resolve symlinks before checking: /tmp is world-writable, so a symlinked
+  // profile could otherwise pass a name check while pointing at the real app
+  // data directory. Component-wise, not substring — "my.demo-database" is not
+  // a demo profile.
   const dbPath = getResolvedDatabasePath();
-  if (!dbPath.includes(DEMO_DATA_DIRNAME)) {
+  let resolved = dbPath;
+  try {
+    resolved = realpathSync(path.dirname(dbPath));
+  } catch {
+    // Directory may not exist yet on a first run; fall back to the literal path.
+    resolved = path.dirname(dbPath);
+  }
+
+  if (!isDemoProfilePath(resolved)) {
     throw new Error(
       `Refusing to seed demo data into a non-demo database: ${dbPath}\n` +
         `Demo mode requires BARNACLES_DATA_DIR to point at a "${DEMO_DATA_DIRNAME}" directory.`
@@ -74,11 +88,14 @@ function technologyRecordFor(slug: string) {
  * the demo database, which assertSafeToSeed has already verified.
  */
 async function clearExistingDemoData(): Promise<void> {
-  // Child rows cascade from projects, so deleting projects is sufficient for
-  // stats/technologies/processes/accounts. Aliases have no parent.
-  for (const project of DEMO_PROJECTS) {
-    await db.delete(projects).where(eq(projects.id, project.id));
-  }
+  // Delete by id prefix rather than by iterating the current fixtures: enumerating
+  // them leaves rows behind when a fixture is renamed or removed, and the next
+  // seed then fails on the projects.path unique index instead of converging.
+  //
+  // Child rows (stats, technologies, processes, accounts) cascade from projects.
+  await db.delete(projects).where(like(projects.id, 'demo-%'));
+
+  // Aliases have no parent row, so clear the ones this seeder owns by name.
   for (const alias of DEMO_ALIASES) {
     await db.delete(aliases).where(eq(aliases.name, alias.name));
   }

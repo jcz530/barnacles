@@ -22,6 +22,7 @@ describe('ProjectRescanSchedulerService in demo mode', () => {
 
   it('does not start when demo mode is enabled', async () => {
     vi.stubEnv('BARNACLES_DEMO', '1');
+    vi.stubEnv('BARNACLES_DATA_DIR', '/tmp/barnacles-demo-test/.demo-data');
     const service = new ProjectRescanSchedulerService();
 
     await service.start();
@@ -32,6 +33,7 @@ describe('ProjectRescanSchedulerService in demo mode', () => {
 
   it('stays disabled when updateInterval re-arms the scheduler', async () => {
     vi.stubEnv('BARNACLES_DEMO', '1');
+    vi.stubEnv('BARNACLES_DATA_DIR', '/tmp/barnacles-demo-test/.demo-data');
     const service = new ProjectRescanSchedulerService();
 
     // updateInterval calls start() again — the guard must live inside start()
