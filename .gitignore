@@ -1,4 +1,12 @@
 .claude
+# Track project skills so they survive a fresh clone and are shared with
+# contributors. Everything else under .claude (settings.local.json, caches)
+# stays ignored. The directory itself must be un-ignored before git will
+# descend into it.
+!.claude/
+.claude/*
+!.claude/skills/
+!.claude/skills/**
 database.db*
 dist
 
