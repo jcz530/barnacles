@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import dayjs from 'dayjs';
 import { FileText, Flame, FolderGit2, GitCommit, Minus, Plus, Scale } from 'lucide-vue-next';
 import GitStatCard from '../components/projects/molecules/GitStatCard.vue';
 import PeriodStepper from '../components/projects/molecules/PeriodStepper.vue';
+import StatDetailPanel from '../components/projects/organisms/StatDetailPanel.vue';
 import StatsHighlightsCard from '../components/projects/organisms/StatsHighlightsCard.vue';
 import StatsLanguageCard from '../components/projects/organisms/StatsLanguageCard.vue';
 import StatsTopFilesCard from '../components/projects/organisms/StatsTopFilesCard.vue';
@@ -167,6 +168,128 @@ const streakValue = computed(() => {
 });
 
 const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString();
+
+interface DatedValue {
+  date: string;
+  value: number;
+}
+
+/** Raw per-day series, before any year-mode bucketing. */
+const rawSeries = (key: 'commits' | 'filesChanged' | 'linesAdded' | 'linesRemoved') =>
+  computed(() => days.value.map(day => ({ date: day.date, value: day[key] })));
+
+const rawCommits = rawSeries('commits');
+const rawFilesChanged = rawSeries('filesChanged');
+const rawLinesAdded = rawSeries('linesAdded');
+const rawLinesRemoved = rawSeries('linesRemoved');
+const rawProjects = computed(() =>
+  days.value.map(day => ({ date: day.date, value: day.projectsWorkedOn }))
+);
+
+/**
+ * One definition per tile, so the grid and the expanded panel can't drift.
+ *
+ * `series` is what the small tile plots (bucketed in year mode, since it has
+ * room for ~53 bars); `detailDays` is always per-day, because the expanded
+ * chart is full width and can render every day of a year.
+ */
+const allStats = computed(() => [
+  {
+    key: 'streak',
+    icon: Flame,
+    label: streakLabel.value,
+    value: streakValue.value,
+    iconClass: 'text-primary-500',
+    series: dailyActivity.value,
+    detailDays: dailyActivity.value,
+    // A 0/1 flag: totals and averages of it would be meaningless.
+    isBinary: true,
+    alwaysShow: true,
+  },
+  {
+    key: 'commits',
+    icon: GitCommit,
+    label: 'Commits',
+    value: formatNumber(totals.value?.commits),
+    series: dailyCommits.value,
+    detailDays: rawCommits.value,
+    alwaysShow: true,
+  },
+  {
+    key: 'files',
+    icon: FileText,
+    label: 'Files Changed',
+    value: formatNumber(totals.value?.filesChanged),
+    series: dailyFilesChanged.value,
+    detailDays: rawFilesChanged.value,
+    alwaysShow: true,
+  },
+  {
+    key: 'projects',
+    icon: FolderGit2,
+    label: 'Projects',
+    value: formatNumber(totals.value?.projectsWorkedOn),
+    iconClass: 'text-slate-500',
+    series: dailyProjects.value,
+    detailDays: rawProjects.value,
+    // Always reads 1 when a single project is selected.
+    hideWhenSingleProject: true,
+  },
+  {
+    key: 'added',
+    icon: Plus,
+    label: 'Lines Added',
+    value: formatNumber(totals.value?.linesAdded),
+    iconClass: 'text-success-500',
+    series: dailyLinesAdded.value,
+    detailDays: rawLinesAdded.value,
+    alwaysShow: true,
+  },
+  {
+    key: 'removed',
+    icon: Minus,
+    label: 'Lines Removed',
+    value: formatNumber(totals.value?.linesRemoved),
+    iconClass: 'text-danger-500',
+    series: dailyLinesRemoved.value,
+    detailDays: rawLinesRemoved.value,
+    alwaysShow: true,
+  },
+  {
+    key: 'net',
+    icon: Scale,
+    label: 'Net Lines',
+    value: formatNumber(totals.value?.netLines),
+    iconClass: 'text-slate-500',
+    // Net lines can go negative, which the bar chart has no way to render, so
+    // this tile carries a figure only.
+    series: [] as DatedValue[],
+    detailDays: [] as DatedValue[],
+    onlyWhenSingleProject: true,
+  },
+]);
+
+const visibleStats = computed(() =>
+  allStats.value.filter(stat => {
+    if (stat.hideWhenSingleProject) return !isSingleProject.value;
+    if (stat.onlyWhenSingleProject) return isSingleProject.value;
+    return true;
+  })
+);
+
+const expandedKey = ref<string | null>(null);
+
+const expandedStat = computed(() =>
+  expandedKey.value ? (visibleStats.value.find(s => s.key === expandedKey.value) ?? null) : null
+);
+
+// Changing period or filter can retire the expanded tile (Projects and Net
+// Lines swap with the filter), which would otherwise leave an empty panel.
+watch(visibleStats, stats => {
+  if (expandedKey.value && !stats.some(stat => stat.key === expandedKey.value)) {
+    expandedKey.value = null;
+  }
+});
 </script>
 
 <template>
@@ -204,63 +327,40 @@ const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString(
       <!-- Three across: six tiles (seven when a single project swaps Projects
            for Net Lines) divide evenly, and keeping the count low leaves each
            tile wide enough that long values don't overflow the card. -->
-      <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
-        <GitStatCard
-          :icon="Flame"
-          :label="streakLabel"
-          :value="streakValue"
-          icon-class="text-primary-500"
-          :daily-values="dailyActivity"
-          :is-loading="isLoading"
-          hide-values
-        />
-        <GitStatCard
-          :icon="GitCommit"
-          label="Commits"
-          :value="formatNumber(totals?.commits)"
-          :daily-values="dailyCommits"
-          :is-loading="isLoading"
-        />
-        <GitStatCard
-          :icon="FileText"
-          label="Files Changed"
-          :value="formatNumber(totals?.filesChanged)"
-          :daily-values="dailyFilesChanged"
-          :is-loading="isLoading"
-        />
-        <GitStatCard
-          v-if="!isSingleProject"
-          :icon="FolderGit2"
-          label="Projects"
-          :value="formatNumber(totals?.projectsWorkedOn)"
-          icon-class="text-slate-500"
-          :daily-values="dailyProjects"
-          :is-loading="isLoading"
-        />
-        <GitStatCard
-          :icon="Plus"
-          label="Lines Added"
-          :value="formatNumber(totals?.linesAdded)"
-          icon-class="text-success-500"
-          :daily-values="dailyLinesAdded"
-          :is-loading="isLoading"
-        />
-        <GitStatCard
-          :icon="Minus"
-          label="Lines Removed"
-          :value="formatNumber(totals?.linesRemoved)"
-          icon-class="text-danger-500"
-          :daily-values="dailyLinesRemoved"
-          :is-loading="isLoading"
-        />
-        <GitStatCard
-          v-if="isSingleProject"
-          :icon="Scale"
-          label="Net Lines"
-          :value="formatNumber(totals?.netLines)"
-          icon-class="text-slate-500"
-          :is-loading="isLoading"
-        />
+      <!-- Expanded stat takes the whole grid's place; the tiles come back on
+           close. -->
+      <StatDetailPanel
+        v-if="expandedStat"
+        :icon="expandedStat.icon"
+        :label="expandedStat.label"
+        :value="expandedStat.value"
+        :icon-class="expandedStat.iconClass"
+        :days="expandedStat.detailDays"
+        :period-label="periodLabel"
+        :is-binary="expandedStat.isBinary"
+        :is-loading="isLoading"
+        @close="expandedKey = null"
+      />
+
+      <div v-else class="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <button
+          v-for="stat in visibleStats"
+          :key="stat.key"
+          type="button"
+          class="focus-visible:ring-primary-500 cursor-pointer rounded-lg text-left transition-colors hover:bg-slate-50 focus-visible:ring-2 focus-visible:outline-none dark:hover:bg-slate-900"
+          :aria-label="`Show ${stat.label} details`"
+          @click="expandedKey = stat.key"
+        >
+          <GitStatCard
+            :icon="stat.icon"
+            :label="stat.label"
+            :value="stat.value"
+            :icon-class="stat.iconClass"
+            :daily-values="stat.series"
+            :is-loading="isLoading"
+            :hide-values="stat.isBinary"
+          />
+        </button>
       </div>
 
       <StatsHighlightsCard
