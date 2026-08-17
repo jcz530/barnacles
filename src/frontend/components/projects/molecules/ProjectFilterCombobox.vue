@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Check, ChevronsUpDown, X } from 'lucide-vue-next';
+import { ChevronsUpDown } from 'lucide-vue-next';
 import type { ProjectWithDetails } from '../../../../shared/types/api';
 import {
   Combobox,
@@ -8,11 +8,12 @@ import {
   ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
-  ComboboxItemIndicator,
   ComboboxList,
+  ComboboxSeparator,
   ComboboxTrigger,
 } from '../../ui/combobox';
 import { Button } from '../../ui/button';
+import { Checkbox } from '../../ui/checkbox';
 
 const props = withDefaults(
   defineProps<{
@@ -44,11 +45,7 @@ const label = computed(() => {
   return `${count} projects`;
 });
 
-const clear = (event: Event) => {
-  // The clear button lives inside the trigger, so stop it from toggling the list.
-  event.stopPropagation();
-  emit('update:modelValue', []);
-};
+const clear = () => emit('update:modelValue', []);
 </script>
 
 <template>
@@ -74,23 +71,22 @@ const clear = (event: Event) => {
             {{ label }}
           </span>
 
-          <span class="ml-2 flex shrink-0 items-center gap-1">
-            <X
-              v-if="modelValue.length"
-              class="size-3.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-              role="button"
-              aria-label="Clear project filter"
-              @click="clear"
-            />
-            <ChevronsUpDown class="size-4 text-slate-400" />
-          </span>
+          <ChevronsUpDown class="ml-2 size-4 shrink-0 text-slate-400" />
         </Button>
       </ComboboxTrigger>
     </ComboboxAnchor>
 
     <!-- Width comes from --reka-combobox-trigger-width, so the list matches the
          trigger; don't set an explicit width here. -->
-    <ComboboxList align="start" class="p-0">
+    <!-- The shared ComboboxInput ships a bordered, shadowed box meant for
+         standalone use. Inside this panel it should read as a header, so the
+         wrapper's border/shadow/rounding are dropped and replaced with a single
+         rule below it. Scoped here via data-slot so other comboboxes keep the
+         default treatment. -->
+    <ComboboxList
+      align="start"
+      class="p-0 [&_[data-slot=command-input-wrapper]]:rounded-none [&_[data-slot=command-input-wrapper]]:border-0 [&_[data-slot=command-input-wrapper]]:border-b [&_[data-slot=command-input-wrapper]]:border-slate-200 [&_[data-slot=command-input-wrapper]]:shadow-none dark:[&_[data-slot=command-input-wrapper]]:border-slate-700"
+    >
       <!-- reka-ui filters the items below against this input as you type. -->
       <ComboboxInput placeholder="Search projects..." />
 
@@ -105,14 +101,31 @@ const clear = (event: Event) => {
           :key="project.id"
           :value="project.id"
           :text-value="project.name"
-          class="flex items-center justify-between gap-2"
+          class="flex items-center gap-2"
         >
+          <!-- Decorative: the item itself owns selection, so the checkbox must
+               not steal the click or the focus ring. -->
+          <Checkbox
+            :model-value="modelValue.includes(project.id)"
+            tabindex="-1"
+            aria-hidden="true"
+            class="pointer-events-none"
+          />
           <span class="truncate">{{ project.name }}</span>
-          <ComboboxItemIndicator>
-            <Check class="text-primary-500 size-4" />
-          </ComboboxItemIndicator>
         </ComboboxItem>
       </div>
+
+      <template v-if="modelValue.length">
+        <!-- Matches the rule under the search input above. -->
+        <ComboboxSeparator class="mx-0 bg-slate-200 dark:bg-slate-700" />
+        <button
+          type="button"
+          class="w-full px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+          @click="clear"
+        >
+          Clear filters
+        </button>
+      </template>
     </ComboboxList>
   </Combobox>
 </template>

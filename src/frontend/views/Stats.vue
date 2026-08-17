@@ -117,6 +117,21 @@ const isSingleProject = computed(() => selectedProjects.value.length === 1);
 const totals = computed(() => stats.value?.totals);
 const days = computed(() => stats.value?.days ?? []);
 
+/** Raw per-day series, before any year-mode bucketing. */
+const rawSeries = (key: 'commits' | 'filesChanged' | 'linesAdded' | 'linesRemoved') =>
+  computed(() => days.value.map(day => ({ date: day.date, value: day[key] })));
+
+const rawCommits = rawSeries('commits');
+const rawFilesChanged = rawSeries('filesChanged');
+const rawLinesAdded = rawSeries('linesAdded');
+const rawLinesRemoved = rawSeries('linesRemoved');
+const rawProjects = computed(() =>
+  days.value.map(day => ({ date: day.date, value: day.projectsWorkedOn }))
+);
+const rawActivity = computed(() =>
+  days.value.map(day => ({ date: day.date, value: day.commits > 0 ? 1 : 0 }))
+);
+
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
 const max = (values: number[]) => Math.max(...values, 0);
 
@@ -142,10 +157,11 @@ const dailyProjects = series('projectsWorkedOn', max);
 // Binary activity, so the streak sparkline reads as "did I commit" rather than
 // "how much" — matching how the dashboard renders it. Bucketed to a year, a
 // week counts as active if any of its days were.
-const dailyActivity = computed(() => {
-  const entries = days.value.map(day => ({ date: day.date, value: day.commits > 0 ? 1 : 0 }));
-  return isYearMode.value ? bucketByIsoWeek(entries, values => (max(values) > 0 ? 1 : 0)) : entries;
-});
+const dailyActivity = computed(() =>
+  isYearMode.value
+    ? bucketByIsoWeek(rawActivity.value, values => (max(values) > 0 ? 1 : 0))
+    : rawActivity.value
+);
 
 const heatmapDays = computed(() => days.value.map(day => ({ date: day.date, value: day.commits })));
 
@@ -174,18 +190,6 @@ interface DatedValue {
   value: number;
 }
 
-/** Raw per-day series, before any year-mode bucketing. */
-const rawSeries = (key: 'commits' | 'filesChanged' | 'linesAdded' | 'linesRemoved') =>
-  computed(() => days.value.map(day => ({ date: day.date, value: day[key] })));
-
-const rawCommits = rawSeries('commits');
-const rawFilesChanged = rawSeries('filesChanged');
-const rawLinesAdded = rawSeries('linesAdded');
-const rawLinesRemoved = rawSeries('linesRemoved');
-const rawProjects = computed(() =>
-  days.value.map(day => ({ date: day.date, value: day.projectsWorkedOn }))
-);
-
 /**
  * One definition per tile, so the grid and the expanded panel can't drift.
  *
@@ -201,7 +205,9 @@ const allStats = computed(() => [
     value: streakValue.value,
     iconClass: 'text-primary-500',
     series: dailyActivity.value,
-    detailDays: dailyActivity.value,
+    // Per-day like every other stat: passing the bucketed series here made the
+    // panel treat a year as ~53 entries and label it like a month.
+    detailDays: rawActivity.value,
     // A 0/1 flag: totals and averages of it would be meaningless.
     isBinary: true,
     alwaysShow: true,

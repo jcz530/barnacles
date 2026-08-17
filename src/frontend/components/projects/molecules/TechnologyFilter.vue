@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
 import { Button } from '../../ui/button';
+import { Checkbox } from '../../ui/checkbox';
 import { Filter } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -64,11 +65,13 @@ const hasFilters = computed(() => props.selectedTechnologies.length > 0);
           class="relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none hover:bg-slate-100"
           @click="toggleTechnology(tech.slug)"
         >
-          <input
-            type="checkbox"
-            :checked="selectedTechnologies.includes(tech.slug)"
-            class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
-            @click.stop="toggleTechnology(tech.slug)"
+          <!-- Decorative: the row owns the click, so the checkbox must not
+               steal it or take focus. -->
+          <Checkbox
+            :model-value="selectedTechnologies.includes(tech.slug)"
+            tabindex="-1"
+            aria-hidden="true"
+            class="pointer-events-none"
           />
           <div class="flex items-center gap-2">
             <div

@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
 import { Button } from '../../ui/button';
+import { Checkbox } from '../../ui/checkbox';
 import { GitBranch } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -72,11 +73,13 @@ const sortedProviders = computed(() => {
           class="relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none hover:bg-slate-100"
           @click="toggleProvider(provider)"
         >
-          <input
-            type="checkbox"
-            :checked="selectedProviders.includes(provider)"
-            class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500"
-            @click.stop="toggleProvider(provider)"
+          <!-- Decorative: the row owns the click, so the checkbox must not
+               steal it or take focus. -->
+          <Checkbox
+            :model-value="selectedProviders.includes(provider)"
+            tabindex="-1"
+            aria-hidden="true"
+            class="pointer-events-none"
           />
           <span>{{ provider }}</span>
         </div>
