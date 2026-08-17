@@ -2,9 +2,14 @@
 import type { Component } from 'vue';
 import { computed, ref } from 'vue';
 import dayjs from 'dayjs';
+import isoWeek from 'dayjs/plugin/isoWeek';
 import { X } from 'lucide-vue-next';
 import { Button } from '../../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
+
+// isoWeekday() drives the weekly tick marks. Registered here rather than relying
+// on another module having already extended dayjs.
+dayjs.extend(isoWeek);
 
 interface DatedValue {
   date: string;
@@ -92,19 +97,40 @@ const summary = computed(() => {
 });
 
 /**
- * Month boundaries, used as chart ticks. Anything longer than a week gets them;
- * below that the individual bars are already labelled.
+ * X-axis ticks, at whatever interval suits the range's length.
+ *
+ * A week labels every day, a month labels Mondays, and anything longer labels
+ * month boundaries. The aim is roughly 4-8 labels whatever the span — one per
+ * bar is unreadable over a month, and month names alone say nothing over a week.
  */
 const axisTicks = computed(() => {
-  if (props.days.length <= 7) return [];
+  const { days } = props;
+  if (days.length === 0) return [];
 
-  return props.days
+  const isTick = (date: string) => {
+    // A week: every day fits.
+    if (days.length <= 7) return true;
+    // Up to roughly two months: start each week. Using Monday rather than every
+    // 7th bar keeps labels on real week boundaries as you step between periods.
+    if (days.length <= 62) return dayjs(date).isoWeekday() === 1;
+    // Longer: the first of each month.
+    return dayjs(date).date() === 1;
+  };
+
+  const format = (date: string) => {
+    if (days.length <= 7) return dayjs(date).format('ddd');
+    if (days.length <= 62) return dayjs(date).format('MMM D');
+    return dayjs(date).format('MMM');
+  };
+
+  return days
     .map((day, index) => ({ day, index }))
-    .filter(({ day }) => dayjs(day.date).date() === 1)
+    .filter(({ day }) => isTick(day.date))
     .map(({ day, index }) => ({
-      label: dayjs(day.date).format('MMM'),
+      key: day.date,
+      label: format(day.date),
       // Percentage rather than pixels, so ticks track the bars as the panel resizes.
-      left: `${(index / props.days.length) * 100}%`,
+      left: `${(index / days.length) * 100}%`,
     }));
 });
 
@@ -218,7 +244,7 @@ const readout = computed(() => {
             <div class="relative mt-1 h-4 flex-1">
               <span
                 v-for="tick in axisTicks"
-                :key="tick.left"
+                :key="tick.key"
                 class="absolute text-[10px] text-slate-400"
                 :style="{ left: tick.left }"
               >
