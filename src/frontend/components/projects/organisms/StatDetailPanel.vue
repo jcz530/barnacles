@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import dayjs from 'dayjs';
 import { X } from 'lucide-vue-next';
 import { Button } from '../../ui/button';
@@ -110,6 +110,25 @@ const axisTicks = computed(() => {
 
 const barTitle = (day: DatedValue) =>
   `${dayjs(day.date).format('ddd, MMM D YYYY')}: ${day.value.toLocaleString()}`;
+
+const hoveredIndex = ref<number | null>(null);
+
+/**
+ * What the figure above the chart shows: the hovered bar, or the best day when
+ * nothing is hovered. A chart whose values only exist in native tooltips makes
+ * the reader hover and wait to learn anything.
+ */
+const readout = computed(() => {
+  const hovered = hoveredIndex.value === null ? null : props.days[hoveredIndex.value];
+  const day = hovered ?? bestDay.value;
+
+  if (!day) return { value: 0, label: 'No activity' };
+
+  return {
+    value: day.value,
+    label: `${dayjs(day.date).format('ddd, MMM D')}${hovered ? '' : ' · best day'}`,
+  };
+});
 </script>
 
 <template>
@@ -139,32 +158,73 @@ const barTitle = (day: DatedValue) =>
              buckets the small tile is limited to. Skipped entirely when nothing
              happened, rather than reserving 160px of blank space. -->
         <div v-if="activeDays.length">
-          <div class="flex h-40 items-end gap-px">
+          <!-- Reads out the hovered bar, falling back to the best day so the
+               chart always states a real value rather than needing a hover to
+               say anything at all. -->
+          <div class="mb-2 flex items-baseline gap-2">
+            <span class="text-xl font-semibold tabular-nums">
+              {{ readout.value.toLocaleString() }}
+            </span>
+            <span class="text-xs text-slate-500">
+              {{ readout.label }}
+            </span>
+          </div>
+
+          <div class="flex gap-2">
+            <!-- Y axis: the scale is otherwise invisible, so bar heights are
+                 only comparable to each other and not to any number. -->
             <div
-              v-for="day in days"
-              :key="day.date"
-              class="group relative flex h-full flex-1 items-end"
-              :title="barTitle(day)"
+              class="flex h-40 w-10 shrink-0 flex-col justify-between text-right text-[10px] text-slate-400 tabular-nums"
             >
+              <span>{{ maxValue.toLocaleString() }}</span>
+              <span>0</span>
+            </div>
+
+            <div class="relative flex h-40 flex-1 items-end gap-px">
+              <!-- Gridline at the top of the scale. -->
               <div
-                class="from-primary-500/60 to-primary-500/90 w-full rounded-sm bg-gradient-to-t transition-all"
-                :class="day.value === 0 ? 'bg-slate-100 dark:bg-slate-800' : ''"
-                :style="{
-                  height: `${Math.max((day.value / maxValue) * 100, day.value > 0 ? 2 : 1)}%`,
-                }"
+                class="absolute inset-x-0 top-0 border-t border-dashed border-slate-200 dark:border-slate-700"
               />
+
+              <div
+                v-for="(day, index) in days"
+                :key="day.date"
+                class="relative flex h-full flex-1 items-end"
+                :title="barTitle(day)"
+                @mouseenter="hoveredIndex = index"
+                @mouseleave="hoveredIndex = null"
+              >
+                <div
+                  class="w-full rounded-sm transition-all"
+                  :class="
+                    day.value === 0
+                      ? 'bg-slate-100 dark:bg-slate-800'
+                      : hoveredIndex === index
+                        ? 'bg-primary-600'
+                        : 'from-primary-500/60 to-primary-500/90 bg-gradient-to-t'
+                  "
+                  :style="{
+                    height: `${Math.max((day.value / maxValue) * 100, day.value > 0 ? 2 : 1)}%`,
+                  }"
+                />
+              </div>
             </div>
           </div>
 
-          <div v-if="axisTicks.length" class="relative mt-1 h-4">
-            <span
-              v-for="tick in axisTicks"
-              :key="tick.left"
-              class="absolute text-[10px] text-slate-400"
-              :style="{ left: tick.left }"
-            >
-              {{ tick.label }}
-            </span>
+          <!-- Mirrors the chart row's gutter (w-10) and gap-2 so the ticks line
+               up with the bars rather than the panel edge. -->
+          <div v-if="axisTicks.length" class="flex gap-2">
+            <div class="w-10 shrink-0" />
+            <div class="relative mt-1 h-4 flex-1">
+              <span
+                v-for="tick in axisTicks"
+                :key="tick.left"
+                class="absolute text-[10px] text-slate-400"
+                :style="{ left: tick.left }"
+              >
+                {{ tick.label }}
+              </span>
+            </div>
           </div>
         </div>
 
