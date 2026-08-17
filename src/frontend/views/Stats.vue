@@ -12,35 +12,75 @@ import {
   Scale,
 } from 'lucide-vue-next';
 import GitStatCard from '../components/projects/molecules/GitStatCard.vue';
-import MonthStepper from '../components/projects/molecules/MonthStepper.vue';
+import PeriodStepper from '../components/projects/molecules/PeriodStepper.vue';
 import StatsHighlightsCard from '../components/projects/organisms/StatsHighlightsCard.vue';
 import StatsLanguageCard from '../components/projects/organisms/StatsLanguageCard.vue';
 import StatsTopFilesCard from '../components/projects/organisms/StatsTopFilesCard.vue';
 import ProjectFilterCombobox from '../components/projects/molecules/ProjectFilterCombobox.vue';
 import ActivityHeatmap from '../components/ui/atoms/ActivityHeatmap.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { currentIsoWeek, formatIsoWeekLabel, isoWeekStart, toIsoWeek } from '../utils/iso-week';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
 
 const { setBreadcrumbs } = useBreadcrumbs();
 setBreadcrumbs([{ label: 'Stats' }]);
 
-const { useMonthlyGitStatsQuery, useProjectsQuery } = useQueries();
+const { usePeriodGitStatsQuery, useProjectsQuery } = useQueries();
 
-// Deliberately not persisted — landing on the current month with no filter is
+// Deliberately not persisted — landing on the current period with no filter is
 // the right default on every visit, regardless of where the last session ended.
+const granularity = ref<'week' | 'month'>('month');
 const selectedMonth = ref(dayjs().format('YYYY-MM'));
+const selectedWeek = ref(currentIsoWeek());
 // Empty means every project, which is also what the API assumes.
 const selectedProjects = ref<string[]>([]);
+
+const isWeekMode = computed(() => granularity.value === 'week');
+
+const selectedPeriod = computed({
+  get: () => (isWeekMode.value ? selectedWeek.value : selectedMonth.value),
+  set: value => {
+    if (isWeekMode.value) selectedWeek.value = value;
+    else selectedMonth.value = value;
+  },
+});
+
+/**
+ * Switch granularity without losing your place: the new period is the one
+ * containing the period you were looking at, so stepping back to March and
+ * switching to weeks lands in March rather than jumping to today.
+ */
+const setGranularity = (next: 'week' | 'month') => {
+  if (next === granularity.value) return;
+
+  if (next === 'week') {
+    const monthStart = dayjs(`${selectedMonth.value}-01`);
+    // Anchor mid-month so the chosen week sits inside it rather than on a
+    // boundary week shared with the previous month.
+    const anchor = monthStart.isSame(dayjs(), 'month') ? dayjs() : monthStart.date(15);
+    selectedWeek.value = toIsoWeek(anchor);
+  } else {
+    selectedMonth.value = isoWeekStart(selectedWeek.value).format('YYYY-MM');
+  }
+
+  granularity.value = next;
+};
+
+const periodLabel = computed(() =>
+  isWeekMode.value
+    ? formatIsoWeekLabel(selectedWeek.value)
+    : dayjs(`${selectedMonth.value}-01`).format('MMMM YYYY')
+);
 
 const { data: projectsData, isLoading: isLoadingProjects } = useProjectsQuery({ enabled: true });
 const {
   data: stats,
   isLoading,
   isFetching,
-} = useMonthlyGitStatsQuery(selectedMonth, selectedProjects);
+} = usePeriodGitStatsQuery(granularity, selectedPeriod, selectedProjects);
 
-const monthLabel = computed(() => dayjs(`${selectedMonth.value}-01`).format('MMMM YYYY'));
 // Only meaningless for exactly one project, where the count would always read 1.
 const isSingleProject = computed(() => selectedProjects.value.length === 1);
 
@@ -69,13 +109,17 @@ const dailyActivity = computed(() =>
 
 const heatmapDays = computed(() => days.value.map(day => ({ date: day.date, value: day.commits })));
 
-// A past month has no running streak, so show what it peaked at instead.
-const isCurrentMonth = computed(() => selectedMonth.value === dayjs().format('YYYY-MM'));
-const streakLabel = computed(() => (isCurrentMonth.value ? 'Day Streak' : 'Longest Streak'));
+// A period that already ended has no running streak, so show its peak instead.
+const isCurrentPeriod = computed(() =>
+  isWeekMode.value
+    ? selectedWeek.value === currentIsoWeek()
+    : selectedMonth.value === dayjs().format('YYYY-MM')
+);
+const streakLabel = computed(() => (isCurrentPeriod.value ? 'Day Streak' : 'Longest Streak'));
 const streakValue = computed(() => {
   const streaks = stats.value?.detail?.streaks;
   if (!streaks) return 0;
-  return isCurrentMonth.value && streaks.current > 0 ? streaks.current : streaks.longest;
+  return isCurrentPeriod.value && streaks.current > 0 ? streaks.current : streaks.longest;
 });
 
 const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString();
@@ -84,7 +128,24 @@ const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString(
 <template>
   <div class="space-y-6 p-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <MonthStepper v-model="selectedMonth" />
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Segmented toggle; the active side is the one carrying the accent. -->
+        <div class="flex items-center rounded-md border p-0.5">
+          <Button
+            v-for="option in ['week', 'month'] as const"
+            :key="option"
+            size="sm"
+            :variant="granularity === option ? 'secondary' : 'ghost'"
+            :class="granularity === option ? 'text-primary-500' : 'text-slate-500'"
+            class="capitalize"
+            @click="setGranularity(option)"
+          >
+            {{ option }}
+          </Button>
+        </div>
+
+        <PeriodStepper v-model="selectedPeriod" :granularity="granularity" />
+      </div>
 
       <ProjectFilterCombobox
         v-model="selectedProjects"
@@ -93,8 +154,8 @@ const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString(
       />
     </div>
 
-    <!-- Dimmed rather than replaced while stepping months, so the page keeps
-         its shape instead of collapsing into skeletons on every click. -->
+    <!-- Dimmed rather than replaced while stepping, so the page keeps its shape
+         instead of collapsing into skeletons on every click. -->
     <div class="space-y-6 transition-opacity" :class="isFetching && !isLoading ? 'opacity-60' : ''">
       <!-- Four across at most: the tile count shifts between seven and eight
            with the project filter, and seven columns squeezed each tile until
@@ -168,7 +229,7 @@ const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString(
 
       <Card>
         <CardHeader>
-          <CardTitle class="text-base">Activity in {{ monthLabel }}</CardTitle>
+          <CardTitle class="text-base">Activity in {{ periodLabel }}</CardTitle>
         </CardHeader>
         <CardContent>
           <ActivityHeatmap :days="heatmapDays" :is-loading="isLoading" />
@@ -178,12 +239,12 @@ const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString(
       <div class="grid gap-4 lg:grid-cols-2">
         <StatsTopFilesCard
           :files="stats?.detail?.topFiles ?? []"
-          :month-label="monthLabel"
+          :month-label="periodLabel"
           :is-loading="isLoading"
         />
         <StatsLanguageCard
           :languages="stats?.detail?.languages ?? []"
-          :month-label="monthLabel"
+          :month-label="periodLabel"
           :is-loading="isLoading"
         />
       </div>
@@ -191,7 +252,7 @@ const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString(
       <StatsHighlightsCard
         :detail="stats?.detail"
         :totals="totals"
-        :month-label="monthLabel"
+        :month-label="periodLabel"
         :is-loading="isLoading"
       />
     </div>

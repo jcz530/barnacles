@@ -2,12 +2,19 @@ import { Hono } from 'hono';
 import dayjs from 'dayjs';
 import { BadRequestException } from '../../exceptions/http-exceptions';
 import { projectService } from '../../services/project';
-import { projectGitStatsService } from '../../services/project/project-git-stats-service';
+import {
+  isoWeeksInYearFor,
+  parseIsoWeek,
+  projectGitStatsService,
+} from '../../services/project/project-git-stats-service';
 import { settingsService } from '../../services/settings-service';
 
 const gitStats = new Hono();
 
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+// ISO week, e.g. 2026-W33. Weeks 00 and 54+ are rejected by the shape; whether
+// 53 exists depends on the year, which is checked below.
+const WEEK_PATTERN = /^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$/;
 const VALID_PERIODS = ['week', 'month', 'last-week'] as const;
 
 /**
@@ -24,20 +31,40 @@ const MAX_PROJECT_IDS = 50;
  * for a specific calendar month.
  *
  * Query params:
- *   period    week | month | last-week (default week); ignored when month is set
+ *   period    week | month | last-week (default week); ignored when month/week is set
  *   month     YYYY-MM, for the Stats page's month-by-month navigation
+ *   week      YYYY-Www ISO week; takes precedence over month
  *   projectId restrict to specific projects; repeat the param to select several,
  *             omit it to aggregate every non-archived project
  *   detail    'full' to include top files, languages, per-project and streaks
  */
 gitStats.get('/git-stats', async c => {
   const month = c.req.query('month');
+  const week = c.req.query('week');
   // queries() rather than query(): the Stats page's filter repeats this param
   // once per selected project.
   const projectIds = c.req.queries('projectId') ?? [];
   const detail = c.req.query('detail') === 'full';
 
-  if (month !== undefined) {
+  if (week !== undefined) {
+    if (!WEEK_PATTERN.test(week)) {
+      throw new BadRequestException(`Invalid week "${week}". Expected YYYY-Www.`, 'INVALID_WEEK');
+    }
+
+    // Week 53 only exists in long years, so reject it elsewhere rather than
+    // silently resolving to week 1 of the next year.
+    const [yearPart, weekPart] = week.split('-W');
+    if (Number(weekPart) > isoWeeksInYearFor(Number(yearPart))) {
+      throw new BadRequestException(
+        `Week ${week} does not exist; ${yearPart} has ${isoWeeksInYearFor(Number(yearPart))} weeks.`,
+        'INVALID_WEEK'
+      );
+    }
+
+    if (parseIsoWeek(week).isAfter(dayjs(), 'day')) {
+      throw new BadRequestException(`Week ${week} is in the future.`, 'FUTURE_WEEK');
+    }
+  } else if (month !== undefined) {
     // Reject rather than falling back: a malformed month means the caller built
     // a bad URL, and silently returning some other range hides the bug.
     if (!MONTH_PATTERN.test(month)) {
@@ -86,6 +113,7 @@ gitStats.get('/git-stats', async c => {
     projectPaths,
     period: validPeriod,
     month,
+    week,
     additionalEmails,
     detail,
   });

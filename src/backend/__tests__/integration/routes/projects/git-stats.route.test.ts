@@ -124,6 +124,111 @@ describe('Git Stats API Integration Tests', () => {
     });
   });
 
+  describe('week requests', () => {
+    it('returns the seven days of an ISO week, Monday first', async () => {
+      const { app } = context.get();
+      const response = await get(app, '/api/projects/git-stats?week=2024-W10');
+
+      expect(response.status).toBe(200);
+      const stats = body(response);
+      expect(stats.period).toBe('custom-week');
+      expect(stats.days).toHaveLength(7);
+      // ISO week 10 of 2024 runs Mon 4 Mar to Sun 10 Mar.
+      expect(stats.days[0].date).toBe('2024-03-04');
+      expect(stats.days[6].date).toBe('2024-03-10');
+      expect(stats.range).toMatchObject({
+        since: '2024-03-04',
+        until: '2024-03-10',
+        week: '2024-W10',
+      });
+    });
+
+    it('handles a week spanning a year boundary', async () => {
+      const { app } = context.get();
+      // 2025-W01 starts Mon 30 Dec 2024 — the ISO year and calendar year differ.
+      const stats = body(await get(app, '/api/projects/git-stats?week=2025-W01'));
+
+      expect(stats.days).toHaveLength(7);
+      expect(stats.days[0].date).toBe('2024-12-30');
+      expect(stats.days[6].date).toBe('2025-01-05');
+    });
+
+    it('accepts week 53 in a long year', async () => {
+      const { app } = context.get();
+      // 2020 is a 53-week ISO year.
+      const response = await get(app, '/api/projects/git-stats?week=2020-W53');
+      expect(response.status).toBe(200);
+      expect(body(response).days).toHaveLength(7);
+    });
+
+    it('rejects week 53 in a year that has only 52', async () => {
+      const { app } = context.get();
+      const response = await get(app, '/api/projects/git-stats?week=2024-W53');
+
+      expect(response.status).toBe(400);
+      expect((response.data as any).code).toBe('INVALID_WEEK');
+    });
+
+    it('rejects a malformed week', async () => {
+      const { app } = context.get();
+
+      for (const week of ['2024-W00', '2024-W54', '2024-W1', 'nonsense', '2024W10']) {
+        const response = await get(app, `/api/projects/git-stats?week=${week}`);
+        expect(response.status, `week=${week}`).toBe(400);
+      }
+    });
+
+    it('rejects a future week', async () => {
+      const { app } = context.get();
+      const response = await get(app, '/api/projects/git-stats?week=2099-W01');
+
+      expect(response.status).toBe(400);
+      expect((response.data as any).code).toBe('FUTURE_WEEK');
+    });
+
+    it('takes precedence over month when both are given', async () => {
+      const { app } = context.get();
+      const stats = body(await get(app, '/api/projects/git-stats?week=2024-W10&month=2024-06'));
+
+      expect(stats.period).toBe('custom-week');
+      expect(stats.days).toHaveLength(7);
+      expect(stats.range.month).toBeUndefined();
+    });
+
+    it('counts commits within the week and bounds the last day', async () => {
+      const { db, app } = context.get();
+      await seedProject(db, { path: '/repos/alpha' });
+
+      gitLogHandler = () =>
+        gitLog([
+          { date: '2024-03-04', files: [[5, 0, 'a.ts']] },
+          // Sunday, the final day — dropped if --until lands on midnight.
+          { date: '2024-03-10', files: [[8, 0, 'b.ts']] },
+        ]);
+
+      const stats = body(await get(app, '/api/projects/git-stats?week=2024-W10'));
+
+      const logCall = execCalls.find(call => call.args[0] === 'log');
+      expect(logCall?.args).toContain('--until=2024-03-10T23:59:59');
+      expect(stats.totals.commits).toBe(2);
+      expect(stats.totals.linesAdded).toBe(13);
+      expect(stats.days[6].commits).toBe(1);
+    });
+
+    it('caches weeks separately from months covering the same days', async () => {
+      const { db, app } = context.get();
+      await seedProject(db, { path: '/repos/alpha' });
+      gitLogHandler = () => gitLog([{ date: '2024-03-04', files: [[5, 0, 'a.ts']] }]);
+
+      const week = body(await get(app, '/api/projects/git-stats?week=2024-W10'));
+      const month = body(await get(app, '/api/projects/git-stats?month=2024-03'));
+
+      // Same underlying commit, but the ranges differ — one must not serve the other.
+      expect(week.days).toHaveLength(7);
+      expect(month.days).toHaveLength(31);
+    });
+  });
+
   describe('month requests', () => {
     it('returns every day of the requested month', async () => {
       const { app } = context.get();

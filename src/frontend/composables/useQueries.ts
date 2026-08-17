@@ -1661,8 +1661,10 @@ export const useQueries = () => {
   // Monthly git stats — powers the Stats page's month-by-month navigation.
   // Kept separate from useGitStatsQuery so the dashboard's cache key and
   // payload size are unaffected by the richer detail blocks.
-  const useMonthlyGitStatsQuery = (
-    month: MaybeRef<string>,
+  const usePeriodGitStatsQuery = (
+    granularity: MaybeRef<'week' | 'month'>,
+    /** `YYYY-Www` for week, `YYYY-MM` for month. */
+    value: MaybeRef<string>,
     projectIds: MaybeRef<string[]>,
     options?: { enabled?: MaybeRef<boolean> }
   ) => {
@@ -1671,11 +1673,11 @@ export const useQueries = () => {
         // Sorted so the key is stable regardless of the order the user picked
         // projects in — reselecting the same set hits the cache.
         const ids = [...unref(projectIds)].sort().join(',');
-        return ['git-stats', 'month', unref(month), ids || 'all'] as const;
+        return ['git-stats', unref(granularity), unref(value), ids || 'all'] as const;
       }),
       queryFn: async () => {
         const params = new URLSearchParams();
-        params.append('month', unref(month));
+        params.append(unref(granularity), unref(value));
         params.append('detail', 'full');
 
         // One repeated param per project; the route reads them with queries().
@@ -1696,8 +1698,8 @@ export const useQueries = () => {
       },
       enabled: options?.enabled ?? true,
       staleTime: 5 * 60 * 1000,
-      // Keep the previous month on screen while the next one loads, so stepping
-      // through months doesn't collapse the page into skeletons on every click.
+      // Keep the previous period on screen while the next one loads, so stepping
+      // doesn't collapse the page into skeletons on every click.
       placeholderData: keepPreviousData,
     });
   };
@@ -1825,7 +1827,7 @@ export const useQueries = () => {
     useUpdateAccountMutation,
     useDeleteAccountMutation,
     useGitStatsQuery,
-    useMonthlyGitStatsQuery,
+    usePeriodGitStatsQuery,
     useIpInfoQuery,
     usePortsQuery,
     useKillPortMutation,

@@ -288,6 +288,7 @@ export interface GitStatsRange {
   since: string; // YYYY-MM-DD
   until: string; // YYYY-MM-DD
   month?: string; // YYYY-MM, present for month requests
+  week?: string; // YYYY-Www (ISO week), present for week requests
 }
 
 /** The richer blocks, returned only when `detail=full` is requested. */
@@ -301,7 +302,7 @@ export interface GitStatsDetail {
 
 export interface GitStats {
   days: GitStatsByDay[];
-  period: 'week' | 'month' | 'last-week' | 'custom-month';
+  period: 'week' | 'month' | 'last-week' | 'custom-month' | 'custom-week';
   range: GitStatsRange;
   totals: GitStatsTotals;
   detail?: GitStatsDetail;
