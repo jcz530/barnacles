@@ -207,6 +207,13 @@ const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString(
         />
       </div>
 
+      <StatsHighlightsCard
+        :detail="stats?.detail"
+        :totals="totals"
+        :month-label="periodLabel"
+        :is-loading="isLoading"
+      />
+
       <Card>
         <CardHeader>
           <CardTitle class="text-base">Activity in {{ periodLabel }}</CardTitle>
@@ -228,13 +235,6 @@ const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString(
           :is-loading="isLoading"
         />
       </div>
-
-      <StatsHighlightsCard
-        :detail="stats?.detail"
-        :totals="totals"
-        :month-label="periodLabel"
-        :is-loading="isLoading"
-      />
     </div>
   </div>
 </template>
