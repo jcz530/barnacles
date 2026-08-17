@@ -42,6 +42,42 @@ export function currentIsoWeek(): string {
   return toIsoWeek(dayjs());
 }
 
+export interface DatedValue {
+  date: string; // YYYY-MM-DD
+  value: number;
+}
+
+/**
+ * Roll daily values up into ISO weeks, preserving order.
+ *
+ * Used for the Stats tiles in year mode: one bar per day would need roughly
+ * 1460px inside a tile a few hundred pixels wide, so the bars overflow and
+ * vanish. ~52 weekly bars fit and still show the year's shape.
+ *
+ * `combine` exists because summing is wrong for some series — a count of
+ * distinct projects, or a binary did-I-commit flag, has to be re-derived for
+ * the bucket rather than added up.
+ */
+export function bucketByIsoWeek(
+  entries: DatedValue[],
+  combine: (values: number[]) => number
+): DatedValue[] {
+  const buckets = new Map<string, { date: string; values: number[] }>();
+
+  for (const entry of entries) {
+    const key = toIsoWeek(entry.date);
+    const bucket = buckets.get(key);
+    if (bucket) bucket.values.push(entry.value);
+    // Label the bucket with its first day, so tooltips read as a real date.
+    else buckets.set(key, { date: entry.date, values: [entry.value] });
+  }
+
+  return [...buckets.values()].map(bucket => ({
+    date: bucket.date,
+    value: combine(bucket.values),
+  }));
+}
+
 /** Human label for a week, e.g. `Aug 10 – 16, 2026`. */
 export function formatIsoWeekLabel(week: string): string {
   const start = isoWeekStart(week);

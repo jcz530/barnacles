@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { addIsoWeeks, formatIsoWeekLabel, isoWeekStart, toIsoWeek } from '@/utils/iso-week';
+import {
+  addIsoWeeks,
+  bucketByIsoWeek,
+  formatIsoWeekLabel,
+  isoWeekStart,
+  toIsoWeek,
+} from '@/utils/iso-week';
 
 /**
  * ISO weeks run Monday-Sunday, and a week belongs to whichever year contains
@@ -74,5 +80,88 @@ describe('formatIsoWeekLabel', () => {
 
   it('shows both years when the week straddles them', () => {
     expect(formatIsoWeekLabel('2025-W01')).toBe('Dec 30, 2024 – Jan 5, 2025');
+  });
+});
+
+describe('bucketByIsoWeek', () => {
+  const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+  const max = (values: number[]) => Math.max(...values, 0);
+
+  /** Consecutive days starting from a date. */
+  function series(start: string, values: number[]) {
+    return values.map((value, index) => ({
+      date: isoWeekStart(toIsoWeek(start)).add(index, 'day').format('YYYY-MM-DD'),
+      value,
+    }));
+  }
+
+  it('returns an empty array for no input', () => {
+    expect(bucketByIsoWeek([], sum)).toEqual([]);
+  });
+
+  it('collapses seven days into one bucket', () => {
+    // Mon 4 Mar 2024 through Sun 10 Mar — one ISO week.
+    const result = bucketByIsoWeek(series('2024-03-04', [1, 2, 3, 4, 5, 6, 7]), sum);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].value).toBe(28);
+    // Labelled with the bucket's first day, so tooltips show a real date.
+    expect(result[0].date).toBe('2024-03-04');
+  });
+
+  it('splits days across week boundaries', () => {
+    // 14 consecutive days from a Monday spans exactly two ISO weeks.
+    const result = bucketByIsoWeek(series('2024-03-04', Array(14).fill(1)), sum);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].value).toBe(7);
+    expect(result[1].value).toBe(7);
+  });
+
+  it('preserves chronological order', () => {
+    const result = bucketByIsoWeek(series('2024-03-04', Array(21).fill(1)), sum);
+    const dates = result.map(bucket => bucket.date);
+
+    expect([...dates].sort()).toEqual(dates);
+  });
+
+  it('groups a full year into about 52 buckets', () => {
+    const days = Array.from({ length: 365 }, (_, index) => ({
+      date: `2023-01-01`,
+      value: index,
+    })).map((entry, index) => ({
+      date: isoWeekStart('2023-W01').add(index, 'day').format('YYYY-MM-DD'),
+      value: entry.value,
+    }));
+
+    const result = bucketByIsoWeek(days, sum);
+    // The point of bucketing: a tile can render ~52 bars, not 365.
+    expect(result.length).toBeGreaterThanOrEqual(52);
+    expect(result.length).toBeLessThanOrEqual(54);
+  });
+
+  it('honours the combine function rather than always summing', () => {
+    const week = series('2024-03-04', [3, 1, 9, 2, 5, 0, 4]);
+
+    // A distinct-project count must not be added across days.
+    expect(bucketByIsoWeek(week, max)[0].value).toBe(9);
+    expect(bucketByIsoWeek(week, sum)[0].value).toBe(24);
+  });
+
+  it('supports a binary any-activity combine', () => {
+    const anyActive = (values: number[]) => (max(values) > 0 ? 1 : 0);
+
+    expect(bucketByIsoWeek(series('2024-03-04', [0, 0, 0, 1, 0, 0, 0]), anyActive)[0].value).toBe(
+      1
+    );
+    expect(bucketByIsoWeek(series('2024-03-04', Array(7).fill(0)), anyActive)[0].value).toBe(0);
+  });
+
+  it('keeps a year-boundary week as a single bucket', () => {
+    // 30 Dec 2024 (Mon) to 5 Jan 2025 (Sun) is all of 2025-W01.
+    const result = bucketByIsoWeek(series('2024-12-30', [1, 1, 1, 1, 1, 1, 1]), sum);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].value).toBe(7);
   });
 });

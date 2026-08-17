@@ -11,7 +11,13 @@ import ProjectFilterCombobox from '../components/projects/molecules/ProjectFilte
 import ActivityHeatmap from '../components/ui/atoms/ActivityHeatmap.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { currentIsoWeek, formatIsoWeekLabel, isoWeekStart, toIsoWeek } from '../utils/iso-week';
+import {
+  bucketByIsoWeek,
+  currentIsoWeek,
+  formatIsoWeekLabel,
+  isoWeekStart,
+  toIsoWeek,
+} from '../utils/iso-week';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
 
@@ -110,22 +116,35 @@ const isSingleProject = computed(() => selectedProjects.value.length === 1);
 const totals = computed(() => stats.value?.totals);
 const days = computed(() => stats.value?.days ?? []);
 
-const dailyValues = (key: 'commits' | 'filesChanged' | 'linesAdded' | 'linesRemoved') =>
-  computed(() => days.value.map(day => ({ date: day.date, value: day[key] })));
+const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+const max = (values: number[]) => Math.max(...values, 0);
 
-const dailyCommits = dailyValues('commits');
-const dailyFilesChanged = dailyValues('filesChanged');
-const dailyLinesAdded = dailyValues('linesAdded');
-const dailyLinesRemoved = dailyValues('linesRemoved');
+const isYearMode = computed(() => granularity.value === 'year');
 
-const dailyProjects = computed(() =>
-  days.value.map(day => ({ date: day.date, value: day.projectsWorkedOn }))
-);
+/** Daily for week/month; weekly buckets for a year, which is too dense to plot. */
+const series = (
+  key: 'commits' | 'filesChanged' | 'linesAdded' | 'linesRemoved' | 'projectsWorkedOn',
+  combine: (values: number[]) => number = sum
+) =>
+  computed(() => {
+    const entries = days.value.map(day => ({ date: day.date, value: day[key] }));
+    return isYearMode.value ? bucketByIsoWeek(entries, combine) : entries;
+  });
+
+const dailyCommits = series('commits');
+const dailyFilesChanged = series('filesChanged');
+const dailyLinesAdded = series('linesAdded');
+const dailyLinesRemoved = series('linesRemoved');
+// Distinct project counts don't add across days, so show the week's peak.
+const dailyProjects = series('projectsWorkedOn', max);
+
 // Binary activity, so the streak sparkline reads as "did I commit" rather than
-// "how much" — matching how the dashboard renders it.
-const dailyActivity = computed(() =>
-  days.value.map(day => ({ date: day.date, value: day.commits > 0 ? 1 : 0 }))
-);
+// "how much" — matching how the dashboard renders it. Bucketed to a year, a
+// week counts as active if any of its days were.
+const dailyActivity = computed(() => {
+  const entries = days.value.map(day => ({ date: day.date, value: day.commits > 0 ? 1 : 0 }));
+  return isYearMode.value ? bucketByIsoWeek(entries, values => (max(values) > 0 ? 1 : 0)) : entries;
+});
 
 const heatmapDays = computed(() => days.value.map(day => ({ date: day.date, value: day.commits })));
 
