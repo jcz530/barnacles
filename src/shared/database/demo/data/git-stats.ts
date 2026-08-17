@@ -1,4 +1,13 @@
-import type { GitStats, GitStatsByDay, GitStatsTotals } from '../../../types/api';
+import type {
+  GitStats,
+  GitStatsByDay,
+  GitStatsDetail,
+  GitStatsLanguageSlice,
+  GitStatsRange,
+  GitStatsTopFile,
+  GitStatsTotals,
+} from '../../../types/api';
+import { calculateStreaks } from '../../../utils/git-streak';
 
 /**
  * Synthetic git activity for demo mode.
@@ -62,13 +71,44 @@ function buildDay(date: string): GitStatsByDay {
 }
 
 /**
+ * Plausible-looking paths for the demo "most changed files" list. Fixed rather
+ * than generated so screenshots stay byte-stable between runs.
+ */
+const DEMO_FILES = [
+  'src/components/Dashboard.vue',
+  'src/lib/api-client.ts',
+  'src/routes/projects.ts',
+  'src/styles/theme.css',
+  'src/components/ProjectCard.vue',
+  'src/services/sync-service.ts',
+  'README.md',
+  'src/utils/format.ts',
+  'src/components/Sidebar.vue',
+  'src/db/schema.ts',
+];
+
+/** Extension -> demo language identity, matching the real detector slugs. */
+const DEMO_LANGUAGES: Record<string, { slug: string; label: string; color: string }> = {
+  '.vue': { slug: 'vue', label: 'Vue', color: '#42B883' },
+  '.ts': { slug: 'typescript', label: 'TypeScript', color: '#3178C6' },
+  '.css': { slug: 'css', label: 'CSS', color: '#1572B6' },
+};
+
+export interface BuildDemoGitStatsOptions {
+  period: GitStats['period'];
+  range: GitStatsRange;
+  dates: string[];
+  detail?: boolean;
+  projectPaths?: string[];
+}
+
+/**
  * Build demo stats for the dates the caller asked about, so the response always
  * lines up with the requested period.
  */
-export function buildDemoGitStats(
-  period: 'week' | 'month' | 'last-week',
-  dates: string[]
-): GitStats {
+export function buildDemoGitStats(options: BuildDemoGitStatsOptions): GitStats {
+  const { period, range, dates, detail = false } = options;
+
   // Days after "now" are left empty so a partial week tapers off rather than
   // showing commits dated in the future.
   //
@@ -77,6 +117,9 @@ export function buildDemoGitStats(
   // resolves to the *upcoming* Monday, putting the whole range in the future.
   // Anchoring to the range keeps the dashboard populated whichever day a
   // screenshot is captured.
+  //
+  // A wholly historical range (any past month) falls through untouched, so
+  // stepping back through the Stats page shows a fully populated month.
   const calendarToday = new Date().toISOString().slice(0, 10);
   const lastDate = dates[dates.length - 1] ?? calendarToday;
   const cutoff = calendarToday < (dates[0] ?? calendarToday) ? lastDate : calendarToday;
@@ -87,13 +130,87 @@ export function buildDemoGitStats(
       : buildDay(date)
   );
 
+  const linesAdded = days.reduce((sum, day) => sum + day.linesAdded, 0);
+  const linesRemoved = days.reduce((sum, day) => sum + day.linesRemoved, 0);
+
   const totals: GitStatsTotals = {
     commits: days.reduce((sum, day) => sum + day.commits, 0),
-    filesChanged: days.reduce((sum, day) => sum + day.filesChanged, 0),
-    linesAdded: days.reduce((sum, day) => sum + day.linesAdded, 0),
-    linesRemoved: days.reduce((sum, day) => sum + day.linesRemoved, 0),
+    // Distinct files over the range. The real service counts a file edited on
+    // several days once, so approximate rather than summing the per-day counts.
+    filesChanged: Math.round(days.reduce((sum, day) => sum + day.filesChanged, 0) * 0.4),
+    linesAdded,
+    linesRemoved,
     projectsWorkedOn: Math.max(...days.map(day => day.projectsWorkedOn), 0),
+    netLines: linesAdded - linesRemoved,
+    churn: linesAdded + linesRemoved,
+    activeDays: days.filter(day => day.commits > 0).length,
   };
 
-  return { period, days, totals };
+  const stats: GitStats = { period, range, days, totals };
+  if (detail) stats.detail = buildDemoDetail(days, totals, range);
+  return stats;
+}
+
+/** Deterministic top files, languages and highlights for the Stats page. */
+function buildDemoDetail(
+  days: GitStatsByDay[],
+  totals: GitStatsTotals,
+  range: GitStatsRange
+): GitStatsDetail {
+  const topFiles: GitStatsTopFile[] = DEMO_FILES.map((file, index) => {
+    // Decay down the list so the bars form a natural-looking ramp.
+    const weight = 1 / (index + 1.6);
+    const changes = Math.max(4, Math.round(totals.churn * weight * 0.16));
+    const added = Math.round(changes * 0.68);
+    return {
+      path: file,
+      changes,
+      linesAdded: added,
+      linesRemoved: changes - added,
+      commits: Math.max(1, Math.round(totals.commits * weight * 0.14)),
+    };
+  }).filter(file => file.changes > 0);
+
+  const byLanguage = new Map<string, GitStatsLanguageSlice>();
+  for (const file of topFiles) {
+    const ext = file.path.slice(file.path.lastIndexOf('.'));
+    const language = DEMO_LANGUAGES[ext];
+    const slug = language?.slug ?? 'other';
+
+    let slice = byLanguage.get(slug);
+    if (!slice) {
+      slice = {
+        slug,
+        label: language?.label ?? 'Other',
+        ...(language ? { color: language.color } : {}),
+        linesChanged: 0,
+        filesChanged: 0,
+        percentage: 0,
+      };
+      byLanguage.set(slug, slice);
+    }
+    slice.linesChanged += file.changes;
+    slice.filesChanged += 1;
+  }
+
+  const languageTotal = [...byLanguage.values()].reduce((sum, s) => sum + s.linesChanged, 0);
+  const languages = [...byLanguage.values()]
+    .map(slice => ({
+      ...slice,
+      percentage: languageTotal ? Math.round((slice.linesChanged / languageTotal) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.linesChanged - a.linesChanged);
+
+  const busiest = days.reduce<GitStatsByDay | null>(
+    (best, day) => (day.commits > 0 && (!best || day.commits > best.commits) ? day : best),
+    null
+  );
+
+  return {
+    topFiles,
+    languages,
+    busiestDay: busiest ? { date: busiest.date, commits: busiest.commits } : null,
+    perProject: [],
+    streaks: calculateStreaks(days, range.until),
+  };
 }

@@ -57,6 +57,20 @@ export const SHOTS = [
     },
   },
   {
+    name: 'stats',
+    route: '/stats',
+    title: 'Explore Your Coding History',
+    description:
+      'Step back through your git history month by month. See commits, churn, streaks and the languages you actually worked in — across every project or one at a time.',
+    alt: 'Barnacles stats page with an activity heatmap and monthly git metrics',
+    // The heatmap and the three detail cards all wait on the same request.
+    settleMs: 800,
+    targets: {
+      readme: { marker: 'stats' },
+      marketing: { stepId: 'new', file: 'stats' },
+    },
+  },
+  {
     name: 'projects-table',
     route: '/projects',
     storage: projectsView('table'),

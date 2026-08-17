@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { useDocumentVisibility } from '@vueuse/core';
 import type { MaybeRef } from 'vue';
 import { computed, unref } from 'vue';
@@ -1658,6 +1658,47 @@ export const useQueries = () => {
     });
   };
 
+  // Monthly git stats — powers the Stats page's month-by-month navigation.
+  // Kept separate from useGitStatsQuery so the dashboard's cache key and
+  // payload size are unaffected by the richer detail blocks.
+  const useMonthlyGitStatsQuery = (
+    month: MaybeRef<string>,
+    projectId: MaybeRef<string | undefined>,
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
+    return useQuery({
+      queryKey: computed(
+        () => ['git-stats', 'month', unref(month), unref(projectId) ?? 'all'] as const
+      ),
+      queryFn: async () => {
+        const params = new URLSearchParams();
+        params.append('month', unref(month));
+        params.append('detail', 'full');
+
+        const project = unref(projectId);
+        if (project) {
+          params.append('projectId', project);
+        }
+
+        const response = await apiCall<ApiResponse<GitStats>>(
+          'GET',
+          `${API_ROUTES.PROJECTS_GIT_STATS}?${params.toString()}`
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch git stats');
+        }
+
+        return response.data;
+      },
+      enabled: options?.enabled ?? true,
+      staleTime: 5 * 60 * 1000,
+      // Keep the previous month on screen while the next one loads, so stepping
+      // through months doesn't collapse the page into skeletons on every click.
+      placeholderData: keepPreviousData,
+    });
+  };
+
   // Ports query — lists all TCP LISTEN ports on the local machine
   const usePortsQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     const visibility = useDocumentVisibility();
@@ -1781,6 +1822,7 @@ export const useQueries = () => {
     useUpdateAccountMutation,
     useDeleteAccountMutation,
     useGitStatsQuery,
+    useMonthlyGitStatsQuery,
     useIpInfoQuery,
     usePortsQuery,
     useKillPortMutation,

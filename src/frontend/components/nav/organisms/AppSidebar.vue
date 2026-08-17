@@ -20,6 +20,7 @@ import { useConfigs } from '@/composables/useConfigs';
 import { useQueries } from '@/composables/useQueries';
 import { useQuery } from '@tanstack/vue-query';
 import {
+  ChartNoAxesColumn,
   FileText,
   FolderGit2,
   Network,
@@ -100,6 +101,12 @@ const data = computed(() => ({
       url: '/ports',
       icon: Radio,
       isActive: route.path.startsWith('/ports'),
+    },
+    {
+      title: 'Stats',
+      url: '/stats',
+      icon: ChartNoAxesColumn,
+      isActive: route.path.startsWith('/stats'),
     },
     {
       title: 'Utilities',

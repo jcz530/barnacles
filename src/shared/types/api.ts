@@ -225,16 +225,86 @@ export interface GitStatsByDay {
 
 export interface GitStatsTotals {
   commits: number;
+  /**
+   * Distinct files touched across the whole period. Not the sum of the per-day
+   * `filesChanged` values — a file edited on several days counts once here.
+   */
   filesChanged: number;
   linesAdded: number;
   linesRemoved: number;
   projectsWorkedOn: number;
+  /** linesAdded - linesRemoved. */
+  netLines: number;
+  /** linesAdded + linesRemoved. */
+  churn: number;
+  /** Days in the range with at least one commit. */
+  activeDays: number;
+}
+
+export interface GitStatsTopFile {
+  /** Path relative to its repository. */
+  path: string;
+  /** Which repo the file belongs to; omitted when a single project is selected. */
+  projectPath?: string;
+  /** linesAdded + linesRemoved, the sort key. */
+  changes: number;
+  linesAdded: number;
+  linesRemoved: number;
+  commits: number;
+}
+
+export interface GitStatsLanguageSlice {
+  /** Technology detector slug, e.g. 'typescript'. */
+  slug: string;
+  /** Display name, resolved server-side so aggregate views need no lookup. */
+  label: string;
+  /** Brand color from the technology detector, absent for the 'other' bucket. */
+  color?: string;
+  linesChanged: number;
+  filesChanged: number;
+  /** Share of linesChanged, 0-100. */
+  percentage: number;
+}
+
+export interface GitStatsPerProject {
+  projectPath: string;
+  commits: number;
+  filesChanged: number;
+  linesAdded: number;
+  linesRemoved: number;
+}
+
+export interface GitStatsStreaks {
+  /** Only non-zero when the range reaches today. */
+  current: number;
+  longest: number;
+  longestStart?: string;
+  longestEnd?: string;
+  /** Streak is alive but today has no commits yet. */
+  warning: boolean;
+}
+
+export interface GitStatsRange {
+  since: string; // YYYY-MM-DD
+  until: string; // YYYY-MM-DD
+  month?: string; // YYYY-MM, present for month requests
+}
+
+/** The richer blocks, returned only when `detail=full` is requested. */
+export interface GitStatsDetail {
+  topFiles: GitStatsTopFile[];
+  languages: GitStatsLanguageSlice[];
+  busiestDay: { date: string; commits: number } | null;
+  perProject: GitStatsPerProject[];
+  streaks: GitStatsStreaks;
 }
 
 export interface GitStats {
   days: GitStatsByDay[];
-  period: 'week' | 'month' | 'last-week';
+  period: 'week' | 'month' | 'last-week' | 'custom-month';
+  range: GitStatsRange;
   totals: GitStatsTotals;
+  detail?: GitStatsDetail;
 }
 
 export interface PortEntry {
