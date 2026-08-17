@@ -16,7 +16,11 @@ useHotkeys();
     <SidebarProvider class="flex-1">
       <TitleBar />
       <AppSidebar class="pt-10" />
-      <SidebarInset>
+      <!-- min-w-0: SidebarInset is a flex-1 child of a flex row, whose default
+           min-width of auto refuses to shrink below its content. Without this a
+           wide child (the year heatmap) stretches this pane and scrolls the whole
+           app sideways instead of scrolling within its own card. -->
+      <SidebarInset class="min-w-0">
         <header class="flex h-10 shrink-0 items-center gap-2">
           <div class="flex items-center gap-2 px-4">
             <NavBreadcrumbs />

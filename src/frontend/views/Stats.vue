@@ -293,7 +293,9 @@ watch(visibleStats, stats => {
 </script>
 
 <template>
-  <div class="space-y-6 p-6">
+  <!-- min-w-0 so a wide child (the year heatmap's 53 columns) scrolls inside its
+       own card rather than stretching the page. -->
+  <div class="min-w-0 space-y-6 p-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-center gap-3">
         <!-- Segmented toggle; the active side is the one carrying the accent. -->

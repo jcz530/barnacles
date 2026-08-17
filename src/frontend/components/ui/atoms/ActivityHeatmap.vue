@@ -134,7 +134,7 @@ const levelClass = (cell: Cell): string => {
 </script>
 
 <template>
-  <div class="w-full">
+  <div class="w-full min-w-0">
     <div v-if="isLoading" class="flex gap-1">
       <div v-for="week in 6" :key="week" class="flex flex-col gap-1" aria-hidden="true">
         <div
@@ -145,8 +145,12 @@ const levelClass = (cell: Cell): string => {
       </div>
     </div>
 
-    <div v-else-if="weeks.length" class="overflow-x-auto">
-      <div class="flex gap-1">
+    <!-- min-w-0 is what actually contains the scroll. A flex/grid item's default
+         min-width is auto, so this box would otherwise be sized to the ~892px
+         its 53 fixed-width columns need, pushing the whole page wider instead of
+         scrolling inside itself. -->
+    <div v-else-if="weeks.length" class="min-w-0 overflow-x-auto">
+      <div class="flex w-max gap-1">
         <!-- Weekday gutter. Only alternate labels, to keep the column narrow. -->
         <div class="mr-1 flex flex-col gap-1 pt-4">
           <div
