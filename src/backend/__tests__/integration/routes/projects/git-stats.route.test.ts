@@ -293,6 +293,75 @@ describe('Git Stats API Integration Tests', () => {
       expect(stats.totals.projectsWorkedOn).toBe(1);
     });
 
+    it('spans several projects when projectId is repeated', async () => {
+      const { db, app } = context.get();
+      const alpha = await seedProject(db, { path: '/repos/alpha' });
+      const beta = await seedProject(db, { path: '/repos/beta' });
+      await seedProject(db, { path: '/repos/gamma' });
+
+      gitLogHandler = cwd => {
+        if (cwd === '/repos/alpha')
+          return gitLog([{ date: '2024-03-04', files: [[10, 0, 'a.ts']] }]);
+        if (cwd === '/repos/beta') return gitLog([{ date: '2024-03-05', files: [[7, 0, 'b.ts']] }]);
+        return gitLog([{ date: '2024-03-06', files: [[999, 0, 'c.ts']] }]);
+      };
+
+      const stats = body(
+        await get(
+          app,
+          `/api/projects/git-stats?month=2024-03&projectId=${alpha.id}&projectId=${beta.id}`
+        )
+      );
+
+      const logCwds = execCalls.filter(c => c.args[0] === 'log').map(c => c.options.cwd);
+      expect(logCwds.sort()).toEqual(['/repos/alpha', '/repos/beta']);
+      // gamma was not selected, so its 999 lines must not appear.
+      expect(stats.totals.linesAdded).toBe(17);
+      expect(stats.totals.projectsWorkedOn).toBe(2);
+    });
+
+    it('counts a repeated id once', async () => {
+      const { db, app } = context.get();
+      const alpha = await seedProject(db, { path: '/repos/alpha' });
+
+      gitLogHandler = () => gitLog([{ date: '2024-03-04', files: [[10, 0, 'a.ts']] }]);
+
+      const stats = body(
+        await get(
+          app,
+          `/api/projects/git-stats?month=2024-03&projectId=${alpha.id}&projectId=${alpha.id}`
+        )
+      );
+
+      const logCwds = execCalls.filter(c => c.args[0] === 'log').map(c => c.options.cwd);
+      expect(logCwds).toEqual(['/repos/alpha']);
+      // Double-counting here would silently inflate every total.
+      expect(stats.totals.linesAdded).toBe(10);
+    });
+
+    it('rejects the whole request when one of several ids is unknown', async () => {
+      const { db, app } = context.get();
+      const alpha = await seedProject(db, { path: '/repos/alpha' });
+
+      const response = await get(
+        app,
+        `/api/projects/git-stats?month=2024-03&projectId=${alpha.id}&projectId=missing`
+      );
+
+      expect(response.status).toBe(400);
+      expect((response.data as any).code).toBe('UNKNOWN_PROJECT');
+    });
+
+    it('rejects more project ids than the cap allows', async () => {
+      const { app } = context.get();
+      const ids = Array.from({ length: 51 }, (_, i) => `projectId=id-${i}`).join('&');
+
+      const response = await get(app, `/api/projects/git-stats?month=2024-03&${ids}`);
+
+      expect(response.status).toBe(400);
+      expect((response.data as any).code).toBe('TOO_MANY_PROJECTS');
+    });
+
     it('aggregates across projects by default', async () => {
       const { db, app } = context.get();
       await seedProject(db, { path: '/repos/alpha' });
@@ -491,6 +560,37 @@ describe('Git Stats API Integration Tests', () => {
 
       expect(all.totals.linesAdded).toBe(17);
       expect(scoped.totals.linesAdded).toBe(10);
+    });
+
+    it('reuses one cache entry regardless of the order ids arrive in', async () => {
+      const { db, app } = context.get();
+      const alpha = await seedProject(db, { path: '/repos/alpha' });
+      const beta = await seedProject(db, { path: '/repos/beta' });
+
+      gitLogHandler = cwd =>
+        cwd === '/repos/alpha'
+          ? gitLog([{ date: '2024-03-04', files: [[10, 0, 'a.ts']] }])
+          : gitLog([{ date: '2024-03-04', files: [[7, 0, 'b.ts']] }]);
+
+      const first = body(
+        await get(
+          app,
+          `/api/projects/git-stats?month=2024-03&projectId=${alpha.id}&projectId=${beta.id}`
+        )
+      );
+      const logCallsAfterFirst = execCalls.filter(c => c.args[0] === 'log').length;
+
+      // Same set, opposite order. The service sorts paths into its cache key, so
+      // this must not re-shell git.
+      const second = body(
+        await get(
+          app,
+          `/api/projects/git-stats?month=2024-03&projectId=${beta.id}&projectId=${alpha.id}`
+        )
+      );
+
+      expect(execCalls.filter(c => c.args[0] === 'log')).toHaveLength(logCallsAfterFirst);
+      expect(second).toEqual(first);
     });
   });
 });

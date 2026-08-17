@@ -16,15 +16,9 @@ import MonthStepper from '../components/projects/molecules/MonthStepper.vue';
 import StatsHighlightsCard from '../components/projects/organisms/StatsHighlightsCard.vue';
 import StatsLanguageCard from '../components/projects/organisms/StatsLanguageCard.vue';
 import StatsTopFilesCard from '../components/projects/organisms/StatsTopFilesCard.vue';
+import ProjectFilterCombobox from '../components/projects/molecules/ProjectFilterCombobox.vue';
 import ActivityHeatmap from '../components/ui/atoms/ActivityHeatmap.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../components/ui/select';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
 
@@ -33,22 +27,22 @@ setBreadcrumbs([{ label: 'Stats' }]);
 
 const { useMonthlyGitStatsQuery, useProjectsQuery } = useQueries();
 
-const ALL_PROJECTS = 'all';
-
-// Deliberately not persisted — landing on the current month is the right
-// default on every visit, regardless of where the last session wandered to.
+// Deliberately not persisted — landing on the current month with no filter is
+// the right default on every visit, regardless of where the last session ended.
 const selectedMonth = ref(dayjs().format('YYYY-MM'));
-const selectedProject = ref<string>(ALL_PROJECTS);
+// Empty means every project, which is also what the API assumes.
+const selectedProjects = ref<string[]>([]);
 
-const projectId = computed(() =>
-  selectedProject.value === ALL_PROJECTS ? undefined : selectedProject.value
-);
-
-const { data: projectsData } = useProjectsQuery({ enabled: true });
-const { data: stats, isLoading, isFetching } = useMonthlyGitStatsQuery(selectedMonth, projectId);
+const { data: projectsData, isLoading: isLoadingProjects } = useProjectsQuery({ enabled: true });
+const {
+  data: stats,
+  isLoading,
+  isFetching,
+} = useMonthlyGitStatsQuery(selectedMonth, selectedProjects);
 
 const monthLabel = computed(() => dayjs(`${selectedMonth.value}-01`).format('MMMM YYYY'));
-const isSingleProject = computed(() => projectId.value !== undefined);
+// Only meaningless for exactly one project, where the count would always read 1.
+const isSingleProject = computed(() => selectedProjects.value.length === 1);
 
 const totals = computed(() => stats.value?.totals);
 const days = computed(() => stats.value?.days ?? []);
@@ -92,17 +86,11 @@ const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString(
     <div class="flex flex-wrap items-center justify-between gap-3">
       <MonthStepper v-model="selectedMonth" />
 
-      <Select v-model="selectedProject">
-        <SelectTrigger class="w-56">
-          <SelectValue placeholder="All projects" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem :value="ALL_PROJECTS">All projects</SelectItem>
-          <SelectItem v-for="project in projectsData ?? []" :key="project.id" :value="project.id">
-            {{ project.name }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
+      <ProjectFilterCombobox
+        v-model="selectedProjects"
+        :projects="projectsData ?? []"
+        :is-loading="isLoadingProjects"
+      />
     </div>
 
     <!-- Dimmed rather than replaced while stepping months, so the page keeps

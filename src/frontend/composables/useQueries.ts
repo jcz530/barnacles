@@ -1663,21 +1663,24 @@ export const useQueries = () => {
   // payload size are unaffected by the richer detail blocks.
   const useMonthlyGitStatsQuery = (
     month: MaybeRef<string>,
-    projectId: MaybeRef<string | undefined>,
+    projectIds: MaybeRef<string[]>,
     options?: { enabled?: MaybeRef<boolean> }
   ) => {
     return useQuery({
-      queryKey: computed(
-        () => ['git-stats', 'month', unref(month), unref(projectId) ?? 'all'] as const
-      ),
+      queryKey: computed(() => {
+        // Sorted so the key is stable regardless of the order the user picked
+        // projects in — reselecting the same set hits the cache.
+        const ids = [...unref(projectIds)].sort().join(',');
+        return ['git-stats', 'month', unref(month), ids || 'all'] as const;
+      }),
       queryFn: async () => {
         const params = new URLSearchParams();
         params.append('month', unref(month));
         params.append('detail', 'full');
 
-        const project = unref(projectId);
-        if (project) {
-          params.append('projectId', project);
+        // One repeated param per project; the route reads them with queries().
+        for (const id of unref(projectIds)) {
+          params.append('projectId', id);
         }
 
         const response = await apiCall<ApiResponse<GitStats>>(
