@@ -10,6 +10,7 @@ import {
   ComboboxItem,
   ComboboxItemIndicator,
   ComboboxList,
+  ComboboxTrigger,
 } from '../../ui/combobox';
 import { Button } from '../../ui/button';
 
@@ -58,32 +59,38 @@ const clear = (event: Event) => {
     :ignore-filter="false"
     :reset-search-term-on-select="false"
   >
+    <!-- Anchor positions the list; Trigger is what actually toggles it open.
+         The anchor alone is inert, which is why the button did nothing. -->
     <ComboboxAnchor as-child>
-      <Button
-        variant="outline"
-        role="combobox"
-        :aria-expanded="open"
-        :disabled="isLoading"
-        class="w-56 justify-between font-normal"
-      >
-        <span class="truncate" :class="modelValue.length ? '' : 'text-slate-500'">
-          {{ label }}
-        </span>
+      <ComboboxTrigger as-child :disabled="isLoading">
+        <Button
+          variant="outline"
+          role="combobox"
+          :aria-expanded="open"
+          :disabled="isLoading"
+          class="w-56 justify-between font-normal"
+        >
+          <span class="truncate" :class="modelValue.length ? '' : 'text-slate-500'">
+            {{ label }}
+          </span>
 
-        <span class="ml-2 flex shrink-0 items-center gap-1">
-          <X
-            v-if="modelValue.length"
-            class="size-3.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-            role="button"
-            aria-label="Clear project filter"
-            @click="clear"
-          />
-          <ChevronsUpDown class="size-4 text-slate-400" />
-        </span>
-      </Button>
+          <span class="ml-2 flex shrink-0 items-center gap-1">
+            <X
+              v-if="modelValue.length"
+              class="size-3.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              role="button"
+              aria-label="Clear project filter"
+              @click="clear"
+            />
+            <ChevronsUpDown class="size-4 text-slate-400" />
+          </span>
+        </Button>
+      </ComboboxTrigger>
     </ComboboxAnchor>
 
-    <ComboboxList class="w-56 p-0">
+    <!-- Width comes from --reka-combobox-trigger-width, so the list matches the
+         trigger; don't set an explicit width here. -->
+    <ComboboxList align="start" class="p-0">
       <!-- reka-ui filters the items below against this input as you type. -->
       <ComboboxInput placeholder="Search projects..." />
 

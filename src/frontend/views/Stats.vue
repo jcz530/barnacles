@@ -96,7 +96,10 @@ const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString(
     <!-- Dimmed rather than replaced while stepping months, so the page keeps
          its shape instead of collapsing into skeletons on every click. -->
     <div class="space-y-6 transition-opacity" :class="isFetching && !isLoading ? 'opacity-60' : ''">
-      <div class="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
+      <!-- Four across at most: the tile count shifts between seven and eight
+           with the project filter, and seven columns squeezed each tile until
+           its value overflowed the card. -->
+      <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
         <GitStatCard
           :icon="Flame"
           :label="streakLabel"
