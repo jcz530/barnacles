@@ -6,7 +6,61 @@ on:
   push:
     branches: [main]
 
+# Nothing in CI writes, so the token gets read access and nothing else.
+permissions:
+  contents: read
+
+# Only the newest commit on a PR is worth testing. Without this, pushing twice
+# in quick succession runs the full six-job matrix to completion both times when
+# only the last result is ever looked at.
+#
+# main is excluded from cancellation via the run_id fallback: its runs each
+# correspond to a distinct merged commit, so every one gets a real pass/fail
+# rather than being cancelled by the next merge.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
+  # Lint, formatting and type results are platform-independent, so these run
+  # once on Linux rather than three times across the test matrix.
+  #
+  # Deliberately no `npm run rebuild` and no Python setup: nothing here loads
+  # better-sqlite3 or node-pty, so this job skips the slowest part of the test
+  # job's setup and finishes long before the matrix does.
+  quality:
+    name: Lint, Format & Types
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # --ignore-scripts skips the postinstall electron-builder rebuild, which
+      # exists to compile native modules this job never touches.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      # Covers all three tsconfig projects. The frontend one uses vue-tsc,
+      # which is the only checker that reads .vue single-file components --
+      # plain tsc skips them silently, and Vite transpiles without type
+      # checking, so a type regression inside a component is invisible to
+      # every other job in this workflow.
+      - name: Run type checking
+        run: npm run type-check
+
   test:
     name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -38,13 +92,6 @@ jobs:
         run: npm run rebuild
         env:
           PYTHON: python3
-
-      # Skipping type-check for now due to pre-existing frontend errors
-      # - name: Run type checking
-      #   run: npm run type-check
-
-#      - name: Run linter
-#        run: npm run lint
 
       - name: Run tests (Linux)
         if: runner.os == 'Linux'
