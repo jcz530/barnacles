@@ -3,6 +3,7 @@ import type {
   GitStatsByDay,
   GitStatsDetail,
   GitStatsLanguageSlice,
+  GitStatsPerProject,
   GitStatsRange,
   GitStatsTopFile,
   GitStatsTotals,
@@ -147,15 +148,41 @@ export function buildDemoGitStats(options: BuildDemoGitStatsOptions): GitStats {
   };
 
   const stats: GitStats = { period, range, days, totals };
-  if (detail) stats.detail = buildDemoDetail(days, totals, range);
+  if (detail) stats.detail = buildDemoDetail(days, totals, range, options.projectPaths ?? []);
   return stats;
+}
+
+/**
+ * Split the period's totals across the demo projects, so the "most active
+ * projects" card has a plausible ranking rather than an empty state.
+ */
+function buildDemoPerProject(totals: GitStatsTotals, projectPaths: string[]): GitStatsPerProject[] {
+  // Only a few projects are worked on in any period; a list where every project
+  // is equally busy looks staged.
+  const active = projectPaths.slice(0, Math.min(5, projectPaths.length));
+  if (active.length === 0 || totals.commits === 0) return [];
+
+  const weights = active.map((_, index) => 1 / (index + 1.4));
+  const weightTotal = weights.reduce((sum, weight) => sum + weight, 0);
+
+  return active.map((projectPath, index) => {
+    const share = weights[index] / weightTotal;
+    return {
+      projectPath,
+      commits: Math.max(1, Math.round(totals.commits * share)),
+      filesChanged: Math.max(1, Math.round(totals.filesChanged * share)),
+      linesAdded: Math.round(totals.linesAdded * share),
+      linesRemoved: Math.round(totals.linesRemoved * share),
+    };
+  });
 }
 
 /** Deterministic top files, languages and highlights for the Stats page. */
 function buildDemoDetail(
   days: GitStatsByDay[],
   totals: GitStatsTotals,
-  range: GitStatsRange
+  range: GitStatsRange,
+  projectPaths: string[]
 ): GitStatsDetail {
   const topFiles: GitStatsTopFile[] = DEMO_FILES.map((file, index) => {
     // Decay down the list so the bars form a natural-looking ramp.
@@ -210,7 +237,7 @@ function buildDemoDetail(
     topFiles,
     languages,
     busiestDay: busiest ? { date: busiest.date, commits: busiest.commits } : null,
-    perProject: [],
+    perProject: buildDemoPerProject(totals, projectPaths),
     streaks: calculateStreaks(days, range.until),
   };
 }

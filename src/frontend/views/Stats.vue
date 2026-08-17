@@ -7,7 +7,7 @@ import PeriodStepper from '../components/projects/molecules/PeriodStepper.vue';
 import StatDetailPanel from '../components/projects/organisms/StatDetailPanel.vue';
 import StatsHighlightsCard from '../components/projects/organisms/StatsHighlightsCard.vue';
 import StatsLanguageCard from '../components/projects/organisms/StatsLanguageCard.vue';
-import StatsTopFilesCard from '../components/projects/organisms/StatsTopFilesCard.vue';
+import StatsActiveProjectsCard from '../components/projects/organisms/StatsActiveProjectsCard.vue';
 import ProjectFilterCombobox from '../components/projects/molecules/ProjectFilterCombobox.vue';
 import ActivityHeatmap from '../components/ui/atoms/ActivityHeatmap.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -380,9 +380,10 @@ watch(visibleStats, stats => {
       </Card>
 
       <div class="grid gap-4 lg:grid-cols-2">
-        <StatsTopFilesCard
-          :files="stats?.detail?.topFiles ?? []"
-          :month-label="periodLabel"
+        <StatsActiveProjectsCard
+          :projects="stats?.detail?.perProject ?? []"
+          :all-projects="projectsData ?? []"
+          :period-label="periodLabel"
           :is-loading="isLoading"
         />
         <StatsLanguageCard

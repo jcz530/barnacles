@@ -87,6 +87,37 @@ describe('demo git stats', () => {
     expect(stats.totals.activeDays).toBeGreaterThan(0);
   });
 
+  it('splits activity across the given projects', () => {
+    const dates = range('2024-03-01', 31);
+    const detail = buildDemoGitStats({
+      period: 'custom-month',
+      range: { since: dates[0], until: dates[dates.length - 1] },
+      dates,
+      detail: true,
+      projectPaths: ['/repos/alpha', '/repos/beta', '/repos/gamma'],
+    }).detail!;
+
+    expect(detail.perProject).toHaveLength(3);
+    expect(detail.perProject.map(p => p.projectPath)).toContain('/repos/alpha');
+
+    // Ranked, so the card reads as a leaderboard rather than a flat list.
+    const commits = detail.perProject.map(p => p.commits);
+    expect([...commits].sort((a, b) => b - a)).toEqual(commits);
+    expect(commits.every(count => count > 0)).toBe(true);
+  });
+
+  it('returns no per-project rows when no projects were given', () => {
+    const dates = range('2024-03-01', 31);
+    const detail = buildDemoGitStats({
+      period: 'custom-month',
+      range: { since: dates[0], until: dates[dates.length - 1] },
+      dates,
+      detail: true,
+    }).detail!;
+
+    expect(detail.perProject).toEqual([]);
+  });
+
   it('omits the detail block unless it is requested', () => {
     expect(build('custom-month', range('2024-03-01', 31)).detail).toBeUndefined();
   });
