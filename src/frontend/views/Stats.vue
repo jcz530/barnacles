@@ -1,16 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import dayjs from 'dayjs';
-import {
-  Activity,
-  FileText,
-  Flame,
-  FolderGit2,
-  GitCommit,
-  Minus,
-  Plus,
-  Scale,
-} from 'lucide-vue-next';
+import { FileText, Flame, FolderGit2, GitCommit, Minus, Plus, Scale } from 'lucide-vue-next';
 import GitStatCard from '../components/projects/molecules/GitStatCard.vue';
 import PeriodStepper from '../components/projects/molecules/PeriodStepper.vue';
 import StatsHighlightsCard from '../components/projects/organisms/StatsHighlightsCard.vue';
@@ -95,9 +86,6 @@ const dailyFilesChanged = dailyValues('filesChanged');
 const dailyLinesAdded = dailyValues('linesAdded');
 const dailyLinesRemoved = dailyValues('linesRemoved');
 
-const dailyChurn = computed(() =>
-  days.value.map(day => ({ date: day.date, value: day.linesAdded + day.linesRemoved }))
-);
 const dailyProjects = computed(() =>
   days.value.map(day => ({ date: day.date, value: day.projectsWorkedOn }))
 );
@@ -157,10 +145,10 @@ const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString(
     <!-- Dimmed rather than replaced while stepping, so the page keeps its shape
          instead of collapsing into skeletons on every click. -->
     <div class="space-y-6 transition-opacity" :class="isFetching && !isLoading ? 'opacity-60' : ''">
-      <!-- Four across at most: the tile count shifts between seven and eight
-           with the project filter, and seven columns squeezed each tile until
-           its value overflowed the card. -->
-      <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+      <!-- Three across: six tiles (seven when a single project swaps Projects
+           for Net Lines) divide evenly, and keeping the count low leaves each
+           tile wide enough that long values don't overflow the card. -->
+      <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <GitStatCard
           :icon="Flame"
           :label="streakLabel"
@@ -207,14 +195,6 @@ const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString(
           :value="formatNumber(totals?.linesRemoved)"
           icon-class="text-danger-500"
           :daily-values="dailyLinesRemoved"
-          :is-loading="isLoading"
-        />
-        <GitStatCard
-          :icon="Activity"
-          label="Churn"
-          :value="formatNumber(totals?.churn)"
-          icon-class="text-slate-500"
-          :daily-values="dailyChurn"
           :is-loading="isLoading"
         />
         <GitStatCard

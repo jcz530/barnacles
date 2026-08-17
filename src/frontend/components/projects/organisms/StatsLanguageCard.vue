@@ -45,18 +45,28 @@ const chartData = computed(() =>
         No commits in {{ monthLabel }}
       </p>
 
-      <PercentageGridChart v-else :data="chartData" full-width>
+      <!-- Matches the project overview's language chart: more dots at a fixed
+           gap, which reads finer-grained than the default 100. -->
+      <PercentageGridChart
+        v-else
+        :data="chartData"
+        :gap="8"
+        :circle-size="8"
+        :total-dots="200"
+        full-width
+        fixed-gap
+      >
         <template #legend="{ data, hoveredLabel, onHover }">
-          <div class="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+          <div class="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2">
             <div
               v-for="item in data"
               :key="item.label"
-              class="flex cursor-default items-center gap-1.5 text-xs transition-opacity"
+              class="flex cursor-pointer items-center gap-1.5 text-xs transition-opacity"
               :class="hoveredLabel && hoveredLabel !== item.label ? 'opacity-40' : ''"
               @mouseenter="onHover(item.label)"
               @mouseleave="onHover(null)"
             >
-              <span class="size-2.5 shrink-0 rounded-sm" :style="{ backgroundColor: item.color }" />
+              <span class="size-3 shrink-0 rounded-full" :style="{ backgroundColor: item.color }" />
               <span class="text-slate-700 dark:text-slate-300">{{ item.label }}</span>
               <span class="text-slate-400">{{ item.percentage }}%</span>
             </div>
