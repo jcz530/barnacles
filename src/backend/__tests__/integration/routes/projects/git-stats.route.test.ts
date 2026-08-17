@@ -124,6 +124,84 @@ describe('Git Stats API Integration Tests', () => {
     });
   });
 
+  describe('year requests', () => {
+    it('returns every day of the requested year', async () => {
+      const { app } = context.get();
+      const response = await get(app, '/api/projects/git-stats?year=2023');
+
+      expect(response.status).toBe(200);
+      const stats = body(response);
+      expect(stats.period).toBe('custom-year');
+      expect(stats.days).toHaveLength(365);
+      expect(stats.days[0].date).toBe('2023-01-01');
+      expect(stats.days[364].date).toBe('2023-12-31');
+      expect(stats.range).toMatchObject({
+        since: '2023-01-01',
+        until: '2023-12-31',
+        year: '2023',
+      });
+    });
+
+    it('covers the extra day of a leap year', async () => {
+      const { app } = context.get();
+      const stats = body(await get(app, '/api/projects/git-stats?year=2024'));
+
+      expect(stats.days).toHaveLength(366);
+      expect(stats.days.some(day => day.date === '2024-02-29')).toBe(true);
+    });
+
+    it('rejects a malformed year', async () => {
+      const { app } = context.get();
+
+      for (const year of ['24', 'nonsense', '1960', '20233']) {
+        const response = await get(app, `/api/projects/git-stats?year=${year}`);
+        expect(response.status, `year=${year}`).toBe(400);
+      }
+    });
+
+    it('rejects a future year', async () => {
+      const { app } = context.get();
+      const response = await get(app, '/api/projects/git-stats?year=2099');
+
+      expect(response.status).toBe(400);
+      expect((response.data as any).code).toBe('FUTURE_YEAR');
+    });
+
+    it('yields to month and week when several ranges are given', async () => {
+      const { app } = context.get();
+
+      const withMonth = body(await get(app, '/api/projects/git-stats?year=2023&month=2024-03'));
+      expect(withMonth.period).toBe('custom-month');
+      expect(withMonth.range.year).toBeUndefined();
+
+      const withWeek = body(await get(app, '/api/projects/git-stats?year=2023&week=2024-W10'));
+      expect(withWeek.period).toBe('custom-week');
+      expect(withWeek.range.year).toBeUndefined();
+    });
+
+    it('aggregates commits across the whole year', async () => {
+      const { db, app } = context.get();
+      await seedProject(db, { path: '/repos/alpha' });
+
+      gitLogHandler = () =>
+        gitLog([
+          { date: '2023-01-15', files: [[10, 0, 'a.ts']] },
+          { date: '2023-06-30', files: [[5, 2, 'b.ts']] },
+          // The final day of the year, dropped if --until lands on midnight.
+          { date: '2023-12-31', files: [[3, 1, 'c.ts']] },
+        ]);
+
+      const stats = body(await get(app, '/api/projects/git-stats?year=2023'));
+
+      const logCall = execCalls.find(call => call.args[0] === 'log');
+      expect(logCall?.args).toContain('--until=2023-12-31T23:59:59');
+      expect(stats.totals.commits).toBe(3);
+      expect(stats.totals.linesAdded).toBe(18);
+      expect(stats.totals.activeDays).toBe(3);
+      expect(stats.days[364].commits).toBe(1);
+    });
+  });
+
   describe('week requests', () => {
     it('returns the seven days of an ISO week, Monday first', async () => {
       const { app } = context.get();

@@ -1662,8 +1662,8 @@ export const useQueries = () => {
   // Kept separate from useGitStatsQuery so the dashboard's cache key and
   // payload size are unaffected by the richer detail blocks.
   const usePeriodGitStatsQuery = (
-    granularity: MaybeRef<'week' | 'month'>,
-    /** `YYYY-Www` for week, `YYYY-MM` for month. */
+    granularity: MaybeRef<'week' | 'month' | 'year'>,
+    /** `YYYY-Www` for week, `YYYY-MM` for month, `YYYY` for year. */
     value: MaybeRef<string>,
     projectIds: MaybeRef<string[]>,
     options?: { enabled?: MaybeRef<boolean> }

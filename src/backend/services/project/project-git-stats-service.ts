@@ -108,9 +108,11 @@ const MAX_CACHE_ENTRIES = 40;
 
 export interface GetGitStatsOptions {
   projectPaths: string[];
-  /** Ignored when `month` or `week` is set. */
+  /** Ignored when `week`, `month` or `year` is set. */
   period?: 'week' | 'month' | 'last-week';
-  /** YYYY-MM. Takes precedence over `period`. */
+  /** YYYY. Lowest precedence of the explicit ranges. */
+  year?: string;
+  /** YYYY-MM. Takes precedence over `year`. */
   month?: string;
   /** YYYY-Www (ISO week, Monday-Sunday). Takes precedence over `month`. */
   week?: string;
@@ -163,26 +165,31 @@ class ProjectGitStatsService {
    * the dashboard's rolling windows.
    */
   async getGitStats(options: GetGitStatsOptions): Promise<GitStats> {
-    const { projectPaths, month, week, detail = false } = options;
+    const { projectPaths, month, week, year, detail = false } = options;
     const period = week
       ? ('custom-week' as const)
       : month
         ? ('custom-month' as const)
-        : (options.period ?? 'week');
+        : year
+          ? ('custom-year' as const)
+          : (options.period ?? 'week');
     const additionalEmails = options.additionalEmails ?? [];
 
     const { since, until, gridUntil } = this.resolveRange(options);
+    // Only the winning range echoes back, so a caller can tell which one applied.
     const range: GitStatsRange = {
       since,
       until,
       ...(week ? { week } : {}),
       ...(month && !week ? { month } : {}),
+      ...(year && !week && !month ? { year } : {}),
     };
 
     const cacheKey = JSON.stringify({
       period,
       month,
       week,
+      year,
       detail,
       projectPaths: [...projectPaths].sort(),
       emails: [...additionalEmails].sort(),
@@ -626,6 +633,18 @@ class ProjectGitStatsService {
     if (options.month) {
       const start = dayjs(`${options.month}-01`).startOf('month');
       const end = start.endOf('month');
+      const queryEnd = end.isAfter(today, 'day') ? today : end;
+
+      return {
+        since: start.format('YYYY-MM-DD'),
+        until: queryEnd.format('YYYY-MM-DD'),
+        gridUntil: end.format('YYYY-MM-DD'),
+      };
+    }
+
+    if (options.year) {
+      const start = dayjs(`${options.year}-01-01`).startOf('year');
+      const end = start.endOf('year');
       const queryEnd = end.isAfter(today, 'day') ? today : end;
 
       return {

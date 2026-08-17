@@ -22,48 +22,80 @@ const { usePeriodGitStatsQuery, useProjectsQuery } = useQueries();
 
 // Deliberately not persisted — landing on the current period with no filter is
 // the right default on every visit, regardless of where the last session ended.
-const granularity = ref<'week' | 'month'>('month');
+type Granularity = 'week' | 'month' | 'year';
+
+const granularity = ref<Granularity>('month');
 const selectedMonth = ref(dayjs().format('YYYY-MM'));
 const selectedWeek = ref(currentIsoWeek());
+const selectedYear = ref(dayjs().format('YYYY'));
 // Empty means every project, which is also what the API assumes.
 const selectedProjects = ref<string[]>([]);
 
-const isWeekMode = computed(() => granularity.value === 'week');
-
 const selectedPeriod = computed({
-  get: () => (isWeekMode.value ? selectedWeek.value : selectedMonth.value),
+  get: () => {
+    switch (granularity.value) {
+      case 'week':
+        return selectedWeek.value;
+      case 'year':
+        return selectedYear.value;
+      default:
+        return selectedMonth.value;
+    }
+  },
   set: value => {
-    if (isWeekMode.value) selectedWeek.value = value;
+    if (granularity.value === 'week') selectedWeek.value = value;
+    else if (granularity.value === 'year') selectedYear.value = value;
     else selectedMonth.value = value;
   },
 });
+
+/**
+ * The day that anchors the current view — used to carry your place across a
+ * granularity change. Mid-period rather than the first day, so switching to a
+ * finer granularity lands inside the period rather than on its boundary.
+ */
+const anchorDate = () => {
+  const now = dayjs();
+  switch (granularity.value) {
+    case 'week':
+      return isoWeekStart(selectedWeek.value);
+    case 'year': {
+      const start = dayjs(`${selectedYear.value}-01-01`);
+      return start.isSame(now, 'year') ? now : start.month(6);
+    }
+    default: {
+      const start = dayjs(`${selectedMonth.value}-01`);
+      return start.isSame(now, 'month') ? now : start.date(15);
+    }
+  }
+};
 
 /**
  * Switch granularity without losing your place: the new period is the one
  * containing the period you were looking at, so stepping back to March and
  * switching to weeks lands in March rather than jumping to today.
  */
-const setGranularity = (next: 'week' | 'month') => {
+const setGranularity = (next: Granularity) => {
   if (next === granularity.value) return;
 
-  if (next === 'week') {
-    const monthStart = dayjs(`${selectedMonth.value}-01`);
-    // Anchor mid-month so the chosen week sits inside it rather than on a
-    // boundary week shared with the previous month.
-    const anchor = monthStart.isSame(dayjs(), 'month') ? dayjs() : monthStart.date(15);
-    selectedWeek.value = toIsoWeek(anchor);
-  } else {
-    selectedMonth.value = isoWeekStart(selectedWeek.value).format('YYYY-MM');
-  }
+  const anchor = anchorDate();
+  if (next === 'week') selectedWeek.value = toIsoWeek(anchor);
+  else if (next === 'year') selectedYear.value = anchor.format('YYYY');
+  else selectedMonth.value = anchor.format('YYYY-MM');
 
   granularity.value = next;
 };
 
-const periodLabel = computed(() =>
-  isWeekMode.value
-    ? formatIsoWeekLabel(selectedWeek.value)
-    : dayjs(`${selectedMonth.value}-01`).format('MMMM YYYY')
-);
+const periodLabel = computed(() => {
+  switch (granularity.value) {
+    case 'week':
+      return formatIsoWeekLabel(selectedWeek.value);
+    case 'year':
+      return selectedYear.value;
+    default:
+      return dayjs(`${selectedMonth.value}-01`).format('MMMM YYYY');
+  }
+});
 
 const { data: projectsData, isLoading: isLoadingProjects } = useProjectsQuery({ enabled: true });
 const {
@@ -98,11 +130,16 @@ const dailyActivity = computed(() =>
 const heatmapDays = computed(() => days.value.map(day => ({ date: day.date, value: day.commits })));
 
 // A period that already ended has no running streak, so show its peak instead.
-const isCurrentPeriod = computed(() =>
-  isWeekMode.value
-    ? selectedWeek.value === currentIsoWeek()
-    : selectedMonth.value === dayjs().format('YYYY-MM')
-);
+const isCurrentPeriod = computed(() => {
+  switch (granularity.value) {
+    case 'week':
+      return selectedWeek.value === currentIsoWeek();
+    case 'year':
+      return selectedYear.value === dayjs().format('YYYY');
+    default:
+      return selectedMonth.value === dayjs().format('YYYY-MM');
+  }
+});
 const streakLabel = computed(() => (isCurrentPeriod.value ? 'Day Streak' : 'Longest Streak'));
 const streakValue = computed(() => {
   const streaks = stats.value?.detail?.streaks;
@@ -120,7 +157,7 @@ const formatNumber = (value: number | undefined) => (value ?? 0).toLocaleString(
         <!-- Segmented toggle; the active side is the one carrying the accent. -->
         <div class="flex items-center rounded-md border p-0.5">
           <Button
-            v-for="option in ['week', 'month'] as const"
+            v-for="option in ['week', 'month', 'year'] as const"
             :key="option"
             size="sm"
             :variant="granularity === option ? 'secondary' : 'ghost'"

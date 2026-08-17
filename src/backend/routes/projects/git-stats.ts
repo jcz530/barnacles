@@ -15,6 +15,8 @@ const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 // ISO week, e.g. 2026-W33. Weeks 00 and 54+ are rejected by the shape; whether
 // 53 exists depends on the year, which is checked below.
 const WEEK_PATTERN = /^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$/;
+// Bounded below by git's own history: nothing predates the tool itself.
+const YEAR_PATTERN = /^(19[7-9]\d|2\d{3})$/;
 const VALID_PERIODS = ['week', 'month', 'last-week'] as const;
 
 /**
@@ -31,8 +33,10 @@ const MAX_PROJECT_IDS = 50;
  * for a specific calendar month.
  *
  * Query params:
- *   period    week | month | last-week (default week); ignored when month/week is set
- *   month     YYYY-MM, for the Stats page's month-by-month navigation
+ *   period    week | month | last-week (default week); ignored when an explicit
+ *             week/month/year is set
+ *   year      YYYY, for the Stats page's year view
+ *   month     YYYY-MM, for month-by-month navigation; takes precedence over year
  *   week      YYYY-Www ISO week; takes precedence over month
  *   projectId restrict to specific projects; repeat the param to select several,
  *             omit it to aggregate every non-archived project
@@ -41,6 +45,7 @@ const MAX_PROJECT_IDS = 50;
 gitStats.get('/git-stats', async c => {
   const month = c.req.query('month');
   const week = c.req.query('week');
+  const year = c.req.query('year');
   // queries() rather than query(): the Stats page's filter repeats this param
   // once per selected project.
   const projectIds = c.req.queries('projectId') ?? [];
@@ -73,6 +78,14 @@ gitStats.get('/git-stats', async c => {
 
     if (dayjs(`${month}-01`).startOf('month').isAfter(dayjs(), 'month')) {
       throw new BadRequestException(`Month ${month} is in the future.`, 'FUTURE_MONTH');
+    }
+  } else if (year !== undefined) {
+    if (!YEAR_PATTERN.test(year)) {
+      throw new BadRequestException(`Invalid year "${year}". Expected YYYY.`, 'INVALID_YEAR');
+    }
+
+    if (Number(year) > dayjs().year()) {
+      throw new BadRequestException(`Year ${year} is in the future.`, 'FUTURE_YEAR');
     }
   }
 
@@ -114,6 +127,7 @@ gitStats.get('/git-stats', async c => {
     period: validPeriod,
     month,
     week,
+    year,
     additionalEmails,
     detail,
   });
