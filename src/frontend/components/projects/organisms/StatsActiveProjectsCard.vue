@@ -40,7 +40,7 @@ const share = (commits: number) =>
 </script>
 
 <template>
-  <Card>
+  <Card class="border-0 bg-transparent shadow-none">
     <CardHeader>
       <CardTitle class="flex items-center gap-2">
         <FolderGit2 class="size-4 text-slate-500" />

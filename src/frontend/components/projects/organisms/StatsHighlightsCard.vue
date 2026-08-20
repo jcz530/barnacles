@@ -9,6 +9,7 @@ const props = defineProps<{
   detail?: GitStatsDetail;
   totals?: GitStatsTotals;
   monthLabel: string;
+  granularity?: 'week' | 'month' | 'year';
   isLoading?: boolean;
 }>();
 
@@ -23,7 +24,11 @@ const highlights = computed(() => {
       key: 'busiest',
       icon: Trophy,
       label: 'Busiest day',
-      value: busiest ? dayjs(busiest.date).format('MMM D') : '—',
+      // A week has seven named days, so the weekday reads better than the date;
+      // longer periods repeat weekdays, where only the date identifies the day.
+      value: busiest
+        ? dayjs(busiest.date).format(props.granularity === 'week' ? 'dddd' : 'MMM D')
+        : '—',
       detail: busiest ? `${busiest.commits} commits` : 'No activity',
     },
     {
@@ -55,7 +60,7 @@ const highlights = computed(() => {
 </script>
 
 <template>
-  <Card>
+  <Card class="border-0 bg-transparent shadow-none">
     <CardHeader>
       <CardTitle class="text-base">Highlights</CardTitle>
     </CardHeader>

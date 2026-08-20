@@ -9,8 +9,6 @@ import StatsHighlightsCard from '../components/projects/organisms/StatsHighlight
 import StatsLanguageCard from '../components/projects/organisms/StatsLanguageCard.vue';
 import StatsActiveProjectsCard from '../components/projects/organisms/StatsActiveProjectsCard.vue';
 import ProjectFilterCombobox from '../components/projects/molecules/ProjectFilterCombobox.vue';
-import ActivityHeatmap from '../components/ui/atoms/ActivityHeatmap.vue';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import {
   bucketByIsoWeek,
@@ -162,8 +160,6 @@ const dailyActivity = computed(() =>
     ? bucketByIsoWeek(rawActivity.value, values => (max(values) > 0 ? 1 : 0))
     : rawActivity.value
 );
-
-const heatmapDays = computed(() => days.value.map(day => ({ date: day.date, value: day.commits })));
 
 // A period that already ended has no running streak, so show its peak instead.
 const isCurrentPeriod = computed(() => {
@@ -372,20 +368,12 @@ watch(visibleStats, stats => {
       </div>
 
       <StatsHighlightsCard
+        :granularity="granularity"
         :detail="stats?.detail"
         :totals="totals"
         :month-label="periodLabel"
         :is-loading="isLoading"
       />
-
-      <Card>
-        <CardHeader>
-          <CardTitle class="text-base">Activity in {{ periodLabel }}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ActivityHeatmap :days="heatmapDays" :is-loading="isLoading" />
-        </CardContent>
-      </Card>
 
       <div class="grid gap-4 lg:grid-cols-2">
         <StatsActiveProjectsCard

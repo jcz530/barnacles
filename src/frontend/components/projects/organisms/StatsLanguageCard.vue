@@ -26,7 +26,7 @@ const chartData = computed(() =>
 </script>
 
 <template>
-  <Card>
+  <Card class="border-0 bg-transparent shadow-none">
     <CardHeader>
       <CardTitle class="flex items-center gap-2">
         <Code class="size-4 text-slate-500" />
