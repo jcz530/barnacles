@@ -104,7 +104,17 @@ interface GitStatsCacheEntry {
  * short TTL so new commits show up without a restart.
  */
 const CURRENT_PERIOD_TTL_MS = 5 * 60 * 1000;
-const MAX_CACHE_ENTRIES = 40;
+/**
+ * The key space is two-dimensional — every period the user visits is cached
+ * once per distinct project selection — so it grows faster than the number of
+ * periods alone suggests. Comparing three filter selections across two years of
+ * months is already ~72 entries, and the frontend's own query cache absorbs the
+ * trivial repeats, so what reaches this cache is the expensive misses. Each one
+ * costs a `git log` per project, while an entry is only single-digit KB (a year
+ * view with full detail is ~40KB), which makes a bigger ceiling the cheap side
+ * of the trade.
+ */
+export const MAX_CACHE_ENTRIES = 150;
 
 export interface GetGitStatsOptions {
   projectPaths: string[];
@@ -428,11 +438,21 @@ class ProjectGitStatsService {
       return null;
     }
 
+    // Re-insert so eviction is least-recently-*used* rather than least-recently
+    // written. Map preserves insertion order, so deleting and re-setting moves
+    // this entry to the newest position. Without it, paging back and forth over
+    // more periods than the cache holds evicts the entries being actively
+    // revisited, and every miss re-runs `git log` once per project.
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+
     return entry.value;
   }
 
   private writeCache(key: string, value: GitStats): void {
     // Bounded so stepping back through years of history can't grow unchecked.
+    // Reads refresh position (see readCache), so the entry dropped here is the
+    // least recently used, not merely the oldest written.
     if (this.cache.size >= MAX_CACHE_ENTRIES) {
       const oldest = this.cache.keys().next();
       if (!oldest.done) this.cache.delete(oldest.value);

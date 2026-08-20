@@ -775,5 +775,42 @@ describe('Git Stats API Integration Tests', () => {
       expect(execCalls.filter(c => c.args[0] === 'log')).toHaveLength(logCallsAfterFirst);
       expect(second).toEqual(first);
     });
+
+    it('keeps a revisited month cached while paging past the entry limit', async () => {
+      const { db, app } = context.get();
+      await seedProject(db, { path: '/repos/alpha' });
+      gitLogHandler = () => gitLog([{ date: '2024-03-04', files: [[1, 0, 'a.ts']] }]);
+
+      const logCalls = () => execCalls.filter(c => c.args[0] === 'log').length;
+      // Imported dynamically to match how this suite reaches the service
+      // elsewhere: vi.mock() is hoisted, so a static import would load the
+      // module before child_process is mocked.
+      const { MAX_CACHE_ENTRIES } = await import(
+        '@backend/services/project/project-git-stats-service'
+      );
+      // Derived from the real ceiling rather than hardcoded, so raising
+      // MAX_CACHE_ENTRIES can't quietly turn this into a no-op test.
+      const months = Array.from({ length: MAX_CACHE_ENTRIES + 5 }, (_, i) => {
+        const year = 2000 + Math.floor(i / 12);
+        return `${year}-${String((i % 12) + 1).padStart(2, '0')}`;
+      });
+
+      // Warm the month we keep coming back to.
+      await get(app, '/api/projects/git-stats?month=2024-03');
+      const afterWarm = logCalls();
+
+      // Page through more months than the cache holds, revisiting the warm one
+      // along the way. Insertion-order eviction would drop it despite the
+      // repeated reads; LRU keeps it because it is never the least-recently-used.
+      for (const month of months) {
+        await get(app, `/api/projects/git-stats?month=${month}`);
+        await get(app, '/api/projects/git-stats?month=2024-03');
+      }
+
+      const revisitCalls = logCalls() - afterWarm;
+      // Only the cold months should have shelled out to git; every revisit of
+      // 2024-03 is served from cache.
+      expect(revisitCalls).toBe(months.length);
+    });
   });
 });
