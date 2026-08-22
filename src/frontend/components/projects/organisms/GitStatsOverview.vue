@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { RouterLink } from 'vue-router';
 import { useQueries } from '@/composables/useQueries';
-import { FileText, Flame, FolderGit2, GitCommit, Minus, Plus } from 'lucide-vue-next';
+import { ArrowRight, FileText, Flame, FolderGit2, GitCommit, Minus, Plus } from 'lucide-vue-next';
 import GitStatCard from '../molecules/GitStatCard.vue';
 import { Button } from '../../ui/button';
-import dayjs from 'dayjs';
+import { calculateStreaks } from '../../../../shared/utils/git-streak';
 
 const { useGitStatsQuery } = useQueries();
 
@@ -52,8 +53,9 @@ const totals = computed(() => {
   // Use backend totals
   const backendTotals = stats.value.totals;
 
-  // Calculate streak (frontend-specific logic for warnings)
-  const streakResult = calculateStreak(stats.value.days);
+  // Shared with the backend and the Stats page, so a streak means the same
+  // thing everywhere. Anchored to today: this widget always shows a live period.
+  const streakResult = calculateStreaks(stats.value.days);
 
   return {
     commits: backendTotals.commits,
@@ -61,9 +63,9 @@ const totals = computed(() => {
     projectsWorkedOn: backendTotals.projectsWorkedOn,
     linesAdded: backendTotals.linesAdded,
     linesRemoved: backendTotals.linesRemoved,
-    streak: streakResult.streak,
+    streak: streakResult.current,
     streakWarning: streakResult.warning,
-    maxStreak: streakResult.maxStreak,
+    maxStreak: streakResult.longest,
   };
 });
 
@@ -88,87 +90,12 @@ const dailyProjectsWorkedOn = computed(
 const dailyStreakActivity = computed(
   () => stats.value?.days.map(d => ({ date: d.date, value: d.commits > 0 ? 1 : 0 })) ?? []
 );
-
-// Calculate streak from daily data
-const calculateStreak = (days: typeof stats.value.days) => {
-  if (!days || days.length === 0) return { streak: 0, warning: false, maxStreak: 0 };
-
-  // Sort by date descending (newest first)
-  const sortedDays = [...days].sort((a, b) => b.date.localeCompare(a.date));
-
-  // Get days with commits
-  const activeDays = sortedDays.filter(day => day.commits > 0);
-  if (activeDays.length === 0) return { streak: 0, warning: false, maxStreak: 0 };
-
-  const today = dayjs().startOf('day');
-  const mostRecentDate = dayjs(activeDays[0].date).startOf('day');
-  const daysSinceLastCommit = today.diff(mostRecentDate, 'day');
-
-  // Streak is broken if last commit was more than 1 day ago
-  if (daysSinceLastCommit > 1) {
-    // Calculate max streak for non-current periods
-    const maxStreak = calculateMaxStreak(activeDays);
-    return { streak: 0, warning: false, maxStreak };
-  }
-
-  // Warning if last commit was yesterday (not today)
-  const warning = daysSinceLastCommit === 1;
-
-  // Count consecutive days working backwards
-  let streak = 1;
-  let currentDate = mostRecentDate;
-
-  for (let i = 1; i < activeDays.length; i++) {
-    const prevDate = dayjs(activeDays[i].date).startOf('day');
-    const expectedDate = currentDate.subtract(1, 'day');
-
-    if (prevDate.isSame(expectedDate, 'day')) {
-      streak++;
-      currentDate = prevDate;
-    } else if (prevDate.isBefore(expectedDate, 'day')) {
-      // Gap found, stop counting
-      break;
-    }
-    // If same date, continue (shouldn't happen with daily data but handle it)
-  }
-
-  // Calculate max streak for the period
-  const maxStreak = calculateMaxStreak(activeDays);
-
-  return { streak, warning, maxStreak };
-};
-
-// Calculate the maximum streak within a period
-const calculateMaxStreak = (activeDays: Array<{ date: string; commits: number }>) => {
-  if (activeDays.length === 0) return 0;
-
-  let maxStreak = 1;
-  let currentStreak = 1;
-  let currentDate = dayjs(activeDays[0].date).startOf('day');
-
-  for (let i = 1; i < activeDays.length; i++) {
-    const prevDate = dayjs(activeDays[i].date).startOf('day');
-    const expectedDate = currentDate.subtract(1, 'day');
-
-    if (prevDate.isSame(expectedDate, 'day')) {
-      currentStreak++;
-      maxStreak = Math.max(maxStreak, currentStreak);
-      currentDate = prevDate;
-    } else if (prevDate.isBefore(expectedDate, 'day')) {
-      // Gap found, reset streak
-      currentStreak = 1;
-      currentDate = prevDate;
-    }
-  }
-
-  return maxStreak;
-};
 </script>
 
 <template>
   <div class="">
     <div class="">
-      <div class="flex items-center justify-around">
+      <div class="flex items-center justify-between">
         <div class="flex gap-2">
           <Button
             v-for="period in ['week', 'month', 'last-week'] as const"
@@ -181,6 +108,13 @@ const calculateMaxStreak = (activeDays: Array<{ date: string; commits: number }>
             {{ getPeriodLabel(period) }}
           </Button>
         </div>
+
+        <Button as-child size="sm" variant="ghost" class="text-slate-500">
+          <RouterLink to="/stats">
+            View all
+            <ArrowRight class="ml-1 size-3.5" />
+          </RouterLink>
+        </Button>
       </div>
     </div>
 
@@ -190,7 +124,7 @@ const calculateMaxStreak = (activeDays: Array<{ date: string; commits: number }>
           :icon="Flame"
           :label="selectedPeriod === 'week' ? 'Day Streak' : 'Max Streak'"
           :value="selectedPeriod === 'week' ? totals.streak : totals.maxStreak"
-          icon-class="text-orange-500"
+          icon-class="text-primary-500"
           :daily-values="dailyStreakActivity"
           :is-loading="isLoading"
           hide-values
@@ -216,7 +150,7 @@ const calculateMaxStreak = (activeDays: Array<{ date: string; commits: number }>
           :icon="FolderGit2"
           label="Projects"
           :value="totals.projectsWorkedOn"
-          icon-class="text-blue-500"
+          icon-class="text-slate-500"
           :daily-values="dailyProjectsWorkedOn"
           :is-loading="isLoading"
         />
@@ -224,7 +158,7 @@ const calculateMaxStreak = (activeDays: Array<{ date: string; commits: number }>
           :icon="Plus"
           label="Lines Added"
           :value="totals.linesAdded.toLocaleString()"
-          icon-class="text-green-500"
+          icon-class="text-success-500"
           :daily-values="dailyLinesAdded"
           :is-loading="isLoading"
         />
@@ -232,7 +166,7 @@ const calculateMaxStreak = (activeDays: Array<{ date: string; commits: number }>
           :icon="Minus"
           label="Lines Removed"
           :value="totals.linesRemoved.toLocaleString()"
-          icon-class="text-red-500"
+          icon-class="text-danger-500"
           :daily-values="dailyLinesRemoved"
           :is-loading="isLoading"
         />

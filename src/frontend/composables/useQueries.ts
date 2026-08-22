@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { useDocumentVisibility } from '@vueuse/core';
 import type { MaybeRef } from 'vue';
 import { computed, unref } from 'vue';
@@ -1658,6 +1658,52 @@ export const useQueries = () => {
     });
   };
 
+  // Monthly git stats — powers the Stats page's month-by-month navigation.
+  // Kept separate from useGitStatsQuery so the dashboard's cache key and
+  // payload size are unaffected by the richer detail blocks.
+  const usePeriodGitStatsQuery = (
+    granularity: MaybeRef<'week' | 'month' | 'year'>,
+    /** `YYYY-Www` for week, `YYYY-MM` for month, `YYYY` for year. */
+    value: MaybeRef<string>,
+    projectIds: MaybeRef<string[]>,
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
+    return useQuery({
+      queryKey: computed(() => {
+        // Sorted so the key is stable regardless of the order the user picked
+        // projects in — reselecting the same set hits the cache.
+        const ids = [...unref(projectIds)].sort().join(',');
+        return ['git-stats', unref(granularity), unref(value), ids || 'all'] as const;
+      }),
+      queryFn: async () => {
+        const params = new URLSearchParams();
+        params.append(unref(granularity), unref(value));
+        params.append('detail', 'full');
+
+        // One repeated param per project; the route reads them with queries().
+        for (const id of unref(projectIds)) {
+          params.append('projectId', id);
+        }
+
+        const response = await apiCall<ApiResponse<GitStats>>(
+          'GET',
+          `${API_ROUTES.PROJECTS_GIT_STATS}?${params.toString()}`
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch git stats');
+        }
+
+        return response.data;
+      },
+      enabled: options?.enabled ?? true,
+      staleTime: 5 * 60 * 1000,
+      // Keep the previous period on screen while the next one loads, so stepping
+      // doesn't collapse the page into skeletons on every click.
+      placeholderData: keepPreviousData,
+    });
+  };
+
   // Ports query — lists all TCP LISTEN ports on the local machine
   const usePortsQuery = (options?: { enabled?: MaybeRef<boolean> }) => {
     const visibility = useDocumentVisibility();
@@ -1781,6 +1827,7 @@ export const useQueries = () => {
     useUpdateAccountMutation,
     useDeleteAccountMutation,
     useGitStatsQuery,
+    usePeriodGitStatsQuery,
     useIpInfoQuery,
     usePortsQuery,
     useKillPortMutation,
