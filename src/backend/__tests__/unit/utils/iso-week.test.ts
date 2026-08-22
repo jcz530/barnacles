@@ -5,7 +5,7 @@ import {
   formatIsoWeekLabel,
   isoWeekStart,
   toIsoWeek,
-} from '@/utils/iso-week';
+} from '@shared/utils/iso-week';
 
 /**
  * ISO weeks run Monday-Sunday, and a week belongs to whichever year contains

@@ -63,6 +63,19 @@ contextBridge.exposeInMainWorld('electron', {
   },
   clipboard: {
     writeFile: (path: string) => ipcRenderer.invoke('clipboard:write-file', path),
+    writeImage: (png: Uint8Array) => ipcRenderer.invoke('clipboard:write-image', png),
+    writeText: (text: string) => ipcRenderer.invoke('clipboard:write-text', text),
+  },
+  shareCard: {
+    render: (request: {
+      html: string;
+      width: number;
+      height: number;
+      outputWidth: number;
+      outputHeight: number;
+    }) => ipcRenderer.invoke('share-card:render', request),
+    save: (request: { png: Uint8Array; suggestedName: string }) =>
+      ipcRenderer.invoke('share-card:save', request),
   },
   updateWindowTitle: (title: string) => ipcRenderer.send('update-window-title', title),
   showOrCreateWindow: () => ipcRenderer.invoke('show-or-create-window'),
