@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import dayjs from 'dayjs';
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { Button } from '../../ui/button';
-import { addIsoWeeks, currentIsoWeek, formatIsoWeekLabel } from '../../../utils/iso-week';
+import { addIsoWeeks, currentIsoWeek, formatIsoWeekLabel } from '@shared/utils/iso-week';
 
 export type PeriodGranularity = 'week' | 'month' | 'year';
 

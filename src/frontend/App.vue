@@ -73,8 +73,14 @@ onUnmounted(() => {
 
 <template>
   <TooltipProvider :delay-duration="300">
+    <!--
+      Outside #app so no stacking context inside the app tree can trap it below
+      a dialog. Dialogs portal to the end of `body`, so the toaster has to be a
+      sibling of that portal to stay clickable above one.
+    -->
+    <Toaster position="bottom-center" :closeButton="true" />
+
     <div id="app">
-      <Toaster position="bottom-center" :closeButton="true" />
       <UpdateNotification
         :update-state="updateState"
         @download="downloadUpdate"
