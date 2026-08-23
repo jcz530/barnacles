@@ -107,9 +107,8 @@ describe('demo seed', () => {
       // Test mode keeps getAppDataDir pointed at a tmp dir, so this asserts the
       // workspace is nested inside whatever profile is active — not a hardcoded
       // .demo-data string.
-      const { demoProjectPath, getDemoWorkspaceRoot } = await import(
-        '@shared/database/demo/workspace'
-      );
+      const { demoProjectPath, getDemoWorkspaceRoot } =
+        await import('@shared/database/demo/workspace');
 
       const resolved = demoProjectPath('harbor-api');
       expect(resolved.startsWith(getDemoWorkspaceRoot())).toBe(true);

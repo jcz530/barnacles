@@ -145,7 +145,7 @@ onMounted(() => {
 
       <!-- Content -->
       <div
-        class="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30 max-h-[400px] overflow-y-auto p-2"
+        class="max-h-[400px] scrollbar-thin scrollbar-thumb-black/20 scrollbar-track-transparent overflow-y-auto p-2 hover:scrollbar-thumb-black/30"
       >
         <!-- Loading state -->
         <div

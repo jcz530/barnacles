@@ -37,9 +37,8 @@ class ProcessManagerService {
    * packaged build loads.
    */
   async loadDemoProcesses(): Promise<void> {
-    const { getDemoRunningProcesses } = await import(
-      '../../shared/database/demo/data/running-processes'
-    );
+    const { getDemoRunningProcesses } =
+      await import('../../shared/database/demo/data/running-processes');
     this.demoProcesses = getDemoRunningProcesses();
   }
 
