@@ -12,6 +12,9 @@ import { projectRescanSchedulerService } from './services/project-rescan-schedul
 import { terminalWebSocketService } from './services/terminal-websocket-service';
 import { portProbeWebSocketService } from './services/port-probe-websocket-service';
 import { sweepOrphans } from './services/port-screenshot-cache-service';
+import { eventService } from './services/event-service';
+import { settingsService } from './services/settings-service';
+import { SETTING_KEYS } from '../shared/types/api';
 import { processManagerService } from './services/process-manager-service';
 
 export const createServer = () => {
@@ -86,6 +89,27 @@ export const startServer = async () => {
   } catch (error) {
     console.error('Failed to sweep orphaned screenshot cache entries:', error);
   }
+
+  // Best-effort: keep the usage event log bounded by the retention window.
+  const pruneUsageEvents = async () => {
+    try {
+      const retentionDays =
+        (await settingsService.getValue<number>(SETTING_KEYS.MCP_USAGE_RETENTION_DAYS)) ?? 90;
+      const { deleted } = await eventService.pruneEvents(retentionDays);
+      if (deleted > 0) {
+        console.log(`\uD83E\uDDF9 Pruned ${deleted} usage events older than ${retentionDays} days`);
+      }
+    } catch (error) {
+      console.error('Failed to prune usage events:', error);
+    }
+  };
+
+  await pruneUsageEvents();
+
+  // The app can stay open for days, so don't rely on restarts to enforce
+  // retention. unref() so this timer never keeps the process alive.
+  const pruneTimer = setInterval(pruneUsageEvents, 24 * 60 * 60 * 1000);
+  pruneTimer.unref?.();
 
   // Find an available port
   console.log(`🔍 Finding available port (preferred: ${APP_CONFIG.API_PORT_PREFERRED})...`);

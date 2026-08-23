@@ -100,8 +100,6 @@ Barnacles also ships an [MCP server](src/cli/README.md#mcp) so LLM clients like 
 
 [View CLI Documentation →](src/cli/README.md)
 
-<!-- Screenshot: CLI in action -->
-
 ### 🤖 Give Your LLM Access to Every Project on Your Machine (via MCP)
 
 Most AI coding assistants only know what's in the file it has open. With Barnacles' MCP server, your assistant knows about every project on your machine, and can start, stop, and read the output of any of them, without you ever opening a terminal. Ask it things like:
@@ -112,6 +110,12 @@ Most AI coding assistants only know what's in the file it has open. With Barnacl
 - *"What does `old-client-site` even do?"* — it reads the project's README, no need to go find the folder.
 
 You don't have to remember which directory a project lives in or alt-tab to a terminal to launch it. The assistant already knows your projects and can run them itself, including watching the live output to debug what's actually happening.
+
+Every tool call is logged locally, so you can see which tools your assistant actually reaches for, what it passed them, and what failed.
+
+<!-- screenshot:mcp -->
+![MCP page showing usage stats and a tool catalog with call counts](assets/images/screenshots/barnacles-screenshot-mcp.png)
+<!-- /screenshot:mcp -->
 
 [Set it up →](src/cli/README.md#mcp)
 

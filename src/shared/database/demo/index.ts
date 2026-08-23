@@ -15,6 +15,7 @@ import {
   projectTechnologies,
   technologies,
   aliases,
+  events,
 } from '../schema';
 import { TECHNOLOGY_DETECTORS } from '../../../backend/services/technology-detectors';
 import { createAccount } from '../../../backend/services/account-service';
@@ -24,6 +25,7 @@ import { DEMO_STATS } from './data/stats';
 import { DEMO_PROCESSES } from './data/processes';
 import { DEMO_ACCOUNTS } from './data/accounts';
 import { DEMO_ALIASES } from './data/aliases';
+import { DEMO_MCP_EVENTS } from './data/mcp-events';
 
 /**
  * Anchor for all demo timestamps. Frozen at seed time so relative copy
@@ -99,6 +101,10 @@ async function clearExistingDemoData(): Promise<void> {
   for (const alias of DEMO_ALIASES) {
     await db.delete(aliases).where(eq(aliases.name, alias.name));
   }
+
+  // Usage events have no parent row either. The demo profile is disposable and
+  // nothing else writes MCP events into it, so clear the source wholesale.
+  await db.delete(events).where(eq(events.source, 'mcp'));
 }
 
 async function seedProjects(): Promise<void> {
@@ -228,6 +234,34 @@ async function seedAccounts(): Promise<void> {
   }
 }
 
+/**
+ * Seed MCP tool-call events so the MCP page shows a populated dashboard.
+ *
+ * Offsets are resolved against DEMO_NOW here rather than baked into the
+ * fixture, so relative copy ("3 minutes ago") stays truthful across runs.
+ */
+async function seedMcpEvents(): Promise<void> {
+  for (const event of DEMO_MCP_EVENTS) {
+    const occurredAt = new Date(
+      DEMO_NOW.getTime() - event.daysAgo * 24 * 60 * 60 * 1000 - event.minutesAgo * 60 * 1000
+    );
+
+    await db.insert(events).values({
+      source: 'mcp',
+      category: 'tool_call',
+      name: event.name,
+      status: event.status,
+      durationMs: event.durationMs,
+      errorMessage: event.errorMessage ?? null,
+      clientName: event.clientName,
+      clientVersion: event.clientVersion,
+      metadata: event.args ? JSON.stringify({ args: event.args }) : null,
+      occurredAt,
+      createdAt: occurredAt,
+    });
+  }
+}
+
 async function seedAliases(): Promise<void> {
   for (const alias of DEMO_ALIASES) {
     await db.insert(aliases).values({
@@ -263,6 +297,7 @@ export async function seedDemoDatabase(): Promise<void> {
   await seedRelatedFolders();
   await seedAccounts();
   await seedAliases();
+  await seedMcpEvents();
 
   console.log(`✅ Demo data seeded (${DEMO_PROJECTS.length} projects)`);
 }

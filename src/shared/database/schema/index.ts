@@ -1,6 +1,6 @@
 import { createId } from '@paralleldrive/cuid2';
 import { relations } from 'drizzle-orm';
-import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('users', {
   id: text('id')
@@ -386,4 +386,43 @@ export const portScreenshots = sqliteTable(
       .$defaultFn(() => new Date()),
   },
   table => [uniqueIndex('port_screenshots_port_process_idx').on(table.port, table.processName)]
+);
+
+/**
+ * Generic app usage event log.
+ *
+ * Deliberately not MCP-specific: `source`/`category`/`name` form a coarse-to-fine
+ * taxonomy so the same table can record MCP tool calls today ('mcp'/'tool_call'/'list_ports')
+ * and CLI commands or page views later without a schema change.
+ *
+ * `occurredAt` is when the event actually happened (supplied by the producer, which
+ * batches), while `createdAt` is when the row was inserted. Always sort and bucket
+ * on `occurredAt`.
+ */
+export const events = sqliteTable(
+  'events',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    source: text('source', { enum: ['mcp', 'cli', 'app', 'api'] }).notNull(),
+    category: text('category').notNull(), // 'tool_call' | 'command' | 'page_view' — plain text so new categories need no migration
+    name: text('name').notNull(), // e.g. 'list_ports'
+    status: text('status', { enum: ['success', 'error'] }).notNull(),
+    durationMs: integer('duration_ms'), // nullable: not every event is timed
+    errorMessage: text('error_message'), // truncated server-side
+    clientName: text('client_name'), // e.g. 'claude-code'
+    clientVersion: text('client_version'),
+    metadata: text('metadata'), // JSON stringified object, e.g. {"args":{...}}
+    occurredAt: integer('occurred_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  table => [
+    index('events_occurred_at_idx').on(table.occurredAt),
+    index('events_source_name_occurred_at_idx').on(table.source, table.name, table.occurredAt),
+  ]
 );

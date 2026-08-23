@@ -78,6 +78,9 @@ export const API_ROUTES = {
     `/api/projects/${projectId}/accounts/${accountId}`,
   PROJECTS_GIT_STATS: '/api/projects/git-stats',
   UTILITIES_IP_INFO: '/api/utilities/ip-info',
+  EVENTS: '/api/events',
+  EVENTS_COUNTS: '/api/events/counts',
+  EVENTS_SERIES: '/api/events/series',
   PORTS: '/api/ports',
   PORTS_KILL: (pid: number) => `/api/ports/${pid}`,
 } as const;

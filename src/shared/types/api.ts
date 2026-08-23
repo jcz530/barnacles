@@ -142,6 +142,8 @@ export const SETTING_KEYS = {
   GIT_EMAILS: 'gitEmails',
   INSTALL_CLI_COMMAND: 'installCliCommand',
   MCP_SERVER: 'mcpServer',
+  MCP_USAGE_LOGGING: 'mcpUsageLogging',
+  MCP_USAGE_RETENTION_DAYS: 'mcpUsageRetentionDays',
   SCAN_EXCLUDED_DIRECTORIES: 'scanExcludedDirectories',
   SCAN_INCLUDED_DIRECTORIES: 'scanIncludedDirectories',
   SCAN_MAX_DEPTH: 'scanMaxDepth',
@@ -319,4 +321,73 @@ export interface PortEntry {
   startedAt?: string;
   command?: string;
   scriptName?: string;
+}
+
+/**
+ * Generic app usage events.
+ *
+ * `source`/`category`/`name` form a coarse-to-fine taxonomy so the same log can
+ * serve MCP tool calls now and other app usage later. See the `events` table.
+ */
+export type EventSource = 'mcp' | 'cli' | 'app' | 'api';
+export type EventStatus = 'success' | 'error';
+
+export interface EventRecord {
+  id: string;
+  source: EventSource;
+  category: string;
+  name: string;
+  status: EventStatus;
+  durationMs?: number | null;
+  errorMessage?: string | null;
+  clientName?: string | null;
+  clientVersion?: string | null;
+  metadata?: Record<string, unknown> | null;
+  occurredAt: Date;
+  createdAt: Date;
+}
+
+/** A single event as submitted by a producer (e.g. the MCP server process). */
+export interface EventInput {
+  source: EventSource;
+  category: string;
+  name: string;
+  status: EventStatus;
+  durationMs?: number;
+  errorMessage?: string;
+  clientName?: string;
+  clientVersion?: string;
+  metadata?: Record<string, unknown>;
+  occurredAt?: string; // ISO string; defaults to now when omitted
+}
+
+export interface EventListFilter {
+  source?: EventSource;
+  category?: string;
+  name?: string;
+  status?: EventStatus;
+  since?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface EventListResponse {
+  events: EventRecord[];
+  total: number;
+}
+
+/** Per-name aggregates, used to merge usage counts into the tool catalog. */
+export interface EventCount {
+  name: string;
+  total: number;
+  errors: number;
+  avgDurationMs: number | null;
+  lastUsedAt: Date | null;
+}
+
+/** One day bucket in a usage time series. Days with no events are zero-filled. */
+export interface EventBucket {
+  date: string; // YYYY-MM-DD
+  total: number;
+  errors: number;
 }

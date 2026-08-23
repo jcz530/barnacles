@@ -128,7 +128,7 @@ async function seedUiState(win, entries) {
  * boot, so a seeded "card" was overwritten with the default "table". Clicking
  * the app's own ViewToggle drives the same state the user would.
  */
-async function forceProjectsView(win, view) {
+async function forceViewMode(win, storageKey, view) {
   return win.webContents.executeJavaScript(`
     (async () => {
       const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -142,7 +142,7 @@ async function forceProjectsView(win, view) {
       const target = ${JSON.stringify(view)} === 'card' ? buttons[1] : buttons[0];
       target.click();
       await sleep(250);
-      return localStorage.getItem('projects-view-mode') === ${JSON.stringify(view)};
+      return localStorage.getItem(${JSON.stringify(storageKey)}) === ${JSON.stringify(view)};
     })();
   `);
 }
@@ -245,9 +245,16 @@ async function capture(win, cornerWin, shot, theme, outputFileName) {
     throw new Error(`theme "${theme}" did not apply`);
   }
 
-  const wantedView = shot.storage?.['projects-view-mode'];
-  if (wantedView && !(await forceProjectsView(win, wantedView))) {
-    throw new Error(`projects view "${wantedView}" did not apply`);
+  // Seeding localStorage alone is not enough: useViewMode reads it once at
+  // setup, and the value persisted by a previous shot is already in place, so
+  // the toggle has to be clicked. Any '*-view-mode' key is handled, not just
+  // the projects list.
+  const viewModeKey = Object.keys(shot.storage ?? {}).find(key => key.endsWith('-view-mode'));
+  if (viewModeKey) {
+    const wantedView = shot.storage[viewModeKey];
+    if (!(await forceViewMode(win, viewModeKey, wantedView))) {
+      throw new Error(`view "${wantedView}" did not apply for ${viewModeKey}`);
+    }
   }
 
   // Runs after the data has landed: scrolling or clicking into rendered UI,

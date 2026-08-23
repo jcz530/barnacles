@@ -14,6 +14,7 @@ import ShowTrayIconSetting from '../components/settings/organisms/ShowTrayIconSe
 import ShowDashboardStatsSetting from '../components/settings/organisms/ShowDashboardStatsSetting.vue';
 import InstallCliCommandSetting from '../components/settings/organisms/InstallCliCommandSetting.vue';
 import McpServerSetting from '../components/settings/organisms/McpServerSetting.vue';
+import McpUsageLoggingSetting from '../components/settings/organisms/McpUsageLoggingSetting.vue';
 import ThemesSetting from '../components/settings/organisms/ThemesSetting.vue';
 import GitEmailsSetting from '../components/settings/organisms/GitEmailsSetting.vue';
 
@@ -181,6 +182,12 @@ onMounted(async () => {
                 :highlighted="highlightedSetting"
               >
                 <McpServerSetting @jump-to-setting="scrollToSetting" />
+              </SettingWrapper>
+              <SettingWrapper
+                :setting-key="SETTING_KEYS.MCP_USAGE_LOGGING"
+                :highlighted="highlightedSetting"
+              >
+                <McpUsageLoggingSetting />
               </SettingWrapper>
             </div>
           </CardContent>
