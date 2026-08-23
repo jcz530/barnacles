@@ -120,7 +120,10 @@ async function build() {
 
   // Install production dependencies
   console.log('\n📥 Installing production dependencies...');
-  run('npm ci --omit=dev');
+  // --ignore-scripts: the postinstall hook runs `electron-builder install-app-deps`,
+  // but electron-builder is a devDependency and isn't present in a prod-only install.
+  // Native modules get rebuilt explicitly further down via `npx electron-builder install-app-deps`.
+  run('npm ci --omit=dev --ignore-scripts');
 
   // Verify production-only install
   const packageCount = countDirItems('node_modules');
