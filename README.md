@@ -113,6 +113,14 @@ Most AI coding assistants only know what's in the file it has open. With Barnacl
 
 You don't have to remember which directory a project lives in or alt-tab to a terminal to launch it. The assistant already knows your projects and can run them itself, including watching the live output to debug what's actually happening.
 
+<!-- screenshot:mcp-setup -->
+<!-- /screenshot:mcp-setup -->
+
+Every tool call is logged locally, so you can see which tools your assistant actually reaches for, what it passed them, and what failed.
+
+<!-- screenshot:mcp -->
+<!-- /screenshot:mcp -->
+
 [Set it up →](src/cli/README.md#mcp)
 
 ## Getting Started

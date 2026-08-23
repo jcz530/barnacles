@@ -42,6 +42,9 @@ const FEATURED = 'demo-proj-01';
  */
 const projectsView = view => ({ 'projects-view-mode': view });
 
+/** Same rationale as projectsView, for the MCP tool catalog's table/card toggle. */
+const mcpToolsView = view => ({ 'mcp-tools-view-mode': view });
+
 /** @type {ShotSpec[]} */
 export const SHOTS = [
   {
@@ -213,6 +216,47 @@ export const SHOTS = [
   // directory — publishing it would expose the machine's actual dotfile
   // inventory (.ssh, .netrc, .gitconfig and their sizes). Demo data cannot mask
   // it, because the page reads the filesystem rather than the database.
+  {
+    // The usage dashboard is seeded from demo MCP events (see
+    // demo/data/mcp-events.ts), so this renders populated rather than empty.
+    // Recorded arguments are fictional paths and demo ids, and they only show
+    // in expanded rows, which are collapsed here.
+    name: 'mcp',
+    route: '/mcp',
+    storage: mcpToolsView('table'),
+    // Counts, the day series and the event list are three separate requests.
+    settleMs: 800,
+    title: 'See What Your Agent Actually Uses',
+    description:
+      'Every MCP tool call your assistant makes, logged locally — which tools it reaches for, how often they fail, and how long they take. Arguments are recorded with credentials redacted; results never are.',
+    alt: 'MCP page showing usage stats and a tool catalog with call counts',
+    targets: {
+      readme: { marker: 'mcp' },
+      marketing: { stepId: 'new', file: 'mcp' },
+    },
+  },
+  {
+    name: 'mcp-tools-cards',
+    route: '/mcp',
+    storage: mcpToolsView('card'),
+    settleMs: 800,
+    title: 'Twenty Tools, Grouped by What They Do',
+    description:
+      'Projects, processes, ports, system and utilities — each tool with its parameters and how often your agent has called it.',
+    alt: 'MCP tool catalog in card view grouped by category',
+    targets: {},
+  },
+  {
+    name: 'mcp-setup',
+    route: '/mcp/setup',
+    title: 'Connect an Agent in One Command',
+    description:
+      'Copy-paste setup for Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Gemini CLI and OpenCode, plus the instructions block to drop into CLAUDE.md or AGENTS.md.',
+    alt: 'MCP setup page with client install snippets and agent instructions',
+    targets: {
+      readme: { marker: 'mcp-setup' },
+    },
+  },
   {
     name: 'utilities',
     route: '/utilities',
