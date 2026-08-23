@@ -390,4 +390,8 @@ export interface EventBucket {
   date: string; // YYYY-MM-DD
   total: number;
   errors: number;
+  /** Mean duration of that day's calls, or null on a day with no timed calls. */
+  avgDurationMs: number | null;
+  /** How many distinct tools were called that day. */
+  toolsUsed: number;
 }
