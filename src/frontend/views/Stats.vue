@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import dayjs from 'dayjs';
-import { FileText, Flame, FolderGit2, GitCommit, Minus, Plus, Scale } from 'lucide-vue-next';
+import {
+  FileText,
+  Flame,
+  FolderGit2,
+  GitCommit,
+  Minus,
+  Plus,
+  Scale,
+  Share2,
+} from 'lucide-vue-next';
 import GitStatCard from '../components/projects/molecules/GitStatCard.vue';
 import PeriodStepper from '../components/projects/molecules/PeriodStepper.vue';
 import StatDetailPanel from '../components/projects/organisms/StatDetailPanel.vue';
@@ -9,6 +18,8 @@ import StatsHighlightsCard from '../components/projects/organisms/StatsHighlight
 import StatsLanguageCard from '../components/projects/organisms/StatsLanguageCard.vue';
 import StatsActiveProjectsCard from '../components/projects/organisms/StatsActiveProjectsCard.vue';
 import ProjectFilterCombobox from '../components/projects/molecules/ProjectFilterCombobox.vue';
+import ShareStatsDialog from '../components/projects/organisms/ShareStatsDialog.vue';
+import SegmentedControl from '../components/ui/atoms/SegmentedControl.vue';
 import { Button } from '../components/ui/button';
 import {
   bucketByIsoWeek,
@@ -16,7 +27,7 @@ import {
   formatIsoWeekLabel,
   isoWeekStart,
   toIsoWeek,
-} from '../utils/iso-week';
+} from '@shared/utils/iso-week';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
 
@@ -30,6 +41,12 @@ const { usePeriodGitStatsQuery, useProjectsQuery } = useQueries();
 type Granularity = 'week' | 'month' | 'year';
 
 const granularity = ref<Granularity>('month');
+
+const GRANULARITY_OPTIONS: Array<{ value: Granularity; label: string }> = [
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+  { value: 'year', label: 'Year' },
+];
 const selectedMonth = ref(dayjs().format('YYYY-MM'));
 const selectedWeek = ref(currentIsoWeek());
 const selectedYear = ref(dayjs().format('YYYY'));
@@ -279,6 +296,8 @@ const visibleStats = computed(() =>
   })
 );
 
+const isSharing = ref(false);
+
 const expandedKey = ref<string | null>(null);
 
 const expandedStat = computed(() =>
@@ -300,30 +319,45 @@ watch(visibleStats, stats => {
   <div class="min-w-0 space-y-6 p-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-center gap-3">
-        <!-- Segmented toggle; the active side is the one carrying the accent. -->
-        <div class="flex items-center rounded-md border p-0.5">
-          <Button
-            v-for="option in ['week', 'month', 'year'] as const"
-            :key="option"
-            size="sm"
-            :variant="granularity === option ? 'secondary' : 'ghost'"
-            :class="granularity === option ? 'text-primary-500' : 'text-slate-500'"
-            class="capitalize"
-            @click="setGranularity(option)"
-          >
-            {{ option }}
-          </Button>
-        </div>
+        <!-- Routed through setGranularity rather than bound directly: switching
+             granularity carries your place across, it is not a plain assign. -->
+        <SegmentedControl
+          :model-value="granularity"
+          :options="GRANULARITY_OPTIONS"
+          @update:model-value="setGranularity"
+        />
 
         <PeriodStepper v-model="selectedPeriod" :granularity="granularity" />
       </div>
 
-      <ProjectFilterCombobox
-        v-model="selectedProjects"
-        :projects="projectsData ?? []"
-        :is-loading="isLoadingProjects"
-      />
+      <div class="flex items-center gap-2">
+        <ProjectFilterCombobox
+          v-model="selectedProjects"
+          :projects="projectsData ?? []"
+          :is-loading="isLoadingProjects"
+        />
+
+        <!-- Nothing worth sharing from an empty period, so don't offer it. -->
+        <Button
+          variant="outline"
+          size="sm"
+          :disabled="isLoading || !totals?.commits"
+          @click="isSharing = true"
+        >
+          <Share2 class="size-4" />
+          Share
+        </Button>
+      </div>
     </div>
+
+    <ShareStatsDialog
+      v-model:open="isSharing"
+      :stats="stats"
+      :period-label="periodLabel"
+      :granularity="granularity"
+      :selected-projects="selectedProjects"
+      :all-projects="projectsData ?? []"
+    />
 
     <!-- Dimmed rather than replaced while stepping, so the page keeps its shape
          instead of collapsing into skeletons on every click. -->

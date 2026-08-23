@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
-import { computed, ref } from 'vue';
+import { computed, ref, useTemplateRef } from 'vue';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 import { X } from 'lucide-vue-next';
@@ -134,10 +134,46 @@ const axisTicks = computed(() => {
     }));
 });
 
+/**
+ * Column spacing, scaled to how many bars there are.
+ *
+ * The tracks are visible surfaces, so they need real space between them to read
+ * as separate columns — but a year of daily bars has no room to spare, and a
+ * fixed gap there would leave the bars sub-pixel.
+ */
+const barGap = computed(() => {
+  const count = props.days.length;
+  if (count <= 31) return 'gap-1';
+  if (count <= 92) return 'gap-0.5';
+  return 'gap-px';
+});
+
 const barTitle = (day: DatedValue) =>
   `${dayjs(day.date).format('ddd, MMM D YYYY')}: ${day.value.toLocaleString()}`;
 
 const hoveredIndex = ref<number | null>(null);
+const chartEl = useTemplateRef<HTMLElement>('chart');
+
+/**
+ * Resolve the hovered bar from the cursor's position across the whole chart.
+ *
+ * Listening on each column instead leaves the gaps between them as dead zones,
+ * so sweeping sideways fires `mouseleave` on every gap and the readout flickers
+ * back to the best day. The columns are `flex-1` and fill the row, so a simple
+ * proportion of the container's width maps straight onto an index.
+ */
+const trackHover = (event: MouseEvent) => {
+  const el = chartEl.value;
+  const count = props.days.length;
+  if (!el || count === 0) return;
+
+  const bounds = el.getBoundingClientRect();
+  if (bounds.width <= 0) return;
+
+  const offset = event.clientX - bounds.left;
+  const index = Math.floor((offset / bounds.width) * count);
+  hoveredIndex.value = Math.min(Math.max(index, 0), count - 1);
+};
 
 /**
  * What the figure above the chart shows: the hovered bar, or the best day when
@@ -206,7 +242,16 @@ const readout = computed(() => {
               <span>0</span>
             </div>
 
-            <div class="relative flex h-40 flex-1 items-end gap-px">
+            <!-- Wider gaps than the old gap-px: the tracks are visible surfaces
+                 now, so they need real space to read as separate columns rather
+                 than one striped block. -->
+            <div
+              ref="chart"
+              class="relative flex h-40 flex-1 items-end"
+              :class="barGap"
+              @mousemove="trackHover"
+              @mouseleave="hoveredIndex = null"
+            >
               <!-- Gridline at the top of the scale. -->
               <div
                 class="absolute inset-x-0 top-0 border-t border-dashed border-slate-200 dark:border-slate-700"
@@ -217,22 +262,23 @@ const readout = computed(() => {
                 :key="day.date"
                 class="relative flex h-full flex-1 items-end"
                 :title="barTitle(day)"
-                @mouseenter="hoveredIndex = index"
-                @mouseleave="hoveredIndex = null"
               >
+                <!-- A full-height neutral track with the value filled in from
+                     the bottom, matching the stat tiles. -->
                 <div
-                  class="w-full rounded-sm transition-all"
-                  :class="
-                    day.value === 0
-                      ? 'bg-slate-100 dark:bg-slate-800'
-                      : hoveredIndex === index
+                  class="flex h-full w-full items-end rounded-full bg-gradient-to-t from-slate-200/40 to-slate-200/80 dark:from-slate-700/40 dark:to-slate-700/80"
+                >
+                  <div
+                    v-if="day.value > 0"
+                    class="w-full rounded-full transition-all"
+                    :class="
+                      hoveredIndex === index
                         ? 'bg-primary-600'
                         : 'from-primary-500/60 to-primary-500/90 bg-gradient-to-t'
-                  "
-                  :style="{
-                    height: `${Math.max((day.value / maxValue) * 100, day.value > 0 ? 2 : 1)}%`,
-                  }"
-                />
+                    "
+                    :style="{ height: `${Math.max((day.value / maxValue) * 100, 3)}%` }"
+                  />
+                </div>
               </div>
             </div>
           </div>
