@@ -130,3 +130,5 @@ out/
 # Disposable demo profile (npm run dev:demo)
 .demo-data/
 screenshots/out/
+
+.claude-pr-screenshots/
