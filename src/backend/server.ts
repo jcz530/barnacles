@@ -91,16 +91,25 @@ export const startServer = async () => {
   }
 
   // Best-effort: keep the usage event log bounded by the retention window.
-  try {
-    const retentionDays =
-      (await settingsService.getValue<number>(SETTING_KEYS.MCP_USAGE_RETENTION_DAYS)) ?? 90;
-    const { deleted } = await eventService.pruneEvents(retentionDays);
-    if (deleted > 0) {
-      console.log(`\uD83E\uDDF9 Pruned ${deleted} usage events older than ${retentionDays} days`);
+  const pruneUsageEvents = async () => {
+    try {
+      const retentionDays =
+        (await settingsService.getValue<number>(SETTING_KEYS.MCP_USAGE_RETENTION_DAYS)) ?? 90;
+      const { deleted } = await eventService.pruneEvents(retentionDays);
+      if (deleted > 0) {
+        console.log(`\uD83E\uDDF9 Pruned ${deleted} usage events older than ${retentionDays} days`);
+      }
+    } catch (error) {
+      console.error('Failed to prune usage events:', error);
     }
-  } catch (error) {
-    console.error('Failed to prune usage events:', error);
-  }
+  };
+
+  await pruneUsageEvents();
+
+  // The app can stay open for days, so don't rely on restarts to enforce
+  // retention. unref() so this timer never keeps the process alive.
+  const pruneTimer = setInterval(pruneUsageEvents, 24 * 60 * 60 * 1000);
+  pruneTimer.unref?.();
 
   // Find an available port
   console.log(`🔍 Finding available port (preferred: ${APP_CONFIG.API_PORT_PREFERRED})...`);

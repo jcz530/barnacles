@@ -286,6 +286,9 @@ class EventService {
 
   /**
    * Delete events, optionally limited to one source. Powers the "Clear log" action.
+   *
+   * With no `source` this intentionally clears the whole table — callers that
+   * mean "just my source" must pass one.
    */
   async clearEvents(
     filter: { source?: EventSource } = {}

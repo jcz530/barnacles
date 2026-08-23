@@ -21,12 +21,20 @@ function parseStatus(value: string | undefined): EventStatus | undefined {
   return value as EventStatus;
 }
 
+/**
+ * Parse a non-negative integer query param.
+ *
+ * Rejects blanks, fractions, and negatives rather than passing them to SQLite,
+ * where a negative offset surfaces as a 500 instead of a 400.
+ */
 function parseIntParam(value: string | undefined, label: string): number | undefined {
   if (value === undefined) return undefined;
+
   const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
+  if (value.trim() === '' || !Number.isInteger(parsed) || parsed < 0) {
     throw new BadRequestException(`Invalid ${label}: ${value}`);
   }
+
   return parsed;
 }
 

@@ -1762,7 +1762,7 @@ export const useQueries = () => {
   // live; aggregates poll more slowly and the day series barely changes.
   const useEventsQuery = (
     filter: MaybeRef<EventListFilter> = {},
-    options?: { enabled?: MaybeRef<boolean> }
+    options?: { enabled?: MaybeRef<boolean>; refetchInterval?: number | false }
   ) => {
     const visibility = useDocumentVisibility();
 
@@ -1792,7 +1792,11 @@ export const useQueries = () => {
       },
       enabled: options?.enabled ?? true,
       placeholderData: keepPreviousData,
-      refetchInterval: () => (visibility.value === 'visible' ? 5000 : false),
+      refetchInterval: () => {
+        const interval = options?.refetchInterval ?? 5000;
+        if (interval === false) return false;
+        return visibility.value === 'visible' ? interval : false;
+      },
     });
   };
 

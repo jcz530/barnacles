@@ -26,7 +26,8 @@ const settingsQuery = useSettingsQuery({ enabled: true });
 const updateSettingMutation = useUpdateSettingMutation();
 
 // Only the total matters here, so ask for the smallest page the API allows.
-const eventsQuery = useEventsQuery({ source: 'mcp', limit: 1 });
+// No polling: this is a settings row, not the live activity feed.
+const eventsQuery = useEventsQuery({ source: 'mcp', limit: 1 }, { refetchInterval: false });
 const clearEventsMutation = useClearEventsMutation();
 
 const recordedCount = computed(() => eventsQuery.data.value?.total ?? 0);
@@ -102,7 +103,12 @@ watch(retentionDays, async newValue => {
           this machine and powers the MCP page.
         </div>
       </div>
-      <Switch id="mcp-usage-logging" v-model="usageLogging" class="ml-4 shrink-0" />
+      <Switch
+        id="mcp-usage-logging"
+        v-model="usageLogging"
+        :disabled="updateSettingMutation.isPending.value"
+        class="ml-4 shrink-0"
+      />
     </div>
 
     <div v-if="usageLogging" class="flex items-center justify-between gap-4">

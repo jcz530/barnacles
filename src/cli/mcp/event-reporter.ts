@@ -27,7 +27,8 @@ const POST_TIMEOUT_MS = 2000;
 const BACKEND_LOOKUP_COOLDOWN_MS = 60_000;
 
 /** Keys whose values must never be recorded. */
-const SENSITIVE_KEY_PATTERN = /pass|secret|token|key|credential|auth/i;
+const SENSITIVE_KEY_PATTERN =
+  /pass|pwd|secret|token|key|credential|auth|session|cookie|bearer|jwt|signature/i;
 
 function debug(message: string, error?: unknown): void {
   if (!process.env.BARNACLES_MCP_DEBUG) return;
@@ -45,6 +46,9 @@ function debug(message: string, error?: unknown): void {
 export function sanitizeArgs(args: unknown): Record<string, unknown> | undefined {
   if (typeof args !== 'object' || args === null || Array.isArray(args)) return undefined;
 
+  // Guards against a self-referential payload recursing until the stack blows.
+  const seen = new WeakSet<object>();
+
   const sanitize = (value: unknown, key?: string): unknown => {
     if (key && SENSITIVE_KEY_PATTERN.test(key)) return '[redacted]';
 
@@ -52,9 +56,12 @@ export function sanitizeArgs(args: unknown): Record<string, unknown> | undefined
       return value.length > MAX_STRING_CHARS ? `${value.slice(0, MAX_STRING_CHARS)}…` : value;
     }
 
-    if (Array.isArray(value)) return value.map(item => sanitize(item));
-
     if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) return '[circular]';
+      seen.add(value);
+
+      if (Array.isArray(value)) return value.map(item => sanitize(item));
+
       return Object.fromEntries(
         Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, sanitize(v, k)])
       );
@@ -206,6 +213,11 @@ export class EventReporter {
         this.cachedBaseUrl = null;
       } finally {
         this.inFlight = null;
+        // Events recorded during this flight hit the `inFlight` early-return in
+        // flush(), which also consumed their debounce timer. Without this they
+        // would sit in the buffer until the next tool call — or be lost if the
+        // session ends first.
+        if (this.buffer.length > 0) this.scheduleFlush();
       }
     })();
 

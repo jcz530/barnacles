@@ -242,6 +242,16 @@ describe('Events API Integration Tests', () => {
       expect(body.events[0].name).toBe('list_ports');
     });
 
+    it('returns 400 for malformed numeric params', async () => {
+      const { app } = context.get();
+
+      // A negative offset would otherwise reach SQLite and surface as a 500.
+      for (const query of ['limit=-5', 'offset=-10', 'limit=1.5', 'limit=', 'limit=abc']) {
+        const response = await get(app, `/api/events?${query}`);
+        expect(response.status, query).toBe(400);
+      }
+    });
+
     it('returns 400 for an invalid source filter', async () => {
       const { app } = context.get();
 

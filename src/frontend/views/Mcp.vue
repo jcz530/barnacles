@@ -53,7 +53,18 @@ async function enableCli() {
 }
 
 const viewMode = useViewMode('mcp-tools-view-mode', 'table');
-const tableSorting = ref<SortingState>([{ id: 'total', desc: true }]);
+// Each category renders its own table, so sorting is tracked per category —
+// a single shared ref would re-sort every other group at once.
+const DEFAULT_TOOL_SORTING: SortingState = [{ id: 'total', desc: true }];
+const tableSorting = ref<Record<string, SortingState>>({});
+
+function sortingFor(category: string): SortingState {
+  return tableSorting.value[category] ?? DEFAULT_TOOL_SORTING;
+}
+
+function setSortingFor(category: string, sorting: SortingState) {
+  tableSorting.value = { ...tableSorting.value, [category]: sorting };
+}
 
 const counts = computed(() => countsQuery.data.value ?? []);
 const series = computed(() => seriesQuery.data.value ?? []);
@@ -65,6 +76,12 @@ const activitySorting = ref<SortingState>([{ id: 'occurredAt', desc: true }]);
 async function clearLog() {
   await clearEventsMutation.mutateAsync({ source: 'mcp' });
 }
+
+// Without this the page renders a confident "0 calls" when the API is down,
+// which is indistinguishable from genuine non-use.
+const hasLoadError = computed(
+  () => countsQuery.isError.value || eventsQuery.isError.value || seriesQuery.isError.value
+);
 
 const totalCalls = computed(() => counts.value.reduce((sum, c) => sum + c.total, 0));
 const toolsUsed = computed(() => counts.value.filter(c => c.total > 0).length);
@@ -136,6 +153,13 @@ const categories = computed(() =>
         </Button>
       </section>
 
+      <section
+        v-if="hasLoadError"
+        class="border-danger-500/40 bg-danger-500/5 rounded-lg border p-4 text-sm text-slate-600"
+      >
+        Usage data couldn't be loaded, so the counts below may be incomplete.
+      </section>
+
       <!-- Usage -->
       <section v-if="isCliInstalled">
         <h2 class="mb-3 text-lg font-semibold text-slate-800">Usage</h2>
@@ -171,8 +195,8 @@ const categories = computed(() =>
               :tools="group.tools"
               :counts="counts"
               :view-mode="viewMode"
-              :sorting="tableSorting"
-              @update:sorting="tableSorting = $event"
+              :sorting="sortingFor(group.value)"
+              @update:sorting="setSortingFor(group.value, $event)"
             />
           </div>
         </div>

@@ -170,6 +170,26 @@ describe('sanitizeArgs', () => {
     expect(sanitizeArgs([1, 2])).toBeUndefined();
   });
 
+  it('redacts the wider set of credential-shaped keys', () => {
+    expect(
+      sanitizeArgs({ pwd: 'x', sessionId: 'y', cookie: 'z', jwt: 'w', bearerToken: 'v' })
+    ).toEqual({
+      pwd: '[redacted]',
+      sessionId: '[redacted]',
+      cookie: '[redacted]',
+      jwt: '[redacted]',
+      bearerToken: '[redacted]',
+    });
+  });
+
+  it('survives a self-referential payload', () => {
+    const cyclic: Record<string, unknown> = { name: 'x' };
+    cyclic.self = cyclic;
+
+    expect(() => sanitizeArgs(cyclic)).not.toThrow();
+    expect(sanitizeArgs(cyclic)).toEqual({ name: 'x', self: '[circular]' });
+  });
+
   it('preserves ordinary values', () => {
     expect(sanitizeArgs({ pid: 123, force: true, name: 'web' })).toEqual({
       pid: 123,
@@ -277,15 +297,52 @@ describe('EventReporter', () => {
   });
 
   it('caps the buffer so a runaway agent cannot exhaust memory', async () => {
-    vi.mocked(getBackendUrl).mockResolvedValue(null);
-    const reporter = new EventReporter();
+    // Hold the flush open so everything recorded piles up in the buffer.
+    let release: (value: unknown) => void = () => {};
+    fetchMock.mockImplementation(() => new Promise(resolve => (release = resolve)));
 
+    const reporter = new EventReporter();
     for (let i = 0; i < 500; i++) {
-      reporter.record({ name: 'list_ports', status: 'success', durationMs: 1 });
+      reporter.record({ name: `call-${i}`, status: 'success', durationMs: 1 });
     }
 
-    // Buffer is bounded; nothing throws and no unbounded growth occurs.
-    await expect(vi.advanceTimersByTimeAsync(2000)).resolves.not.toThrow();
+    // Assert the bound itself, not merely that nothing threw. The first 20
+    // events flush immediately; the remaining 480 pile up behind the stuck
+    // request and must be capped rather than grow without limit.
+    const buffered = (reporter as unknown as { buffer: unknown[] }).buffer;
+    expect(buffered.length).toBeLessThanOrEqual(200);
+
+    // The cap trims from the front, so the newest events are the ones kept.
+    const names = (buffered as { name: string }[]).map(event => event.name);
+    expect(names).toContain('call-499');
+    expect(names).not.toContain('call-20');
+
+    release({ ok: true, status: 200 });
+    await vi.advanceTimersByTimeAsync(5000);
+  });
+
+  it('still sends events recorded during a flush that outlasts the debounce', async () => {
+    // The debounce timer fires while a flush is in flight, hits the `inFlight`
+    // early return, and consumes the timer — these events must not be stranded.
+    let release: (value: unknown) => void = () => {};
+    fetchMock
+      .mockImplementationOnce(() => new Promise(resolve => (release = resolve)))
+      .mockResolvedValue({ ok: true, status: 200 });
+
+    const reporter = new EventReporter();
+    reporter.record({ name: 'first', status: 'success', durationMs: 1 });
+    await vi.advanceTimersByTimeAsync(2000);
+
+    reporter.record({ name: 'second', status: 'success', durationMs: 1 });
+    await vi.advanceTimersByTimeAsync(2000);
+
+    release({ ok: true, status: 200 });
+    await vi.advanceTimersByTimeAsync(10000);
+
+    const sent = fetchMock.mock.calls.flatMap(call =>
+      (JSON.parse(call[1].body).events as { name: string }[]).map(event => event.name)
+    );
+    expect(sent).toContain('second');
   });
 });
 
