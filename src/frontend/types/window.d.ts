@@ -32,6 +32,27 @@ declare global {
       };
       clipboard: {
         writeFile: (path: string) => Promise<{ success: boolean; error?: string }>;
+        writeImage: (png: Uint8Array) => Promise<{ success: boolean; error?: string }>;
+        writeText: (text: string) => Promise<{ success: boolean; error?: string }>;
+      };
+      shareCard: {
+        render: (request: {
+          html: string;
+          width: number;
+          height: number;
+          outputWidth: number;
+          outputHeight: number;
+        }) => Promise<{
+          success: boolean;
+          data?: { png: Uint8Array; width: number; height: number };
+          error?: string;
+        }>;
+        save: (request: { png: Uint8Array; suggestedName: string }) => Promise<{
+          success: boolean;
+          data?: string;
+          canceled?: boolean;
+          error?: string;
+        }>;
       };
       updateWindowTitle: (title: string) => void;
       showOrCreateWindow: () => Promise<{

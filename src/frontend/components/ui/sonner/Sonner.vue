@@ -30,6 +30,22 @@ const props = defineProps<ToasterProps>();
 </template>
 
 <style>
+/*
+ * Keep the toaster above dialogs for clicks, not just for paint.
+ *
+ * Reka's DialogPortal teleports a dialog to the end of `body`, later in
+ * document order than this toaster, so on a z-index tie the dialog wins
+ * hit-testing and a click on a toast action lands on whatever dialog button
+ * sits behind it.
+ *
+ * Sonner already sets a high z-index of its own, so this is belt-and-braces
+ * against an ancestor stacking context capping it: the value here is the
+ * maximum, and it is applied where the toaster is positioned.
+ */
+[data-sonner-toaster] {
+  z-index: 2147483647;
+}
+
 /* Variant-specific toast styling */
 [data-sonner-toast][data-type='success'] {
   /*
