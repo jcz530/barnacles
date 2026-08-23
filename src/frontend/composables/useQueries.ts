@@ -12,6 +12,10 @@ import type {
   DetectedAlias,
   DetectedIDE,
   DetectedTerminal,
+  EventBucket,
+  EventCount,
+  EventListFilter,
+  EventListResponse,
   GitStats,
   IDE,
   PortEntry,
@@ -1752,6 +1756,124 @@ export const useQueries = () => {
     });
   };
 
+  // MCP / usage event queries
+  //
+  // The events list polls while the page is visible so the activity feed feels
+  // live; aggregates poll more slowly and the day series barely changes.
+  const useEventsQuery = (
+    filter: MaybeRef<EventListFilter> = {},
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
+    const visibility = useDocumentVisibility();
+
+    return useQuery({
+      queryKey: computed(() => ['events', unref(filter)] as const),
+      queryFn: async () => {
+        const current = unref(filter);
+        const params = new URLSearchParams();
+
+        if (current.source) params.append('source', current.source);
+        if (current.category) params.append('category', current.category);
+        if (current.name) params.append('name', current.name);
+        if (current.status) params.append('status', current.status);
+        if (current.since) params.append('since', current.since);
+        if (current.limit !== undefined) params.append('limit', String(current.limit));
+        if (current.offset !== undefined) params.append('offset', String(current.offset));
+
+        const query = params.toString() ? `?${params.toString()}` : '';
+
+        const response = await apiCall<ApiResponse<EventListResponse>>(
+          'GET',
+          `${API_ROUTES.EVENTS}${query}`
+        );
+
+        if (!response) return { events: [], total: 0 };
+        return response.data ?? { events: [], total: 0 };
+      },
+      enabled: options?.enabled ?? true,
+      placeholderData: keepPreviousData,
+      refetchInterval: () => (visibility.value === 'visible' ? 5000 : false),
+    });
+  };
+
+  const useEventCountsQuery = (
+    filter: MaybeRef<{ source?: string; since?: string }> = {},
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
+    const visibility = useDocumentVisibility();
+
+    return useQuery({
+      queryKey: computed(() => ['events', 'counts', unref(filter)] as const),
+      queryFn: async () => {
+        const current = unref(filter);
+        const params = new URLSearchParams();
+        if (current.source) params.append('source', current.source);
+        if (current.since) params.append('since', current.since);
+
+        const query = params.toString() ? `?${params.toString()}` : '';
+
+        const response = await apiCall<ApiResponse<EventCount[]>>(
+          'GET',
+          `${API_ROUTES.EVENTS_COUNTS}${query}`
+        );
+
+        if (!response) return [];
+        return response.data ?? [];
+      },
+      enabled: options?.enabled ?? true,
+      refetchInterval: () => (visibility.value === 'visible' ? 15000 : false),
+    });
+  };
+
+  const useEventSeriesQuery = (
+    filter: MaybeRef<{ source?: string; name?: string; days?: number }> = {},
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
+    return useQuery({
+      queryKey: computed(() => ['events', 'series', unref(filter)] as const),
+      queryFn: async () => {
+        const current = unref(filter);
+        const params = new URLSearchParams();
+        if (current.source) params.append('source', current.source);
+        if (current.name) params.append('name', current.name);
+        if (current.days !== undefined) params.append('days', String(current.days));
+
+        const query = params.toString() ? `?${params.toString()}` : '';
+
+        const response = await apiCall<ApiResponse<EventBucket[]>>(
+          'GET',
+          `${API_ROUTES.EVENTS_SERIES}${query}`
+        );
+
+        if (!response) return [];
+        return response.data ?? [];
+      },
+      enabled: options?.enabled ?? true,
+      staleTime: 60 * 1000,
+    });
+  };
+
+  const useClearEventsMutation = () => {
+    return useMutation({
+      mutationFn: async (filter: { source?: string } = {}) => {
+        const params = new URLSearchParams();
+        if (filter.source) params.append('source', filter.source);
+        const query = params.toString() ? `?${params.toString()}` : '';
+
+        const response = await apiCall<ApiResponse<{ deleted: number }>>(
+          'DELETE',
+          `${API_ROUTES.EVENTS}${query}`
+        );
+
+        if (!response) throw new Error('Failed to clear events');
+        return response.data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['events'] });
+      },
+    });
+  };
+
   return {
     useUsersQuery,
     useHealthQuery,
@@ -1831,5 +1953,9 @@ export const useQueries = () => {
     useIpInfoQuery,
     usePortsQuery,
     useKillPortMutation,
+    useEventsQuery,
+    useEventCountsQuery,
+    useEventSeriesQuery,
+    useClearEventsMutation,
   };
 };

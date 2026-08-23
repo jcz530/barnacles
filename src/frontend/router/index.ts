@@ -16,6 +16,8 @@ import Projects from '../views/Projects.vue';
 import Settings from '../views/Settings.vue';
 import Terminals from '../views/Terminals.vue';
 import Ports from '../views/Ports.vue';
+import Mcp from '../views/Mcp.vue';
+import McpSetup from '../views/McpSetup.vue';
 import Stats from '../views/Stats.vue';
 import Themes from '../views/Themes.vue';
 import ThemeEditor from '../views/ThemeEditor.vue';
@@ -52,6 +54,8 @@ export const RouteNames = {
   Aliases: 'Aliases',
   PresetPacks: 'PresetPacks',
   ConfigFiles: 'ConfigFiles',
+  Mcp: 'MCP',
+  McpSetup: 'MCP Setup',
   Utilities: 'Utilities',
   UtilityDetail: 'UtilityDetail',
   UpdateTest: 'UpdateTest',
@@ -190,6 +194,16 @@ const routes: RouteRecordRaw[] = [
         path: '/configs',
         name: RouteNames.ConfigFiles,
         component: ConfigFilesPage,
+      },
+      {
+        path: '/mcp',
+        name: RouteNames.Mcp,
+        component: Mcp,
+      },
+      {
+        path: '/mcp/setup',
+        name: RouteNames.McpSetup,
+        component: McpSetup,
       },
       {
         path: '/utilities',

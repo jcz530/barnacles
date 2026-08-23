@@ -41,6 +41,8 @@ const DEFAULT_SETTINGS = {
   showDashboardStats: { value: 'true', type: 'boolean' as const },
   installCliCommand: { value: 'true', type: 'boolean' as const },
   gitEmails: { value: JSON.stringify([]), type: 'json' as const },
+  mcpUsageLogging: { value: 'true', type: 'boolean' as const },
+  mcpUsageRetentionDays: { value: '90', type: 'number' as const },
 };
 
 class SettingsService {

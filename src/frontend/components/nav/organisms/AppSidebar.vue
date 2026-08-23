@@ -25,6 +25,7 @@ import {
   FolderGit2,
   Network,
   Radio,
+  Plug,
   Sparkles,
   SquareTerminal,
   Terminal,
@@ -113,6 +114,12 @@ const data = computed(() => ({
       url: '/utilities',
       icon: Sparkles,
       isActive: route.path.startsWith('/utilities'),
+    },
+    {
+      title: 'MCP',
+      url: '/mcp',
+      icon: Plug,
+      isActive: route.path.startsWith('/mcp'),
     },
   ],
   navSecondary: [
