@@ -39,6 +39,16 @@ const callSeries = computed(() =>
 const errorSeries = computed(() =>
   props.series.map(bucket => ({ date: bucket.date, value: bucket.errors }))
 );
+// An idle day reports no average; plot it as a zero-height bar rather than
+// dropping the day, so the bars stay aligned with the other cards' dates.
+const durationSeries = computed(() =>
+  props.series.map(bucket => ({ date: bucket.date, value: bucket.avgDurationMs ?? 0 }))
+);
+const toolsSeries = computed(() =>
+  props.series.map(bucket => ({ date: bucket.date, value: bucket.toolsUsed }))
+);
+
+const formatMs = (value: number) => `${value.toLocaleString()}ms`;
 </script>
 
 <template>
@@ -57,11 +67,19 @@ const errorSeries = computed(() =>
       :daily-values="errorSeries"
       :is-loading="isLoading"
     />
-    <GitStatCard :icon="Timer" label="Avg duration" :value="avgDuration" :is-loading="isLoading" />
+    <GitStatCard
+      :icon="Timer"
+      label="Avg duration"
+      :value="avgDuration"
+      :daily-values="durationSeries"
+      :format-value="formatMs"
+      :is-loading="isLoading"
+    />
     <GitStatCard
       :icon="Wrench"
       label="Tools used"
       :value="`${toolsUsed} / ${totalTools}`"
+      :daily-values="toolsSeries"
       :is-loading="isLoading"
     />
   </div>

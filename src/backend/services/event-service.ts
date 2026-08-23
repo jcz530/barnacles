@@ -81,7 +81,13 @@ function toEventRecord(row: EventRow): EventRecord {
  * which isn't worth it at this scale — do it here instead.
  */
 export function zeroFillSeries(
-  rows: { date: string; total: number; errors: number }[],
+  rows: {
+    date: string;
+    total: number;
+    errors: number;
+    avgDurationMs: number | null;
+    toolsUsed: number;
+  }[],
   days: number,
   today: Date = new Date()
 ): EventBucket[] {
@@ -99,7 +105,15 @@ export function zeroFillSeries(
     const key = `${year}-${month}-${day}`;
 
     const row = byDate.get(key);
-    buckets.push({ date: key, total: row?.total ?? 0, errors: row?.errors ?? 0 });
+    buckets.push({
+      date: key,
+      total: row?.total ?? 0,
+      errors: row?.errors ?? 0,
+      // A day with no calls has no average to report — null, not 0, so the
+      // chart can tell "fast" apart from "idle".
+      avgDurationMs: row?.avgDurationMs ?? null,
+      toolsUsed: row?.toolsUsed ?? 0,
+    });
 
     cursor.setDate(cursor.getDate() + 1);
   }
@@ -251,6 +265,8 @@ class EventService {
         date: bucket,
         total: count(),
         errors: sql<number>`sum(case when ${events.status} = 'error' then 1 else 0 end)`,
+        avgDurationMs: avg(events.durationMs),
+        toolsUsed: sql<number>`count(distinct ${events.name})`,
       })
       .from(events)
       .where(and(...conditions))
@@ -261,6 +277,8 @@ class EventService {
         date: row.date,
         total: Number(row.total ?? 0),
         errors: Number(row.errors ?? 0),
+        avgDurationMs: row.avgDurationMs === null ? null : Math.round(Number(row.avgDurationMs)),
+        toolsUsed: Number(row.toolsUsed ?? 0),
       })),
       days
     );

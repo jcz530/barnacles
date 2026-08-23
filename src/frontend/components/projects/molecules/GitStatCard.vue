@@ -17,7 +17,16 @@ const props = defineProps<{
   isLoading?: boolean;
   hideValues?: boolean;
   warningMessage?: string;
+  /**
+   * Render a bar's value for the hover readout and labels. Defaults to a plain
+   * number, so a card whose figure carries a unit (ms, %) can keep the bars
+   * reading in that same unit instead of a bare count.
+   */
+  formatValue?: (value: number) => string;
 }>();
+
+const formatBarValue = (value: number) =>
+  props.formatValue ? props.formatValue(value) : value.toLocaleString();
 
 // Create unique transition name from label
 const transitionName = computed(() => {
@@ -120,7 +129,7 @@ const display = computed(() => {
   if (!bar) return { value: props.value, label: props.label, isHovered: false };
 
   return {
-    value: bar.value.toLocaleString(),
+    value: formatBarValue(bar.value),
     label: bar.formattedDate,
     isHovered: true,
   };
@@ -158,7 +167,7 @@ const barGap = computed(() => {
               : 'from-primary-500/60 to-primary-500/80'
           "
           :style="{ height: `${bar.height}%` }"
-          :title="`${bar.formattedDate}: ${bar.value}`"
+          :title="`${bar.formattedDate}: ${formatBarValue(bar.value)}`"
         />
         <span
           v-if="showsLabels"
@@ -180,7 +189,7 @@ const barGap = computed(() => {
           :style="`transition-delay: ${(index + 1) * 50}ms`"
           :title="bar.formattedDate"
         >
-          {{ bar.value.toLocaleString() }}
+          {{ formatBarValue(bar.value) }}
         </span>
       </div>
     </div>
