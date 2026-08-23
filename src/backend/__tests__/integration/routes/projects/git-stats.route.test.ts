@@ -87,9 +87,8 @@ describe('Git Stats API Integration Tests', () => {
 
     // The service caches results; each test seeds its own data and must not
     // read another test's.
-    const { projectGitStatsService } = await import(
-      '@backend/services/project/project-git-stats-service'
-    );
+    const { projectGitStatsService } =
+      await import('@backend/services/project/project-git-stats-service');
     projectGitStatsService.clearCache();
   });
 
@@ -785,9 +784,8 @@ describe('Git Stats API Integration Tests', () => {
       // Imported dynamically to match how this suite reaches the service
       // elsewhere: vi.mock() is hoisted, so a static import would load the
       // module before child_process is mocked.
-      const { MAX_CACHE_ENTRIES } = await import(
-        '@backend/services/project/project-git-stats-service'
-      );
+      const { MAX_CACHE_ENTRIES } =
+        await import('@backend/services/project/project-git-stats-service');
       // Derived from the real ceiling rather than hardcoded, so raising
       // MAX_CACHE_ENTRIES can't quietly turn this into a no-op test.
       const months = Array.from({ length: MAX_CACHE_ENTRIES + 5 }, (_, i) => {

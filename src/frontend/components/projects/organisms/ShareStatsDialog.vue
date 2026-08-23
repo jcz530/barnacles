@@ -293,8 +293,7 @@ watch(
         <TabsContent value="text" class="min-h-0 flex-1 space-y-4 overflow-y-auto">
           <pre
             class="max-h-80 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-xs whitespace-pre text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
-            >{{ summary }}</pre
-          >
+            >{{ summary }}</pre>
 
           <div class="flex items-center gap-2">
             <SegmentedControl v-model="textVariant" :options="TEXT_OPTIONS" />

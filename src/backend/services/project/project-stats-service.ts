@@ -35,8 +35,8 @@ class ProjectStatsService {
     }
 
     let languageStats:
-      | Record<string, { fileCount: number; percentage: number; linesOfCode: number }>
-      | undefined = undefined;
+      Record<string, { fileCount: number; percentage: number; linesOfCode: number }> | undefined =
+      undefined;
 
     // Only fetch language stats if requested
     if (includeLanguageStats) {

@@ -13,14 +13,7 @@ import {
 } from 'lucide-vue-next';
 
 export type FileCategory =
-  | 'image'
-  | 'video'
-  | 'audio'
-  | 'document'
-  | 'code'
-  | 'data'
-  | 'archive'
-  | 'other';
+  'image' | 'video' | 'audio' | 'document' | 'code' | 'data' | 'archive' | 'other';
 
 export interface FileTypeInfo {
   category: FileCategory;
