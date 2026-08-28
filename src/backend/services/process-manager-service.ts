@@ -12,6 +12,44 @@ import { isDemoMode } from '../../shared/config/runtime-mode';
  */
 const MAX_OUTPUT_CHUNKS = 1000;
 
+/**
+ * Size a PTY starts at, before any terminal attaches. Processes can be started
+ * with no UI open at all (CLI, MCP, project start), so a default is
+ * unavoidable; 80x24 is what a program assumes when it cannot detect a
+ * terminal. A client that attaches later resizes to its real geometry.
+ */
+const DEFAULT_COLS = 80;
+const DEFAULT_ROWS = 24;
+
+/** Largest single input frame accepted from a client, in bytes. */
+const MAX_INPUT_BYTES = 8 * 1024;
+
+/**
+ * Bounds for a PTY resize. node-pty can abort the process on absurd geometry,
+ * so anything a client sends is checked before it reaches the pty.
+ */
+export function isValidTerminalSize(cols: number, rows: number): boolean {
+  return (
+    Number.isInteger(cols) &&
+    Number.isInteger(rows) &&
+    cols >= 1 &&
+    cols <= 500 &&
+    rows >= 1 &&
+    rows <= 300
+  );
+}
+
+/**
+ * A live consumer of a process's output. Registered via subscribe(), which
+ * hands back a disposer -- callers must never reach into the subscriber set
+ * directly, or a dropped connection leaks a listener for the life of the
+ * process.
+ */
+export interface ProcessSubscriber {
+  onData: (chunk: string, seq: number) => void;
+  onExit: (exitCode: number) => void;
+}
+
 export interface RunningProcess {
   name: string;
   bashId: string;
@@ -26,6 +64,10 @@ export interface RunningProcess {
   cwd?: string; // Working directory for ad-hoc processes
   command?: string; // Original command for ad-hoc processes
   createdAt: Date; // Creation timestamp
+  subscribers: Set<ProcessSubscriber>; // Live output consumers
+  seq: number; // Monotonic chunk counter; lets clients detect a dropped chunk
+  cols: number; // Last applied PTY width
+  rows: number; // Last applied PTY height
 }
 
 export class ProcessManagerService {
@@ -90,8 +132,8 @@ export class ProcessManagerService {
 
     return pty.spawn(shell, args, {
       name: 'xterm-256color',
-      cols: 120,
-      rows: 30,
+      cols: DEFAULT_COLS,
+      rows: DEFAULT_ROWS,
       cwd,
       env: envVars,
     });
@@ -116,6 +158,17 @@ export class ProcessManagerService {
         runningProcess.output = runningProcess.output.slice(-MAX_OUTPUT_CHUNKS);
       }
 
+      runningProcess.seq += 1;
+      const seq = runningProcess.seq;
+      for (const subscriber of runningProcess.subscribers) {
+        try {
+          subscriber.onData(data, seq);
+        } catch (error) {
+          // One bad consumer must not stop the others, nor the buffering above.
+          console.error('[Process] Subscriber onData failed:', error);
+        }
+      }
+
       // A configured URL is the user's explicit choice, so only fall back to
       // sniffing one out of the output when they haven't set one.
       if (!runningProcess.detectedUrl && !runningProcess.configuredUrl) {
@@ -131,6 +184,14 @@ export class ProcessManagerService {
     ptyProcess.onExit(({ exitCode }) => {
       runningProcess.status = exitCode === 0 ? 'stopped' : 'failed';
       runningProcess.exitCode = exitCode;
+
+      for (const subscriber of runningProcess.subscribers) {
+        try {
+          subscriber.onExit(exitCode);
+        } catch (error) {
+          console.error('[Process] Subscriber onExit failed:', error);
+        }
+      }
     });
   }
 
@@ -241,6 +302,10 @@ export class ProcessManagerService {
           output: [],
           configuredUrl: processConfig.url,
           createdAt: new Date(),
+          subscribers: new Set(),
+          seq: 0,
+          cols: DEFAULT_COLS,
+          rows: DEFAULT_ROWS,
         };
 
         this.attachProcessHandlers(runningProcess);
@@ -473,6 +538,10 @@ export class ProcessManagerService {
       status: 'running',
       output: [],
       createdAt: new Date(),
+      subscribers: new Set(),
+      seq: 0,
+      cols: DEFAULT_COLS,
+      rows: DEFAULT_ROWS,
     };
 
     this.attachProcessHandlers(runningProcess);
@@ -600,6 +669,115 @@ export class ProcessManagerService {
    */
   getProcessOutputById(processId: string): string[] | null {
     return this.findRunning(processId)?.process.output ?? null;
+  }
+
+  /**
+   * Attach a live consumer to a process.
+   *
+   * Returns the buffered scrollback alongside the disposer so a client can
+   * paint history and then continue from the live stream without a gap. The
+   * snapshot and the subscription are taken together, synchronously, which is
+   * what makes that safe.
+   *
+   * INVARIANT: never introduce an `await` between reading `output` and adding
+   * to `subscribers`. A suspension there lets a chunk land in between, so the
+   * client would either miss it entirely or replay it twice.
+   */
+  subscribe(
+    processId: string,
+    subscriber: ProcessSubscriber
+  ): { unsubscribe: () => void; snapshot: string[]; seq: number } | null {
+    const found = this.findRunning(processId);
+    if (!found) {
+      return null;
+    }
+
+    const runningProcess = found.process;
+    const snapshot = [...runningProcess.output];
+    const seq = runningProcess.seq;
+    runningProcess.subscribers.add(subscriber);
+
+    return {
+      snapshot,
+      seq,
+      unsubscribe: () => {
+        runningProcess.subscribers.delete(subscriber);
+      },
+    };
+  }
+
+  /**
+   * Forward client keystrokes to a process's PTY.
+   */
+  writeToProcess(processId: string, data: string): boolean {
+    const found = this.findRunning(processId);
+    if (!found || found.process.status !== 'running') {
+      return false;
+    }
+
+    // A paste can be arbitrarily large; cap it so one frame cannot wedge the
+    // PTY or balloon memory.
+    const payload = data.length > MAX_INPUT_BYTES ? data.slice(0, MAX_INPUT_BYTES) : data;
+
+    try {
+      found.process.process.write(payload);
+      return true;
+    } catch (error) {
+      console.error(`Failed to write to process ${processId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Resize a process's PTY to match its viewer.
+   */
+  resizeProcess(processId: string, cols: number, rows: number): boolean {
+    if (!isValidTerminalSize(cols, rows)) {
+      return false;
+    }
+
+    const found = this.findRunning(processId);
+    if (!found || found.process.status !== 'running') {
+      return false;
+    }
+
+    try {
+      // node-pty throws if the pty is already gone.
+      found.process.process.resize(cols, rows);
+      found.process.cols = cols;
+      found.process.rows = rows;
+      return true;
+    } catch (error) {
+      console.error(`Failed to resize process ${processId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Current buffered state of a process, for a client that is attaching.
+   */
+  getProcessSnapshot(processId: string): {
+    output: string[];
+    seq: number;
+    status: RunningProcess['status'];
+    exitCode?: number;
+    cols: number;
+    rows: number;
+  } | null {
+    const found = this.findRunning(processId);
+    if (!found) {
+      return null;
+    }
+
+    const { process: runningProcess } = found;
+    return {
+      output: [...runningProcess.output],
+      seq: runningProcess.seq,
+      status: runningProcess.status,
+      exitCode: runningProcess.exitCode,
+      cols: runningProcess.cols,
+      rows: runningProcess.rows,
+    };
   }
 
   /**

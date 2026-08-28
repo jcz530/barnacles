@@ -4,6 +4,8 @@ import type { UpdateInfo, DownloadProgress, UpdateError } from './updater';
 export interface ApiConfig {
   port: number;
   baseUrl: string;
+  /** Per-launch token required to open a process WebSocket. */
+  wsToken: string;
 }
 
 export interface ElectronAPI {

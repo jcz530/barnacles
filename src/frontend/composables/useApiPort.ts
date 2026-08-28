@@ -8,6 +8,7 @@ import { APP_CONFIG } from '../../shared/constants';
  */
 export function useApiPort() {
   const port = ref<number>(APP_CONFIG.API_PORT_PREFERRED);
+  const wsToken = ref<string>('');
   const isLoaded = ref(false);
 
   /**
@@ -17,6 +18,7 @@ export function useApiPort() {
     try {
       const config = await window.electronAPI.getApiConfig();
       port.value = config.port;
+      wsToken.value = config.wsToken ?? '';
       isLoaded.value = true;
     } catch {
       // Fallback to default port if IPC fails
@@ -57,6 +59,7 @@ export function useApiPort() {
     apiBaseUrl,
     wsBaseUrl,
     port,
+    wsToken,
     isLoaded,
     loadApiPort,
   };

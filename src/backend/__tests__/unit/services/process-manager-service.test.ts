@@ -196,6 +196,222 @@ describe('ProcessManagerService', () => {
     });
   });
 
+  describe('subscribe', () => {
+    it('hands back the buffered scrollback and a disposer', async () => {
+      const { processId, pty } = await startOne(service);
+      pty.emitData('before\r\n');
+
+      const sub = service.subscribe(processId, { onData: vi.fn(), onExit: vi.fn() })!;
+
+      expect(sub.snapshot).toEqual(['before\r\n']);
+      expect(sub.seq).toBe(1);
+      expect(typeof sub.unsubscribe).toBe('function');
+    });
+
+    it('returns a copy, so a caller cannot mutate the live buffer', async () => {
+      const { processId, pty } = await startOne(service);
+      pty.emitData('one');
+
+      const sub = service.subscribe(processId, { onData: vi.fn(), onExit: vi.fn() })!;
+      sub.snapshot.push('injected');
+
+      expect(service.getProcessOutputById(processId)).toEqual(['one']);
+    });
+
+    it('delivers chunks after subscribing, with a contiguous seq', async () => {
+      const { processId, pty } = await startOne(service);
+      const onData = vi.fn();
+      service.subscribe(processId, { onData, onExit: vi.fn() });
+
+      pty.emitData('a');
+      pty.emitData('b');
+
+      expect(onData.mock.calls).toEqual([
+        ['a', 1],
+        ['b', 2],
+      ]);
+    });
+
+    it('replays a chunk exactly once across the subscribe boundary', async () => {
+      // The bug this guards: if the snapshot and the subscription were not
+      // taken together, a chunk arriving between them would either be painted
+      // twice or lost entirely.
+      const { processId, pty } = await startOne(service);
+      pty.emitData('historical');
+
+      const onData = vi.fn();
+      const sub = service.subscribe(processId, { onData, onExit: vi.fn() })!;
+
+      expect(sub.snapshot).toEqual(['historical']);
+      expect(onData).not.toHaveBeenCalled();
+
+      pty.emitData('live');
+      expect(onData.mock.calls).toEqual([['live', 2]]);
+    });
+
+    it('stops delivering after the disposer runs', async () => {
+      const { processId, pty } = await startOne(service);
+      const onData = vi.fn();
+      const sub = service.subscribe(processId, { onData, onExit: vi.fn() })!;
+
+      sub.unsubscribe();
+      pty.emitData('ignored');
+
+      expect(onData).not.toHaveBeenCalled();
+    });
+
+    it('fans out to every subscriber', async () => {
+      const { processId, pty } = await startOne(service);
+      const first = vi.fn();
+      const second = vi.fn();
+      service.subscribe(processId, { onData: first, onExit: vi.fn() });
+      service.subscribe(processId, { onData: second, onExit: vi.fn() });
+
+      pty.emitData('shared');
+
+      expect(first).toHaveBeenCalledWith('shared', 1);
+      expect(second).toHaveBeenCalledWith('shared', 1);
+    });
+
+    it('keeps serving other subscribers when one throws', async () => {
+      const { processId, pty } = await startOne(service);
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const healthy = vi.fn();
+      service.subscribe(processId, {
+        onData: () => {
+          throw new Error('bad consumer');
+        },
+        onExit: vi.fn(),
+      });
+      service.subscribe(processId, { onData: healthy, onExit: vi.fn() });
+
+      pty.emitData('still delivered');
+
+      expect(healthy).toHaveBeenCalledWith('still delivered', 1);
+      expect(service.getProcessOutputById(processId)).toEqual(['still delivered']);
+    });
+
+    it('notifies subscribers on exit', async () => {
+      const { processId, pty } = await startOne(service);
+      const onExit = vi.fn();
+      service.subscribe(processId, { onData: vi.fn(), onExit });
+
+      pty.emitExit(3);
+
+      expect(onExit).toHaveBeenCalledWith(3);
+    });
+
+    it('keeps counting seq past a buffer eviction', async () => {
+      // seq tracks chunks produced, not chunks retained, so a client can still
+      // tell that it missed something after the ring buffer wraps.
+      const { processId, pty } = await startOne(service);
+      for (let i = 0; i < 1005; i++) {
+        pty.emitData(`c${i}`);
+      }
+
+      const sub = service.subscribe(processId, { onData: vi.fn(), onExit: vi.fn() })!;
+
+      expect(sub.seq).toBe(1005);
+      expect(sub.snapshot).toHaveLength(1000);
+    });
+
+    it('returns null for an unknown process', () => {
+      expect(service.subscribe('nope', { onData: vi.fn(), onExit: vi.fn() })).toBeNull();
+    });
+  });
+
+  describe('writeToProcess', () => {
+    it('forwards input to the pty', async () => {
+      const { processId, pty } = await startOne(service);
+
+      expect(service.writeToProcess(processId, 'ls\r')).toBe(true);
+      expect(pty.write).toHaveBeenCalledWith('ls\r');
+    });
+
+    it('truncates an oversized frame rather than passing it through', async () => {
+      const { processId, pty } = await startOne(service);
+
+      service.writeToProcess(processId, 'x'.repeat(10_000));
+
+      expect(pty.write.mock.calls[0][0]).toHaveLength(8 * 1024);
+    });
+
+    it('refuses to write to an exited process', async () => {
+      const { processId, pty } = await startOne(service);
+      pty.emitExit(0);
+
+      expect(service.writeToProcess(processId, 'ls\r')).toBe(false);
+      expect(pty.write).not.toHaveBeenCalled();
+    });
+
+    it('returns false for an unknown process', () => {
+      expect(service.writeToProcess('nope', 'ls')).toBe(false);
+    });
+
+    it('survives a throwing pty', async () => {
+      const { processId, pty } = await startOne(service);
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      pty.write.mockImplementation(() => {
+        throw new Error('pty gone');
+      });
+
+      expect(service.writeToProcess(processId, 'ls')).toBe(false);
+    });
+  });
+
+  describe('resizeProcess', () => {
+    it('resizes the pty and records the new geometry', async () => {
+      const { processId, pty } = await startOne(service);
+
+      expect(service.resizeProcess(processId, 100, 40)).toBe(true);
+      expect(pty.resize).toHaveBeenCalledWith(100, 40);
+      expect(service.getProcessSnapshot(processId)).toMatchObject({ cols: 100, rows: 40 });
+    });
+
+    it.each([
+      ['zero cols', 0, 24],
+      ['negative rows', 80, -1],
+      ['fractional cols', 80.5, 24],
+      ['absurd width', 100_000, 24],
+      ['NaN', Number.NaN, 24],
+    ])('rejects %s without touching the pty', async (_label, cols, rows) => {
+      const { processId, pty } = await startOne(service);
+
+      expect(service.resizeProcess(processId, cols, rows)).toBe(false);
+      expect(pty.resize).not.toHaveBeenCalled();
+    });
+
+    it('survives a throwing pty', async () => {
+      const { processId, pty } = await startOne(service);
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      pty.resize.mockImplementation(() => {
+        throw new Error('pty gone');
+      });
+
+      expect(service.resizeProcess(processId, 100, 40)).toBe(false);
+    });
+  });
+
+  describe('getProcessSnapshot', () => {
+    it('reports buffered output, seq, status, and geometry', async () => {
+      const { processId, pty } = await startOne(service);
+      pty.emitData('hello');
+
+      expect(service.getProcessSnapshot(processId)).toEqual({
+        output: ['hello'],
+        seq: 1,
+        status: 'running',
+        exitCode: undefined,
+        cols: 80,
+        rows: 24,
+      });
+    });
+
+    it('returns null for an unknown process', () => {
+      expect(service.getProcessSnapshot('nope')).toBeNull();
+    });
+  });
+
   describe('lookup by id', () => {
     it('finds a process across projects', async () => {
       await service.startProjectProcesses('project-a', '/tmp/a', [

@@ -117,9 +117,12 @@ export const startServer = async () => {
 
   // Update runtime configuration
   const apiBaseUrl = `http://${APP_CONFIG.API_HOST}:${availablePort}`;
+  // Minted per launch and handed to the renderer over IPC. See RUNTIME_CONFIG.
+  const { randomBytes } = await import('node:crypto');
   updateRuntimeConfig({
     API_PORT: availablePort,
     API_BASE_URL: apiBaseUrl,
+    WS_TOKEN: randomBytes(32).toString('hex'),
   });
 
   const app = createServer();

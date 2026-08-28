@@ -14,6 +14,15 @@ export const APP_CONFIG = {
 export let RUNTIME_CONFIG = {
   API_PORT: 51000,
   API_BASE_URL: 'http://localhost:51000',
+  /**
+   * Per-launch secret proving a WebSocket client is our own renderer.
+   *
+   * The API binds a real localhost port and CORS is deliberately skipped for
+   * upgrade requests, so without this any local process -- or any web page the
+   * user visits -- could attach to a process socket and type into a login
+   * shell. Minted at startup, held in memory only, never persisted.
+   */
+  WS_TOKEN: '',
 };
 
 export const updateRuntimeConfig = (config: Partial<typeof RUNTIME_CONFIG>) => {
@@ -33,6 +42,7 @@ export const API_ROUTES = {
   PROJECTS_TERMINALS_AVAILABLE: '/api/projects/terminals/available',
   TERMINALS: '/api/terminals',
   TERMINALS_WS: '/api/terminals/ws',
+  PROCESS_WS: '/api/processes/ws',
   PROCESSES: '/api/processes',
   PROCESS_OUTPUT: (id: string) => `/api/processes/${id}/output`,
   PROJECTS_PACKAGE_SCRIPTS: (id: string) => `/api/projects/${id}/package-scripts`,
