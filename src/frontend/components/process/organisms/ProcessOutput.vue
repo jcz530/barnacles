@@ -2,32 +2,85 @@
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { useDebounceFn } from '@vueuse/core';
+import { onMounted, onUnmounted, ref, toRef } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
+import { useProcessTerminalWebSocket } from '../../../composables/useProcessTerminalWebSocket';
 import '@xterm/xterm/css/xterm.css';
 
-const props = defineProps<{
-  output: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    processId: string;
+    /** Render output but refuse keystrokes. */
+    readonly?: boolean;
+  }>(),
+  { readonly: false }
+);
 
 const terminalRef = ref<HTMLDivElement>();
+const queryClient = useQueryClient();
+
 let terminal: Terminal | null = null;
 let fitAddon: FitAddon | null = null;
-let lastOutput = '';
+let resizeObserver: ResizeObserver | null = null;
+
+/** Stop accepting input once the process is gone. */
+const freezeInput = () => {
+  if (terminal) {
+    terminal.options.disableStdin = true;
+    terminal.options.cursorBlink = false;
+  }
+};
+
+const { sendInput, sendResize } = useProcessTerminalWebSocket(toRef(props, 'processId'), {
+  onReplay: (data, reset) => {
+    if (!terminal) return;
+    if (reset) {
+      terminal.clear();
+    }
+    terminal.write(data);
+  },
+  onAttached: message => {
+    if (message.status !== 'running') {
+      freezeInput();
+    }
+    // Our geometry is authoritative from the moment we attach; the process may
+    // have been spawned before any terminal existed.
+    pushSize();
+  },
+  onOutput: data => terminal?.write(data),
+  onExit: exitCode => {
+    terminal?.write(`\r\n\x1b[2m[Process exited with code ${exitCode}]\x1b[0m\r\n`);
+    freezeInput();
+    // The status badge polls on a 5s interval; nudge it so a process the user
+    // just killed does not linger as "running".
+    queryClient.invalidateQueries({ queryKey: ['processes'] });
+  },
+});
+
+/** Report the current grid size to the PTY. */
+const pushSize = () => {
+  if (terminal) {
+    sendResize(terminal.cols, terminal.rows);
+  }
+};
+
+// Dragging a window edge fires a burst of resizes; only the last one matters.
+const pushSizeDebounced = useDebounceFn(pushSize, 100);
 
 const initTerminal = () => {
   if (!terminalRef.value) return;
 
-  // Create terminal instance (read-only)
   terminal = new Terminal({
-    cursorBlink: false,
-    disableStdin: true,
+    cursorBlink: !props.readonly,
+    disableStdin: props.readonly,
     fontSize: 13,
     fontFamily: 'Menlo, Monaco, "Courier New", monospace',
     scrollback: 10000,
     theme: {
       background: '#00000000',
       foreground: '#d4d4d4',
-      cursor: '#1e1e1e', // Hide cursor
+      cursor: '#d4d4d4',
       black: '#000000',
       red: '#cd3131',
       green: '#0dbc79',
@@ -47,44 +100,33 @@ const initTerminal = () => {
     },
   });
 
-  // Add addons
   fitAddon = new FitAddon();
   terminal.loadAddon(fitAddon);
   terminal.loadAddon(new WebLinksAddon());
 
-  // Open terminal in the container
   terminal.open(terminalRef.value);
+  fitAddon.fit();
 
-  // Fit terminal to container and write initial output
-  fitAddon?.fit();
-
-  // Write initial output after terminal is properly sized
-  if (props.output) {
-    terminal?.write(props.output);
-    lastOutput = props.output;
+  // xterm already encodes keystrokes, pastes, and control sequences (Ctrl-C
+  // arrives as \x03), so the bytes can go straight to the PTY.
+  if (!props.readonly) {
+    terminal.onData(data => sendInput(data));
   }
 
-  // Handle window resize
-  const resizeObserver = new ResizeObserver(() => {
+  terminal.onResize(() => pushSizeDebounced());
+
+  resizeObserver = new ResizeObserver(() => {
     fitAddon?.fit();
   });
-
-  if (terminalRef.value) {
-    resizeObserver.observe(terminalRef.value);
-  }
-
-  return () => {
-    resizeObserver.disconnect();
-  };
+  resizeObserver.observe(terminalRef.value);
 };
 
 const cleanup = () => {
-  if (terminal) {
-    terminal.dispose();
-    terminal = null;
-  }
+  resizeObserver?.disconnect();
+  resizeObserver = null;
+  terminal?.dispose();
+  terminal = null;
   fitAddon = null;
-  lastOutput = '';
 };
 
 onMounted(() => {
@@ -94,28 +136,6 @@ onMounted(() => {
 onUnmounted(() => {
   cleanup();
 });
-
-// Watch for output changes and write new content
-watch(
-  () => props.output,
-  newOutput => {
-    if (!terminal) return;
-
-    // If output is completely different, clear and rewrite
-    if (!newOutput.startsWith(lastOutput)) {
-      terminal.clear();
-      terminal.write(newOutput);
-      lastOutput = newOutput;
-    } else {
-      // Only write the new part
-      const newContent = newOutput.slice(lastOutput.length);
-      if (newContent) {
-        terminal.write(newContent);
-        lastOutput = newOutput;
-      }
-    }
-  }
-);
 </script>
 
 <template>

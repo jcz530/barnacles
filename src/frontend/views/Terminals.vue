@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Terminal as TerminalIcon } from 'lucide-vue-next';
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import ProcessCard from '../components/process/molecules/ProcessCard.vue';
 import ProcessOutput from '../components/process/organisms/ProcessOutput.vue';
 import { Skeleton } from '../components/ui/skeleton';
@@ -10,27 +10,13 @@ import { useProcessManagement } from '../composables/useProcessManagement';
 
 const { setBreadcrumbs } = useBreadcrumbs();
 setBreadcrumbs([{ label: 'Processes' }]);
-const {
-  useProcessesQuery,
-  useKillProcessMutation,
-  useCreateProcessMutation,
-  useProcessOutputByIdQuery,
-} = useQueries();
+const { useProcessesQuery, useKillProcessMutation, useCreateProcessMutation } = useQueries();
 
 const { data: processes, isLoading } = useProcessesQuery();
 const killProcessMutation = useKillProcessMutation();
 const createProcessMutation = useCreateProcessMutation();
 
 const selectedProcess = ref<string | null>(null);
-
-// Fetch process output for selected process
-const { data: processOutput } = useProcessOutputByIdQuery(
-  computed(() => selectedProcess.value || ''),
-  {
-    enabled: computed(() => !!selectedProcess.value),
-    refetchInterval: 1000,
-  }
-);
 
 const {
   runningProcesses: activeProcesses,
@@ -136,8 +122,11 @@ const selectProcess = (process: any) => {
 
       <!-- Process display area -->
       <div class="flex-1 rounded-lg bg-[#1d293d] p-4">
-        <div v-if="selectedProcess && processOutput" class="h-full">
-          <ProcessOutput :output="processOutput.output" />
+        <div v-if="selectedProcess" class="h-full">
+          <!-- Keyed so switching processes remounts the terminal and its
+               socket, rather than bleeding one process's scrollback into the
+               next. -->
+          <ProcessOutput :key="selectedProcess" :process-id="selectedProcess" />
         </div>
         <div v-else class="flex h-full items-center justify-center text-slate-400">
           <div class="text-center">
