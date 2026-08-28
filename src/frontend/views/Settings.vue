@@ -19,6 +19,7 @@ import ThemesSetting from '../components/settings/organisms/ThemesSetting.vue';
 import GitEmailsSetting from '../components/settings/organisms/GitEmailsSetting.vue';
 
 const { setBreadcrumbs } = useBreadcrumbs();
+setBreadcrumbs([{ label: 'Settings' }]);
 const route = useRoute();
 const highlightedSetting = ref<SettingKey | null>(null);
 
@@ -36,8 +37,6 @@ function scrollToSetting(settingKey: SettingKey) {
 }
 
 onMounted(async () => {
-  setBreadcrumbs([{ label: 'Settings' }]);
-
   const settingParam = route.query.setting as string | undefined;
   if (settingParam) {
     // Validate that the setting key exists

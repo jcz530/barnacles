@@ -14,7 +14,7 @@ import {
   Search,
   Sparkles,
 } from 'lucide-vue-next';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import AliasesTable from '../components/aliases/organisms/AliasesTable.vue';
 import Card from '../components/ui/card/Card.vue';
 import CardHeader from '../components/ui/card/CardHeader.vue';
@@ -26,6 +26,7 @@ import { Input } from '../components/ui/input';
 import CopyButton from '@/components/atoms/CopyButton.vue';
 
 const { setBreadcrumbs } = useBreadcrumbs();
+setBreadcrumbs([{ label: 'Aliases' }]);
 const {
   useAliasesQuery,
   useAliasesConfigPathQuery,
@@ -34,10 +35,6 @@ const {
   useDeleteAliasMutation,
   useSyncAliasesMutation,
 } = useQueries();
-
-onMounted(() => {
-  setBreadcrumbs([{ label: 'Aliases' }]);
-});
 
 // Query for fetching aliases
 const { data: aliasesData, isLoading, refetch } = useAliasesQuery({ enabled: true });

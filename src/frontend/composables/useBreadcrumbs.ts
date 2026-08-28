@@ -8,6 +8,7 @@ import {
   type ComputedRef,
   type InjectionKey,
   type Ref,
+  type WatchStopHandle,
 } from 'vue';
 
 export interface BreadcrumbItem {
@@ -15,37 +16,52 @@ export interface BreadcrumbItem {
   href?: string;
 }
 
+export type BreadcrumbSource =
+  BreadcrumbItem[] | Ref<BreadcrumbItem[]> | ComputedRef<BreadcrumbItem[]>;
+
+/** Identifies which component instance last wrote the breadcrumbs. */
+type BreadcrumbOwner = number;
+
 interface BreadcrumbContext {
   breadcrumbs: Ref<BreadcrumbItem[]>;
-  setBreadcrumbs: (
-    items: BreadcrumbItem[] | Ref<BreadcrumbItem[]> | ComputedRef<BreadcrumbItem[]>
-  ) => void;
+  /** The instance whose breadcrumbs are currently displayed. */
+  currentOwner: Ref<BreadcrumbOwner | null>;
+  setBreadcrumbs: (items: BreadcrumbSource, owner: BreadcrumbOwner) => void;
 }
 
 export const BreadcrumbSymbol: InjectionKey<BreadcrumbContext> = Symbol('breadcrumbs');
+
+let nextOwner = 0;
 
 /**
  * Provides breadcrumb context in a layout component
  */
 export function provideBreadcrumbs() {
   const breadcrumbs = ref<BreadcrumbItem[]>([]);
+  const currentOwner = ref<BreadcrumbOwner | null>(null);
 
-  const setBreadcrumbs = (
-    items: BreadcrumbItem[] | Ref<BreadcrumbItem[]> | ComputedRef<BreadcrumbItem[]>
-  ) => {
+  // Only one reactive source may drive the breadcrumbs at a time. This watcher
+  // is registered in the layout's scope, which outlives every page, so it has
+  // to be stopped by hand when a new source takes over — otherwise a stale
+  // page's computed keeps firing and overwrites the current page's crumbs.
+  let stopWatching: WatchStopHandle | null = null;
+
+  const setBreadcrumbs = (items: BreadcrumbSource, owner: BreadcrumbOwner) => {
+    stopWatching?.();
+    stopWatching = null;
+    currentOwner.value = owner;
+
     if (isRef(items)) {
-      // If items is a ref/computed, set up a watcher
       breadcrumbs.value = items.value;
-      watch(items, newItems => {
+      stopWatching = watch(items, newItems => {
         breadcrumbs.value = newItems;
       });
     } else {
-      // Plain array
       breadcrumbs.value = items;
     }
   };
 
-  provide(BreadcrumbSymbol, { breadcrumbs, setBreadcrumbs });
+  provide(BreadcrumbSymbol, { breadcrumbs, currentOwner, setBreadcrumbs });
 
   return { breadcrumbs };
 }
@@ -60,12 +76,20 @@ export function useBreadcrumbs() {
     throw new Error('useBreadcrumbs must be used within a component that provides breadcrumbs');
   }
 
-  const { setBreadcrumbs } = context;
+  const { currentOwner, setBreadcrumbs } = context;
+  const owner = ++nextOwner;
 
-  // Clear breadcrumbs on unmount to prevent stale data
   onUnmounted(() => {
-    setBreadcrumbs([]);
+    // Vue mounts the incoming page before unmounting the outgoing one, so by
+    // the time this runs the next page has usually already set its own crumbs.
+    // Only clear what this instance still owns, or we'd wipe them.
+    if (currentOwner.value === owner) {
+      setBreadcrumbs([], owner);
+      currentOwner.value = null;
+    }
   });
 
-  return { setBreadcrumbs };
+  return {
+    setBreadcrumbs: (items: BreadcrumbSource) => setBreadcrumbs(items, owner),
+  };
 }

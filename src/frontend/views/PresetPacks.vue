@@ -3,7 +3,7 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
 import type { PresetPack } from '../../shared/types/api';
 import { AlertCircle, ArrowLeft, Check, Package, Sparkles } from 'lucide-vue-next';
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Card from '../components/ui/card/Card.vue';
 import CardHeader from '../components/ui/card/CardHeader.vue';
@@ -16,12 +16,9 @@ import { Badge } from '../components/ui/badge';
 import { RouteNames } from '@/router';
 
 const { setBreadcrumbs } = useBreadcrumbs();
+setBreadcrumbs([{ label: 'Aliases', href: '/aliases' }, { label: 'Preset Packs' }]);
 const { usePresetsQuery, useInstallPresetMutation } = useQueries();
 const router = useRouter();
-
-onMounted(() => {
-  setBreadcrumbs([{ label: 'Aliases', href: '/aliases' }, { label: 'Preset Packs' }]);
-});
 
 const { data: presets, isLoading } = usePresetsQuery({ enabled: true });
 const installMutation = useInstallPresetMutation();
