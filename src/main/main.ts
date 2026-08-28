@@ -8,6 +8,8 @@ import { initializeUpdater } from './updater';
 import { createWindow } from './window-manager';
 import { createTray, updateTrayMenu, destroyTray } from './tray-manager';
 import { settingsService } from '../backend/services/settings-service';
+import { processManagerService } from '../backend/services/process-manager-service';
+import { processWebSocketService } from '../backend/services/process-websocket-service';
 import { installCli, uninstallCli, isCliInstalled } from './cli-manager';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
@@ -27,6 +29,9 @@ let apiPort: number | undefined;
 
 // Track if the app is quitting
 let isQuitting = false;
+
+/** How long shutdown waits for processes to stop before giving up and exiting. */
+const SHUTDOWN_CLEANUP_TIMEOUT_MS = 5000;
 
 // Track if we're currently showing the tray popup to prevent activate event interference
 let isShowingTrayPopup = false;
@@ -237,6 +242,38 @@ app.on('second-instance', (_event, commandLine) => {
 app.on('before-quit', () => {
   // Set quitting flag so windows can close properly
   isQuitting = true;
+});
+
+/** Guards against re-entering the quit handler after cleanup re-issues quit. */
+let processCleanupDone = false;
+
+/**
+ * Stop every process the app started before it exits.
+ *
+ * On 'will-quit' rather than 'window-all-closed': with the tray enabled (or on
+ * macOS) closing the last window does not quit, and killing the user's dev
+ * servers every time they closed a window would be its own bug. 'before-quit'
+ * is too early -- it can still be cancelled.
+ */
+app.on('will-quit', event => {
+  if (processCleanupDone) {
+    return;
+  }
+
+  // cleanup() is async but this handler is not, so the quit has to be deferred
+  // and re-issued. The guard above is what keeps that from looping forever.
+  event.preventDefault();
+
+  const timeout = new Promise<void>(resolve => setTimeout(resolve, SHUTDOWN_CLEANUP_TIMEOUT_MS));
+
+  // Bounded: a wedged process must never make the app unquittable.
+  Promise.race([processManagerService.cleanup(), timeout])
+    .catch(error => console.error('[Shutdown] Process cleanup failed:', error))
+    .finally(() => {
+      processWebSocketService.cleanup();
+      processCleanupDone = true;
+      app.quit();
+    });
 });
 
 app.on('window-all-closed', async () => {

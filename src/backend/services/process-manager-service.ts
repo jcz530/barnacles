@@ -21,6 +21,9 @@ const MAX_OUTPUT_CHUNKS = 1000;
 const DEFAULT_COLS = 80;
 const DEFAULT_ROWS = 24;
 
+/** Grace period between SIGTERM and SIGKILL when stopping a process tree. */
+const KILL_ESCALATION_MS = 3000;
+
 /** Largest single input frame accepted from a client, in bytes. */
 const MAX_INPUT_BYTES = 8 * 1024;
 
@@ -137,6 +140,58 @@ export class ProcessManagerService {
       cwd,
       env: envVars,
     });
+  }
+
+  /**
+   * Stop a process and everything it started.
+   *
+   * IPty.kill() signals only the shell it spawned, so a `npm run dev` leaves
+   * its vite/esbuild/tsc children running and still holding their ports.
+   * node-pty creates each process via forkpty(3), which calls setsid(), so the
+   * shell is already a process-group leader and the whole tree can be signalled
+   * with a negative pid.
+   */
+  private killProcessTree(runningProcess: RunningProcess): void {
+    const pid = runningProcess.process.pid;
+
+    // Windows has no process groups; ConPTY tears the tree down with the pty.
+    if (isWindows) {
+      runningProcess.process.kill();
+      return;
+    }
+
+    // Guard the negation: kill(-0) signals OUR OWN group, and kill(-1) signals
+    // every process this user owns. Neither is ever what we want here.
+    if (!(pid > 1)) {
+      console.error(`Refusing to signal process group for implausible pid ${pid}`);
+      return;
+    }
+
+    try {
+      // SIGTERM rather than node-pty's default SIGHUP: dev servers install
+      // SIGTERM handlers to release ports and clean up temp dirs.
+      process.kill(-pid, 'SIGTERM');
+
+      // Escalate for anything that ignored the polite request. unref() so a
+      // pending timer can never hold the app open at quit.
+      const escalation = setTimeout(() => {
+        try {
+          process.kill(-pid, 0); // throws ESRCH once the group is gone
+          process.kill(-pid, 'SIGKILL');
+        } catch {
+          // Already exited, which is the good case.
+        }
+      }, KILL_ESCALATION_MS);
+      escalation.unref?.();
+    } catch {
+      // ESRCH means it is already gone; anything else, fall back to signalling
+      // just the pty so behavior is never worse than before.
+      try {
+        runningProcess.process.kill();
+      } catch {
+        // Nothing left to do.
+      }
+    }
   }
 
   /**
@@ -356,7 +411,7 @@ export class ProcessManagerService {
     // Kill all processes
     for (const [processId, runningProcess] of projectProcesses.entries()) {
       try {
-        runningProcess.process.kill();
+        this.killProcessTree(runningProcess);
         runningProcess.status = 'stopped';
       } catch (error) {
         console.error(`Failed to kill process ${processId}:`, error);
@@ -380,7 +435,7 @@ export class ProcessManagerService {
     const runningProcess = projectProcesses.get(processId)!;
 
     try {
-      runningProcess.process.kill();
+      this.killProcessTree(runningProcess);
       runningProcess.status = 'stopped';
     } catch (error) {
       console.error(`Failed to kill process ${processId}:`, error);
@@ -648,7 +703,7 @@ export class ProcessManagerService {
     const projectProcesses = this.runningProcesses.get(projectId)!;
 
     try {
-      runningProcess.process.kill();
+      this.killProcessTree(runningProcess);
       runningProcess.status = 'stopped';
     } catch (error) {
       console.error(`Failed to kill process ${processId}:`, error);

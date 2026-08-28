@@ -23,7 +23,7 @@ function createFakePty(): FakePty {
   let exitCb: ((e: { exitCode: number }) => void) | undefined;
 
   return {
-    pid: 4242,
+    pid: 1234,
     onData: cb => {
       dataCb = cb;
     },
@@ -436,6 +436,77 @@ describe('ProcessManagerService', () => {
       await startOne(service);
 
       expect(spawned).toHaveLength(1);
+    });
+  });
+
+  describe('killProcessTree', () => {
+    it('signals the whole process group, not just the shell', async () => {
+      // The bug this fixes: IPty.kill() reaches only the shell, so a dev
+      // server's vite/esbuild children survive and keep holding their ports.
+      const { processId, pty } = await startOne(service);
+      const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+      await service.stopProcess('project-1', processId);
+
+      expect(kill).toHaveBeenCalledWith(-pty.pid, 'SIGTERM');
+    });
+
+    it('escalates to SIGKILL for a group that ignored SIGTERM', async () => {
+      vi.useFakeTimers();
+      const { processId, pty } = await startOne(service);
+      const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+      await service.stopProcess('project-1', processId);
+      kill.mockClear();
+      vi.advanceTimersByTime(3000);
+
+      expect(kill).toHaveBeenCalledWith(-pty.pid, 0);
+      expect(kill).toHaveBeenCalledWith(-pty.pid, 'SIGKILL');
+      vi.useRealTimers();
+    });
+
+    it('does not escalate once the group is gone', async () => {
+      vi.useFakeTimers();
+      const { processId } = await startOne(service);
+      const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+      await service.stopProcess('project-1', processId);
+      kill.mockClear();
+      // The liveness probe throwing is how we learn the group already exited.
+      kill.mockImplementation(() => {
+        throw Object.assign(new Error('no such process'), { code: 'ESRCH' });
+      });
+      vi.advanceTimersByTime(3000);
+
+      expect(kill).toHaveBeenCalledTimes(1);
+      expect(kill).toHaveBeenCalledWith(-1234, 0);
+      vi.useRealTimers();
+    });
+
+    it.each([
+      ['pid 0, which would signal our own process group', 0],
+      ['pid 1, which would signal every process this user owns', 1],
+      ['a negative pid', -5],
+    ])('refuses to signal a group for %s', async (_label, pid) => {
+      const { processId, pty } = await startOne(service);
+      pty.pid = pid;
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+      await service.stopProcess('project-1', processId);
+
+      expect(kill).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the pty when the group signal fails', async () => {
+      const { processId, pty } = await startOne(service);
+      vi.spyOn(process, 'kill').mockImplementation(() => {
+        throw new Error('EPERM');
+      });
+
+      await service.stopProcess('project-1', processId);
+
+      expect(pty.kill).toHaveBeenCalled();
     });
   });
 
