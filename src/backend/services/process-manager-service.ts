@@ -6,7 +6,13 @@ import type { ProcessStatus, ProjectProcessStatus, StartProcess } from '../../sh
 import { isWindows, getDefaultShell } from '../../shared/utils/platform';
 import { isDemoMode } from '../../shared/config/runtime-mode';
 
-interface RunningProcess {
+/**
+ * How many PTY output chunks to retain per process. The unit is chunks, not
+ * lines: one chunk may carry many lines or part of one.
+ */
+const MAX_OUTPUT_CHUNKS = 1000;
+
+export interface RunningProcess {
   name: string;
   bashId: string;
   process: IPty;
@@ -22,7 +28,7 @@ interface RunningProcess {
   createdAt: Date; // Creation timestamp
 }
 
-class ProcessManagerService {
+export class ProcessManagerService {
   // Map of projectId -> Map of processId -> RunningProcess
   private runningProcesses: Map<string, Map<string, RunningProcess>> = new Map();
 
@@ -88,6 +94,43 @@ class ProcessManagerService {
       rows: 30,
       cwd,
       env: envVars,
+    });
+  }
+
+  /**
+   * Wire output buffering, URL detection, and exit handling onto a freshly
+   * spawned process. Shared by both spawn paths so the ring buffer and exit
+   * bookkeeping can only ever be defined once.
+   */
+  private attachProcessHandlers(runningProcess: RunningProcess): void {
+    const ptyProcess = runningProcess.process;
+
+    // Capture all output (stdout and stderr combined in PTY)
+    ptyProcess.onData((data: string) => {
+      runningProcess.output.push(data);
+
+      // Keep only the last 1000 chunks to prevent unbounded memory growth.
+      // Note: the unit is PTY chunks, not lines -- a chunk may hold many lines
+      // or a partial one.
+      if (runningProcess.output.length > MAX_OUTPUT_CHUNKS) {
+        runningProcess.output = runningProcess.output.slice(-MAX_OUTPUT_CHUNKS);
+      }
+
+      // A configured URL is the user's explicit choice, so only fall back to
+      // sniffing one out of the output when they haven't set one.
+      if (!runningProcess.detectedUrl && !runningProcess.configuredUrl) {
+        const detectedUrl = this.detectUrl(data);
+        if (detectedUrl) {
+          runningProcess.detectedUrl = detectedUrl;
+          console.log(`Detected URL for process ${runningProcess.name}: ${detectedUrl}`);
+        }
+      }
+    });
+
+    // Handle process exit
+    ptyProcess.onExit(({ exitCode }) => {
+      runningProcess.status = exitCode === 0 ? 'stopped' : 'failed';
+      runningProcess.exitCode = exitCode;
     });
   }
 
@@ -200,30 +243,7 @@ class ProcessManagerService {
           createdAt: new Date(),
         };
 
-        // Capture all output (stdout and stderr combined in PTY)
-        ptyProcess.onData((data: string) => {
-          runningProcess.output.push(data);
-
-          // Keep only last 1000 lines to prevent memory issues
-          if (runningProcess.output.length > 1000) {
-            runningProcess.output = runningProcess.output.slice(-1000);
-          }
-
-          // Try to detect URL if not already detected and no configured URL
-          if (!runningProcess.detectedUrl && !runningProcess.configuredUrl) {
-            const detectedUrl = this.detectUrl(data);
-            if (detectedUrl) {
-              runningProcess.detectedUrl = detectedUrl;
-              console.log(`Detected URL for process ${processConfig.name}: ${detectedUrl}`);
-            }
-          }
-        });
-
-        // Handle process exit
-        ptyProcess.onExit(({ exitCode }) => {
-          runningProcess.status = exitCode === 0 ? 'stopped' : 'failed';
-          runningProcess.exitCode = exitCode;
-        });
+        this.attachProcessHandlers(runningProcess);
 
         projectProcesses.set(processConfig.id, runningProcess);
 
@@ -455,30 +475,7 @@ class ProcessManagerService {
       createdAt: new Date(),
     };
 
-    // Capture all output (stdout and stderr combined in PTY)
-    ptyProcess.onData((data: string) => {
-      runningProcess.output.push(data);
-
-      // Keep only last 1000 lines
-      if (runningProcess.output.length > 1000) {
-        runningProcess.output = runningProcess.output.slice(-1000);
-      }
-
-      // Try to detect URL
-      if (!runningProcess.detectedUrl) {
-        const detectedUrl = this.detectUrl(data);
-        if (detectedUrl) {
-          runningProcess.detectedUrl = detectedUrl;
-          console.log(`Detected URL for process ${title}: ${detectedUrl}`);
-        }
-      }
-    });
-
-    // Handle process exit
-    ptyProcess.onExit(({ exitCode }) => {
-      runningProcess.status = exitCode === 0 ? 'stopped' : 'failed';
-      runningProcess.exitCode = exitCode;
-    });
+    this.attachProcessHandlers(runningProcess);
 
     projectProcesses.set(processId, runningProcess);
 
@@ -525,71 +522,84 @@ class ProcessManagerService {
   }
 
   /**
-   * Get a single process by ID across all projects
+   * Locate a running process by ID across every project.
+   *
+   * Process IDs are only unique per project by construction (ad-hoc processes
+   * live under a synthetic 'global' project), so a by-ID lookup has to scan.
+   * The map holds a handful of projects, so one shared scan beats keeping a
+   * second flat index in sync across every mutation site.
    */
-  getProcess(processId: string): ProcessStatus | null {
+  private findRunning(processId: string): { projectId: string; process: RunningProcess } | null {
     for (const [projectId, projectProcesses] of this.runningProcesses.entries()) {
-      if (projectProcesses.has(processId)) {
-        const runningProcess = projectProcesses.get(processId)!;
-        return {
-          processId,
-          projectId,
-          name: runningProcess.name,
-          title: runningProcess.title,
-          cwd: runningProcess.cwd,
-          command: runningProcess.command,
-          status: runningProcess.status,
-          bashId: runningProcess.bashId,
-          exitCode: runningProcess.exitCode,
-          error: runningProcess.error,
-          url: runningProcess.configuredUrl || runningProcess.detectedUrl,
-          detectedUrl: runningProcess.detectedUrl,
-          createdAt: runningProcess.createdAt.toISOString(),
-        };
+      const process = projectProcesses.get(processId);
+      if (process) {
+        return { projectId, process };
       }
     }
     return null;
+  }
+
+  /**
+   * Get a single process by ID across all projects
+   */
+  getProcess(processId: string): ProcessStatus | null {
+    const found = this.findRunning(processId);
+    if (!found) {
+      return null;
+    }
+
+    const { projectId, process: runningProcess } = found;
+    return {
+      processId,
+      projectId,
+      name: runningProcess.name,
+      title: runningProcess.title,
+      cwd: runningProcess.cwd,
+      command: runningProcess.command,
+      status: runningProcess.status,
+      bashId: runningProcess.bashId,
+      exitCode: runningProcess.exitCode,
+      error: runningProcess.error,
+      url: runningProcess.configuredUrl || runningProcess.detectedUrl,
+      detectedUrl: runningProcess.detectedUrl,
+      createdAt: runningProcess.createdAt.toISOString(),
+    };
   }
 
   /**
    * Kill a specific process by ID (search across all projects)
    */
   async killProcess(processId: string): Promise<boolean> {
-    for (const [projectId, projectProcesses] of this.runningProcesses.entries()) {
-      if (projectProcesses.has(processId)) {
-        const runningProcess = projectProcesses.get(processId)!;
-
-        try {
-          runningProcess.process.kill();
-          runningProcess.status = 'stopped';
-        } catch (error) {
-          console.error(`Failed to kill process ${processId}:`, error);
-        }
-
-        projectProcesses.delete(processId);
-
-        // Clean up project map if empty
-        if (projectProcesses.size === 0) {
-          this.runningProcesses.delete(projectId);
-        }
-
-        return true;
-      }
+    const found = this.findRunning(processId);
+    if (!found) {
+      return false;
     }
-    return false;
+
+    const { projectId, process: runningProcess } = found;
+    const projectProcesses = this.runningProcesses.get(projectId)!;
+
+    try {
+      runningProcess.process.kill();
+      runningProcess.status = 'stopped';
+    } catch (error) {
+      console.error(`Failed to kill process ${processId}:`, error);
+    }
+
+    projectProcesses.delete(processId);
+
+    // Clean up project map if empty
+    if (projectProcesses.size === 0) {
+      this.runningProcesses.delete(projectId);
+    }
+
+    return true;
   }
 
   /**
    * Get output from a process by ID (search across all projects)
    */
   getProcessOutputById(processId: string): string[] | null {
-    for (const [, projectProcesses] of this.runningProcesses.entries()) {
-      if (projectProcesses.has(processId)) {
-        const runningProcess = projectProcesses.get(processId)!;
-        return runningProcess.output;
-      }
-    }
-    return null;
+    return this.findRunning(processId)?.process.output ?? null;
   }
 
   /**
