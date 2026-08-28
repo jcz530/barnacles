@@ -6,13 +6,12 @@ import UtilitiesGrid from '@/components/utilities/organisms/UtilitiesGrid.vue';
 import type { UtilityMetadata } from '@/utilities/types';
 
 const { setBreadcrumbs } = useBreadcrumbs();
+setBreadcrumbs([{ label: 'Utilities' }]);
 
 const utilities = ref<UtilityMetadata[]>([]);
 const isLoading = ref(true);
 
 onMounted(async () => {
-  setBreadcrumbs([{ label: 'Utilities' }]);
-
   // Discover and load all utilities
   try {
     await discoverUtilities();

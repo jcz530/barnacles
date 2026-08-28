@@ -9,6 +9,7 @@ import { useQueries } from '../composables/useQueries';
 import { useProcessManagement } from '../composables/useProcessManagement';
 
 const { setBreadcrumbs } = useBreadcrumbs();
+setBreadcrumbs([{ label: 'Processes' }]);
 const {
   useProcessesQuery,
   useKillProcessMutation,
@@ -46,8 +47,6 @@ const {
 });
 
 onMounted(() => {
-  setBreadcrumbs([{ label: 'Processes' }]);
-
   // Auto-select the first process if available
   if (activeProcesses.value.length > 0 && !selectedProcess.value) {
     selectedProcess.value = activeProcesses.value[0].processId;

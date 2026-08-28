@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useTheme } from '@/composables/useTheme';
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { Palette, Plus } from 'lucide-vue-next';
@@ -22,6 +22,7 @@ import { RouterLink } from 'vue-router';
 import { RouteNames } from '@/router';
 
 const { setBreadcrumbs } = useBreadcrumbs();
+setBreadcrumbs([{ label: 'Settings', href: '/settings' }, { label: 'Themes' }]);
 const { themes, activeTheme, deleteTheme, isLoading } = useTheme();
 
 const defaultThemes = computed(() => themes.value.filter(t => t.isDefault));
@@ -33,10 +34,6 @@ const themeToDeleteName = computed(() => {
   if (!themeToDelete.value) return '';
   const theme = themes.value.find(t => t.id === themeToDelete.value);
   return theme?.name || '';
-});
-
-onMounted(() => {
-  setBreadcrumbs([{ label: 'Settings', href: '/settings' }, { label: 'Themes' }]);
 });
 
 function handleDeleteTheme(themeId: string) {

@@ -9,7 +9,11 @@ import { Button } from '@/components/ui/button';
 import type { FileNode } from '@/types/window';
 import { ListChevronsDownUp } from 'lucide-vue-next';
 import { useFileTree } from '@/composables/useFileTree';
+import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { CONFIG_FILE_PATHS } from '../../shared/constants/config-files';
+
+const { setBreadcrumbs } = useBreadcrumbs();
+setBreadcrumbs([{ label: 'Config Files' }]);
 
 const isLoading = ref(false);
 const error = ref<string | null>(null);

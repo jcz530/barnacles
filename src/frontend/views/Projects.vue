@@ -30,7 +30,7 @@ import { useProjectActions } from '@/composables/useProjectActions';
 
 const router = useRouter();
 const { setBreadcrumbs } = useBreadcrumbs();
-setBreadcrumbs([{ label: 'Projects', href: '/projects' }]);
+setBreadcrumbs([{ label: 'Projects' }]);
 const {
   useProjectsQuery,
   useTechnologiesQuery,

@@ -3,7 +3,7 @@ import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
 import { useQueries } from '@/composables/useQueries';
 import type { SortingState } from '@tanstack/vue-table';
 import { AlertCircle, Plus, RefreshCw, Save, Search, Trash2 } from 'lucide-vue-next';
-import { computed, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import Card from '../components/ui/card/Card.vue';
 import CardHeader from '../components/ui/card/CardHeader.vue';
 import CardTitle from '../components/ui/card/CardTitle.vue';
@@ -21,11 +21,8 @@ interface HostEntry {
 }
 
 const { setBreadcrumbs } = useBreadcrumbs();
+setBreadcrumbs([{ label: 'Hosts' }]);
 const { useHostsQuery, useHostsPathQuery, useUpdateHostsMutation } = useQueries();
-
-onMounted(() => {
-  setBreadcrumbs([{ label: 'Hosts' }]);
-});
 
 // Query for fetching hosts
 const { data: hostsData, isLoading, refetch } = useHostsQuery({ enabled: true });
