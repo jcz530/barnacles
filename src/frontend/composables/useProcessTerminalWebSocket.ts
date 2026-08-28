@@ -1,6 +1,9 @@
 import { computed, type Ref } from 'vue';
 import { useWebSocket } from '@vueuse/core';
 import { API_ROUTES } from '../../shared/constants';
+
+/** Server close code for a refused attach (unknown process, bad token). */
+const CLOSE_REFUSED = 1008;
 import { useApiPort } from './useApiPort';
 
 /** Messages the server sends a terminal. */
@@ -23,6 +26,8 @@ type ProcessSocketMessage =
 interface Handlers {
   /** Scrollback replayed on attach; `reset` means clear before writing. */
   onReplay: (data: string, reset: boolean) => void;
+  /** The server refused this attach; retrying will not help. */
+  onRefused?: (reason: string) => void;
   onAttached: (message: Extract<ProcessSocketMessage, { type: 'attached' }>) => void;
   onOutput: (data: string) => void;
   onExit: (exitCode: number) => void;
@@ -43,6 +48,9 @@ export function useProcessTerminalWebSocket(processId: Ref<string | null>, handl
   /** Highest seq seen, so a gap in the stream is detectable. */
   let lastSeq = 0;
 
+  /** Set when the server refuses the attach; stops the reconnect loop. */
+  let refused = false;
+
   const wsUrl = computed(() => {
     if (!isLoaded.value || !wsToken.value || !processId.value) {
       return undefined;
@@ -52,9 +60,23 @@ export function useProcessTerminalWebSocket(processId: Ref<string | null>, handl
   });
 
   const { status, send, close, open } = useWebSocket(wsUrl, {
-    // A terminal is long-lived, and replay-on-attach makes reconnecting
-    // lossless, so unlike the other sockets in this app it is worth retrying.
-    autoReconnect: { retries: 5, delay: 1000 },
+    // A terminal is long-lived, so unlike the other sockets in this app it is
+    // worth retrying. Reattaching repaints from the server's buffer rather
+    // than resuming a stream, so anything that scrolled out of that buffer
+    // while disconnected is gone -- correct, but not a true resume.
+    // 1008 is the server refusing us outright -- an unknown process (a demo
+    // fixture has no PTY) or a bad token. Retrying cannot change either
+    // answer, so refusals stop the loop instead of becoming an error storm.
+    autoReconnect: {
+      retries: () => !refused,
+      delay: 1000,
+    },
+    onDisconnected: (_ws, event) => {
+      if (event.code === CLOSE_REFUSED) {
+        refused = true;
+        handlers.onRefused?.(event.reason || 'Process is not available');
+      }
+    },
     onMessage: (_ws, event) => {
       let message: ProcessSocketMessage;
       try {

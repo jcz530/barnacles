@@ -24,8 +24,18 @@ const DEFAULT_ROWS = 24;
 /** Grace period between SIGTERM and SIGKILL when stopping a process tree. */
 const KILL_ESCALATION_MS = 3000;
 
-/** Largest single input frame accepted from a client, in bytes. */
-const MAX_INPUT_BYTES = 8 * 1024;
+/**
+ * Shorter grace period during app shutdown. The quit path waits for this
+ * inline, so it is bounded well under the caller's own shutdown timeout.
+ */
+const SHUTDOWN_ESCALATION_MS = 1500;
+
+/**
+ * Largest single input frame accepted from a client, in UTF-16 code units.
+ * Not bytes: multi-byte characters count as one or two units here, so the
+ * actual byte cost of a full frame can be several times this.
+ */
+const MAX_INPUT_LENGTH = 8 * 1024;
 
 /**
  * Bounds for a PTY resize. node-pty can abort the process on absurd geometry,
@@ -150,21 +160,24 @@ export class ProcessManagerService {
    * node-pty creates each process via forkpty(3), which calls setsid(), so the
    * shell is already a process-group leader and the whole tree can be signalled
    * with a negative pid.
+   *
+   * Returns false when nothing could be signalled, so callers do not untrack a
+   * process that is still running.
    */
-  private killProcessTree(runningProcess: RunningProcess): void {
+  private killProcessTree(runningProcess: RunningProcess): boolean {
     const pid = runningProcess.process.pid;
 
     // Windows has no process groups; ConPTY tears the tree down with the pty.
     if (isWindows) {
       runningProcess.process.kill();
-      return;
+      return true;
     }
 
     // Guard the negation: kill(-0) signals OUR OWN group, and kill(-1) signals
     // every process this user owns. Neither is ever what we want here.
     if (!(pid > 1)) {
       console.error(`Refusing to signal process group for implausible pid ${pid}`);
-      return;
+      return false;
     }
 
     try {
@@ -183,13 +196,15 @@ export class ProcessManagerService {
         }
       }, KILL_ESCALATION_MS);
       escalation.unref?.();
+      return true;
     } catch {
       // ESRCH means it is already gone; anything else, fall back to signalling
       // just the pty so behavior is never worse than before.
       try {
         runningProcess.process.kill();
+        return true;
       } catch {
-        // Nothing left to do.
+        return false;
       }
     }
   }
@@ -409,13 +424,25 @@ export class ProcessManagerService {
     }
 
     // Kill all processes
+    // Anything we could not signal stays tracked: dropping it would hide a
+    // live process from the UI and from cleanup on quit.
+    const survivors = new Map<string, RunningProcess>();
     for (const [processId, runningProcess] of projectProcesses.entries()) {
       try {
-        this.killProcessTree(runningProcess);
-        runningProcess.status = 'stopped';
+        if (this.killProcessTree(runningProcess)) {
+          runningProcess.status = 'stopped';
+        } else {
+          survivors.set(processId, runningProcess);
+        }
       } catch (error) {
         console.error(`Failed to kill process ${processId}:`, error);
+        survivors.set(processId, runningProcess);
       }
+    }
+
+    if (survivors.size > 0) {
+      this.runningProcesses.set(projectId, survivors);
+      return;
     }
 
     // Clear the project's processes
@@ -434,13 +461,22 @@ export class ProcessManagerService {
 
     const runningProcess = projectProcesses.get(processId)!;
 
+    let killed = false;
     try {
-      this.killProcessTree(runningProcess);
-      runningProcess.status = 'stopped';
+      killed = this.killProcessTree(runningProcess);
     } catch (error) {
       console.error(`Failed to kill process ${processId}:`, error);
     }
 
+    // Keep tracking anything we could not signal; forgetting it here would
+    // hide a still-running process from the UI and from cleanup on quit.
+    // Keep tracking anything we could not signal; forgetting it here would
+    // hide a still-running process from the UI and from cleanup on quit.
+    if (!killed) {
+      return;
+    }
+
+    runningProcess.status = 'stopped';
     projectProcesses.delete(processId);
 
     // Clean up project map if empty
@@ -702,13 +738,19 @@ export class ProcessManagerService {
     const { projectId, process: runningProcess } = found;
     const projectProcesses = this.runningProcesses.get(projectId)!;
 
+    let killed = false;
     try {
-      this.killProcessTree(runningProcess);
-      runningProcess.status = 'stopped';
+      killed = this.killProcessTree(runningProcess);
     } catch (error) {
       console.error(`Failed to kill process ${processId}:`, error);
     }
 
+    // Report failure rather than untracking a process that is still running.
+    if (!killed) {
+      return false;
+    }
+
+    runningProcess.status = 'stopped';
     projectProcesses.delete(processId);
 
     // Clean up project map if empty
@@ -771,8 +813,14 @@ export class ProcessManagerService {
     }
 
     // A paste can be arbitrarily large; cap it so one frame cannot wedge the
-    // PTY or balloon memory.
-    const payload = data.length > MAX_INPUT_BYTES ? data.slice(0, MAX_INPUT_BYTES) : data;
+    // PTY or balloon memory. Trim one unit further when the cut would land
+    // between a surrogate pair, which would otherwise write half a character.
+    let payload = data;
+    if (data.length > MAX_INPUT_LENGTH) {
+      const lastCode = data.charCodeAt(MAX_INPUT_LENGTH - 1);
+      const splitsSurrogatePair = lastCode >= 0xd800 && lastCode <= 0xdbff;
+      payload = data.slice(0, splitsSurrogatePair ? MAX_INPUT_LENGTH - 1 : MAX_INPUT_LENGTH);
+    }
 
     try {
       found.process.process.write(payload);
@@ -839,8 +887,37 @@ export class ProcessManagerService {
    * Clean up all processes (call on app shutdown)
    */
   async cleanup(): Promise<void> {
-    for (const projectId of this.runningProcesses.keys()) {
+    // Collect the groups we signal so shutdown can finish the job itself. The
+    // SIGKILL escalation killProcessTree schedules is unref'd, so it never
+    // fires once the app exits -- during shutdown the escalation has to happen
+    // inline or a process that ignores SIGTERM survives the quit.
+    const signalled: number[] = [];
+    for (const projectProcesses of this.runningProcesses.values()) {
+      for (const runningProcess of projectProcesses.values()) {
+        const pid = runningProcess.process.pid;
+        if (pid > 1) {
+          signalled.push(pid);
+        }
+      }
+    }
+
+    for (const projectId of [...this.runningProcesses.keys()]) {
       await this.stopProjectProcesses(projectId);
+    }
+
+    if (isWindows || signalled.length === 0) {
+      return;
+    }
+
+    await new Promise<void>(resolve => setTimeout(resolve, SHUTDOWN_ESCALATION_MS));
+
+    for (const pid of signalled) {
+      try {
+        process.kill(-pid, 0); // throws ESRCH once the group is gone
+        process.kill(-pid, 'SIGKILL');
+      } catch {
+        // Already exited, which is the good case.
+      }
     }
   }
 }

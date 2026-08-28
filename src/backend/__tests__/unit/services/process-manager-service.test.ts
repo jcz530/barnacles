@@ -359,6 +359,23 @@ describe('ProcessManagerService', () => {
     });
   });
 
+  describe('input truncation', () => {
+    it('does not split a surrogate pair at the cap', async () => {
+      // Slicing mid-pair would write half a character to the PTY.
+      const { processId, pty } = await startOne(service);
+      const cap = 8 * 1024;
+      // Land an emoji (two code units) exactly astride the boundary.
+      const data = 'a'.repeat(cap - 1) + '😀' + 'b'.repeat(10);
+
+      service.writeToProcess(processId, data);
+
+      const written = pty.write.mock.calls[0][0] as string;
+      expect(written).toHaveLength(cap - 1);
+      const lastCode = written.charCodeAt(written.length - 1);
+      expect(lastCode >= 0xd800 && lastCode <= 0xdbff).toBe(false);
+    });
+  });
+
   describe('resizeProcess', () => {
     it('resizes the pty and records the new geometry', async () => {
       const { processId, pty } = await startOne(service);
@@ -511,13 +528,39 @@ describe('ProcessManagerService', () => {
   });
 
   describe('stop', () => {
-    it('kills the pty and forgets the process', async () => {
+    it('signals the process group and forgets the process', async () => {
       const { processId, pty } = await startOne(service);
+      // Must be mocked: without it the real kill(-1234) decides the outcome,
+      // which depends on whether that group happens to exist on this machine.
+      const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
 
       await service.stopProcess('project-1', processId);
 
-      expect(pty.kill).toHaveBeenCalled();
+      expect(kill).toHaveBeenCalledWith(-pty.pid, 'SIGTERM');
+      expect(pty.kill).not.toHaveBeenCalled();
       expect(service.getProcess(processId)).toBeNull();
+    });
+
+    it('keeps tracking a process it could not signal', async () => {
+      // Untracking here would hide a live process from the UI and from
+      // cleanup on quit, leaving it unkillable from inside the app.
+      const { processId, pty } = await startOne(service);
+      pty.pid = 0;
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await service.stopProcess('project-1', processId);
+
+      expect(service.getProcess(processId)).not.toBeNull();
+      expect(service.getProcess(processId)?.status).toBe('running');
+    });
+
+    it('reports failure from killProcess when it could not signal', async () => {
+      const { processId, pty } = await startOne(service);
+      pty.pid = 0;
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      expect(await service.killProcess(processId)).toBe(false);
+      expect(service.getProcess(processId)).not.toBeNull();
     });
 
     it('cleanup stops processes across every project', async () => {
@@ -530,11 +573,29 @@ describe('ProcessManagerService', () => {
       ]);
       const ptyB = lastPty();
 
+      const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
       await service.cleanup();
 
-      expect(ptyA.kill).toHaveBeenCalled();
-      expect(ptyB.kill).toHaveBeenCalled();
+      expect(kill).toHaveBeenCalledWith(-ptyA.pid, 'SIGTERM');
+      expect(kill).toHaveBeenCalledWith(-ptyB.pid, 'SIGTERM');
       expect(service.getAllProcesses()).toEqual([]);
+    });
+
+    it('force-kills survivors before shutdown returns', async () => {
+      // The normal escalation timer is unref'd and never fires once the app
+      // exits, so cleanup has to escalate inline or a process ignoring
+      // SIGTERM outlives the quit.
+      vi.useFakeTimers();
+      const { pty } = await startOne(service);
+      const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+      const done = service.cleanup();
+      await vi.advanceTimersByTimeAsync(1500);
+      await done;
+
+      expect(kill).toHaveBeenCalledWith(-pty.pid, 'SIGKILL');
+      vi.useRealTimers();
     });
   });
 });

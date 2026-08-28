@@ -244,7 +244,10 @@ app.on('before-quit', () => {
   isQuitting = true;
 });
 
-/** Guards against re-entering the quit handler after cleanup re-issues quit. */
+/** Set as soon as shutdown cleanup begins, not when it finishes. */
+let processCleanupStarted = false;
+
+/** Set once cleanup has finished, so the re-issued quit is allowed through. */
 let processCleanupDone = false;
 
 /**
@@ -261,8 +264,16 @@ app.on('will-quit', event => {
   }
 
   // cleanup() is async but this handler is not, so the quit has to be deferred
-  // and re-issued. The guard above is what keeps that from looping forever.
+  // and re-issued once it settles.
   event.preventDefault();
+
+  // A second quit while cleanup is still running (a user pressing Cmd-Q again
+  // because the app looks busy) must not start a concurrent pass: two of them
+  // would mutate the same maps and signal every process group twice.
+  if (processCleanupStarted) {
+    return;
+  }
+  processCleanupStarted = true;
 
   const timeout = new Promise<void>(resolve => setTimeout(resolve, SHUTDOWN_CLEANUP_TIMEOUT_MS));
 
