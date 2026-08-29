@@ -1,24 +1,46 @@
 <script setup lang="ts">
 import type { ComputedRef } from 'vue';
-import { computed, inject, onMounted, ref, watch } from 'vue';
+import { computed, inject, onBeforeUnmount, onMounted, ref, toRaw, watch } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import * as shiki from 'shiki';
 import { Skeleton } from '../../ui/skeleton';
 import { Button } from '../../ui/button';
-import { Code, Copy, FileText, Image } from 'lucide-vue-next';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../ui/alert-dialog';
+import { Code, Copy, FileText, Image, Pencil, ShieldAlert, WrapText, X } from 'lucide-vue-next';
 import { formatFileSize, getFileTypeInfo } from '@/utils/file-types';
 import { RUNTIME_CONFIG } from '../../../../shared/constants';
-import { useDark } from '@vueuse/core';
+import { useDark, useLocalStorage } from '@vueuse/core';
+import FileEditor from './FileEditor.vue';
+import { resolveShikiLanguage, SHIKI_LANGUAGES } from '@/utils/file-language';
+import { toastDanger, toastSuccess } from '../../ui/sonner';
+import type { FileEncoding } from '@/types/window';
 
 interface Props {
   filePath?: string | null;
   projectPath: string;
+  /** Whether this surface offers in-app editing. */
+  editable?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   filePath: null,
+  editable: true,
 });
+
+const emit = defineEmits<{
+  /** Mirrors unsaved-changes state so parents can guard navigation away. */
+  'update:dirty': [dirty: boolean];
+}>();
 const projectId = inject<ComputedRef<string> | undefined>('projectId', undefined);
 
 const isLoading = ref(false);
@@ -29,30 +51,6 @@ const error = ref<string | null>(null);
 const highlighter = ref<shiki.Highlighter | null>(null);
 const viewAsText = ref(false); // Toggle for SVG view mode
 const copySuccess = ref(false); // Track copy success for visual feedback
-
-// Mapping for config files without extensions or with special names
-const CONFIG_FILE_LANGUAGES: Record<string, string> = {
-  '.npmrc': 'ini',
-  '.bashrc': 'bash',
-  '.bash_profile': 'bash',
-  '.profile': 'bash',
-  '.zshrc': 'bash',
-  '.zsh_profile': 'bash',
-  '.gitconfig': 'ini',
-  '.editorconfig': 'ini',
-  '.env': 'properties',
-  '.prettierrc': 'json',
-  '.eslintrc': 'json',
-  Dockerfile: 'dockerfile',
-  Makefile: 'makefile',
-  Rakefile: 'ruby',
-  Gemfile: 'ruby',
-  Podfile: 'ruby',
-  '.dockerignore': 'plaintext',
-  '.gitignore': 'plaintext',
-  '.nvmrc': 'plaintext',
-  'tsconfig.json': 'jsonc',
-};
 
 // Get file extension and type info
 const extension = computed(() => {
@@ -68,16 +66,9 @@ const fileName = computed(() => {
   return parts[parts.length - 1];
 });
 
-// Determine the language for syntax highlighting
-const detectedLanguage = computed(() => {
-  // First check if it's a known config file
-  if (fileName.value && CONFIG_FILE_LANGUAGES[fileName.value]) {
-    return CONFIG_FILE_LANGUAGES[fileName.value];
-  }
-
-  // Otherwise use the file type info
-  return getFileTypeInfo(extension.value).language;
-});
+// Determine the language for syntax highlighting. Shared with the editor so
+// view and edit modes never disagree about what a file is.
+const detectedLanguage = computed(() => resolveShikiLanguage(props.filePath));
 
 const fileTypeInfo = computed(() => getFileTypeInfo(extension.value));
 
@@ -98,35 +89,267 @@ onMounted(async () => {
   try {
     highlighter.value = await shiki.createHighlighter({
       themes: ['github-dark', 'github-light'],
-      langs: [
-        'javascript',
-        'typescript',
-        'python',
-        'html',
-        'css',
-        'json',
-        'jsonc',
-        'markdown',
-        'bash',
-        'yaml',
-        'rust',
-        'go',
-        'java',
-        'php',
-        'ruby',
-        'vue',
-        'xml',
-        'ini',
-        'properties',
-        'dockerfile',
-        'makefile',
-        'plaintext',
-      ],
+      langs: [...SHIKI_LANGUAGES],
     });
   } catch (err) {
     console.error('Failed to initialize syntax highlighter:', err);
   }
 });
+
+// --- Editing state -------------------------------------------------------
+// Editing goes through a separate IPC read (files:read-file-for-edit) because a
+// safe save needs the file's encoding details plus the mtime/size identity used
+// to detect a conflicting write.
+
+const isEditing = ref(false);
+const editedContent = ref('');
+const originalContent = ref('');
+const fileEncoding = ref<FileEncoding | null>(null);
+const expectedMtimeMs = ref<number | undefined>(undefined);
+const expectedSize = ref<number | undefined>(undefined);
+const isSaving = ref(false);
+// Soft wrap is on by default so long lines never need horizontal scrolling;
+// persisted so the choice survives switching files and restarting the app.
+const wrapLines = useLocalStorage('barnacles:editor-wrap-lines', true);
+const editBlockedReason = ref<string | null>(null);
+const showSensitiveWarning = ref(false);
+const showConflictDialog = ref(false);
+const showDiscardDialog = ref(false);
+const pendingSensitivePath = ref<string | null>(null);
+
+const isDirty = computed(() => isEditing.value && editedContent.value !== originalContent.value);
+
+watch(isDirty, dirty => emit('update:dirty', dirty));
+
+/** Resolves the path to read/write, matching loadFile's resolution. */
+const resolveFullPath = (): string | null => {
+  if (!props.filePath) return null;
+  if (props.filePath.startsWith('/') || props.filePath.startsWith('~')) return props.filePath;
+  return props.projectPath ? `${props.projectPath}/${props.filePath}` : props.filePath;
+};
+
+/** Editing is only offered for text we can round-trip safely. */
+const canEdit = computed(() => {
+  if (!props.editable || !props.filePath || isLoading.value || error.value) return false;
+  // Media and images are read-only; SVG is editable as text.
+  const category = fileTypeInfo.value.category;
+  if (category === 'video' || category === 'audio') return false;
+  if (category === 'image' && !isSvgFile.value) return false;
+  return true;
+});
+
+const NOT_EDITABLE_MESSAGES: Record<string, string> = {
+  binary: 'This file contains binary data and cannot be edited safely.',
+  'not-utf8': 'This file is not valid UTF-8 and cannot be edited without corrupting it.',
+  'too-large': 'This file is too large to edit.',
+  'ambiguous-line-endings':
+    'This file mixes carriage returns in a way that cannot be edited without ' +
+    'changing bytes you did not touch. Open it in an external editor instead.',
+};
+
+/** Reads the file for editing and enters edit mode, or explains why it cannot. */
+const isOpeningEditor = ref(false);
+
+const beginEditing = async (skipSensitiveCheck = false) => {
+  const fullPath = resolveFullPath();
+  // Re-entrancy guard: double-clicking Edit would otherwise issue two reads and
+  // let the slower one set the conflict baseline from a different snapshot.
+  if (!fullPath || isOpeningEditor.value) return;
+  isOpeningEditor.value = true;
+  try {
+    await openForEditing(fullPath, skipSensitiveCheck);
+  } finally {
+    isOpeningEditor.value = false;
+  }
+};
+
+const openForEditing = async (fullPath: string, skipSensitiveCheck: boolean) => {
+  editBlockedReason.value = null;
+
+  let result: Awaited<ReturnType<typeof window.electron.files.readFileForEdit>>;
+  try {
+    result = await window.electron.files.readFileForEdit(fullPath);
+  } catch (err) {
+    // Without this the rejection is unhandled and the button looks inert --
+    // the same invisible-failure mode as the structured-clone bug on save.
+    console.error('Failed to open file for editing:', err);
+    toastDanger('Could not open this file for editing', {
+      description: err instanceof Error ? err.message : 'Unexpected error',
+    });
+    return;
+  }
+
+  if (!result.success || !result.data) {
+    editBlockedReason.value = result.error || 'Could not open this file for editing';
+    return;
+  }
+
+  const data = result.data;
+
+  if (!data.editable) {
+    editBlockedReason.value =
+      NOT_EDITABLE_MESSAGES[data.reason || ''] || 'This file cannot be edited.';
+    return;
+  }
+
+  // Credential files get a warning before the editor opens.
+  if (data.isSensitive && !skipSensitiveCheck) {
+    pendingSensitivePath.value = data.realPath || fullPath;
+    showSensitiveWarning.value = true;
+    return;
+  }
+
+  originalContent.value = data.content || '';
+  editedContent.value = data.content || '';
+  fileEncoding.value = data.encoding || null;
+  expectedMtimeMs.value = data.mtimeMs;
+  expectedSize.value = data.size;
+  isEditing.value = true;
+};
+
+const confirmSensitiveEdit = async () => {
+  showSensitiveWarning.value = false;
+  pendingSensitivePath.value = null;
+  await beginEditing(true);
+};
+
+// Escape and overlay clicks close the dialog without firing Cancel's handler,
+// which would otherwise leave a stale credential path to show in the next one.
+watch(showSensitiveWarning, open => {
+  if (!open) pendingSensitivePath.value = null;
+});
+
+/** Writes the buffer back to disk. `force` skips the conflict check. */
+const saveFile = async (force = false) => {
+  const fullPath = resolveFullPath();
+  if (!fullPath || !fileEncoding.value || isSaving.value) return;
+
+  isSaving.value = true;
+  try {
+    const result = await window.electron.files.writeFile({
+      filePath: fullPath,
+      content: editedContent.value,
+      // toRaw + spread: ipcRenderer.invoke serializes with structured clone,
+      // which throws on Vue's reactive Proxy ("An object could not be cloned").
+      encoding: { ...toRaw(fileEncoding.value) },
+      expectedMtimeMs: expectedMtimeMs.value,
+      expectedSize: expectedSize.value,
+      force,
+    });
+
+    if (!result.success) {
+      if (result.reason === 'conflict') {
+        showConflictDialog.value = true;
+        return;
+      }
+      toastDanger('Could not save the file', {
+        description: result.error || 'Unknown error',
+      });
+      return;
+    }
+
+    // Re-baseline so the buffer is no longer dirty and the next save has a
+    // current identity to check against.
+    originalContent.value = editedContent.value;
+    expectedMtimeMs.value = result.data?.mtimeMs;
+    expectedSize.value = result.data?.size;
+    isEditing.value = false;
+
+    toastSuccess('Saved', { description: fileName.value });
+
+    // Refresh the read-only view so it reflects what is now on disk.
+    await loadFile(viewAsText.value);
+  } catch (err) {
+    console.error('Failed to save file:', err);
+    toastDanger('Could not save the file', {
+      description: err instanceof Error ? err.message : 'Unexpected error',
+    });
+  } finally {
+    isSaving.value = false;
+  }
+};
+
+/** Discards the buffer and returns to the read-only view. */
+const cancelEditing = () => {
+  isEditing.value = false;
+  editedContent.value = originalContent.value;
+  showDiscardDialog.value = false;
+};
+
+// Exposed so a parent guarding navigation can discard the buffer for real.
+// The parent must not clear its own dirty mirror: that value is only corrected
+// by the isDirty watcher, which does not fire if the buffer never changes --
+// leaving the guard permanently disarmed.
+defineExpose({
+  discardEdits: () => {
+    isEditing.value = false;
+    editedContent.value = originalContent.value;
+  },
+});
+
+const requestCancelEditing = () => {
+  if (isDirty.value) {
+    showDiscardDialog.value = true;
+    return;
+  }
+  cancelEditing();
+};
+
+/** Conflict resolution: take what is on disk and discard the buffer. */
+const reloadFromDisk = async () => {
+  showConflictDialog.value = false;
+  isEditing.value = false;
+  await beginEditing(true);
+};
+
+const overwriteOnDisk = async () => {
+  showConflictDialog.value = false;
+  await saveFile(true);
+};
+
+// Leaving the app with unsaved work should prompt.
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+  if (isDirty.value) {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+};
+
+// Cmd/Ctrl+S is also bound inside CodeMirror, but that keymap only sees events
+// routed through the editor's DOM -- clicking any header button moves focus out
+// and silently breaks the shortcut. This window-level handler covers that.
+const handleSaveShortcut = (event: KeyboardEvent) => {
+  if (!isEditing.value) return;
+  if (event.key !== 's' || !(event.metaKey || event.ctrlKey)) return;
+  event.preventDefault();
+  if (isDirty.value && !isSaving.value) void saveFile(false);
+};
+
+onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  window.addEventListener('keydown', handleSaveShortcut);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+  window.removeEventListener('keydown', handleSaveShortcut);
+});
+
+// Switching files drops any in-progress edit; the parent guards the confirm.
+watch(
+  () => props.filePath,
+  () => {
+    isEditing.value = false;
+    editedContent.value = '';
+    originalContent.value = '';
+    editBlockedReason.value = null;
+    // Reset the save identity too: leaving file A's encoding/mtime in place
+    // while file B is shown means any save that skips beginEditing would write
+    // B with A's line endings and check the conflict baseline against A.
+    fileEncoding.value = null;
+    expectedMtimeMs.value = undefined;
+    expectedSize.value = undefined;
+  }
+);
 
 // Function to load file with optional forceText parameter
 const loadFile = async (forceText = false) => {
@@ -491,12 +714,58 @@ const copyToClipboard = async () => {
     </div>
 
     <!-- File content -->
-    <div v-else-if="fileContent" class="flex h-full flex-col overflow-hidden">
+    <!-- `!== null` not truthiness: a 0-byte file is a valid, editable file, and
+         `''` would fall through to the no-header plain-text branch. -->
+    <div v-else-if="fileContent !== null" class="flex h-full flex-col overflow-hidden">
       <!-- File info header -->
-      <div class="border-b border-slate-200 bg-slate-50 px-6 py-3">
-        <div class="flex items-center justify-between">
-          <h3 class="font-medium text-slate-900">{{ filePath }}</h3>
-          <div class="flex items-center gap-3">
+      <!-- shrink-0 keeps the header (and the Save/Cancel buttons) pinned no
+           matter how wide the content below is. -->
+      <div class="shrink-0 border-b border-slate-200 bg-slate-50 px-6 py-3">
+        <div class="flex items-center justify-between gap-4">
+          <h3 class="flex min-w-0 items-center gap-2 font-medium text-slate-900">
+            <!-- A long path truncates rather than pushing the buttons away. -->
+            <span class="truncate" :title="filePath || undefined">{{ filePath }}</span>
+            <span v-if="isDirty" class="text-primary-600 shrink-0 text-xs font-normal">
+              • Unsaved
+            </span>
+          </h3>
+          <div class="flex shrink-0 items-center gap-3">
+            <!-- Edit / Save controls -->
+            <template v-if="isEditing">
+              <Button
+                variant="outline"
+                size="sm"
+                :title="wrapLines ? 'Disable line wrapping' : 'Enable line wrapping'"
+                :aria-pressed="wrapLines"
+                @click="wrapLines = !wrapLines"
+              >
+                <WrapText class="h-4 w-4" :class="wrapLines ? '' : 'text-slate-400'" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                :disabled="isSaving"
+                @click="requestCancelEditing"
+              >
+                <X class="h-4 w-4" />
+                Cancel
+              </Button>
+              <Button size="sm" :disabled="!isDirty || isSaving" @click="saveFile(false)">
+                {{ isSaving ? 'Saving...' : 'Save' }}
+              </Button>
+            </template>
+            <Button
+              v-else-if="canEdit"
+              variant="outline"
+              size="sm"
+              class="gap-2"
+              title="Edit this file"
+              @click="beginEditing(false)"
+            >
+              <Pencil class="h-4 w-4" />
+              Edit
+            </Button>
+
             <!-- SVG view toggle button -->
             <Button
               v-if="isSvgFile"
@@ -525,8 +794,37 @@ const copyToClipboard = async () => {
         </div>
       </div>
 
+      <!-- Why this file cannot be edited -->
+      <div
+        v-if="editBlockedReason"
+        class="shrink-0 border-b border-slate-200 bg-slate-50 px-6 py-2"
+      >
+        <p class="text-xs text-slate-600">{{ editBlockedReason }}</p>
+      </div>
+
+      <!-- Mixed line endings get normalized on save, so say so up front -->
+      <div
+        v-if="isEditing && fileEncoding?.mixedLineEndings"
+        class="shrink-0 border-b border-slate-200 bg-slate-50 px-6 py-2"
+      >
+        <p class="text-xs text-slate-600">
+          This file mixes CRLF and LF line endings. Saving normalizes them to
+          {{ fileEncoding.lineEnding === 'crlf' ? 'CRLF' : 'LF' }}.
+        </p>
+      </div>
+
+      <!-- Editor -->
+      <div v-if="isEditing" class="min-h-0 min-w-0 flex-1 overflow-hidden">
+        <FileEditor
+          v-model="editedContent"
+          :file-path="filePath"
+          :wrap="wrapLines"
+          @save="saveFile(false)"
+        />
+      </div>
+
       <!-- Content area -->
-      <div class="flex-1 overflow-auto">
+      <div v-else class="min-h-0 min-w-0 flex-1 overflow-auto">
         <!-- Video player -->
         <div v-if="isVideo && mediaSrc" class="flex items-center justify-center bg-black/5 p-6">
           <video
@@ -570,6 +868,61 @@ const copyToClipboard = async () => {
         }}</pre>
       </div>
     </div>
+
+    <!-- Credential files warn before opening the editor -->
+    <AlertDialog v-model:open="showSensitiveWarning">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle class="flex items-center gap-2">
+            <ShieldAlert class="text-danger-600 h-5 w-5" />
+            Edit a credentials file?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            <span class="font-mono text-xs">{{ pendingSensitivePath }}</span> holds key material or
+            credentials. A bad edit can lock you out of servers or services. A backup is kept, but
+            proceed carefully.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="pendingSensitivePath = null">Cancel</AlertDialogCancel>
+          <AlertDialogAction @click="confirmSensitiveEdit">Edit anyway</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <!-- The file changed underneath us between opening and saving -->
+    <AlertDialog v-model:open="showConflictDialog">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>File changed on disk</AlertDialogTitle>
+          <AlertDialogDescription>
+            This file was modified by something else after you opened it. Reload to take the version
+            on disk and lose your edits, or overwrite to keep yours.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <Button variant="outline" @click="reloadFromDisk">Reload</Button>
+          <AlertDialogAction @click="overwriteOnDisk">Overwrite</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <!-- Cancelling with unsaved changes -->
+    <AlertDialog v-model:open="showDiscardDialog">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Your edits to {{ fileName }} have not been saved. Discarding cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep editing</AlertDialogCancel>
+          <AlertDialogAction @click="cancelEditing">Discard</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>
 

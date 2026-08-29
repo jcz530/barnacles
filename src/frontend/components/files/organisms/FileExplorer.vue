@@ -2,6 +2,16 @@
 import { computed, Ref, ref, watch } from 'vue';
 import FileTree from './FileTree.vue';
 import FileViewer from './FileViewer.vue';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import FileSearchInput from '../molecules/FileSearchInput.vue';
 import FileTypeFilter, { type FilterValue } from '../molecules/FileTypeFilter.vue';
 import ExclusionsDropdown from '../molecules/ExclusionsDropdown.vue';
@@ -57,17 +67,42 @@ const filters = ref<FilterValue[]>([]);
 const fileTreeRef = ref<InstanceType<typeof FileTree> | null>(null);
 const globalExclusions = ref<string[]>([]);
 
+// Unsaved edits in the viewer block navigation until confirmed.
+const hasUnsavedChanges = ref(false);
+const pendingFile = ref<FileNode | null>(null);
+const viewerRef = ref<InstanceType<typeof FileViewer> | null>(null);
+
 // Use the file tree composable for shared logic
 const {
   selectedFile,
   selectedFilePath,
   handleSelect,
+  selectFile,
   availableExtensions,
   matchingFilePaths,
   totalFileCount,
   filteredFileCount,
   hasActiveFilters,
-} = useFileTree({ fileTree, searchQuery, filters });
+} = useFileTree({
+  fileTree,
+  searchQuery,
+  filters,
+  canLeaveCurrentFile: node => {
+    if (!hasUnsavedChanges.value) return true;
+    pendingFile.value = node;
+    return false;
+  },
+});
+
+const discardAndNavigate = () => {
+  const node = pendingFile.value;
+  pendingFile.value = null;
+  // Tell the viewer to drop its buffer rather than clearing the local mirror:
+  // the mirror is only updated by the viewer's isDirty emit, so writing it here
+  // desyncs the guard whenever the buffer itself does not change.
+  viewerRef.value?.discardEdits();
+  if (node) selectFile(node);
+};
 
 // Create a writable ref for selected file path (for URL sync)
 const selectedFilePathForUrl = computed({
@@ -408,8 +443,31 @@ const exclusionsForDropdown = computed(() => {
     </div>
 
     <!-- Main content: File viewer -->
-    <div class="flex-1">
-      <FileViewer :file-path="selectedFilePath" :project-path="projectPath || ''" />
+    <!-- min-w-0: a flex item defaults to min-width:auto and refuses to shrink
+         below its content, so long code lines would push the header (and its
+         buttons) out of the window instead of scrolling inside this pane. -->
+    <div class="min-w-0 flex-1">
+      <FileViewer
+        ref="viewerRef"
+        :file-path="selectedFilePath"
+        :project-path="projectPath || ''"
+        @update:dirty="hasUnsavedChanges = $event"
+      />
     </div>
+
+    <AlertDialog :open="pendingFile !== null" @update:open="open => !open && (pendingFile = null)">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You have unsaved edits. Opening another file will discard them.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep editing</AlertDialogCancel>
+          <AlertDialogAction @click="discardAndNavigate">Discard</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>
