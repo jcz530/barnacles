@@ -65,6 +65,7 @@ export const setupAPIBridge = (): void => {
     return {
       port: RUNTIME_CONFIG.API_PORT,
       baseUrl: RUNTIME_CONFIG.API_BASE_URL,
+      wsToken: RUNTIME_CONFIG.WS_TOKEN,
     };
   });
 };

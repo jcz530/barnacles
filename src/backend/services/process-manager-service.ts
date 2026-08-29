@@ -6,7 +6,64 @@ import type { ProcessStatus, ProjectProcessStatus, StartProcess } from '../../sh
 import { isWindows, getDefaultShell } from '../../shared/utils/platform';
 import { isDemoMode } from '../../shared/config/runtime-mode';
 
-interface RunningProcess {
+/**
+ * How many PTY output chunks to retain per process. The unit is chunks, not
+ * lines: one chunk may carry many lines or part of one.
+ */
+const MAX_OUTPUT_CHUNKS = 1000;
+
+/**
+ * Size a PTY starts at, before any terminal attaches. Processes can be started
+ * with no UI open at all (CLI, MCP, project start), so a default is
+ * unavoidable; 80x24 is what a program assumes when it cannot detect a
+ * terminal. A client that attaches later resizes to its real geometry.
+ */
+const DEFAULT_COLS = 80;
+const DEFAULT_ROWS = 24;
+
+/** Grace period between SIGTERM and SIGKILL when stopping a process tree. */
+const KILL_ESCALATION_MS = 3000;
+
+/**
+ * Shorter grace period during app shutdown. The quit path waits for this
+ * inline, so it is bounded well under the caller's own shutdown timeout.
+ */
+const SHUTDOWN_ESCALATION_MS = 1500;
+
+/**
+ * Largest single input frame accepted from a client, in UTF-16 code units.
+ * Not bytes: multi-byte characters count as one or two units here, so the
+ * actual byte cost of a full frame can be several times this.
+ */
+const MAX_INPUT_LENGTH = 8 * 1024;
+
+/**
+ * Bounds for a PTY resize. node-pty can abort the process on absurd geometry,
+ * so anything a client sends is checked before it reaches the pty.
+ */
+export function isValidTerminalSize(cols: number, rows: number): boolean {
+  return (
+    Number.isInteger(cols) &&
+    Number.isInteger(rows) &&
+    cols >= 1 &&
+    cols <= 500 &&
+    rows >= 1 &&
+    rows <= 300
+  );
+}
+
+/**
+ * A live consumer of a process's output. Registered via subscribe(), which
+ * hands back a disposer -- callers must never reach into the subscriber set
+ * directly, or a dropped connection leaks a listener for the life of the
+ * process.
+ */
+export interface ProcessSubscriber {
+  onData: (chunk: string, seq: number) => void;
+  onExit: (exitCode: number) => void;
+}
+
+export interface RunningProcess {
   name: string;
   bashId: string;
   process: IPty;
@@ -20,9 +77,13 @@ interface RunningProcess {
   cwd?: string; // Working directory for ad-hoc processes
   command?: string; // Original command for ad-hoc processes
   createdAt: Date; // Creation timestamp
+  subscribers: Set<ProcessSubscriber>; // Live output consumers
+  seq: number; // Monotonic chunk counter; lets clients detect a dropped chunk
+  cols: number; // Last applied PTY width
+  rows: number; // Last applied PTY height
 }
 
-class ProcessManagerService {
+export class ProcessManagerService {
   // Map of projectId -> Map of processId -> RunningProcess
   private runningProcesses: Map<string, Map<string, RunningProcess>> = new Map();
 
@@ -84,10 +145,123 @@ class ProcessManagerService {
 
     return pty.spawn(shell, args, {
       name: 'xterm-256color',
-      cols: 120,
-      rows: 30,
+      cols: DEFAULT_COLS,
+      rows: DEFAULT_ROWS,
       cwd,
       env: envVars,
+    });
+  }
+
+  /**
+   * Stop a process and everything it started.
+   *
+   * IPty.kill() signals only the shell it spawned, so a `npm run dev` leaves
+   * its vite/esbuild/tsc children running and still holding their ports.
+   * node-pty creates each process via forkpty(3), which calls setsid(), so the
+   * shell is already a process-group leader and the whole tree can be signalled
+   * with a negative pid.
+   *
+   * Returns false when nothing could be signalled, so callers do not untrack a
+   * process that is still running.
+   */
+  private killProcessTree(runningProcess: RunningProcess): boolean {
+    const pid = runningProcess.process.pid;
+
+    // Windows has no process groups; ConPTY tears the tree down with the pty.
+    if (isWindows) {
+      runningProcess.process.kill();
+      return true;
+    }
+
+    // Guard the negation: kill(-0) signals OUR OWN group, and kill(-1) signals
+    // every process this user owns. Neither is ever what we want here.
+    if (!(pid > 1)) {
+      console.error(`Refusing to signal process group for implausible pid ${pid}`);
+      return false;
+    }
+
+    try {
+      // SIGTERM rather than node-pty's default SIGHUP: dev servers install
+      // SIGTERM handlers to release ports and clean up temp dirs.
+      process.kill(-pid, 'SIGTERM');
+
+      // Escalate for anything that ignored the polite request. unref() so a
+      // pending timer can never hold the app open at quit.
+      const escalation = setTimeout(() => {
+        try {
+          process.kill(-pid, 0); // throws ESRCH once the group is gone
+          process.kill(-pid, 'SIGKILL');
+        } catch {
+          // Already exited, which is the good case.
+        }
+      }, KILL_ESCALATION_MS);
+      escalation.unref?.();
+      return true;
+    } catch {
+      // ESRCH means it is already gone; anything else, fall back to signalling
+      // just the pty so behavior is never worse than before.
+      try {
+        runningProcess.process.kill();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  /**
+   * Wire output buffering, URL detection, and exit handling onto a freshly
+   * spawned process. Shared by both spawn paths so the ring buffer and exit
+   * bookkeeping can only ever be defined once.
+   */
+  private attachProcessHandlers(runningProcess: RunningProcess): void {
+    const ptyProcess = runningProcess.process;
+
+    // Capture all output (stdout and stderr combined in PTY)
+    ptyProcess.onData((data: string) => {
+      runningProcess.output.push(data);
+
+      // Keep only the last 1000 chunks to prevent unbounded memory growth.
+      // Note: the unit is PTY chunks, not lines -- a chunk may hold many lines
+      // or a partial one.
+      if (runningProcess.output.length > MAX_OUTPUT_CHUNKS) {
+        runningProcess.output = runningProcess.output.slice(-MAX_OUTPUT_CHUNKS);
+      }
+
+      runningProcess.seq += 1;
+      const seq = runningProcess.seq;
+      for (const subscriber of runningProcess.subscribers) {
+        try {
+          subscriber.onData(data, seq);
+        } catch (error) {
+          // One bad consumer must not stop the others, nor the buffering above.
+          console.error('[Process] Subscriber onData failed:', error);
+        }
+      }
+
+      // A configured URL is the user's explicit choice, so only fall back to
+      // sniffing one out of the output when they haven't set one.
+      if (!runningProcess.detectedUrl && !runningProcess.configuredUrl) {
+        const detectedUrl = this.detectUrl(data);
+        if (detectedUrl) {
+          runningProcess.detectedUrl = detectedUrl;
+          console.log(`Detected URL for process ${runningProcess.name}: ${detectedUrl}`);
+        }
+      }
+    });
+
+    // Handle process exit
+    ptyProcess.onExit(({ exitCode }) => {
+      runningProcess.status = exitCode === 0 ? 'stopped' : 'failed';
+      runningProcess.exitCode = exitCode;
+
+      for (const subscriber of runningProcess.subscribers) {
+        try {
+          subscriber.onExit(exitCode);
+        } catch (error) {
+          console.error('[Process] Subscriber onExit failed:', error);
+        }
+      }
     });
   }
 
@@ -198,32 +372,13 @@ class ProcessManagerService {
           output: [],
           configuredUrl: processConfig.url,
           createdAt: new Date(),
+          subscribers: new Set(),
+          seq: 0,
+          cols: DEFAULT_COLS,
+          rows: DEFAULT_ROWS,
         };
 
-        // Capture all output (stdout and stderr combined in PTY)
-        ptyProcess.onData((data: string) => {
-          runningProcess.output.push(data);
-
-          // Keep only last 1000 lines to prevent memory issues
-          if (runningProcess.output.length > 1000) {
-            runningProcess.output = runningProcess.output.slice(-1000);
-          }
-
-          // Try to detect URL if not already detected and no configured URL
-          if (!runningProcess.detectedUrl && !runningProcess.configuredUrl) {
-            const detectedUrl = this.detectUrl(data);
-            if (detectedUrl) {
-              runningProcess.detectedUrl = detectedUrl;
-              console.log(`Detected URL for process ${processConfig.name}: ${detectedUrl}`);
-            }
-          }
-        });
-
-        // Handle process exit
-        ptyProcess.onExit(({ exitCode }) => {
-          runningProcess.status = exitCode === 0 ? 'stopped' : 'failed';
-          runningProcess.exitCode = exitCode;
-        });
+        this.attachProcessHandlers(runningProcess);
 
         projectProcesses.set(processConfig.id, runningProcess);
 
@@ -269,13 +424,25 @@ class ProcessManagerService {
     }
 
     // Kill all processes
+    // Anything we could not signal stays tracked: dropping it would hide a
+    // live process from the UI and from cleanup on quit.
+    const survivors = new Map<string, RunningProcess>();
     for (const [processId, runningProcess] of projectProcesses.entries()) {
       try {
-        runningProcess.process.kill();
-        runningProcess.status = 'stopped';
+        if (this.killProcessTree(runningProcess)) {
+          runningProcess.status = 'stopped';
+        } else {
+          survivors.set(processId, runningProcess);
+        }
       } catch (error) {
         console.error(`Failed to kill process ${processId}:`, error);
+        survivors.set(processId, runningProcess);
       }
+    }
+
+    if (survivors.size > 0) {
+      this.runningProcesses.set(projectId, survivors);
+      return;
     }
 
     // Clear the project's processes
@@ -294,13 +461,22 @@ class ProcessManagerService {
 
     const runningProcess = projectProcesses.get(processId)!;
 
+    let killed = false;
     try {
-      runningProcess.process.kill();
-      runningProcess.status = 'stopped';
+      killed = this.killProcessTree(runningProcess);
     } catch (error) {
       console.error(`Failed to kill process ${processId}:`, error);
     }
 
+    // Keep tracking anything we could not signal; forgetting it here would
+    // hide a still-running process from the UI and from cleanup on quit.
+    // Keep tracking anything we could not signal; forgetting it here would
+    // hide a still-running process from the UI and from cleanup on quit.
+    if (!killed) {
+      return;
+    }
+
+    runningProcess.status = 'stopped';
     projectProcesses.delete(processId);
 
     // Clean up project map if empty
@@ -453,32 +629,13 @@ class ProcessManagerService {
       status: 'running',
       output: [],
       createdAt: new Date(),
+      subscribers: new Set(),
+      seq: 0,
+      cols: DEFAULT_COLS,
+      rows: DEFAULT_ROWS,
     };
 
-    // Capture all output (stdout and stderr combined in PTY)
-    ptyProcess.onData((data: string) => {
-      runningProcess.output.push(data);
-
-      // Keep only last 1000 lines
-      if (runningProcess.output.length > 1000) {
-        runningProcess.output = runningProcess.output.slice(-1000);
-      }
-
-      // Try to detect URL
-      if (!runningProcess.detectedUrl) {
-        const detectedUrl = this.detectUrl(data);
-        if (detectedUrl) {
-          runningProcess.detectedUrl = detectedUrl;
-          console.log(`Detected URL for process ${title}: ${detectedUrl}`);
-        }
-      }
-    });
-
-    // Handle process exit
-    ptyProcess.onExit(({ exitCode }) => {
-      runningProcess.status = exitCode === 0 ? 'stopped' : 'failed';
-      runningProcess.exitCode = exitCode;
-    });
+    this.attachProcessHandlers(runningProcess);
 
     projectProcesses.set(processId, runningProcess);
 
@@ -525,79 +682,242 @@ class ProcessManagerService {
   }
 
   /**
-   * Get a single process by ID across all projects
+   * Locate a running process by ID across every project.
+   *
+   * Process IDs are only unique per project by construction (ad-hoc processes
+   * live under a synthetic 'global' project), so a by-ID lookup has to scan.
+   * The map holds a handful of projects, so one shared scan beats keeping a
+   * second flat index in sync across every mutation site.
    */
-  getProcess(processId: string): ProcessStatus | null {
+  private findRunning(processId: string): { projectId: string; process: RunningProcess } | null {
     for (const [projectId, projectProcesses] of this.runningProcesses.entries()) {
-      if (projectProcesses.has(processId)) {
-        const runningProcess = projectProcesses.get(processId)!;
-        return {
-          processId,
-          projectId,
-          name: runningProcess.name,
-          title: runningProcess.title,
-          cwd: runningProcess.cwd,
-          command: runningProcess.command,
-          status: runningProcess.status,
-          bashId: runningProcess.bashId,
-          exitCode: runningProcess.exitCode,
-          error: runningProcess.error,
-          url: runningProcess.configuredUrl || runningProcess.detectedUrl,
-          detectedUrl: runningProcess.detectedUrl,
-          createdAt: runningProcess.createdAt.toISOString(),
-        };
+      const process = projectProcesses.get(processId);
+      if (process) {
+        return { projectId, process };
       }
     }
     return null;
+  }
+
+  /**
+   * Get a single process by ID across all projects
+   */
+  getProcess(processId: string): ProcessStatus | null {
+    const found = this.findRunning(processId);
+    if (!found) {
+      return null;
+    }
+
+    const { projectId, process: runningProcess } = found;
+    return {
+      processId,
+      projectId,
+      name: runningProcess.name,
+      title: runningProcess.title,
+      cwd: runningProcess.cwd,
+      command: runningProcess.command,
+      status: runningProcess.status,
+      bashId: runningProcess.bashId,
+      exitCode: runningProcess.exitCode,
+      error: runningProcess.error,
+      url: runningProcess.configuredUrl || runningProcess.detectedUrl,
+      detectedUrl: runningProcess.detectedUrl,
+      createdAt: runningProcess.createdAt.toISOString(),
+    };
   }
 
   /**
    * Kill a specific process by ID (search across all projects)
    */
   async killProcess(processId: string): Promise<boolean> {
-    for (const [projectId, projectProcesses] of this.runningProcesses.entries()) {
-      if (projectProcesses.has(processId)) {
-        const runningProcess = projectProcesses.get(processId)!;
-
-        try {
-          runningProcess.process.kill();
-          runningProcess.status = 'stopped';
-        } catch (error) {
-          console.error(`Failed to kill process ${processId}:`, error);
-        }
-
-        projectProcesses.delete(processId);
-
-        // Clean up project map if empty
-        if (projectProcesses.size === 0) {
-          this.runningProcesses.delete(projectId);
-        }
-
-        return true;
-      }
+    const found = this.findRunning(processId);
+    if (!found) {
+      return false;
     }
-    return false;
+
+    const { projectId, process: runningProcess } = found;
+    const projectProcesses = this.runningProcesses.get(projectId)!;
+
+    let killed = false;
+    try {
+      killed = this.killProcessTree(runningProcess);
+    } catch (error) {
+      console.error(`Failed to kill process ${processId}:`, error);
+    }
+
+    // Report failure rather than untracking a process that is still running.
+    if (!killed) {
+      return false;
+    }
+
+    runningProcess.status = 'stopped';
+    projectProcesses.delete(processId);
+
+    // Clean up project map if empty
+    if (projectProcesses.size === 0) {
+      this.runningProcesses.delete(projectId);
+    }
+
+    return true;
   }
 
   /**
    * Get output from a process by ID (search across all projects)
    */
   getProcessOutputById(processId: string): string[] | null {
-    for (const [, projectProcesses] of this.runningProcesses.entries()) {
-      if (projectProcesses.has(processId)) {
-        const runningProcess = projectProcesses.get(processId)!;
-        return runningProcess.output;
-      }
+    return this.findRunning(processId)?.process.output ?? null;
+  }
+
+  /**
+   * Attach a live consumer to a process.
+   *
+   * Returns the buffered scrollback alongside the disposer so a client can
+   * paint history and then continue from the live stream without a gap. The
+   * snapshot and the subscription are taken together, synchronously, which is
+   * what makes that safe.
+   *
+   * INVARIANT: never introduce an `await` between reading `output` and adding
+   * to `subscribers`. A suspension there lets a chunk land in between, so the
+   * client would either miss it entirely or replay it twice.
+   */
+  subscribe(
+    processId: string,
+    subscriber: ProcessSubscriber
+  ): { unsubscribe: () => void; snapshot: string[]; seq: number } | null {
+    const found = this.findRunning(processId);
+    if (!found) {
+      return null;
     }
-    return null;
+
+    const runningProcess = found.process;
+    const snapshot = [...runningProcess.output];
+    const seq = runningProcess.seq;
+    runningProcess.subscribers.add(subscriber);
+
+    return {
+      snapshot,
+      seq,
+      unsubscribe: () => {
+        runningProcess.subscribers.delete(subscriber);
+      },
+    };
+  }
+
+  /**
+   * Forward client keystrokes to a process's PTY.
+   */
+  writeToProcess(processId: string, data: string): boolean {
+    const found = this.findRunning(processId);
+    if (!found || found.process.status !== 'running') {
+      return false;
+    }
+
+    // A paste can be arbitrarily large; cap it so one frame cannot wedge the
+    // PTY or balloon memory. Trim one unit further when the cut would land
+    // between a surrogate pair, which would otherwise write half a character.
+    let payload = data;
+    if (data.length > MAX_INPUT_LENGTH) {
+      const lastCode = data.charCodeAt(MAX_INPUT_LENGTH - 1);
+      const splitsSurrogatePair = lastCode >= 0xd800 && lastCode <= 0xdbff;
+      payload = data.slice(0, splitsSurrogatePair ? MAX_INPUT_LENGTH - 1 : MAX_INPUT_LENGTH);
+    }
+
+    try {
+      found.process.process.write(payload);
+      return true;
+    } catch (error) {
+      console.error(`Failed to write to process ${processId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Resize a process's PTY to match its viewer.
+   */
+  resizeProcess(processId: string, cols: number, rows: number): boolean {
+    if (!isValidTerminalSize(cols, rows)) {
+      return false;
+    }
+
+    const found = this.findRunning(processId);
+    if (!found || found.process.status !== 'running') {
+      return false;
+    }
+
+    try {
+      // node-pty throws if the pty is already gone.
+      found.process.process.resize(cols, rows);
+      found.process.cols = cols;
+      found.process.rows = rows;
+      return true;
+    } catch (error) {
+      console.error(`Failed to resize process ${processId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Current buffered state of a process, for a client that is attaching.
+   */
+  getProcessSnapshot(processId: string): {
+    output: string[];
+    seq: number;
+    status: RunningProcess['status'];
+    exitCode?: number;
+    cols: number;
+    rows: number;
+  } | null {
+    const found = this.findRunning(processId);
+    if (!found) {
+      return null;
+    }
+
+    const { process: runningProcess } = found;
+    return {
+      output: [...runningProcess.output],
+      seq: runningProcess.seq,
+      status: runningProcess.status,
+      exitCode: runningProcess.exitCode,
+      cols: runningProcess.cols,
+      rows: runningProcess.rows,
+    };
   }
 
   /**
    * Clean up all processes (call on app shutdown)
    */
   async cleanup(): Promise<void> {
-    for (const projectId of this.runningProcesses.keys()) {
+    // Collect the groups we signal so shutdown can finish the job itself. The
+    // SIGKILL escalation killProcessTree schedules is unref'd, so it never
+    // fires once the app exits -- during shutdown the escalation has to happen
+    // inline or a process that ignores SIGTERM survives the quit.
+    const signalled: number[] = [];
+    for (const projectProcesses of this.runningProcesses.values()) {
+      for (const runningProcess of projectProcesses.values()) {
+        const pid = runningProcess.process.pid;
+        if (pid > 1) {
+          signalled.push(pid);
+        }
+      }
+    }
+
+    for (const projectId of [...this.runningProcesses.keys()]) {
       await this.stopProjectProcesses(projectId);
+    }
+
+    if (isWindows || signalled.length === 0) {
+      return;
+    }
+
+    await new Promise<void>(resolve => setTimeout(resolve, SHUTDOWN_ESCALATION_MS));
+
+    for (const pid of signalled) {
+      try {
+        process.kill(-pid, 0); // throws ESRCH once the group is gone
+        process.kill(-pid, 'SIGKILL');
+      } catch {
+        // Already exited, which is the good case.
+      }
     }
   }
 }

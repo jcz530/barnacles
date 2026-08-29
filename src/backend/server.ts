@@ -10,6 +10,7 @@ import api from './routes';
 import { projectScanWebSocketService } from './services/project-scan-websocket-service';
 import { projectRescanSchedulerService } from './services/project-rescan-scheduler-service';
 import { terminalWebSocketService } from './services/terminal-websocket-service';
+import { processWebSocketService } from './services/process-websocket-service';
 import { portProbeWebSocketService } from './services/port-probe-websocket-service';
 import { sweepOrphans } from './services/port-screenshot-cache-service';
 import { eventService } from './services/event-service';
@@ -117,9 +118,12 @@ export const startServer = async () => {
 
   // Update runtime configuration
   const apiBaseUrl = `http://${APP_CONFIG.API_HOST}:${availablePort}`;
+  // Minted per launch and handed to the renderer over IPC. See RUNTIME_CONFIG.
+  const { randomBytes } = await import('node:crypto');
   updateRuntimeConfig({
     API_PORT: availablePort,
     API_BASE_URL: apiBaseUrl,
+    WS_TOKEN: randomBytes(32).toString('hex'),
   });
 
   const app = createServer();
@@ -203,6 +207,7 @@ export const startServer = async () => {
   // Initialize WebSocket services with the HTTP server
   projectScanWebSocketService.initialize(httpServer);
   terminalWebSocketService.initialize(httpServer);
+  processWebSocketService.initialize(httpServer);
   portProbeWebSocketService.initialize(httpServer);
 
   // Start periodic rescan scheduler

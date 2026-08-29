@@ -23,7 +23,6 @@ const {
   useProcessesQuery,
   useCreateProcessMutation,
   useKillProcessMutation,
-  useProcessOutputByIdQuery,
   useProjectPackageManagerQuery,
 } = useQueries();
 
@@ -51,15 +50,6 @@ const toggleGroup = (groupKey: string) => {
     expandedGroups.value.add(groupKey);
   }
 };
-
-// Fetch process output for selected process
-const { data: processOutput } = useProcessOutputByIdQuery(
-  computed(() => selectedProcess.value || ''),
-  {
-    enabled: computed(() => !!selectedProcess.value),
-    refetchInterval: 1000,
-  }
-);
 
 const {
   runningProcesses,
@@ -333,8 +323,10 @@ autoSelectProcess();
     <!-- Process display area -->
     <div class="flex-1 rounded-lg bg-[#1d293d] p-4">
       <!-- Show process output -->
-      <div v-if="selectedProcess && processOutput" class="h-full">
-        <ProcessOutput :output="processOutput.output" />
+      <div v-if="selectedProcess" class="h-full">
+        <!-- Keyed so switching processes remounts the terminal and its socket,
+             rather than bleeding one process's scrollback into the next. -->
+        <ProcessOutput :key="selectedProcess" :process-id="selectedProcess" />
       </div>
 
       <!-- Empty state -->
