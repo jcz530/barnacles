@@ -104,6 +104,20 @@ contextBridge.exposeInMainWorld('electron', {
       ipcRenderer.invoke('files:get-global-exclusions', dirPath),
     readFile: (filePath: string, forceText?: boolean) =>
       ipcRenderer.invoke('files:read-file', filePath, forceText),
+    readFileForEdit: (filePath: string) => ipcRenderer.invoke('files:read-file-for-edit', filePath),
+    writeFile: (request: {
+      filePath: string;
+      content: string;
+      encoding: {
+        bom: boolean;
+        lineEnding: 'lf' | 'crlf';
+        finalNewline: boolean;
+        mixedLineEndings: boolean;
+      };
+      expectedMtimeMs?: number;
+      expectedSize?: number;
+      force?: boolean;
+    }) => ipcRenderer.invoke('files:write-file', request),
     getFileStats: (filePath: string) => ipcRenderer.invoke('files:get-file-stats', filePath),
     searchContent: (dirPath: string, query: string) =>
       ipcRenderer.invoke('files:search-content', dirPath, query),

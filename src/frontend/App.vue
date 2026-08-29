@@ -55,6 +55,9 @@ if (window.electron?.onNavigateToProject) {
 // Global keyboard shortcut for Cmd+F / Ctrl+F - send to main process to toggle overlay
 onKeyStroke('f', e => {
   if (e.metaKey || e.ctrlKey) {
+    // Let a focused code editor keep Cmd+F for its own in-document search;
+    // the app-wide find overlay cannot search an unrendered CodeMirror buffer.
+    if ((e.target as HTMLElement | null)?.closest?.('.cm-editor')) return;
     e.preventDefault();
     window.electron.find.toggle();
   }

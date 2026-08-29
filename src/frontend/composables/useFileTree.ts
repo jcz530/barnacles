@@ -8,16 +8,37 @@ interface UseFileTreeOptions {
   fileTree: Ref<FileNode[]>;
   searchQuery: Ref<string>;
   filters: Ref<FilterValue[]>;
+  /**
+   * Optional veto on switching files, used to guard unsaved edits. Return false
+   * to block the selection; the caller is responsible for confirming and then
+   * calling `selectFile` itself.
+   */
+  canLeaveCurrentFile?: (next: FileNode) => boolean;
 }
 
-export function useFileTree({ fileTree, searchQuery, filters }: UseFileTreeOptions) {
+export function useFileTree({
+  fileTree,
+  searchQuery,
+  filters,
+  canLeaveCurrentFile,
+}: UseFileTreeOptions) {
   const selectedFile = ref<FileNode | null>(null);
 
-  // Handle file selection
-  const handleSelect = (node: FileNode) => {
+  /** Selects a file unconditionally, bypassing the guard. */
+  const selectFile = (node: FileNode) => {
     if (node.type === 'file') {
       selectedFile.value = node;
     }
+  };
+
+  // Handle file selection
+  const handleSelect = (node: FileNode) => {
+    if (node.type !== 'file') return;
+    // Reselecting the open file is not navigation, so it must not prompt --
+    // and confirming that prompt used to desync the parent's dirty mirror.
+    if (node.path === selectedFile.value?.path) return;
+    if (canLeaveCurrentFile && !canLeaveCurrentFile(node)) return;
+    selectedFile.value = node;
   };
 
   // Shared filter matching logic
@@ -149,6 +170,7 @@ export function useFileTree({ fileTree, searchQuery, filters }: UseFileTreeOptio
     selectedFile,
     selectedFilePath,
     handleSelect,
+    selectFile,
     availableExtensions,
     allFiles,
     matchingFilePaths,

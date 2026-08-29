@@ -3,6 +3,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import { existsSync, statSync } from 'fs';
+import { readFileForEdit as readForEdit, writeFileAtomic, type FileEncoding } from './file-write';
 
 // Directories and files to exclude from the tree
 const EXCLUDED_DIRS = new Set([
@@ -417,6 +418,66 @@ export const setupFileSystemBridge = (): void => {
       };
     }
   });
+
+  // Handler for reading a file for editing.
+  //
+  // Distinct from files:read-file because editing needs the encoding details and
+  // the mtime/size identity used to detect a conflicting write later.
+  ipcMain.handle('files:read-file-for-edit', async (_, filePath: string) => {
+    try {
+      const expandedPath = expandTilde(filePath);
+
+      if (!existsSync(expandedPath)) {
+        throw new Error(`File does not exist: ${expandedPath}`);
+      }
+
+      const result = await readForEdit(filePath);
+      return { success: true, data: result };
+    } catch (error) {
+      console.error('Error reading file for edit:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  });
+
+  // Handler for writing a file back to disk atomically.
+  ipcMain.handle(
+    'files:write-file',
+    async (
+      _,
+      request: {
+        filePath: string;
+        content: string;
+        encoding: FileEncoding;
+        expectedMtimeMs?: number;
+        expectedSize?: number;
+        force?: boolean;
+      }
+    ) => {
+      try {
+        const result = await writeFileAtomic(request);
+
+        if (!result.success) {
+          return {
+            success: false,
+            reason: result.reason,
+            error: result.error,
+          };
+        }
+
+        return { success: true, data: result };
+      } catch (error) {
+        console.error('Error writing file:', error);
+        return {
+          success: false,
+          reason: 'error' as const,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    }
+  );
 
   // Handler for searching file contents
   ipcMain.handle('files:search-content', async (_, dirPath: string, query: string) => {

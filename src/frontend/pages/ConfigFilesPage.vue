@@ -6,6 +6,16 @@ import FileSearchInput from '@/components/files/molecules/FileSearchInput.vue';
 import FileTypeFilter, { type FilterValue } from '@/components/files/molecules/FileTypeFilter.vue';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { FileNode } from '@/types/window';
 import { ListChevronsDownUp } from 'lucide-vue-next';
 import { useFileTree } from '@/composables/useFileTree';
@@ -22,16 +32,41 @@ const searchQuery = ref('');
 const filters = ref<FilterValue[]>([]);
 const fileTreeRef = ref<InstanceType<typeof FileTree> | null>(null);
 
+// Unsaved edits in the viewer block navigation until confirmed.
+const hasUnsavedChanges = ref(false);
+const pendingFile = ref<FileNode | null>(null);
+const viewerRef = ref<InstanceType<typeof FileViewer> | null>(null);
+
 // Use the file tree composable for shared logic
 const {
   selectedFilePath,
   handleSelect,
+  selectFile,
   availableExtensions,
   matchingFilePaths,
   totalFileCount,
   filteredFileCount,
   hasActiveFilters,
-} = useFileTree({ fileTree, searchQuery, filters });
+} = useFileTree({
+  fileTree,
+  searchQuery,
+  filters,
+  canLeaveCurrentFile: node => {
+    if (!hasUnsavedChanges.value) return true;
+    pendingFile.value = node;
+    return false;
+  },
+});
+
+const discardAndNavigate = () => {
+  const node = pendingFile.value;
+  pendingFile.value = null;
+  // Tell the viewer to drop its buffer rather than clearing the local mirror:
+  // the mirror is only updated by the viewer's isDirty emit, so writing it here
+  // desyncs the guard whenever the buffer itself does not change.
+  viewerRef.value?.discardEdits();
+  if (node) selectFile(node);
+};
 
 // Recursively prepend base path to all children paths
 const prependBasePath = (nodes: FileNode[], basePath: string): FileNode[] => {
@@ -202,9 +237,31 @@ const handleCollapseAll = () => {
       </div>
 
       <!-- Main content: File viewer -->
-      <div class="flex-1">
-        <FileViewer :file-path="selectedFilePath" project-path="" />
+      <!-- min-w-0 so long lines scroll inside the viewer instead of widening
+           this pane and pushing the header buttons off-screen. -->
+      <div class="min-w-0 flex-1">
+        <FileViewer
+          ref="viewerRef"
+          :file-path="selectedFilePath"
+          project-path=""
+          @update:dirty="hasUnsavedChanges = $event"
+        />
       </div>
     </div>
+
+    <AlertDialog :open="pendingFile !== null" @update:open="open => !open && (pendingFile = null)">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You have unsaved edits. Opening another file will discard them.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep editing</AlertDialogCancel>
+          <AlertDialogAction @click="discardAndNavigate">Discard</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

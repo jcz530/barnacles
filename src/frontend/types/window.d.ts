@@ -9,6 +9,14 @@ export interface FileNode {
   extension?: string;
 }
 
+/** Invisible file properties preserved across an edit. Mirrors main/ipc/file-write.ts. */
+export interface FileEncoding {
+  bom: boolean;
+  lineEnding: 'lf' | 'crlf';
+  finalNewline: boolean;
+  mixedLineEndings: boolean;
+}
+
 export interface SearchResult {
   filePath: string;
   fileName: string;
@@ -91,6 +99,33 @@ declare global {
           success: boolean;
           data?: { buffer: Uint8Array; size: number };
           error?: string;
+        }>;
+        readFileForEdit: (filePath: string) => Promise<{
+          success: boolean;
+          data?: {
+            editable: boolean;
+            reason?: 'binary' | 'not-utf8' | 'too-large' | 'ambiguous-line-endings';
+            content?: string;
+            encoding?: FileEncoding;
+            mtimeMs?: number;
+            size?: number;
+            realPath?: string;
+            isSensitive?: boolean;
+          };
+          error?: string;
+        }>;
+        writeFile: (request: {
+          filePath: string;
+          content: string;
+          encoding: FileEncoding;
+          expectedMtimeMs?: number;
+          expectedSize?: number;
+          force?: boolean;
+        }) => Promise<{
+          success: boolean;
+          reason?: 'conflict' | 'permission' | 'not-found' | 'error';
+          error?: string;
+          data?: { mtimeMs: number; size: number; backupPath?: string };
         }>;
         getFileStats: (filePath: string) => Promise<{
           success: boolean;
