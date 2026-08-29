@@ -225,7 +225,11 @@ describe('non-editable files', () => {
 });
 
 describe('atomic write', () => {
-  it('preserves restrictive file permissions', async () => {
+  // Windows has no POSIX permission bits: chmod() only toggles the read-only
+  // attribute, so a file chmod'd 0600 stats back as 0666. The production code
+  // is unaffected -- it copies whatever mode the OS reports -- but the
+  // assertion only means something on a POSIX filesystem.
+  it.skipIf(process.platform === 'win32')('preserves restrictive file permissions', async () => {
     const filePath = await fixture('id_rsa', 'PRIVATE KEY\n');
     await fs.chmod(filePath, 0o600);
 
@@ -308,22 +312,25 @@ describe('atomic write', () => {
     expect(await fs.readFile(target, 'utf8')).toBe('edited\n');
   });
 
-  it('creates the temp file with the final mode, never world-readable', async () => {
-    // The plaintext of a 0600 key must not sit at 0644 mid-write.
-    const filePath = await fixture('secret.key', 'SECRET\n');
-    await fs.chmod(filePath, 0o600);
+  it.skipIf(process.platform === 'win32')(
+    'creates the temp file with the final mode, never world-readable',
+    async () => {
+      // The plaintext of a 0600 key must not sit at 0644 mid-write.
+      const filePath = await fixture('secret.key', 'SECRET\n');
+      await fs.chmod(filePath, 0o600);
 
-    const read = await readFileForEdit(filePath);
-    await writeFileAtomic({
-      filePath,
-      content: 'SECRET EDITED\n',
-      encoding: read.encoding!,
-      expectedMtimeMs: read.mtimeMs,
-      expectedSize: read.size,
-    });
+      const read = await readFileForEdit(filePath);
+      await writeFileAtomic({
+        filePath,
+        content: 'SECRET EDITED\n',
+        encoding: read.encoding!,
+        expectedMtimeMs: read.mtimeMs,
+        expectedSize: read.size,
+      });
 
-    expect((await fs.stat(filePath)).mode & 0o777).toBe(0o600);
-  });
+      expect((await fs.stat(filePath)).mode & 0o777).toBe(0o600);
+    }
+  );
 
   it('leaves no temp files behind', async () => {
     const filePath = await fixture('clean.txt', 'a\n');
