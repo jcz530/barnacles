@@ -16,10 +16,28 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../ui/alert-dialog';
-import { Code, Copy, FileText, Image, Pencil, ShieldAlert, WrapText, X } from 'lucide-vue-next';
+import {
+  Code,
+  Copy,
+  FileCheck,
+  FileText,
+  FolderOpen,
+  Image,
+  MoreHorizontal,
+  Pencil,
+  ShieldAlert,
+  WrapText,
+  X,
+} from 'lucide-vue-next';
 import { formatFileSize, getFileTypeInfo } from '@/utils/file-types';
 import { RUNTIME_CONFIG } from '../../../../shared/constants';
 import { useDark, useLocalStorage } from '@vueuse/core';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../ui/dropdown-menu';
 import FileEditor from './FileEditor.vue';
 import { resolveShikiLanguage, SHIKI_LANGUAGES } from '@/utils/file-language';
 import { toastDanger, toastSuccess } from '../../ui/sonner';
@@ -286,6 +304,46 @@ defineExpose({
     editedContent.value = originalContent.value;
   },
 });
+
+// --- File actions -------------------------------------------------------
+// These mirror the file tree's right-click menu (FileTreeItem.vue) so the same
+// actions are reachable from the header without going back to the tree.
+
+const openInFinder = () => {
+  const fullPath = resolveFullPath();
+  if (!fullPath) return;
+  window.electron?.shell.showItemInFolder(fullPath);
+};
+
+const copyFileToClipboard = async () => {
+  const fullPath = resolveFullPath();
+  if (!fullPath) return;
+  try {
+    const result = await window.electron?.clipboard.writeFile(fullPath);
+    if (!result?.success) {
+      toastDanger('Could not copy the file', { description: result?.error });
+      return;
+    }
+    toastSuccess('File copied');
+  } catch (err) {
+    toastDanger('Could not copy the file', {
+      description: err instanceof Error ? err.message : 'Unexpected error',
+    });
+  }
+};
+
+const copyPath = async () => {
+  const fullPath = resolveFullPath();
+  if (!fullPath) return;
+  try {
+    await navigator.clipboard.writeText(fullPath);
+    toastSuccess('Path copied');
+  } catch (err) {
+    toastDanger('Could not copy the path', {
+      description: err instanceof Error ? err.message : 'Unexpected error',
+    });
+  }
+};
 
 const requestCancelEditing = () => {
   if (isDirty.value) {
@@ -729,11 +787,13 @@ const copyToClipboard = async () => {
               • Unsaved
             </span>
           </h3>
-          <div class="flex shrink-0 items-center gap-3">
+          <!-- Ghost is the only variant without a shadow, and matches the
+               flat treatment used in the file tree. -->
+          <div class="flex shrink-0 items-center gap-1">
             <!-- Edit / Save controls -->
             <template v-if="isEditing">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 :title="wrapLines ? 'Disable line wrapping' : 'Enable line wrapping'"
                 :aria-pressed="wrapLines"
@@ -741,22 +801,23 @@ const copyToClipboard = async () => {
               >
                 <WrapText class="h-4 w-4" :class="wrapLines ? '' : 'text-slate-400'" />
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                :disabled="isSaving"
-                @click="requestCancelEditing"
-              >
+              <Button variant="ghost" size="sm" :disabled="isSaving" @click="requestCancelEditing">
                 <X class="h-4 w-4" />
                 Cancel
               </Button>
-              <Button size="sm" :disabled="!isDirty || isSaving" @click="saveFile(false)">
+              <Button
+                variant="ghost"
+                size="sm"
+                class="text-primary-600 hover:text-primary-700 font-medium"
+                :disabled="!isDirty || isSaving"
+                @click="saveFile(false)"
+              >
                 {{ isSaving ? 'Saving...' : 'Save' }}
               </Button>
             </template>
             <Button
               v-else-if="canEdit"
-              variant="outline"
+              variant="ghost"
               size="sm"
               class="gap-2"
               title="Edit this file"
@@ -769,7 +830,7 @@ const copyToClipboard = async () => {
             <!-- SVG view toggle button -->
             <Button
               v-if="isSvgFile"
-              variant="outline"
+              variant="ghost"
               size="sm"
               @click="toggleViewMode"
               class="gap-2"
@@ -779,17 +840,41 @@ const copyToClipboard = async () => {
             </Button>
             <!-- Copy raw content button -->
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               @click="copyToClipboard"
               class="gap-2"
               title="Copy raw file contents"
-              :class="{ 'border-success-200 bg-success-50 text-success-600': copySuccess }"
+              :class="{ 'text-success-600': copySuccess }"
             >
               <Copy class="h-4 w-4" />
               {{ copySuccess ? 'Copied!' : 'Raw' }}
             </Button>
-            <span class="text-xs text-slate-500">{{ formatFileSize(fileSize) }}</span>
+
+            <!-- Same actions as right-clicking the file in the tree -->
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button variant="ghost" size="sm" title="More actions">
+                  <MoreHorizontal class="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem @click="openInFinder">
+                  <FolderOpen class="h-4 w-4" />
+                  View in Finder
+                </DropdownMenuItem>
+                <DropdownMenuItem @click="copyFileToClipboard">
+                  <FileCheck class="h-4 w-4" />
+                  Copy File
+                </DropdownMenuItem>
+                <DropdownMenuItem @click="copyPath">
+                  <Copy class="h-4 w-4" />
+                  Copy Path
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <span class="ml-1 text-xs text-slate-500">{{ formatFileSize(fileSize) }}</span>
           </div>
         </div>
       </div>
