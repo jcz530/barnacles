@@ -33,6 +33,8 @@ export interface Project {
   size?: number | null;
   isFavorite: boolean;
   archivedAt?: Date | null;
+  /** Set when the project's directory went missing; null while it is present. */
+  missingSince?: Date | null;
   preferredIde?: string | null;
   preferredTerminal?: string | null;
   createdAt: Date;

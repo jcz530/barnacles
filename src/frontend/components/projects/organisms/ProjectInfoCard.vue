@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Folder } from 'lucide-vue-next';
 import type { Project } from '../../../../shared/types/api';
 import { useFormatters } from '../../../composables/useFormatters';
@@ -9,9 +10,15 @@ interface Props {
   project: Project;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const { formatDate } = useFormatters();
+
+// "Missing" outranks "Archived": it is the state that needs the user's attention.
+const statusLabel = computed(() => {
+  if (props.project.missingSince) return 'Missing';
+  return props.project.archivedAt ? 'Archived' : 'Active';
+});
 </script>
 
 <template>
@@ -38,12 +45,19 @@ const { formatDate } = useFormatters();
           <span
             class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium"
             :class="{
-              'bg-success-100 text-success-700': !project.archivedAt,
-              'bg-slate-100 text-slate-700': !!project.archivedAt,
+              'bg-success-100 text-success-700': !project.archivedAt && !project.missingSince,
+              'bg-slate-100 text-slate-700': !!project.archivedAt && !project.missingSince,
+              'bg-orange-100 text-orange-700': !!project.missingSince,
             }"
           >
-            {{ project.archivedAt ? 'Archived' : 'Active' }}
+            {{ statusLabel }}
           </span>
+          <!-- A missing directory is not necessarily gone: an unmounted drive
+               looks the same, so say what was observed rather than asserting. -->
+          <p v-if="project.missingSince" class="mt-1.5 text-xs text-slate-500">
+            Folder not found since {{ formatDate(project.missingSince) }}. The project and its
+            settings are kept in case it comes back.
+          </p>
         </div>
       </div>
       <div>

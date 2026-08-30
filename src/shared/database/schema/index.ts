@@ -28,6 +28,11 @@ export const projects = sqliteTable('projects', {
   size: integer('size'), // in bytes
   isFavorite: integer('is_favorite', { mode: 'boolean' }).notNull().default(false),
   archivedAt: integer('archived_at', { mode: 'timestamp' }),
+  // When the project's directory was first found to be unreadable. A rescan
+  // cannot tell "deleted" from "external drive unmounted", so a missing project
+  // is flagged rather than removed -- deleting would cascade away processes,
+  // accounts and exclusions the user configured. Cleared when it reappears.
+  missingSince: integer('missing_since', { mode: 'timestamp' }),
   preferredIde: text('preferred_ide'),
   preferredTerminal: text('preferred_terminal'),
   createdAt: integer('created_at', { mode: 'timestamp' })

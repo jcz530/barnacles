@@ -32,6 +32,8 @@ export interface Project {
   size?: number | null;
   isFavorite: boolean;
   archivedAt?: Date | null;
+  /** Set when the project's directory went missing; null while it is present. */
+  missingSince?: Date | null;
   preferredIde?: string | null;
   preferredTerminal?: string | null;
   createdAt: Date;
@@ -49,6 +51,12 @@ export interface ProjectFilters {
   search?: string;
   technologies?: string[];
   includeArchived?: boolean;
+  /**
+   * Include projects whose directory has gone missing. Excluded by default so
+   * they stop inflating counts and totals; the rescan sets this to find them
+   * again, and the UI sets it to show them for review.
+   */
+  includeMissing?: boolean;
 }
 
 class ProjectService {
@@ -69,6 +77,11 @@ class ProjectService {
     // By default, exclude archived projects unless explicitly requested
     if (!filters?.includeArchived) {
       conditions.push(sql`${projects.archivedAt} IS NULL`);
+    }
+
+    // A project whose directory is gone should not count towards totals.
+    if (!filters?.includeMissing) {
+      conditions.push(sql`${projects.missingSince} IS NULL`);
     }
 
     if (filters?.search) {
@@ -147,10 +160,11 @@ class ProjectService {
    * requiring the caller to already know the project ID.
    */
   async getProjectByPath(path: string): Promise<ProjectWithDetails | null> {
+    // A missing project cannot be the one the caller is standing in.
     const allProjects = await db
       .select()
       .from(projects)
-      .where(sql`${projects.archivedAt} IS NULL`);
+      .where(sql`${projects.archivedAt} IS NULL AND ${projects.missingSince} IS NULL`);
 
     const normalizedPath = path.replace(/[/\\]+$/, '');
 
@@ -557,6 +571,30 @@ class ProjectService {
    */
   async removeRelatedFolder(folderId: string) {
     return projectRelatedFoldersService.removeRelatedFolder(folderId);
+  }
+
+  /**
+   * Flag a project whose directory is gone or unreadable.
+   *
+   * Deliberately not a delete: a rescan cannot distinguish a deleted folder from
+   * an unmounted drive, and removing the row would cascade away the processes,
+   * accounts and exclusions the user configured.
+   */
+  async markProjectMissing(id: string): Promise<void> {
+    await db
+      .update(projects)
+      .set({ missingSince: new Date(), updatedAt: new Date() })
+      .where(eq(projects.id, id));
+  }
+
+  /**
+   * Clear the missing flag after a project's directory becomes readable again.
+   */
+  async markProjectFound(id: string): Promise<void> {
+    await db
+      .update(projects)
+      .set({ missingSince: null, updatedAt: new Date() })
+      .where(eq(projects.id, id));
   }
 
   /**

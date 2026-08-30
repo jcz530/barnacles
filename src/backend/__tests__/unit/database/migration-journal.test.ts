@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
 /**
  * Drizzle applies a migration only when its journal `when` exceeds the newest
@@ -48,5 +51,16 @@ describe('migration journal', () => {
       .filter(tag => !tags.has(tag));
 
     expect(unregistered).toEqual([]);
+  });
+
+  it('applies cleanly from empty on a fresh database', () => {
+    // drizzle-kit generates against its own snapshots, which do not know about
+    // hand-written migrations -- so it can re-emit a DROP COLUMN for a column an
+    // earlier hand-written migration already removed, breaking the whole chain.
+    const sqlite = new Database(':memory:');
+
+    expect(() =>
+      migrate(drizzle(sqlite), { migrationsFolder: path.join(process.cwd(), 'migrations') })
+    ).not.toThrow();
   });
 });

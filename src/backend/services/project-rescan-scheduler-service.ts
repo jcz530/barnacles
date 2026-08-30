@@ -75,9 +75,14 @@ export class ProjectRescanSchedulerService {
 
     try {
       // Get all projects from database (including archived)
-      const projects = await projectService.getProjects({ includeArchived: true });
+      // includeMissing so a project that reappears can have its flag cleared.
+      const projects = await projectService.getProjects({
+        includeArchived: true,
+        includeMissing: true,
+      });
 
       let updatedCount = 0;
+      let missingCount = 0;
       let errorCount = 0;
 
       for (const project of projects) {
@@ -90,12 +95,26 @@ export class ProjectRescanSchedulerService {
             await projectService.saveProject(projectInfo);
             updatedCount++;
 
+            // The directory is readable again, so clear any missing flag.
+            if (project.missingSince) {
+              await projectService.markProjectFound(project.id);
+            }
+
             // Broadcast update via WebSocket
             projectScanWebSocketService.broadcast({
               type: 'project-updated',
               projectPath: project.path,
               projectData: projectInfo,
             });
+          } else {
+            // The directory is gone or unreadable. Flag it rather than deleting:
+            // an unmounted drive looks identical to a deletion here, and removing
+            // the row would cascade away processes, accounts and exclusions the
+            // user configured. Keep the first-seen timestamp on repeat rescans.
+            if (!project.missingSince) {
+              await projectService.markProjectMissing(project.id);
+            }
+            missingCount++;
           }
         } catch (error) {
           console.error(`Error rescanning project ${project.path}:`, error);
@@ -103,7 +122,9 @@ export class ProjectRescanSchedulerService {
         }
       }
 
-      console.log(`✅ Periodic rescan completed: ${updatedCount} updated, ${errorCount} errors`);
+      console.log(
+        `✅ Periodic rescan completed: ${updatedCount} updated, ${missingCount} missing, ${errorCount} errors`
+      );
     } catch (error) {
       console.error('Error during periodic rescan:', error);
     }
