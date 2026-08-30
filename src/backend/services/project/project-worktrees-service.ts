@@ -5,7 +5,7 @@ import { promisify } from 'util';
 import { eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { db } from '../../../shared/database';
-import { projectWorktrees } from '../../../shared/database/schema';
+import { projects, projectWorktrees } from '../../../shared/database/schema';
 
 const execFileAsync = promisify(execFile);
 
@@ -241,16 +241,20 @@ class ProjectWorktreesService {
       return this.getWorktrees(projectId);
     }
 
-    const existing = await db
-      .select()
-      .from(projectWorktrees)
-      .where(eq(projectWorktrees.projectId, projectId));
-    const existingByPath = new Map(existing.map(row => [row.path, row]));
+    // Look at every worktree row, not just this project's. `path` is globally
+    // unique, and a path can legitimately be claimed by a different project:
+    // either it was scanned as a standalone project before we knew it was a
+    // worktree, or another repo's git metadata still lists it. Git is the
+    // authority for who owns a path, so re-point those rows to this project
+    // rather than colliding on the unique index.
+    const allRows = await db.select().from(projectWorktrees);
+    const existing = allRows.filter(row => row.projectId === projectId);
+    const rowByPath = new Map(allRows.map(row => [row.path, row]));
     const seen = new Set<string>();
 
     for (const worktree of fromGit) {
       seen.add(worktree.path);
-      const previous = existingByPath.get(worktree.path);
+      const previous = rowByPath.get(worktree.path);
 
       // Only the scanned path has freshly collected git state; leave the other
       // worktrees' stored values alone rather than blanking them.
@@ -267,6 +271,8 @@ class ProjectWorktreesService {
         await db
           .update(projectWorktrees)
           .set({
+            // Claim the row if another project held this path.
+            projectId,
             branch: worktree.branch,
             isMain: worktree.isMain,
             ...gitState,
@@ -290,6 +296,25 @@ class ProjectWorktreesService {
     for (const row of existing) {
       if (!seen.has(row.path)) {
         await db.delete(projectWorktrees).where(eq(projectWorktrees.id, row.id));
+      }
+    }
+
+    // Collapse any standalone project row that is really one of these worktrees.
+    // Such rows exist because the directory was scanned as a project before we
+    // could tell it was a worktree; the scanner skips it now, so nothing else
+    // would ever clean it up. Deleting cascades its stats and technologies,
+    // which were duplicates of this project's.
+    for (const worktree of fromGit) {
+      if (worktree.isMain) {
+        continue;
+      }
+
+      const duplicates = await db.select().from(projects).where(eq(projects.path, worktree.path));
+
+      for (const duplicate of duplicates) {
+        if (duplicate.id !== projectId) {
+          await db.delete(projects).where(eq(projects.id, duplicate.id));
+        }
       }
     }
 

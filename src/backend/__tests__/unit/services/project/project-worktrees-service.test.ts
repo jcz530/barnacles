@@ -250,6 +250,62 @@ describe('ProjectWorktreesService', () => {
       expect(worktrees).toHaveLength(1);
     });
 
+    it('claims a worktree path held by another project', async () => {
+      // The collapse case: the sibling worktree was scanned as its own project
+      // before we knew it was a worktree, so its path already has a row. `path`
+      // is globally unique, so sync must re-point that row rather than collide.
+      const repo = await makeRepo('repo');
+      const linked = path.join(tempDir, 'linked');
+      await execFileAsync('git', ['worktree', 'add', '-q', '-b', 'feat', linked], { cwd: repo });
+
+      await seedProject('p1', repo);
+      await seedProject('p2', linked);
+      await db.insert(projectWorktrees).values({
+        projectId: 'p2',
+        path: linked,
+        branch: 'feat',
+        isMain: true,
+      });
+
+      const worktrees = await projectWorktreesService.syncWorktrees('p1', repo);
+
+      expect(worktrees.map(w => w.path).sort()).toEqual([repo, linked].sort());
+      // and p2 no longer owns it
+      const p2Rows = await db
+        .select()
+        .from(projectWorktrees)
+        .where(eq(projectWorktrees.projectId, 'p2'));
+      expect(p2Rows).toEqual([]);
+    });
+
+    it('deletes a standalone project row that is really a worktree', async () => {
+      // The original bug: the sibling worktree was stored as its own project,
+      // double-counting the repo. Syncing the real project must collapse it --
+      // and must not lose the worktree row to the delete's cascade.
+      const repo = await makeRepo('repo');
+      const linked = path.join(tempDir, 'linked');
+      await execFileAsync('git', ['worktree', 'add', '-q', '-b', 'feat', linked], { cwd: repo });
+
+      await seedProject('p1', repo);
+      await seedProject('p2', linked);
+
+      const worktrees = await projectWorktreesService.syncWorktrees('p1', repo);
+
+      const remainingProjects = await db.select().from(projects);
+      expect(remainingProjects.map(p => p.id)).toEqual(['p1']);
+      // the worktree survived the cascade because it was re-pointed first
+      expect(worktrees.map(w => w.path).sort()).toEqual([repo, linked].sort());
+    });
+
+    it('never deletes the project being synced', async () => {
+      const repo = await makeRepo('repo');
+      await seedProject('p1', repo);
+
+      await projectWorktreesService.syncWorktrees('p1', repo);
+
+      expect((await db.select().from(projects)).map(p => p.id)).toEqual(['p1']);
+    });
+
     it('cascades worktree rows when the project is deleted', async () => {
       const repo = await makeRepo('repo');
       await seedProject('p1', repo);
