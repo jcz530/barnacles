@@ -9,6 +9,82 @@ import { settingsService } from './settings-service';
 
 const execAsync = promisify(exec);
 
+// Extensions whose contents are never line-countable. Reading these decodes binary
+// data as UTF-8 purely to count newlines: wasted I/O, and the resulting garbage
+// inflates lines_of_code. A single repo can hold tens of MB of these.
+const BINARY_FILE_EXTENSIONS = new Set([
+  // images
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.bmp',
+  '.ico',
+  '.icns',
+  '.webp',
+  '.avif',
+  '.tiff',
+  '.psd',
+  // video / audio
+  '.mp4',
+  '.mov',
+  '.avi',
+  '.mkv',
+  '.webm',
+  '.mp3',
+  '.wav',
+  '.flac',
+  '.ogg',
+  '.m4a',
+  // archives
+  '.zip',
+  '.gz',
+  '.tgz',
+  '.bz2',
+  '.xz',
+  '.7z',
+  '.rar',
+  '.tar',
+  '.jar',
+  '.war',
+  // fonts
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.otf',
+  '.eot',
+  // documents
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.xls',
+  '.xlsx',
+  '.ppt',
+  '.pptx',
+  // compiled / binary artifacts
+  '.exe',
+  '.dll',
+  '.so',
+  '.dylib',
+  '.o',
+  '.a',
+  '.class',
+  '.pyc',
+  '.pyo',
+  '.wasm',
+  // databases and disk images
+  '.db',
+  '.sqlite',
+  '.sqlite3',
+  '.dmg',
+  '.iso',
+  '.bin',
+]);
+
+// Files above this size are not line-counted. Reading a very large file into a JS
+// string stalls the scan and can throw ERR_STRING_TOO_LONG (silently counted as 0).
+const MAX_LINE_COUNT_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+
 // Re-export TechnologyDetector type for external use
 export type { TechnologyDetector };
 
@@ -397,26 +473,36 @@ class ProjectScannerService {
           } else if (entry.isFile()) {
             fileCount++;
 
-            // Track file extension
             const ext = path.extname(entry.name).toLowerCase();
             if (ext) {
               fileExtensions.add(ext);
               extensionCounts[ext] = (extensionCounts[ext] || 0) + 1;
-
-              // Count lines for code files
-              const lines = await projectScannerService.countLines(fullPath);
-              totalLinesOfCode += lines;
-              extensionLines[ext] = (extensionLines[ext] || 0) + lines;
             }
 
+            // stat first so its size can gate line counting without a second syscall
+            let fileSize: number | undefined;
             try {
               const stats = await fs.stat(fullPath);
+              fileSize = stats.size;
               totalSize += stats.size;
               if (stats.mtime > lastModified) {
                 lastModified = stats.mtime;
               }
             } catch {
               // Skip files we can't stat
+            }
+
+            // Count lines for text files only. Binary formats and very large files
+            // are skipped -- reading them wastes I/O and pollutes the line counts.
+            if (
+              ext &&
+              !BINARY_FILE_EXTENSIONS.has(ext) &&
+              fileSize !== undefined &&
+              fileSize <= MAX_LINE_COUNT_FILE_SIZE
+            ) {
+              const lines = await projectScannerService.countLines(fullPath);
+              totalLinesOfCode += lines;
+              extensionLines[ext] = (extensionLines[ext] || 0) + lines;
             }
           }
         }
