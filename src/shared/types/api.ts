@@ -20,9 +20,10 @@ export interface ProjectStats {
   languageStats?: Record<string, { fileCount: number; percentage: number; linesOfCode: number }>;
   linesOfCode?: number | null;
   thirdPartySize?: number | null;
-  gitBranch?: string | null;
-  gitStatus?: string | null;
   gitRemoteUrl?: string | null;
+  // Derived from the project's main worktree rather than stored here -- branch
+  // and dirty state describe a checkout. Read `worktrees` for per-checkout data.
+  gitBranch?: string | null;
   lastCommitDate?: Date | null;
   lastCommitMessage?: string | null;
   hasUncommittedChanges?: boolean | null;

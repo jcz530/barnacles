@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createUnitTestContext, mockDatabaseForUnit } from '@test/contexts';
-import {
-  ProjectScanWebSocketService,
-  type ScanProgress,
-} from '@backend/services/project-scan-websocket-service';
+import { ProjectScanWebSocketService } from '@backend/services/project-scan-websocket-service';
 import type { ProjectInfo } from '@backend/services/project-scanner-service';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+const run = promisify(execFile);
 
 mockDatabaseForUnit();
 
@@ -150,7 +151,22 @@ describe('ProjectScanWebSocketService walk', () => {
 
     expect(found.map(p => path.basename(p))).toEqual(['visible']);
   });
-});
 
-// Keeps the ScanProgress import meaningful for type-checking consumers.
-export type { ScanProgress };
+  it('skips a linked worktree rather than making it its own project', async () => {
+    const repo = path.join(tempDir, 'repo');
+    await fs.mkdir(repo, { recursive: true });
+    await fs.writeFile(path.join(repo, 'package.json'), '{}');
+    await run('git', ['init', '-q'], { cwd: repo });
+    await run('git', ['config', 'user.email', 'test@example.com'], { cwd: repo });
+    await run('git', ['config', 'user.name', 'Test'], { cwd: repo });
+    await run('git', ['commit', '-q', '--allow-empty', '-m', 'init'], { cwd: repo });
+
+    // A sibling worktree: the layout that previously produced a duplicate project
+    const linked = path.join(tempDir, 'repo-feature');
+    await run('git', ['worktree', 'add', '-q', '-b', 'feature', linked], { cwd: repo });
+
+    const found = await runScan();
+
+    expect(found.map(p => path.basename(p))).toEqual(['repo']);
+  });
+});

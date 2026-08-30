@@ -2,6 +2,7 @@ import { IncomingMessage, Server as HttpServer } from 'http';
 import { WebSocket, WebSocketServer } from 'ws';
 import { projectScannerService, type ProjectInfo } from './project-scanner-service';
 import { projectService } from './project';
+import { isLinkedWorktree } from './project/project-worktrees-service';
 import { settingsService } from './settings-service';
 import { getDefaultScanDirectories } from '../utils/default-scan-directories';
 import type { ProjectWithDetails } from '../../shared/types/api';
@@ -268,6 +269,14 @@ export class ProjectScanWebSocketService {
       scanned.add(realDirPath);
 
       try {
+        // A linked worktree is a checkout of a repository we already track, not
+        // a project of its own -- it is registered by its main repo's
+        // `git worktree list`. Skip it, and stop descending: whatever is inside
+        // belongs to that repository.
+        if (await isLinkedWorktree(dirPath)) {
+          return;
+        }
+
         // Check if current directory is a project
         const projectInfo = await projectScannerService.scanProject(dirPath);
         if (projectInfo) {

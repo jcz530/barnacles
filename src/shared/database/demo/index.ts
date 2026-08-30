@@ -13,6 +13,7 @@ import {
   projectRelatedFolders,
   projectStats,
   projectTechnologies,
+  projectWorktrees,
   technologies,
   aliases,
   events,
@@ -161,15 +162,26 @@ async function seedStats(): Promise<void> {
       directoryCount: stats.directoryCount,
       linesOfCode: stats.linesOfCode,
       thirdPartySize: stats.thirdPartySize,
-      gitBranch: stats.gitBranch,
-      gitStatus: stats.gitStatus,
       gitRemoteUrl: stats.gitRemoteUrl,
-      lastCommitDate: daysAgo(stats.lastCommitDaysAgo),
-      lastCommitMessage: stats.lastCommitMessage,
-      hasUncommittedChanges: stats.hasUncommittedChanges,
       createdAt: DEMO_NOW,
       updatedAt: DEMO_NOW,
     });
+
+    // Branch and dirty state are per-checkout, so they seed a main worktree.
+    const demoProject = DEMO_PROJECTS.find(project => project.id === stats.projectId);
+    if (demoProject && stats.gitBranch) {
+      await db.insert(projectWorktrees).values({
+        projectId: stats.projectId,
+        path: demoProject.path,
+        branch: stats.gitBranch,
+        isMain: true,
+        hasUncommittedChanges: stats.hasUncommittedChanges,
+        lastCommitDate: daysAgo(stats.lastCommitDaysAgo),
+        lastCommitMessage: stats.lastCommitMessage,
+        createdAt: DEMO_NOW,
+        updatedAt: DEMO_NOW,
+      });
+    }
 
     for (const language of stats.languages) {
       await db.insert(projectLanguageStats).values({

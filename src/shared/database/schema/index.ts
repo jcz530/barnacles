@@ -89,12 +89,9 @@ export const projectStats = sqliteTable('project_stats', {
   directoryCount: integer('directory_count'),
   linesOfCode: integer('lines_of_code'), // total lines of code
   thirdPartySize: integer('third_party_size'), // total size of third-party packages in bytes (node_modules, vendor, etc.)
-  gitBranch: text('git_branch'),
-  gitStatus: text('git_status'),
+  // Branch, dirty state and last commit live on project_worktrees: they describe
+  // a checkout, not a repository. The remote does belong to the repository.
   gitRemoteUrl: text('git_remote_url'),
-  lastCommitDate: integer('last_commit_date', { mode: 'timestamp' }),
-  lastCommitMessage: text('last_commit_message'),
-  hasUncommittedChanges: integer('has_uncommitted_changes', { mode: 'boolean' }),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),

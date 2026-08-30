@@ -306,7 +306,7 @@ class ProjectService {
 
     // Record this repository's checkouts. Cheap for a non-git directory: git
     // fails and the sync leaves the (empty) rows alone.
-    await projectWorktreesService.syncWorktrees(projectId, projectInfo.path);
+    await projectWorktreesService.syncWorktrees(projectId, projectInfo.path, projectInfo.gitInfo);
 
     // Return the complete project
     const project = await this.getProjectById(projectId);

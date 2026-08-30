@@ -218,8 +218,22 @@ class ProjectWorktreesService {
    * and its user-set fields (preferredIde) survive. Worktrees git no longer
    * reports are removed.
    */
-  async syncWorktrees(projectId: string, repoPath: string): Promise<Worktree[]> {
+  async syncWorktrees(
+    projectId: string,
+    repoPath: string,
+    /**
+     * Git state for `repoPath` itself, when the caller already collected it
+     * (the scanner does). Applied to whichever worktree matches that path;
+     * other worktrees keep whatever they already had.
+     */
+    gitInfoForRepoPath?: {
+      hasUncommittedChanges?: boolean;
+      lastCommitDate?: Date;
+      lastCommitMessage?: string;
+    }
+  ): Promise<Worktree[]> {
     const fromGit = await this.listWorktreesFromGit(repoPath);
+    const normalizedRepoPath = await normalizePath(repoPath);
 
     if (fromGit.length === 0) {
       // Not a git repo, or git failed. Leave any existing rows alone rather than
@@ -238,12 +252,24 @@ class ProjectWorktreesService {
       seen.add(worktree.path);
       const previous = existingByPath.get(worktree.path);
 
+      // Only the scanned path has freshly collected git state; leave the other
+      // worktrees' stored values alone rather than blanking them.
+      const gitState =
+        worktree.path === normalizedRepoPath && gitInfoForRepoPath
+          ? {
+              hasUncommittedChanges: gitInfoForRepoPath.hasUncommittedChanges ?? null,
+              lastCommitDate: gitInfoForRepoPath.lastCommitDate ?? null,
+              lastCommitMessage: gitInfoForRepoPath.lastCommitMessage ?? null,
+            }
+          : {};
+
       if (previous) {
         await db
           .update(projectWorktrees)
           .set({
             branch: worktree.branch,
             isMain: worktree.isMain,
+            ...gitState,
             updatedAt: new Date(),
           })
           .where(eq(projectWorktrees.id, previous.id));
@@ -254,6 +280,7 @@ class ProjectWorktreesService {
           path: worktree.path,
           branch: worktree.branch,
           isMain: worktree.isMain,
+          ...gitState,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
