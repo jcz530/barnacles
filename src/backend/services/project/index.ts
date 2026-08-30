@@ -310,22 +310,6 @@ class ProjectService {
   }
 
   /**
-   * Scan directories and save all found projects
-   */
-  async scanAndSaveProjects(
-    directories: string[],
-    maxDepth: number = 3
-  ): Promise<ProjectWithDetails[]> {
-    const scannedProjects = await projectScannerService.scanDirectories(directories, maxDepth);
-
-    const savedProjects = await Promise.all(
-      scannedProjects.map(projectInfo => this.saveProject(projectInfo))
-    );
-
-    return savedProjects;
-  }
-
-  /**
    * Rescan a single project by its path
    */
   async rescanProject(projectPath: string): Promise<ProjectWithDetails> {

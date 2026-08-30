@@ -1,4 +1,4 @@
-import { exec, execFile } from 'child_process';
+import { execFile } from 'child_process';
 import fs from 'fs/promises';
 import ignore from 'ignore';
 import path from 'path';
@@ -6,8 +6,6 @@ import { promisify } from 'util';
 import type { TechnologyDetector } from './technology-detectors';
 import { TECHNOLOGY_DETECTORS } from './technology-detectors';
 import { settingsService } from './settings-service';
-
-const execAsync = promisify(exec);
 
 // execFile rather than exec for git: an argv array is never shell-parsed, so a
 // project path containing a quote or a semicolon is just a path.
@@ -96,8 +94,12 @@ const BINARY_FILE_EXTENSIONS = new Set([
   '.bin',
 ]);
 
-// Files above this size are not line-counted. Reading a very large file into a JS
-// string stalls the scan and can throw ERR_STRING_TOO_LONG (silently counted as 0).
+// Files above this size are not line-counted. Reading one into a JS string and
+// splitting it allocates several times its size, and a multi-MB file is
+// essentially never hand-written source: surveying the repos on a real machine,
+// everything over this threshold was a log, a SQLite database, a WAL segment, a
+// Redis AOF or a media file. Raising the cap mainly re-admits those to the line
+// counts. (It is not a crash guard -- V8 tolerates strings up to ~512MB.)
 const MAX_LINE_COUNT_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 
 // Re-export TechnologyDetector type for external use
@@ -373,12 +375,19 @@ class ProjectScannerService {
     try {
       // Use 'du' command on Unix-like systems (macOS, Linux) for much faster calculation
       // -sk: sum in kilobytes, -s: summarize (don't show subdirectories)
-      const { stdout } = await execAsync(`du -sk "${dirPath}"`, {
+      // execFile, not exec: the path is not interpolated into a shell string, so a
+      // directory name containing a quote or a semicolon is just a name.
+      const { stdout } = await execFileAsync('du', ['-sk', dirPath], {
         timeout: 30000, // 30 second timeout
       });
 
       // Output format: "size\tpath"
       const sizeInKB = parseInt(stdout.split('\t')[0], 10);
+      if (!Number.isFinite(sizeInKB)) {
+        // Unexpected output (e.g. a warning line): fall back rather than
+        // propagating NaN into the project's size.
+        return await this.getDirectorySizeRecursive(dirPath);
+      }
       return sizeInKB * 1024; // Convert KB to bytes
     } catch {
       // Fallback to slower recursive method if 'du' fails
@@ -650,59 +659,6 @@ class ProjectScannerService {
       },
       gitInfo,
     };
-  }
-
-  /**
-   * Scans multiple directories for projects
-   */
-  async scanDirectories(basePaths: string[], maxDepth: number = 3): Promise<ProjectInfo[]> {
-    const projects: ProjectInfo[] = [];
-    const scanned = new Set<string>();
-
-    async function scanRecursive(dirPath: string, depth: number): Promise<void> {
-      // Resolve symlinks so the same real directory isn't revisited under a
-      // different path (e.g. symlink-heavy pnpm workspaces), which would
-      // otherwise cause the same project to be scanned/saved many times.
-      let realDirPath: string;
-      try {
-        realDirPath = await fs.realpath(dirPath);
-      } catch {
-        return;
-      }
-
-      if (depth > maxDepth || scanned.has(realDirPath)) {
-        return;
-      }
-
-      scanned.add(realDirPath);
-
-      try {
-        // Check if current directory is a project
-        const projectInfo = await projectScannerService.scanProject(dirPath);
-        if (projectInfo) {
-          projects.push(projectInfo);
-          // Don't scan subdirectories if we found a project
-          return;
-        }
-
-        // Otherwise, scan subdirectories
-        const entries = await fs.readdir(dirPath, { withFileTypes: true });
-
-        for (const entry of entries) {
-          if (entry.isDirectory() && !entry.name.startsWith('.')) {
-            await scanRecursive(path.join(dirPath, entry.name), depth + 1);
-          }
-        }
-      } catch {
-        // Skip directories we can't access
-      }
-    }
-
-    for (const basePath of basePaths) {
-      await scanRecursive(basePath, 0);
-    }
-
-    return projects;
   }
 
   /**

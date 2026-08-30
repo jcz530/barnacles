@@ -6,6 +6,12 @@ import { settingsService } from './settings-service';
 import { getDefaultScanDirectories } from '../utils/default-scan-directories';
 import type { ProjectWithDetails } from '../../shared/types/api';
 
+// How many sibling directories are walked at once. Each subtree does its own file
+// I/O and git subprocesses, so scanning strictly serially left the whole scan
+// blocked on one project at a time. Matches PROJECT_CONCURRENCY in
+// project-git-stats-service, which parallelises comparable per-project git work.
+const SCAN_CONCURRENCY = 8;
+
 export interface ScanProgress {
   type:
     | 'scan-started'
@@ -271,20 +277,33 @@ export class ProjectScanWebSocketService {
           return;
         }
 
-        // Otherwise, scan subdirectories
+        // Otherwise, scan subdirectories. Siblings are walked with bounded
+        // concurrency: each one is an independent subtree doing its own file I/O
+        // and git subprocesses, and scanning them strictly one at a time left the
+        // whole scan waiting on a single project at a time.
         const entries = await fs.readdir(dirPath, { withFileTypes: true });
+        const subdirs = entries.filter(entry => entry.isDirectory() && !entry.name.startsWith('.'));
 
-        for (const entry of entries) {
-          // Check cancellation before each subdirectory
-          const scanState = self.activeScans.get(scanId);
-          if (scanState?.cancelled) {
-            return;
-          }
+        let nextIndex = 0;
+        const workers = Array.from(
+          { length: Math.min(SCAN_CONCURRENCY, subdirs.length) },
+          async () => {
+            while (true) {
+              // Claim the next index. No await between read and increment, so
+              // each subdirectory is handed to exactly one worker.
+              const index = nextIndex++;
+              if (index >= subdirs.length) {
+                return;
+              }
 
-          if (entry.isDirectory() && !entry.name.startsWith('.')) {
-            await scanRecursive(path.join(dirPath, entry.name), depth + 1);
+              // Cancellation is checked at the top of scanRecursive, so a
+              // cancelled scan drains the remaining indices without doing work.
+              await scanRecursive(path.join(dirPath, subdirs[index].name), depth + 1);
+            }
           }
-        }
+        );
+
+        await Promise.all(workers);
       } catch {
         // Skip directories we can't access
       }
