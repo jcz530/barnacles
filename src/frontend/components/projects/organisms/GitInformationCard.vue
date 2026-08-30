@@ -14,7 +14,11 @@ const props = defineProps<Props>();
 
 const { getGitProvider, openGitRemote } = useProjectActions();
 
-const gitProvider = computed(() => getGitProvider(props.project.stats.gitRemoteUrl));
+const gitProvider = computed(() => getGitProvider(props.project.stats?.gitRemoteUrl));
+
+// The main checkout is the repository's current state; per-worktree detail lives
+// in WorktreesCard.
+const mainWorktree = computed(() => (props.project.worktrees ?? []).find(w => w.isMain));
 
 const { formatDate } = useFormatters();
 </script>
@@ -28,12 +32,12 @@ const { formatDate } = useFormatters();
       </CardTitle>
     </CardHeader>
     <CardContent>
-      <div v-if="project.stats?.gitBranch" class="space-y-4">
+      <div v-if="mainWorktree || project.stats?.gitRemoteUrl" class="space-y-4">
         <div>
           <div class="text-sm font-medium text-slate-500">Remote</div>
           <div class="mt-1 font-mono text-sm text-slate-900">
             <Button
-              v-if="project.stats.gitRemoteUrl"
+              v-if="project.stats?.gitRemoteUrl && gitProvider"
               variant="link"
               :title="gitProvider.webUrl"
               @click="() => openGitRemote(gitProvider.webUrl)"
@@ -43,26 +47,26 @@ const { formatDate } = useFormatters();
             <p v-else>Unset</p>
           </div>
         </div>
-        <div>
+        <div v-if="mainWorktree">
           <div class="text-sm font-medium text-slate-500">Current Branch</div>
           <div class="mt-1 font-mono text-sm text-slate-900">
-            {{ project.stats.gitBranch }}
+            {{ mainWorktree.branch || 'detached HEAD' }}
           </div>
         </div>
-        <div v-if="project.stats.lastCommitMessage">
+        <div v-if="mainWorktree?.lastCommitMessage">
           <div class="text-sm font-medium text-slate-500">Last Commit</div>
           <div class="mt-1 text-sm text-slate-900">
-            {{ project.stats.lastCommitMessage }}
+            {{ mainWorktree.lastCommitMessage }}
           </div>
           <div
-            v-if="project.stats.lastCommitDate"
+            v-if="mainWorktree.lastCommitDate"
             class="mt-1 flex items-center gap-1.5 text-xs text-slate-500"
           >
             <Clock class="h-3.5 w-3.5" />
-            {{ formatDate(project.stats.lastCommitDate) }}
+            {{ formatDate(mainWorktree.lastCommitDate) }}
           </div>
         </div>
-        <div v-if="project.stats.hasUncommittedChanges">
+        <div v-if="mainWorktree?.hasUncommittedChanges">
           <span
             class="inline-flex items-center gap-1.5 rounded-md bg-orange-100 px-2.5 py-1 text-xs font-medium text-orange-700"
           >
@@ -70,7 +74,7 @@ const { formatDate } = useFormatters();
             Uncommitted Changes
           </span>
         </div>
-        <div v-else>
+        <div v-else-if="mainWorktree">
           <span
             class="bg-success-100 text-success-700 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium"
           >

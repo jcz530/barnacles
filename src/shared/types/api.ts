@@ -21,12 +21,6 @@ export interface ProjectStats {
   linesOfCode?: number | null;
   thirdPartySize?: number | null;
   gitRemoteUrl?: string | null;
-  // Derived from the project's main worktree rather than stored here -- branch
-  // and dirty state describe a checkout. Read `worktrees` for per-checkout data.
-  gitBranch?: string | null;
-  lastCommitDate?: Date | null;
-  lastCommitMessage?: string | null;
-  hasUncommittedChanges?: boolean | null;
 }
 
 export interface Project {

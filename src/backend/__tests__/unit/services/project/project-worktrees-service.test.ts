@@ -250,6 +250,32 @@ describe('ProjectWorktreesService', () => {
       expect(worktrees).toHaveLength(1);
     });
 
+
+    it('records dirty state and last commit per worktree', async () => {
+      const repo = await makeRepo('repo');
+      const linked = path.join(tempDir, 'linked');
+      await execFileAsync('git', ['worktree', 'add', '-q', '-b', 'feat', linked], { cwd: repo });
+
+      // Give the linked worktree its own commit and its own dirty file, so a
+      // repo-level answer would be visibly wrong for it.
+      await fs.writeFile(path.join(linked, 'only-here.txt'), 'hello');
+      await execFileAsync('git', ['add', 'only-here.txt'], { cwd: linked });
+      await execFileAsync('git', ['commit', '-q', '-m', 'commit on the worktree'], { cwd: linked });
+      await fs.writeFile(path.join(linked, 'dirty.txt'), 'uncommitted');
+
+      await seedProject('p1', repo);
+      const worktrees = await projectWorktreesService.syncWorktrees('p1', repo);
+
+      const main = worktrees.find(w => w.path === repo);
+      const feature = worktrees.find(w => w.path === linked);
+
+      expect(feature?.lastCommitMessage).toBe('commit on the worktree');
+      expect(feature?.hasUncommittedChanges).toBe(true);
+      // the main checkout is clean and still on its own commit
+      expect(main?.lastCommitMessage).toBe('init');
+      expect(main?.hasUncommittedChanges).toBe(false);
+    });
+
     it('claims a worktree path held by another project', async () => {
       // The collapse case: the sibling worktree was scanned as its own project
       // before we knew it was a worktree, so its path already has a row. `path`

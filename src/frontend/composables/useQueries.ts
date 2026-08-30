@@ -36,6 +36,7 @@ import type {
 } from '../../shared/types/process';
 import type { IpInfo } from '../../shared/utilities/ip-info';
 import type { RelatedFolder } from '../../backend/services/project/project-related-folders-service';
+import type { Worktree } from '../../shared/types/api';
 import { useApi } from './useApi';
 
 export const useQueries = () => {
@@ -161,6 +162,50 @@ export const useQueries = () => {
   };
 
   // Related folders query
+  // Worktrees for a project (main checkout first)
+  const useWorktreesQuery = (
+    projectId: MaybeRef<string>,
+    options?: { enabled?: MaybeRef<boolean> }
+  ) => {
+    return useQuery({
+      queryKey: ['projects', unref(projectId), 'worktrees'],
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<Worktree[]>>(
+          'GET',
+          `${API_ROUTES.PROJECTS}/${unref(projectId)}/worktrees`
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch worktrees');
+        }
+
+        return response.data || [];
+      },
+      enabled: options?.enabled ?? true,
+    });
+  };
+
+  // Re-read a project's worktrees from git
+  const useSyncWorktreesMutation = () => {
+    return useMutation({
+      mutationFn: async ({ projectId }: { projectId: string }) => {
+        return await apiCall<ApiResponse<Worktree[]>>(
+          'POST',
+          `${API_ROUTES.PROJECTS}/${projectId}/worktrees/sync`,
+          {}
+        );
+      },
+      onSuccess: (_data, variables) => {
+        queryClient.invalidateQueries({
+          queryKey: ['projects', variables.projectId, 'worktrees'],
+        });
+        // The project payload embeds worktrees and the derived git summary
+        queryClient.invalidateQueries({ queryKey: ['project', variables.projectId] });
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+      },
+    });
+  };
+
   const useRelatedFoldersQuery = (
     projectId: MaybeRef<string>,
     options?: { enabled?: MaybeRef<boolean> }
@@ -433,12 +478,20 @@ export const useQueries = () => {
   // Open project in IDE mutation
   const useOpenProjectMutation = () => {
     return useMutation({
-      mutationFn: async ({ projectId, ideId }: { projectId: string; ideId?: string }) => {
-        return await apiCall<ApiResponse>(
-          'POST',
-          `${API_ROUTES.PROJECTS}/${projectId}/open`,
-          ideId ? { ideId } : {}
-        );
+      mutationFn: async ({
+        projectId,
+        ideId,
+        worktreePath,
+      }: {
+        projectId: string;
+        ideId?: string;
+        /** Opens this worktree instead of the project root. */
+        worktreePath?: string;
+      }) => {
+        return await apiCall<ApiResponse>('POST', `${API_ROUTES.PROJECTS}/${projectId}/open`, {
+          ...(ideId ? { ideId } : {}),
+          ...(worktreePath ? { worktreePath } : {}),
+        });
       },
     });
   };
@@ -513,11 +566,23 @@ export const useQueries = () => {
   // Open terminal at project mutation
   const useOpenTerminalMutation = () => {
     return useMutation({
-      mutationFn: async ({ projectId, terminalId }: { projectId: string; terminalId?: string }) => {
+      mutationFn: async ({
+        projectId,
+        terminalId,
+        worktreePath,
+      }: {
+        projectId: string;
+        terminalId?: string;
+        /** Opens a terminal at this worktree instead of the project root. */
+        worktreePath?: string;
+      }) => {
         return await apiCall<ApiResponse>(
           'POST',
           `${API_ROUTES.PROJECTS}/${projectId}/open-terminal`,
-          terminalId ? { terminalId } : {}
+          {
+            ...(terminalId ? { terminalId } : {}),
+            ...(worktreePath ? { worktreePath } : {}),
+          }
         );
       },
     });
@@ -1884,6 +1949,8 @@ export const useQueries = () => {
     useProjectsQuery,
     useProjectQuery,
     useTechnologiesQuery,
+    useWorktreesQuery,
+    useSyncWorktreesMutation,
     useRelatedFoldersQuery,
     useAddRelatedFolderMutation,
     useRemoveRelatedFolderMutation,

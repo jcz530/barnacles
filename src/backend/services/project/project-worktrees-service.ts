@@ -110,6 +110,49 @@ export function parseWorktreeList(stdout: string): ParsedWorktree[] {
   return worktrees;
 }
 
+/** Dirty state and last commit for a single checkout. */
+export interface WorktreeGitState {
+  hasUncommittedChanges: boolean | null;
+  lastCommitDate: Date | null;
+  lastCommitMessage: string | null;
+}
+
+/**
+ * Reads dirty state and last commit for one checkout.
+ *
+ * Each worktree has its own working tree and its own HEAD, so this has to run
+ * per path -- the repository-level answer is only correct for the main checkout.
+ * Returns nulls rather than throwing so one bad worktree cannot fail a sync.
+ */
+async function readWorktreeGitState(worktreePath: string): Promise<WorktreeGitState> {
+  const options = { cwd: worktreePath, maxBuffer: GIT_MAX_BUFFER, timeout: GIT_TIMEOUT_MS };
+  const state: WorktreeGitState = {
+    hasUncommittedChanges: null,
+    lastCommitDate: null,
+    lastCommitMessage: null,
+  };
+
+  try {
+    const { stdout } = await execFileAsync('git', ['status', '--porcelain'], options);
+    state.hasUncommittedChanges = stdout.trim().length > 0;
+  } catch {
+    // Leave null; the worktree directory may be gone or unreadable.
+  }
+
+  try {
+    const { stdout } = await execFileAsync('git', ['log', '-1', '--format=%cI%x00%s'], options);
+    const [commitDate, commitMessage] = stdout.split('\0');
+    if (commitDate?.trim()) {
+      state.lastCommitDate = new Date(commitDate.trim());
+    }
+    state.lastCommitMessage = commitMessage?.trim() || null;
+  } catch {
+    // No commits yet.
+  }
+
+  return state;
+}
+
 /**
  * Absolute path to the repository's shared git directory, which is the identity
  * of a repository: every worktree of the same repo resolves to the same value.
@@ -252,12 +295,26 @@ class ProjectWorktreesService {
     const rowByPath = new Map(allRows.map(row => [row.path, row]));
     const seen = new Set<string>();
 
+    // Each checkout has its own working tree and HEAD, so branch alone is not
+    // enough -- read dirty state and last commit per worktree. Repos have a
+    // handful of worktrees at most, so reading them together is cheap.
+    const gitStateByPath = new Map<string, WorktreeGitState>(
+      await Promise.all(
+        fromGit
+          .filter(worktree => worktree.path !== normalizedRepoPath || !gitInfoForRepoPath)
+          .map(
+            async worktree =>
+              [worktree.path, await readWorktreeGitState(worktree.path)] as const
+          )
+      )
+    );
+
     for (const worktree of fromGit) {
       seen.add(worktree.path);
       const previous = rowByPath.get(worktree.path);
 
-      // Only the scanned path has freshly collected git state; leave the other
-      // worktrees' stored values alone rather than blanking them.
+      // Prefer git state the caller already collected for the scanned path;
+      // every other checkout was read directly above.
       const gitState =
         worktree.path === normalizedRepoPath && gitInfoForRepoPath
           ? {
@@ -265,7 +322,7 @@ class ProjectWorktreesService {
               lastCommitDate: gitInfoForRepoPath.lastCommitDate ?? null,
               lastCommitMessage: gitInfoForRepoPath.lastCommitMessage ?? null,
             }
-          : {};
+          : (gitStateByPath.get(worktree.path) ?? {});
 
       if (previous) {
         await db

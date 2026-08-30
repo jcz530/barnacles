@@ -26,10 +26,21 @@ const fakeProject: ProjectWithDetails = {
   stats: {
     id: 'stats-1',
     projectId: 'proj-1',
-    gitBranch: 'main',
-    hasUncommittedChanges: true,
-    lastCommitMessage: 'fix bug',
+    gitRemoteUrl: 'https://github.com/example/barnacles.git',
   },
+  worktrees: [
+    {
+      id: 'wt-1',
+      projectId: 'proj-1',
+      path: '/Users/dev/barnacles',
+      branch: 'main',
+      isMain: true,
+      hasUncommittedChanges: true,
+      lastCommitMessage: 'fix bug',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ],
 };
 
 describe('get_project_status tool', () => {

@@ -7,6 +7,7 @@ import GitInformationCard from './GitInformationCard.vue';
 import LanguageBreakdownCard from './LanguageBreakdownCard.vue';
 import ProjectInfoCard from './ProjectInfoCard.vue';
 import TechnologiesCard from './TechnologiesCard.vue';
+import WorktreesCard from './WorktreesCard.vue';
 
 const project = inject<ComputedRef<ProjectWithDetails | undefined>>('project');
 </script>
@@ -15,6 +16,7 @@ const project = inject<ComputedRef<ProjectWithDetails | undefined>>('project');
   <div class="grid gap-6 px-1 md:grid-cols-2">
     <ProjectInfoCard :project="project" />
     <GitInformationCard :project="project" />
+    <WorktreesCard :project="project" />
     <LanguageBreakdownCard :project="project" />
     <FileStatisticsCard :project="project" />
     <TechnologiesCard :technologies="project.technologies ?? []" />

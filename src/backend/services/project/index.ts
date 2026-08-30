@@ -45,32 +45,6 @@ export interface ProjectWithDetails extends Project {
   worktrees?: import('./project-worktrees-service').Worktree[];
 }
 
-/**
- * Projects the main worktree's branch and dirty state onto `stats`.
- *
- * Branch and dirty state are properties of a checkout, so they now live on
- * project_worktrees. Existing consumers (the project list, tray, CLI and the MCP
- * tools) still read `stats.gitBranch`, so keep serving it from the main worktree
- * until those move to `worktrees` -- at which point this shim comes out.
- */
-function withMainWorktreeStats(
-  stats: import('./project-stats-service').ProjectStats | null,
-  worktrees: import('./project-worktrees-service').Worktree[]
-): import('./project-stats-service').ProjectStats | null {
-  const main = worktrees.find(worktree => worktree.isMain);
-  if (!main || !stats) {
-    return stats;
-  }
-
-  return {
-    ...stats,
-    gitBranch: main.branch ?? stats.gitBranch,
-    hasUncommittedChanges: main.hasUncommittedChanges ?? stats.hasUncommittedChanges,
-    lastCommitDate: main.lastCommitDate ?? stats.lastCommitDate,
-    lastCommitMessage: main.lastCommitMessage ?? stats.lastCommitMessage,
-  };
-}
-
 export interface ProjectFilters {
   search?: string;
   technologies?: string[];
@@ -124,7 +98,7 @@ class ProjectService {
         return {
           ...project,
           technologies: techs,
-          stats: withMainWorktreeStats(stats, worktrees),
+          stats,
           worktrees,
         };
       })
@@ -162,7 +136,7 @@ class ProjectService {
     return {
       ...project,
       technologies: techs,
-      stats: withMainWorktreeStats(stats, worktrees),
+      stats,
       worktrees,
     };
   }
@@ -400,16 +374,45 @@ class ProjectService {
   }
 
   /**
-   * Open a project in its preferred IDE
+   * Resolves which directory an "open" action should target.
+   *
+   * Defaults to the project root. A worktreePath is honoured only when it is one
+   * of this project's own worktrees, so the caller cannot open an arbitrary
+   * directory by passing a path.
    */
-  async openProjectInIDE(id: string, ideId?: string): Promise<void> {
+  private async resolveOpenTarget(
+    project: ProjectWithDetails,
+    worktreePath?: string
+  ): Promise<{ path: string; preferredIde: string | null }> {
+    if (!worktreePath) {
+      return { path: project.path, preferredIde: project.preferredIde ?? null };
+    }
+
+    const worktree = (project.worktrees ?? []).find(candidate => candidate.path === worktreePath);
+    if (!worktree) {
+      throw new Error('Worktree not found for this project');
+    }
+
+    // A worktree may have its own IDE preference; fall back to the project's.
+    return {
+      path: worktree.path,
+      preferredIde: worktree.preferredIde ?? project.preferredIde ?? null,
+    };
+  }
+
+  /**
+   * Open a project, or one of its worktrees, in the preferred IDE
+   */
+  async openProjectInIDE(id: string, ideId?: string, worktreePath?: string): Promise<void> {
     const project = await this.getProjectById(id);
 
     if (!project) {
       throw new Error('Project not found');
     }
 
-    await projectToolsService.openProjectInIDE(project.path, project.preferredIde, ideId);
+    const target = await this.resolveOpenTarget(project, worktreePath);
+
+    await projectToolsService.openProjectInIDE(target.path, target.preferredIde, ideId);
   }
 
   /**
@@ -436,15 +439,21 @@ class ProjectService {
   /**
    * Open a terminal at the project path
    */
-  async openTerminalAtProject(id: string, terminalId?: string): Promise<void> {
+  async openTerminalAtProject(
+    id: string,
+    terminalId?: string,
+    worktreePath?: string
+  ): Promise<void> {
     const project = await this.getProjectById(id);
 
     if (!project) {
       throw new Error('Project not found');
     }
 
+    const target = await this.resolveOpenTarget(project, worktreePath);
+
     await projectToolsService.openTerminalAtProject(
-      project.path,
+      target.path,
       project.preferredTerminal,
       terminalId
     );

@@ -84,9 +84,9 @@ tools.post('/:id/open', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const body = await c.req.json().catch(() => ({}));
-    const { ideId } = body;
+    const { ideId, worktreePath } = body;
 
-    await projectService.openProjectInIDE(project.id, ideId);
+    await projectService.openProjectInIDE(project.id, ideId, worktreePath);
 
     return c.json({
       message: 'Project opened in IDE',
@@ -194,9 +194,9 @@ tools.post('/:id/open-terminal', loadProject, async (c: ProjectContext) => {
   try {
     const project = c.get('project');
     const body = await c.req.json().catch(() => ({}));
-    const { terminalId } = body;
+    const { terminalId, worktreePath } = body;
 
-    await projectService.openTerminalAtProject(project.id, terminalId);
+    await projectService.openTerminalAtProject(project.id, terminalId, worktreePath);
 
     return c.json({
       message: 'Terminal opened at project path',
