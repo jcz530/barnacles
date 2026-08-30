@@ -169,6 +169,13 @@
       "when": 1787420378869,
       "tag": "0023_vengeful_blur",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1788148800000,
+      "tag": "0024_add_dot_venv_exclusion",
+      "breakpoints": true
     }
   ]
 }

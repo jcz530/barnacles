@@ -359,6 +359,7 @@ class ProjectScannerService {
       '.nuxt',
       '__pycache__',
       'venv',
+      '.venv',
       'target',
     ];
 

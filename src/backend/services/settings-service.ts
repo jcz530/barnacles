@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS = {
       '.nuxt',
       '__pycache__',
       'venv',
+      '.venv',
       'target',
     ]),
     type: 'json' as const,
