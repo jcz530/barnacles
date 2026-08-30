@@ -21,6 +21,7 @@ import type {
 import { calculateStreaks, todayIsoDate } from '../../../shared/utils/git-streak';
 import { isDemoMode } from '../../../shared/config/runtime-mode';
 import { TECHNOLOGY_DETECTORS } from '../technology-detectors';
+import { getGitCommonDir } from './project-worktrees-service';
 
 // ISO weeks run Monday-Sunday and are what the `week=YYYY-Www` param addresses.
 // isoWeeksInYear needs isLeapYear, and it is what tells a 53-week year from a
@@ -239,8 +240,13 @@ class ProjectGitStatsService {
       });
     });
 
+    // `git log --all` reads the shared object store, so two checkouts of one
+    // repository return the identical commits -- scanning both would double every
+    // number. Collapse to one path per repository first.
+    const distinctPaths = await this.dedupeByRepository(projectPaths);
+
     const collected = await mapWithConcurrency(
-      projectPaths,
+      distinctPaths,
       PROJECT_CONCURRENCY,
       async projectPath => {
         // A repo may override the author email locally, so resolve per project
@@ -472,6 +478,38 @@ class ProjectGitStatsService {
    * that feed top-files and languages are free once we're already parsing
    * numstat output.
    */
+  /**
+   * One path per repository.
+   *
+   * Identity is the shared git directory, so every checkout of a repo collapses
+   * to a single entry while independent clones of the same remote stay separate.
+   * The first path wins, and `projectPaths` arrives sorted, so the choice is
+   * stable across calls (which matters -- the result is cached on those paths).
+   *
+   * A path whose repository cannot be resolved is kept as-is rather than
+   * dropped: it may still be a directory worth reading.
+   */
+  private async dedupeByRepository(projectPaths: string[]): Promise<string[]> {
+    const seenRepos = new Set<string>();
+    const distinct: string[] = [];
+
+    for (const projectPath of projectPaths) {
+      const commonDir = await getGitCommonDir(projectPath);
+
+      if (!commonDir) {
+        distinct.push(projectPath);
+        continue;
+      }
+
+      if (!seenRepos.has(commonDir)) {
+        seenRepos.add(commonDir);
+        distinct.push(projectPath);
+      }
+    }
+
+    return distinct;
+  }
+
   private async getProjectGitData(
     projectPath: string,
     userEmails: string[],
