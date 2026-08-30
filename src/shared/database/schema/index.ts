@@ -170,6 +170,35 @@ export const projectRelatedFolders = sqliteTable('project_related_folders', {
     .$defaultFn(() => new Date()),
 });
 
+// A project's git checkouts. The main worktree plus any linked worktrees
+// (`git worktree add`), which share one object store and so are one project.
+// Branch and dirty state belong here rather than on project_stats: they are
+// properties of a checkout, not of the repository.
+export const projectWorktrees = sqliteTable('project_worktrees', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  path: text('path').notNull().unique(),
+  // Null for a detached HEAD, which has no branch.
+  branch: text('branch'),
+  isMain: integer('is_main', { mode: 'boolean' }).notNull().default(false),
+  // Absolute path to this worktree's own git dir, from `git rev-parse --git-dir`.
+  gitDir: text('git_dir'),
+  hasUncommittedChanges: integer('has_uncommitted_changes', { mode: 'boolean' }),
+  lastCommitDate: integer('last_commit_date', { mode: 'timestamp' }),
+  lastCommitMessage: text('last_commit_message'),
+  preferredIde: text('preferred_ide'),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export const projectExclusions = sqliteTable('project_exclusions', {
   id: text('id')
     .primaryKey()
@@ -211,6 +240,7 @@ export const projectsRelations = relations(projects, ({ many, one }) => ({
   }),
   processes: many(projectProcesses),
   relatedFolders: many(projectRelatedFolders),
+  worktrees: many(projectWorktrees),
   exclusions: many(projectExclusions),
   accounts: many(projectAccounts),
 }));
@@ -267,6 +297,13 @@ export const projectProcessCommandsRelations = relations(projectProcessCommands,
 export const projectRelatedFoldersRelations = relations(projectRelatedFolders, ({ one }) => ({
   project: one(projects, {
     fields: [projectRelatedFolders.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const projectWorktreesRelations = relations(projectWorktrees, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectWorktrees.projectId],
     references: [projects.id],
   }),
 }));

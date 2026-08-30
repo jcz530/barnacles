@@ -173,8 +173,15 @@
     {
       "idx": 24,
       "version": "6",
-      "when": 1788148800000,
+      "when": 1787767962493,
       "tag": "0024_add_dot_venv_exclusion",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1788115546118,
+      "tag": "0025_loving_doctor_strange",
       "breakpoints": true
     }
   ]
