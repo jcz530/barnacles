@@ -515,6 +515,8 @@ class ProjectScannerService {
 
             // Count lines for text files only. Binary formats and very large files
             // are skipped -- reading them wastes I/O and pollutes the line counts.
+            // A file we could not stat is also skipped: readFile would fail for the
+            // same reason and countLines would return 0 anyway.
             if (
               ext &&
               !BINARY_FILE_EXTENSIONS.has(ext) &&
