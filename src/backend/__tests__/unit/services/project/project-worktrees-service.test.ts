@@ -250,7 +250,6 @@ describe('ProjectWorktreesService', () => {
       expect(worktrees).toHaveLength(1);
     });
 
-
     it('records dirty state and last commit per worktree', async () => {
       const repo = await makeRepo('repo');
       const linked = path.join(tempDir, 'linked');

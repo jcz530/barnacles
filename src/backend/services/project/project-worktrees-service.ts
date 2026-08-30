@@ -303,8 +303,7 @@ class ProjectWorktreesService {
         fromGit
           .filter(worktree => worktree.path !== normalizedRepoPath || !gitInfoForRepoPath)
           .map(
-            async worktree =>
-              [worktree.path, await readWorktreeGitState(worktree.path)] as const
+            async worktree => [worktree.path, await readWorktreeGitState(worktree.path)] as const
           )
       )
     );
