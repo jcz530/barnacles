@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../../shared/database';
-import { projects } from '../../../shared/database/schema';
+import { projects, projectWorktrees } from '../../../shared/database/schema';
 import type { ProjectInfo } from '../project-scanner-service';
 import { projectScannerService } from '../project-scanner-service';
 import { ideDetectorService } from '../ide-detector-service';
@@ -13,12 +13,14 @@ import { projectFileSystemService } from './project-filesystem-service';
 import { projectPackageService } from './project-package-service';
 import { projectRelatedFoldersService } from './project-related-folders-service';
 import { projectExclusionsService } from './project-exclusions-service';
+import { projectWorktreesService } from './project-worktrees-service';
 
 // Re-export types
 export type { Technology } from './project-technology-service';
 export type { ProjectStats } from './project-stats-service';
 export type { RelatedFolder } from './project-related-folders-service';
 export type { ProjectExclusion } from './project-exclusions-service';
+export type { Worktree } from './project-worktrees-service';
 
 export interface Project {
   id: string;
@@ -39,6 +41,34 @@ export interface Project {
 export interface ProjectWithDetails extends Project {
   technologies: import('./project-technology-service').Technology[];
   stats?: import('./project-stats-service').ProjectStats | null;
+  /** Main checkout first. Empty for a project that is not a git repository. */
+  worktrees?: import('./project-worktrees-service').Worktree[];
+}
+
+/**
+ * Projects the main worktree's branch and dirty state onto `stats`.
+ *
+ * Branch and dirty state are properties of a checkout, so they now live on
+ * project_worktrees. Existing consumers (the project list, tray, CLI and the MCP
+ * tools) still read `stats.gitBranch`, so keep serving it from the main worktree
+ * until those move to `worktrees` -- at which point this shim comes out.
+ */
+function withMainWorktreeStats(
+  stats: import('./project-stats-service').ProjectStats | null,
+  worktrees: import('./project-worktrees-service').Worktree[]
+): import('./project-stats-service').ProjectStats | null {
+  const main = worktrees.find(worktree => worktree.isMain);
+  if (!main || !stats) {
+    return stats;
+  }
+
+  return {
+    ...stats,
+    gitBranch: main.branch ?? stats.gitBranch,
+    hasUncommittedChanges: main.hasUncommittedChanges ?? stats.hasUncommittedChanges,
+    lastCommitDate: main.lastCommitDate ?? stats.lastCommitDate,
+    lastCommitMessage: main.lastCommitMessage ?? stats.lastCommitMessage,
+  };
 }
 
 export interface ProjectFilters {
@@ -85,15 +115,17 @@ class ProjectService {
     // Get technologies for each project
     const projectsWithDetails = await Promise.all(
       projectResults.map(async project => {
-        const [techs, stats] = await Promise.all([
+        const [techs, stats, worktrees] = await Promise.all([
           projectTechnologyService.getProjectTechnologies(project.id),
           projectStatsService.getProjectStats(project.id, false), // Don't include language stats in list view
+          projectWorktreesService.getWorktrees(project.id),
         ]);
 
         return {
           ...project,
           technologies: techs,
-          stats,
+          stats: withMainWorktreeStats(stats, worktrees),
+          worktrees,
         };
       })
     );
@@ -121,15 +153,17 @@ class ProjectService {
     }
 
     const project = result[0];
-    const [techs, stats] = await Promise.all([
+    const [techs, stats, worktrees] = await Promise.all([
       projectTechnologyService.getProjectTechnologies(project.id),
       projectStatsService.getProjectStats(project.id),
+      projectWorktreesService.getWorktrees(project.id),
     ]);
 
     return {
       ...project,
       technologies: techs,
-      stats,
+      stats: withMainWorktreeStats(stats, worktrees),
+      worktrees,
     };
   }
 
@@ -146,16 +180,33 @@ class ProjectService {
 
     const normalizedPath = path.replace(/[/\\]+$/, '');
 
-    let bestMatch: (typeof allProjects)[number] | null = null;
-    for (const project of allProjects) {
-      const projectPath = project.path.replace(/[/\\]+$/, '');
-      const isMatch =
-        normalizedPath === projectPath ||
-        normalizedPath.startsWith(projectPath + '/') ||
-        normalizedPath.startsWith(projectPath + '\\');
+    // Candidates are project roots plus every known worktree path. A linked
+    // worktree usually lives outside its project's directory (a sibling, or an
+    // entirely separate root), so matching on project paths alone would fail to
+    // resolve anything running from inside one.
+    const candidates: { projectId: string; path: string }[] = allProjects.map(project => ({
+      projectId: project.id,
+      path: project.path,
+    }));
 
-      if (isMatch && (!bestMatch || projectPath.length > bestMatch.path.length)) {
-        bestMatch = project;
+    const projectIds = new Set(allProjects.map(project => project.id));
+    const worktrees = await db.select().from(projectWorktrees);
+    for (const worktree of worktrees) {
+      if (projectIds.has(worktree.projectId)) {
+        candidates.push({ projectId: worktree.projectId, path: worktree.path });
+      }
+    }
+
+    let bestMatch: { projectId: string; path: string } | null = null;
+    for (const candidate of candidates) {
+      const candidatePath = candidate.path.replace(/[/\\]+$/, '');
+      const isMatch =
+        normalizedPath === candidatePath ||
+        normalizedPath.startsWith(candidatePath + '/') ||
+        normalizedPath.startsWith(candidatePath + '\\');
+
+      if (isMatch && (!bestMatch || candidatePath.length > bestMatch.path.length)) {
+        bestMatch = candidate;
       }
     }
 
@@ -163,7 +214,7 @@ class ProjectService {
       return null;
     }
 
-    return this.getProjectById(bestMatch.id);
+    return this.getProjectById(bestMatch.projectId);
   }
 
   /**
@@ -252,6 +303,10 @@ class ProjectService {
 
     // Save or update project stats
     await projectStatsService.saveProjectStats(projectId, projectInfo);
+
+    // Record this repository's checkouts. Cheap for a non-git directory: git
+    // fails and the sync leaves the (empty) rows alone.
+    await projectWorktreesService.syncWorktrees(projectId, projectInfo.path);
 
     // Return the complete project
     const project = await this.getProjectById(projectId);
@@ -493,6 +548,27 @@ class ProjectService {
    */
   async removeRelatedFolder(folderId: string) {
     return projectRelatedFoldersService.removeRelatedFolder(folderId);
+  }
+
+  /**
+   * Get all worktrees for a project, main checkout first
+   */
+  async getWorktrees(projectId: string) {
+    return projectWorktreesService.getWorktrees(projectId);
+  }
+
+  /**
+   * Re-read a project's worktrees from git
+   */
+  async syncWorktrees(projectId: string, repoPath: string) {
+    return projectWorktreesService.syncWorktrees(projectId, repoPath);
+  }
+
+  /**
+   * Set the preferred IDE for a single worktree
+   */
+  async setWorktreePreferredIde(worktreeId: string, preferredIde: string | null) {
+    return projectWorktreesService.setPreferredIde(worktreeId, preferredIde);
   }
 
   /**

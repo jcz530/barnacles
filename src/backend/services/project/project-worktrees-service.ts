@@ -15,21 +15,10 @@ const execFileAsync = promisify(execFile);
 const GIT_MAX_BUFFER = 32 * 1024 * 1024;
 const GIT_TIMEOUT_MS = 30_000;
 
-export interface Worktree {
-  id: string;
-  projectId: string;
-  path: string;
-  /** Null for a detached HEAD, which is not on a branch. */
-  branch: string | null;
-  isMain: boolean;
-  gitDir: string | null;
-  hasUncommittedChanges: boolean | null;
-  lastCommitDate: Date | null;
-  lastCommitMessage: string | null;
-  preferredIde: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Single source of truth, shared with the frontend. Declaring a second copy here
+// is how ProjectStats ended up with two interfaces that disagree.
+export type { Worktree } from '../../../shared/types/api';
+import type { Worktree } from '../../../shared/types/api';
 
 /** One entry of `git worktree list --porcelain`. */
 export interface ParsedWorktree {
