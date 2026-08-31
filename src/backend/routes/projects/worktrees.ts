@@ -36,13 +36,21 @@ worktrees.post('/:id/worktrees/sync', loadProject, async (c: ProjectContext) => 
  * PATCH /:id/worktrees/:worktreeId
  * Update a worktree's preferred IDE
  */
-worktrees.patch('/:id/worktrees/:worktreeId', async c => {
+worktrees.patch('/:id/worktrees/:worktreeId', loadProject, async (c: ProjectContext) => {
+  const project = c.get('project');
   const worktreeId = c.req.param('worktreeId');
   const body = await c.req.json();
   const { preferredIde } = body;
 
   if (preferredIde === undefined) {
     throw new BadRequestException('preferredIde is required');
+  }
+
+  // Scope to this project: without it any worktree id could be mutated through
+  // any project's URL, unlike every sibling route here.
+  const owned = (await projectService.getWorktrees(project.id)).some(w => w.id === worktreeId);
+  if (!owned) {
+    throw new BadRequestException('Worktree not found for this project');
   }
 
   const result = await projectService.setWorktreePreferredIde(worktreeId, preferredIde);

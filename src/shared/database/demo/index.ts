@@ -203,7 +203,9 @@ async function seedStats(): Promise<void> {
   for (const worktree of DEMO_WORKTREES) {
     await db.insert(projectWorktrees).values({
       projectId: worktree.projectId,
-      path: worktree.path,
+      // Resolved under the demo workspace, matching how projects are seeded, so
+      // the directory exists and open-in-IDE resolves.
+      path: demoProjectPath(worktree.directory),
       branch: worktree.branch,
       isMain: false,
       hasUncommittedChanges: worktree.hasUncommittedChanges,
@@ -213,7 +215,6 @@ async function seedStats(): Promise<void> {
       updatedAt: DEMO_NOW,
     });
   }
-
 }
 
 async function seedProcesses(): Promise<void> {

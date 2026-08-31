@@ -123,23 +123,27 @@ describe('demo seed', () => {
       expect(orphans).toEqual([]);
     });
 
-    it('gives every worktree a unique path', () => {
-      // projectWorktrees.path is globally unique, so a duplicate fixture path
-      // would fail the seed on the unique index.
-      const paths = DEMO_WORKTREES.map(w => w.path);
-      expect(new Set(paths).size).toBe(paths.length);
+    it('gives every worktree a unique directory', () => {
+      // projectWorktrees.path is globally unique, so a duplicate would fail the
+      // seed on the unique index.
+      const dirs = DEMO_WORKTREES.map(w => w.directory);
+      expect(new Set(dirs).size).toBe(dirs.length);
     });
 
-    it('never collides an extra worktree with a project path', () => {
-      const projectPaths = new Set(DEMO_PROJECTS.map(p => p.path));
-      const collisions = DEMO_WORKTREES.filter(w => projectPaths.has(w.path));
+    it('never collides an extra worktree with a project directory', () => {
+      // Both resolve under the same demo workspace root, so a shared name would
+      // put a worktree at its project's own path.
+      const projectNames = new Set(DEMO_PROJECTS.map(p => p.name));
+      const collisions = DEMO_WORKTREES.filter(w => projectNames.has(w.directory));
 
       expect(collisions).toEqual([]);
     });
 
-    it('never leaks a real home directory into a worktree path', () => {
+    it('uses a bare directory name, not a path', () => {
+      // The seeder resolves these under the demo workspace; a path here would
+      // either escape it or land somewhere that does not exist on disk.
       for (const worktree of DEMO_WORKTREES) {
-        expect(worktree.path.startsWith('/Users/dev/')).toBe(true);
+        expect(worktree.directory).not.toContain('/');
       }
     });
 

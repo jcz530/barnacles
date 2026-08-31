@@ -331,7 +331,6 @@ describe('ProjectWorktreesService', () => {
       expect((await db.select().from(projects)).map(p => p.id)).toEqual(['p1']);
     });
 
-
     it('does not delete itself when synced from a linked worktree path', async () => {
       // A project row can sit at a linked worktree's path (it was scanned before
       // we could tell). Syncing THAT project reports its own path as a non-main
@@ -345,8 +344,36 @@ describe('ProjectWorktreesService', () => {
 
       const worktrees = await projectWorktreesService.syncWorktrees('p-linked', linked);
 
+      // The project survives; syncing a worktree-path project is a no-op rather
+      // than a claim, so it owns no checkouts.
       expect((await db.select().from(projects)).map(p => p.id)).toEqual(['p-linked']);
-      expect(worktrees.length).toBeGreaterThan(0);
+      expect(worktrees).toEqual([]);
+    });
+
+    it("does not steal another project's worktrees when synced from a worktree path", async () => {
+      // Any database scanned before worktrees were understood has a project row
+      // at each linked worktree path. `git worktree list` describes the whole
+      // repository from any checkout, so syncing such a row would claim the main
+      // repository's checkouts -- stripping the real project's worktrees and
+      // pointing its own isMain row at a directory that is not this project.
+      const repo = await makeRepo('repo');
+      const linked = path.join(tempDir, 'linked');
+      await execFileAsync('git', ['worktree', 'add', '-q', '-b', 'feat', linked], { cwd: repo });
+
+      await seedProject('p-main', repo);
+      await seedProject('p-linked', linked);
+      await projectWorktreesService.syncWorktrees('p-main', repo);
+
+      // The rescan reaches the worktree-path project and syncs it.
+      await projectWorktreesService.syncWorktrees('p-linked', linked);
+
+      // The real project keeps both of its checkouts.
+      const mainWorktrees = await projectWorktreesService.getWorktrees('p-main');
+      expect(mainWorktrees.map(w => w.path).sort()).toEqual([repo, linked].sort());
+      expect(mainWorktrees.find(w => w.isMain)?.path).toBe(repo);
+
+      // And the stale row claimed nothing.
+      expect(await projectWorktreesService.getWorktrees('p-linked')).toEqual([]);
     });
 
     it('cascades worktree rows when the project is deleted', async () => {

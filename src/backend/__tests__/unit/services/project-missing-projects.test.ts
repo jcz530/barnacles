@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createUnitTestContext, mockDatabaseForUnit } from '@test/contexts';
 import { ProjectRescanSchedulerService } from '@backend/services/project-rescan-scheduler-service';
 import { projectService } from '@backend/services/project';
+import { projectTechnologyService } from '@backend/services/project/project-technology-service';
 import { db } from '@shared/database';
-import { projects, projectProcesses } from '@shared/database/schema';
+import { projects, projectProcesses, projectTechnologies } from '@shared/database/schema';
 import { eq } from 'drizzle-orm';
 import fs from 'fs/promises';
 import path from 'path';
@@ -134,5 +135,32 @@ describe('missing projects', () => {
     await scheduler.triggerManualRescan();
 
     expect(await projectService.getProjectByPath(dir)).toBeNull();
+  });
+
+  it('keeps technologies when a missing directory comes back', async () => {
+    // The lookup that preserves technologies during a lightweight rescan has to
+    // include missing projects: a returning project is still flagged missing at
+    // that moment, and a missed lookup makes saveProject wipe its technologies.
+    const dir = await seedProject('techs', 'techs-project');
+    await projectTechnologyService.updateProjectTechnologies('techs', ['nodejs', 'vue']);
+
+    const before = await db
+      .select()
+      .from(projectTechnologies)
+      .where(eq(projectTechnologies.projectId, 'techs'));
+    expect(before.length).toBeGreaterThan(0);
+
+    await fs.rm(dir, { recursive: true, force: true });
+    await scheduler.triggerManualRescan();
+
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, 'package.json'), '{}');
+    await scheduler.triggerManualRescan();
+
+    const after = await db
+      .select()
+      .from(projectTechnologies)
+      .where(eq(projectTechnologies.projectId, 'techs'));
+    expect(after.length).toBe(before.length);
   });
 });

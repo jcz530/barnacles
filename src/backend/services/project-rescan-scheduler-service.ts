@@ -156,10 +156,14 @@ export class ProjectRescanSchedulerService {
       // Get last modified time from filesystem
       const stats = await fs.stat(projectPath);
 
-      // Get existing project to preserve technologies
+      // Get existing project to preserve technologies. includeMissing matters:
+      // a project whose directory has just reappeared is still flagged missing
+      // at this point, and without it the lookup misses, technologies come back
+      // empty, and saveProject wipes them.
       const existingProjects = await projectService.getProjects({
         search: projectPath,
         includeArchived: true,
+        includeMissing: true,
       });
       const existingProject = existingProjects.find(p => p.path === projectPath);
 

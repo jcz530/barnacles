@@ -201,6 +201,19 @@ export async function getGitCommonDir(dirPath: string): Promise<string | null> {
  * projects, while worktrees of one repo share one.
  */
 export async function isLinkedWorktree(dirPath: string): Promise<boolean> {
+  // Cheap gate before spawning git: a linked worktree's `.git` is a FILE holding
+  // `gitdir: ...`, while a main checkout's is a directory and a non-repo has
+  // neither. The scanner calls this for every directory it visits, so without
+  // this check every non-repo directory would cost two git subprocesses.
+  try {
+    const gitEntry = await fs.stat(path.join(dirPath, '.git'));
+    if (!gitEntry.isFile()) {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+
   const commonDir = await getGitCommonDir(dirPath);
   if (!commonDir) {
     return false;
@@ -281,6 +294,20 @@ class ProjectWorktreesService {
     if (fromGit.length === 0) {
       // Not a git repo, or git failed. Leave any existing rows alone rather than
       // deleting them on a transient failure.
+      return this.getWorktrees(projectId);
+    }
+
+    // `git worktree list` describes the whole repository from any checkout, so
+    // running this for a project that sits at a *linked worktree* path would
+    // claim the main repository's checkouts for it -- stripping the real
+    // project's worktrees and leaving its own isMain row pointing at a directory
+    // that is not this project.
+    //
+    // Such rows exist in any database scanned before worktrees were understood.
+    // The scanner skips these directories now; the collapse below removes the
+    // stale rows once the main repository is synced. Until then, do nothing.
+    const mainFromGit = fromGit.find(worktree => worktree.isMain);
+    if (mainFromGit && mainFromGit.path !== normalizedRepoPath) {
       return this.getWorktrees(projectId);
     }
 

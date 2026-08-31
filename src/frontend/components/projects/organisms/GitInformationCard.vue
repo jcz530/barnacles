@@ -8,6 +8,7 @@ import { useProjectActions } from '@/composables/useProjectActions';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { ScrollArea } from '../../ui/scroll-area';
+import { getMainWorktree } from '@/utils/worktrees';
 import { toastDanger, toastSuccess } from '../../ui/sonner';
 
 interface Props {
@@ -26,7 +27,9 @@ const openTerminalMutation = useOpenTerminalMutation();
 const gitProvider = computed(() => getGitProvider(props.project.stats?.gitRemoteUrl));
 
 const worktrees = computed(() => props.project.worktrees ?? []);
-const mainWorktree = computed(() => worktrees.value.find(worktree => worktree.isMain));
+// Via the shared helper, which falls back to the first worktree -- otherwise a
+// single checkout whose isMain is false renders an empty card body.
+const mainWorktree = computed(() => getMainWorktree(props.project));
 
 // With one checkout, "current branch" is unambiguous and a list would be noise.
 // With several, the single-branch summary is actively misleading, so show them all.
