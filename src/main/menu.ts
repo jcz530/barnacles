@@ -1,9 +1,55 @@
-import { app, BrowserWindow, Menu, MenuItemConstructorOptions } from 'electron';
+import { app, BrowserWindow, Menu, MenuItemConstructorOptions, shell } from 'electron';
 import { createAppWindow } from './main';
 import { toggleFindOverlay } from './find-overlay-manager';
+import { checkForUpdatesInteractive } from './updater';
+
+const ISSUES_URL = 'https://github.com/jcz530/barnacles/issues';
+const SITE_URL = 'https://barnacles.app';
+
+/**
+ * Tag links out to the marketing site so analytics can tell app traffic apart
+ * from every other source, and tell which menu item sent it.
+ */
+const siteUrl = (content: string): string => {
+  const url = new URL(SITE_URL);
+  url.searchParams.set('utm_source', 'barnacles-app');
+  url.searchParams.set('utm_medium', 'app-menu');
+  url.searchParams.set('utm_campaign', 'in-app-links');
+  url.searchParams.set('utm_content', content);
+  return url.toString();
+};
 
 export const createMenu = (): void => {
   const isMac = process.platform === 'darwin';
+
+  // Without this the native About panel falls back to bare defaults. macOS only
+  // accepts this fixed set of fields, so anything richer would need a custom
+  // window instead.
+  app.setAboutPanelOptions({
+    applicationName: app.getName(),
+    applicationVersion: app.getVersion(),
+    version: app.getVersion(),
+    copyright: 'Copyright © 2025 Joe Czubiak',
+    // credits is display text, not a link, so it keeps the bare URL -- a visible
+    // query string would just look like spam in the About box.
+    credits: 'App for developers.\nhttps://barnacles.app',
+    authors: ['Joe Czubiak'],
+    website: siteUrl('about-panel'),
+  });
+
+  const checkForUpdatesItem: MenuItemConstructorOptions = {
+    label: 'Check for Updates...',
+    click: () => {
+      void checkForUpdatesInteractive();
+    },
+  };
+
+  const reportIssueItem: MenuItemConstructorOptions = {
+    label: 'Report an Issue',
+    click: () => {
+      void shell.openExternal(ISSUES_URL);
+    },
+  };
 
   // Helper function to get window menu items
   const getWindowMenuItems = (): MenuItemConstructorOptions[] => {
@@ -27,6 +73,8 @@ export const createMenu = (): void => {
             label: app.name,
             submenu: [
               { role: 'about' as const },
+              { type: 'separator' as const },
+              checkForUpdatesItem,
               { type: 'separator' as const },
               { role: 'services' as const },
               { type: 'separator' as const },
@@ -137,11 +185,13 @@ export const createMenu = (): void => {
       submenu: [
         {
           label: 'Learn More',
-          click: async () => {
-            const { shell } = await import('electron');
-            await shell.openExternal('https://barnacles.app');
+          click: () => {
+            void shell.openExternal(siteUrl('help-learn-more'));
           },
         },
+        reportIssueItem,
+        // Windows and Linux have no app menu, so this is their only route to it.
+        ...(isMac ? [] : [{ type: 'separator' as const }, checkForUpdatesItem]),
       ],
     },
   ];
