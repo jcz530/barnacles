@@ -331,6 +331,24 @@ describe('ProjectWorktreesService', () => {
       expect((await db.select().from(projects)).map(p => p.id)).toEqual(['p1']);
     });
 
+
+    it('does not delete itself when synced from a linked worktree path', async () => {
+      // A project row can sit at a linked worktree's path (it was scanned before
+      // we could tell). Syncing THAT project reports its own path as a non-main
+      // entry, which the collapse loop would otherwise delete -- taking the row
+      // being synced, and its worktrees, with it.
+      const repo = await makeRepo('repo');
+      const linked = path.join(tempDir, 'linked');
+      await execFileAsync('git', ['worktree', 'add', '-q', '-b', 'feat', linked], { cwd: repo });
+
+      await seedProject('p-linked', linked);
+
+      const worktrees = await projectWorktreesService.syncWorktrees('p-linked', linked);
+
+      expect((await db.select().from(projects)).map(p => p.id)).toEqual(['p-linked']);
+      expect(worktrees.length).toBeGreaterThan(0);
+    });
+
     it('cascades worktree rows when the project is deleted', async () => {
       const repo = await makeRepo('repo');
       await seedProject('p1', repo);
