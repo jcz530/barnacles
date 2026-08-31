@@ -27,6 +27,7 @@ import { DEMO_PROCESSES } from './data/processes';
 import { DEMO_ACCOUNTS } from './data/accounts';
 import { DEMO_ALIASES } from './data/aliases';
 import { DEMO_MCP_EVENTS } from './data/mcp-events';
+import { DEMO_WORKTREES } from './data/worktrees';
 
 /**
  * Anchor for all demo timestamps. Frozen at seed time so relative copy
@@ -172,7 +173,9 @@ async function seedStats(): Promise<void> {
     if (demoProject && stats.gitBranch) {
       await db.insert(projectWorktrees).values({
         projectId: stats.projectId,
-        path: demoProject.path,
+        // The real on-disk workspace path, matching the project row -- a
+        // cosmetic /Users/dev path would not resolve for open-in-IDE.
+        path: demoProjectPath(demoProject.name),
         branch: stats.gitBranch,
         isMain: true,
         hasUncommittedChanges: stats.hasUncommittedChanges,
@@ -195,6 +198,22 @@ async function seedStats(): Promise<void> {
       });
     }
   }
+  // Additional checkouts, so demo mode exercises the multi-worktree view and not
+  // just the single-checkout summary.
+  for (const worktree of DEMO_WORKTREES) {
+    await db.insert(projectWorktrees).values({
+      projectId: worktree.projectId,
+      path: worktree.path,
+      branch: worktree.branch,
+      isMain: false,
+      hasUncommittedChanges: worktree.hasUncommittedChanges,
+      lastCommitDate: daysAgo(worktree.lastCommitDaysAgo),
+      lastCommitMessage: worktree.lastCommitMessage,
+      createdAt: DEMO_NOW,
+      updatedAt: DEMO_NOW,
+    });
+  }
+
 }
 
 async function seedProcesses(): Promise<void> {
