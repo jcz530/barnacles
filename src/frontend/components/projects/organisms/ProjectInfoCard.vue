@@ -12,7 +12,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const { formatDate } = useFormatters();
+const { formatDate, formatRelativeDate } = useFormatters();
 
 // "Missing" outranks "Archived": it is the state that needs the user's attention.
 const statusLabel = computed(() => {
@@ -69,14 +69,14 @@ const statusLabel = computed(() => {
       </div>
       <div>
         <div class="text-sm font-medium text-slate-500">Created</div>
-        <div class="mt-1 text-sm text-slate-900">
-          {{ formatDate(project.createdAt) }}
+        <div class="mt-1 text-sm text-slate-900" :title="formatDate(project.createdAt)">
+          {{ formatRelativeDate(project.createdAt) }}
         </div>
       </div>
       <div>
         <div class="text-sm font-medium text-slate-500">Last Updated</div>
-        <div class="mt-1 text-sm text-slate-900">
-          {{ formatDate(project.updatedAt) }}
+        <div class="mt-1 text-sm text-slate-900" :title="formatDate(project.updatedAt)">
+          {{ formatRelativeDate(project.updatedAt) }}
         </div>
       </div>
     </CardContent>
