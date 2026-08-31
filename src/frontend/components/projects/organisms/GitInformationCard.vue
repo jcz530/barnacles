@@ -43,7 +43,7 @@ const isGitProject = computed(
 // A row is ~130px plus the 12px gap between them. Capping at 2.5 rows leaves a
 // partial row visible, which reads as "there is more" rather than as a cut-off.
 const WORKTREE_ROW_HEIGHT = 142;
-const MAX_VISIBLE_ROWS = 2.2;
+const MAX_VISIBLE_ROWS = 2.4;
 
 const listHeight = computed(() => {
   const rows = Math.min(worktrees.value.length, MAX_VISIBLE_ROWS);
@@ -107,20 +107,21 @@ const handleOpenTerminal = async (worktreePath: string) => {
     </CardHeader>
     <CardContent>
       <div v-if="isGitProject" class="space-y-4">
-        <!-- The remote belongs to the repository, so it stays on both views. -->
-        <div>
-          <div class="text-sm font-medium text-slate-500">Remote</div>
-          <div class="mt-1 font-mono text-sm text-slate-900">
-            <Button
-              v-if="project.stats?.gitRemoteUrl && gitProvider"
-              variant="link"
-              :title="gitProvider.webUrl"
-              @click="() => openGitRemote(gitProvider.webUrl)"
-            >
-              {{ gitProvider.name }}</Button
-            >
-            <p v-else>Unset</p>
-          </div>
+        <!-- The remote belongs to the repository, so it stays on both views.
+             Label and value share one line: it is a short value, and the space
+             is better spent on the worktree list below. -->
+        <div class="flex items-baseline gap-2">
+          <span class="text-sm font-medium text-slate-500">Remote</span>
+          <Button
+            v-if="project.stats?.gitRemoteUrl && gitProvider"
+            variant="link"
+            class="h-auto p-0 font-mono text-sm"
+            :title="gitProvider.webUrl"
+            @click="() => openGitRemote(gitProvider.webUrl)"
+          >
+            {{ gitProvider.name }}
+          </Button>
+          <span v-else class="font-mono text-sm text-slate-900">Unset</span>
         </div>
 
         <!-- Several checkouts: list them. Capped and scrolled so a repo with many
