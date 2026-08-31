@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import type { ProgressInfo, UpdateInfo } from 'electron-updater';
 import { autoUpdater } from 'electron-updater';
 
@@ -99,6 +99,84 @@ export async function checkForUpdates(): Promise<void> {
     await autoUpdater.checkForUpdates();
   } catch (error) {
     console.error('Failed to check for updates:', error);
+  }
+}
+
+/**
+ * Check for updates from a user-initiated action (the menu item), reporting the
+ * outcome in a dialog.
+ *
+ * The renderer's own check is fire-and-forget: it listens for the broadcast
+ * events and only surfaces something when there is an update to act on. A menu
+ * click needs an answer either way, otherwise "Check for Updates..." looks
+ * broken when you are already current -- so this resolves the check here and
+ * says so.
+ */
+export async function checkForUpdatesInteractive(): Promise<void> {
+  const parentWindow = BrowserWindow.getFocusedWindow() ?? undefined;
+  const showMessage = async (options: Electron.MessageBoxOptions) => {
+    if (parentWindow) {
+      await dialog.showMessageBox(parentWindow, options);
+    } else {
+      await dialog.showMessageBox(options);
+    }
+  };
+
+  // Updates are not wired up in development, so say that rather than silently
+  // doing nothing.
+  if (!app.isPackaged) {
+    await showMessage({
+      type: 'info',
+      message: 'Update checks are disabled in development',
+      detail: `Running Barnacles ${app.getVersion()} from source.`,
+      buttons: ['OK'],
+    });
+    return;
+  }
+
+  if (updateCheckInProgress) {
+    await showMessage({
+      type: 'info',
+      message: 'Already checking for updates',
+      buttons: ['OK'],
+    });
+    return;
+  }
+
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    // A null result means the check did not run at all (no update feed
+    // configured, for instance) -- do not claim the app is up to date.
+    if (!result) {
+      await showMessage({
+        type: 'info',
+        message: 'Could not check for updates',
+        detail: 'The update service did not respond. Please try again later.',
+        buttons: ['OK'],
+      });
+      return;
+    }
+
+    // Trust the library's own verdict rather than comparing version strings,
+    // which gets subtle with prereleases and build numbers. When an update does
+    // exist, the renderer's UpdateNotification already offers to download it,
+    // so there is nothing to say here.
+    if (!result.isUpdateAvailable) {
+      await showMessage({
+        type: 'info',
+        message: "You're up to date",
+        detail: `Barnacles ${app.getVersion()} is the latest version.`,
+        buttons: ['OK'],
+      });
+    }
+  } catch (error) {
+    console.error('Failed to check for updates:', error);
+    await showMessage({
+      type: 'error',
+      message: 'Could not check for updates',
+      detail: error instanceof Error ? error.message : String(error),
+      buttons: ['OK'],
+    });
   }
 }
 
