@@ -483,17 +483,26 @@ class ProjectGitStatsService {
    *
    * Identity is the shared git directory, so every checkout of a repo collapses
    * to a single entry while independent clones of the same remote stay separate.
-   * The first path wins, and `projectPaths` arrives sorted, so the choice is
-   * stable across calls (which matters -- the result is cached on those paths).
+   *
+   * The surviving path must not depend on input order: callers pass projects
+   * ordered by lastModified, which changes as the user works, while the cache
+   * key is built from a sorted copy -- so an order-dependent winner would let a
+   * cache hit return stats computed against a different checkout. That matters
+   * because the winner is user-visible (reported as `perProject.projectPath`)
+   * and carries attribution (a checkout can override user.email locally).
+   *
+   * Prefers a repository's main checkout, which is the path a user recognises,
+   * falling back to the lexicographically first so the choice is still stable
+   * for a set of paths that contains no main checkout.
    *
    * A path whose repository cannot be resolved is kept as-is rather than
    * dropped: it may still be a directory worth reading.
    */
   private async dedupeByRepository(projectPaths: string[]): Promise<string[]> {
-    const seenRepos = new Set<string>();
     const distinct: string[] = [];
+    const bestByRepo = new Map<string, string>();
 
-    for (const projectPath of projectPaths) {
+    for (const projectPath of [...projectPaths].sort()) {
       const commonDir = await getGitCommonDir(projectPath);
 
       if (!commonDir) {
@@ -501,13 +510,20 @@ class ProjectGitStatsService {
         continue;
       }
 
-      if (!seenRepos.has(commonDir)) {
-        seenRepos.add(commonDir);
-        distinct.push(projectPath);
+      const incumbent = bestByRepo.get(commonDir);
+      if (!incumbent) {
+        bestByRepo.set(commonDir, projectPath);
+        continue;
+      }
+
+      // `<repo>/.git` is the common dir of the main checkout itself.
+      const isMainCheckout = path.resolve(commonDir) === path.resolve(projectPath, '.git');
+      if (isMainCheckout) {
+        bestByRepo.set(commonDir, projectPath);
       }
     }
 
-    return distinct;
+    return [...distinct, ...bestByRepo.values()];
   }
 
   private async getProjectGitData(

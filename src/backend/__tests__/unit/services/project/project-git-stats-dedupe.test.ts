@@ -48,11 +48,12 @@ describe('git stats repository de-duplication', () => {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  async function statsFor(projectPaths: string[]) {
+  async function statsFor(projectPaths: string[], detail = false) {
     return projectGitStatsService.getGitStats({
       projectPaths,
       period: 'month',
       additionalEmails: ['dev@example.com'],
+      detail,
     });
   }
 
@@ -104,5 +105,27 @@ describe('git stats repository de-duplication', () => {
     // Nothing to report, but it must not throw or drop the range.
     expect(stats.totals.commits).toBe(0);
     expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('picks the same checkout regardless of input order', async () => {
+    // Callers pass projects ordered by lastModified, which changes as the user
+    // works -- but the cache key is built from a sorted copy, so an
+    // order-dependent winner would let a cache hit return stats computed
+    // against a different checkout (which can carry its own user.email).
+    const repo = await makeRepo('repo');
+    const linked = path.join(tempDir, 'linked');
+    await execFileAsync('git', ['worktree', 'add', '-q', '-b', 'feat', linked], { cwd: repo });
+
+    // perProject names the surviving checkout, and only detail mode reports it.
+    // Assert the exact winner in BOTH orders: asserting only that the two agree
+    // would pass even for an order-dependent implementation whose first case
+    // happens to match.
+    const forwards = await statsFor([repo, linked], true);
+    const backwards = await statsFor([linked, repo], true);
+
+    // The main checkout represents the repository, not whichever path sorts first
+    // (here 'linked' < 'repo').
+    expect(forwards.detail?.perProject.map(p => p.projectPath) ?? []).toEqual([repo]);
+    expect(backwards.detail?.perProject.map(p => p.projectPath) ?? []).toEqual([repo]);
   });
 });
