@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import dayjs from 'dayjs';
 import {
   FileText,
@@ -51,7 +52,15 @@ const selectedMonth = ref(dayjs().format('YYYY-MM'));
 const selectedWeek = ref(currentIsoWeek());
 const selectedYear = ref(dayjs().format('YYYY'));
 // Empty means every project, which is also what the API assumes.
-const selectedProjects = ref<string[]>([]);
+// A ?projectId= link (e.g. from a project's detail page) seeds the filter so the
+// page opens scoped to that project. Read once on setup rather than kept in sync:
+// clearing the filter should not have to rewrite the URL, and revisiting /stats
+// without the param still lands unfiltered, per the note above.
+const route = useRoute();
+const projectIdParam = route.query.projectId;
+const initialProjectIds =
+  typeof projectIdParam === 'string' && projectIdParam ? [projectIdParam] : [];
+const selectedProjects = ref<string[]>(initialProjectIds);
 
 const selectedPeriod = computed({
   get: () => {
