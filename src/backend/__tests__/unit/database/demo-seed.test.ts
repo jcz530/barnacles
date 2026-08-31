@@ -3,6 +3,7 @@ import { createUnitTestContext, mockDatabaseForUnit } from '@test/contexts';
 import { DEMO_PROJECTS, DEMO_FEATURED_PROJECT_ID } from '@shared/database/demo/data/projects';
 import { DEMO_STATS } from '@shared/database/demo/data/stats';
 import { DEMO_PROCESSES } from '@shared/database/demo/data/processes';
+import { DEMO_WORKTREES } from '@shared/database/demo/data/worktrees';
 import { TECHNOLOGY_DETECTORS } from '@backend/services/technology-detectors';
 
 mockDatabaseForUnit();
@@ -113,6 +114,54 @@ describe('demo seed', () => {
       const resolved = demoProjectPath('harbor-api');
       expect(resolved.startsWith(getDemoWorkspaceRoot())).toBe(true);
       expect(resolved.endsWith('harbor-api')).toBe(true);
+    });
+
+    it('attaches every extra worktree to a real project', () => {
+      const projectIds = new Set(DEMO_PROJECTS.map(p => p.id));
+      const orphans = DEMO_WORKTREES.filter(w => !projectIds.has(w.projectId));
+
+      expect(orphans).toEqual([]);
+    });
+
+    it('gives every worktree a unique directory', () => {
+      // projectWorktrees.path is globally unique, so a duplicate would fail the
+      // seed on the unique index.
+      const dirs = DEMO_WORKTREES.map(w => w.directory);
+      expect(new Set(dirs).size).toBe(dirs.length);
+    });
+
+    it('never collides an extra worktree with a project directory', () => {
+      // Both resolve under the same demo workspace root, so a shared name would
+      // put a worktree at its project's own path.
+      const projectNames = new Set(DEMO_PROJECTS.map(p => p.name));
+      const collisions = DEMO_WORKTREES.filter(w => projectNames.has(w.directory));
+
+      expect(collisions).toEqual([]);
+    });
+
+    it('uses a bare directory name, not a path', () => {
+      // The seeder resolves these under the demo workspace; a path here would
+      // either escape it or land somewhere that does not exist on disk.
+      for (const worktree of DEMO_WORKTREES) {
+        expect(worktree.directory).not.toContain('/');
+      }
+    });
+
+    it('gives at least one project enough worktrees to exercise the list view', () => {
+      // A single checkout renders the summary, not the list -- demo mode should
+      // show the multi-worktree view the feature exists for.
+      const countByProject = new Map<string, number>();
+      for (const worktree of DEMO_WORKTREES) {
+        countByProject.set(worktree.projectId, (countByProject.get(worktree.projectId) ?? 0) + 1);
+      }
+
+      // +1 for the main worktree each project gets from its stats fixture.
+      const largest = Math.max(...countByProject.values()) + 1;
+      expect(largest).toBeGreaterThanOrEqual(3);
+    });
+
+    it('covers a detached HEAD', () => {
+      expect(DEMO_WORKTREES.some(w => w.branch === null)).toBe(true);
     });
 
     it('only references technology slugs the app knows about', () => {

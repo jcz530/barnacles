@@ -42,8 +42,7 @@ describe('ProjectStatsService', () => {
         fileCount: 100,
         directoryCount: 20,
         linesOfCode: 5000,
-        gitBranch: 'main',
-        gitStatus: 'clean',
+        gitRemoteUrl: 'https://github.com/example/repo.git',
       });
 
       // Create language stats (should be ignored)
@@ -117,7 +116,7 @@ describe('ProjectStatsService', () => {
       });
     });
 
-    it('should include git information in stats', async () => {
+    it('should include the git remote in stats', async () => {
       const projectId = 'test-project-789';
 
       // Create project first
@@ -127,26 +126,16 @@ describe('ProjectStatsService', () => {
         path: '/test/path',
       });
 
-      const commitDate = new Date('2024-01-15');
-
       await db.insert(projectStats).values({
         projectId,
         fileCount: 50,
-        gitBranch: 'feature/new-stuff',
-        gitStatus: 'modified',
         gitRemoteUrl: 'https://github.com/user/repo.git',
-        lastCommitDate: commitDate,
-        lastCommitMessage: 'Add new feature',
-        hasUncommittedChanges: true,
       });
 
       const result = await projectStatsService.getProjectStats(projectId);
 
       expect(result).not.toBeNull();
-      expect(result?.gitBranch).toBe('feature/new-stuff');
-      expect(result?.gitStatus).toBe('modified');
-      expect(result?.lastCommitMessage).toBe('Add new feature');
-      expect(result?.hasUncommittedChanges).toBe(true);
+      expect(result?.gitRemoteUrl).toBe('https://github.com/user/repo.git');
     });
   });
 
@@ -191,8 +180,7 @@ describe('ProjectStatsService', () => {
       expect(result).not.toBeNull();
       expect(result?.fileCount).toBe(150);
       expect(result?.directoryCount).toBe(25);
-      expect(result?.gitBranch).toBe('develop');
-      expect(result?.gitStatus).toBe('clean');
+      expect(result?.gitRemoteUrl).toBe('https://github.com/test/repo.git');
     });
 
     it('should update existing stats for a project', async () => {
@@ -210,7 +198,7 @@ describe('ProjectStatsService', () => {
         projectId,
         fileCount: 100,
         directoryCount: 20,
-        gitBranch: 'main',
+        gitRemoteUrl: 'https://github.com/test/old.git',
       });
 
       // Update with new info
@@ -238,7 +226,45 @@ describe('ProjectStatsService', () => {
 
       expect(result?.fileCount).toBe(200);
       expect(result?.directoryCount).toBe(40);
-      expect(result?.gitBranch).toBe('feature');
+    });
+
+    it('should preserve the git remote when gitInfo is undefined', async () => {
+      const projectId = 'project-no-gitinfo-999';
+
+      // Create project first
+      await db.insert(projects).values({
+        id: projectId,
+        name: 'Test Project',
+        path: '/test/path',
+      });
+
+      await db.insert(projectStats).values({
+        projectId,
+        fileCount: 100,
+        gitRemoteUrl: 'https://github.com/example/repo.git',
+      });
+
+      // A lightweight rescan where getGitInfo() failed: gitInfo is undefined.
+      // Drizzle's mapUpdateSet filters undefined values out of the UPDATE, so
+      // the stored remote survives. This pins that behaviour -- switching to
+      // explicit nulls would wipe it on every 30-minute rescan.
+      const projectInfo: ProjectInfo = {
+        name: 'Test Project',
+        path: '/test/path',
+        technologies: [],
+        stats: {
+          lastModified: new Date(),
+          languageStats: {},
+        },
+        gitInfo: undefined,
+      };
+
+      await projectStatsService.saveProjectStats(projectId, projectInfo);
+
+      const result = await projectStatsService.getProjectStats(projectId, false);
+
+      expect(result?.gitRemoteUrl).toBe('https://github.com/example/repo.git');
+      expect(result?.fileCount).toBe(100);
     });
 
     it('should save language stats when provided', async () => {

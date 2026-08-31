@@ -13,6 +13,7 @@ import {
   projectRelatedFolders,
   projectStats,
   projectTechnologies,
+  projectWorktrees,
   technologies,
   aliases,
   events,
@@ -26,6 +27,7 @@ import { DEMO_PROCESSES } from './data/processes';
 import { DEMO_ACCOUNTS } from './data/accounts';
 import { DEMO_ALIASES } from './data/aliases';
 import { DEMO_MCP_EVENTS } from './data/mcp-events';
+import { DEMO_WORKTREES } from './data/worktrees';
 
 /**
  * Anchor for all demo timestamps. Frozen at seed time so relative copy
@@ -161,15 +163,28 @@ async function seedStats(): Promise<void> {
       directoryCount: stats.directoryCount,
       linesOfCode: stats.linesOfCode,
       thirdPartySize: stats.thirdPartySize,
-      gitBranch: stats.gitBranch,
-      gitStatus: stats.gitStatus,
       gitRemoteUrl: stats.gitRemoteUrl,
-      lastCommitDate: daysAgo(stats.lastCommitDaysAgo),
-      lastCommitMessage: stats.lastCommitMessage,
-      hasUncommittedChanges: stats.hasUncommittedChanges,
       createdAt: DEMO_NOW,
       updatedAt: DEMO_NOW,
     });
+
+    // Branch and dirty state are per-checkout, so they seed a main worktree.
+    const demoProject = DEMO_PROJECTS.find(project => project.id === stats.projectId);
+    if (demoProject && stats.gitBranch) {
+      await db.insert(projectWorktrees).values({
+        projectId: stats.projectId,
+        // The real on-disk workspace path, matching the project row -- a
+        // cosmetic /Users/dev path would not resolve for open-in-IDE.
+        path: demoProjectPath(demoProject.name),
+        branch: stats.gitBranch,
+        isMain: true,
+        hasUncommittedChanges: stats.hasUncommittedChanges,
+        lastCommitDate: daysAgo(stats.lastCommitDaysAgo),
+        lastCommitMessage: stats.lastCommitMessage,
+        createdAt: DEMO_NOW,
+        updatedAt: DEMO_NOW,
+      });
+    }
 
     for (const language of stats.languages) {
       await db.insert(projectLanguageStats).values({
@@ -182,6 +197,23 @@ async function seedStats(): Promise<void> {
         updatedAt: DEMO_NOW,
       });
     }
+  }
+  // Additional checkouts, so demo mode exercises the multi-worktree view and not
+  // just the single-checkout summary.
+  for (const worktree of DEMO_WORKTREES) {
+    await db.insert(projectWorktrees).values({
+      projectId: worktree.projectId,
+      // Resolved under the demo workspace, matching how projects are seeded, so
+      // the directory exists and open-in-IDE resolves.
+      path: demoProjectPath(worktree.directory),
+      branch: worktree.branch,
+      isMain: false,
+      hasUncommittedChanges: worktree.hasUncommittedChanges,
+      lastCommitDate: daysAgo(worktree.lastCommitDaysAgo),
+      lastCommitMessage: worktree.lastCommitMessage,
+      createdAt: DEMO_NOW,
+      updatedAt: DEMO_NOW,
+    });
   }
 }
 

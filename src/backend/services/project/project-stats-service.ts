@@ -3,18 +3,11 @@ import { db } from '../../../shared/database';
 import { projectLanguageStats, projectStats } from '../../../shared/database/schema';
 import type { ProjectInfo } from '../project-scanner-service';
 
-export interface ProjectStats {
-  id: string;
-  projectId: string;
-  fileCount?: number | null;
-  directoryCount?: number | null;
-  languageStats?: Record<string, { fileCount: number; percentage: number; linesOfCode: number }>;
-  gitBranch?: string | null;
-  gitStatus?: string | null;
-  lastCommitDate?: Date | null;
-  lastCommitMessage?: string | null;
-  hasUncommittedChanges?: boolean | null;
-}
+// Single source of truth, shared with the frontend. This interface previously
+// existed in two copies that had already drifted (the backend one was missing
+// gitRemoteUrl and thirdPartySize).
+export type { ProjectStats } from '../../../shared/types/api';
+import type { ProjectStats } from '../../../shared/types/api';
 
 class ProjectStatsService {
   /**
@@ -77,14 +70,12 @@ class ProjectStatsService {
       .where(eq(projectStats.projectId, projectId))
       .limit(1);
 
-    // Build stats data, only including fields that are provided
+    // Build stats data, only including fields that are provided.
+    // Branch, dirty state and last commit are per-checkout and are written to
+    // project_worktrees by projectWorktreesService, not here. The remote is a
+    // property of the repository, so it stays.
     const statsData: Partial<typeof projectStats.$inferInsert> = {
-      gitBranch: projectInfo.gitInfo?.branch,
-      gitStatus: projectInfo.gitInfo?.status,
       gitRemoteUrl: projectInfo.gitInfo?.remoteUrl,
-      lastCommitDate: projectInfo.gitInfo?.lastCommitDate,
-      lastCommitMessage: projectInfo.gitInfo?.lastCommitMessage,
-      hasUncommittedChanges: projectInfo.gitInfo?.hasUncommittedChanges,
       updatedAt: new Date(),
     };
 

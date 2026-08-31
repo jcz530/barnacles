@@ -20,12 +20,7 @@ export interface ProjectStats {
   languageStats?: Record<string, { fileCount: number; percentage: number; linesOfCode: number }>;
   linesOfCode?: number | null;
   thirdPartySize?: number | null;
-  gitBranch?: string | null;
-  gitStatus?: string | null;
   gitRemoteUrl?: string | null;
-  lastCommitDate?: Date | null;
-  lastCommitMessage?: string | null;
-  hasUncommittedChanges?: boolean | null;
 }
 
 export interface Project {
@@ -38,6 +33,8 @@ export interface Project {
   size?: number | null;
   isFavorite: boolean;
   archivedAt?: Date | null;
+  /** Set when the project's directory went missing; null while it is present. */
+  missingSince?: Date | null;
   preferredIde?: string | null;
   preferredTerminal?: string | null;
   createdAt: Date;
@@ -114,9 +111,28 @@ export interface UpdateAccountInput {
   loginUrl?: string;
 }
 
+/** A git checkout of a project: the main worktree, or a linked one. */
+export interface Worktree {
+  id: string;
+  projectId: string;
+  path: string;
+  /** Null for a detached HEAD, which is not on a branch. */
+  branch?: string | null;
+  isMain: boolean;
+  gitDir?: string | null;
+  hasUncommittedChanges?: boolean | null;
+  lastCommitDate?: Date | null;
+  lastCommitMessage?: string | null;
+  preferredIde?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface ProjectWithDetails extends Project {
   technologies: Technology[];
   stats?: ProjectStats | null;
+  /** Main checkout first. Empty for a project that is not a git repository. */
+  worktrees?: Worktree[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

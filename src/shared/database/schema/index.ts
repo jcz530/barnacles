@@ -28,6 +28,11 @@ export const projects = sqliteTable('projects', {
   size: integer('size'), // in bytes
   isFavorite: integer('is_favorite', { mode: 'boolean' }).notNull().default(false),
   archivedAt: integer('archived_at', { mode: 'timestamp' }),
+  // When the project's directory was first found to be unreadable. A rescan
+  // cannot tell "deleted" from "external drive unmounted", so a missing project
+  // is flagged rather than removed -- deleting would cascade away processes,
+  // accounts and exclusions the user configured. Cleared when it reappears.
+  missingSince: integer('missing_since', { mode: 'timestamp' }),
   preferredIde: text('preferred_ide'),
   preferredTerminal: text('preferred_terminal'),
   createdAt: integer('created_at', { mode: 'timestamp' })
@@ -89,12 +94,9 @@ export const projectStats = sqliteTable('project_stats', {
   directoryCount: integer('directory_count'),
   linesOfCode: integer('lines_of_code'), // total lines of code
   thirdPartySize: integer('third_party_size'), // total size of third-party packages in bytes (node_modules, vendor, etc.)
-  gitBranch: text('git_branch'),
-  gitStatus: text('git_status'),
+  // Branch, dirty state and last commit live on project_worktrees: they describe
+  // a checkout, not a repository. The remote does belong to the repository.
   gitRemoteUrl: text('git_remote_url'),
-  lastCommitDate: integer('last_commit_date', { mode: 'timestamp' }),
-  lastCommitMessage: text('last_commit_message'),
-  hasUncommittedChanges: integer('has_uncommitted_changes', { mode: 'boolean' }),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -170,6 +172,35 @@ export const projectRelatedFolders = sqliteTable('project_related_folders', {
     .$defaultFn(() => new Date()),
 });
 
+// A project's git checkouts. The main worktree plus any linked worktrees
+// (`git worktree add`), which share one object store and so are one project.
+// Branch and dirty state belong here rather than on project_stats: they are
+// properties of a checkout, not of the repository.
+export const projectWorktrees = sqliteTable('project_worktrees', {
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  path: text('path').notNull().unique(),
+  // Null for a detached HEAD, which has no branch.
+  branch: text('branch'),
+  isMain: integer('is_main', { mode: 'boolean' }).notNull().default(false),
+  // Absolute path to this worktree's own git dir, from `git rev-parse --git-dir`.
+  gitDir: text('git_dir'),
+  hasUncommittedChanges: integer('has_uncommitted_changes', { mode: 'boolean' }),
+  lastCommitDate: integer('last_commit_date', { mode: 'timestamp' }),
+  lastCommitMessage: text('last_commit_message'),
+  preferredIde: text('preferred_ide'),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export const projectExclusions = sqliteTable('project_exclusions', {
   id: text('id')
     .primaryKey()
@@ -211,6 +242,7 @@ export const projectsRelations = relations(projects, ({ many, one }) => ({
   }),
   processes: many(projectProcesses),
   relatedFolders: many(projectRelatedFolders),
+  worktrees: many(projectWorktrees),
   exclusions: many(projectExclusions),
   accounts: many(projectAccounts),
 }));
@@ -267,6 +299,13 @@ export const projectProcessCommandsRelations = relations(projectProcessCommands,
 export const projectRelatedFoldersRelations = relations(projectRelatedFolders, ({ one }) => ({
   project: one(projects, {
     fields: [projectRelatedFolders.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const projectWorktreesRelations = relations(projectWorktrees, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectWorktrees.projectId],
     references: [projects.id],
   }),
 }));

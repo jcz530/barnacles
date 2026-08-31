@@ -5,6 +5,7 @@ import packages from './packages';
 import processes from './processes';
 import relatedFolders from './related-folders';
 import exclusions from './exclusions';
+import worktrees from './worktrees';
 import technologies from './technologies';
 import tools from './tools';
 import accounts from './accounts';
@@ -41,6 +42,9 @@ projects.route('/', files);
 
 // Related folders
 projects.route('/', relatedFolders);
+
+// Worktrees (git checkouts of the project)
+projects.route('/', worktrees);
 
 // Exclusions (file tree hidden directories)
 projects.route('/', exclusions);

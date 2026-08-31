@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../../shared/database';
-import { projects } from '../../../shared/database/schema';
+import { projects, projectWorktrees } from '../../../shared/database/schema';
 import type { ProjectInfo } from '../project-scanner-service';
 import { projectScannerService } from '../project-scanner-service';
 import { ideDetectorService } from '../ide-detector-service';
@@ -13,12 +13,14 @@ import { projectFileSystemService } from './project-filesystem-service';
 import { projectPackageService } from './project-package-service';
 import { projectRelatedFoldersService } from './project-related-folders-service';
 import { projectExclusionsService } from './project-exclusions-service';
+import { projectWorktreesService } from './project-worktrees-service';
 
 // Re-export types
 export type { Technology } from './project-technology-service';
 export type { ProjectStats } from './project-stats-service';
 export type { RelatedFolder } from './project-related-folders-service';
 export type { ProjectExclusion } from './project-exclusions-service';
+export type { Worktree } from './project-worktrees-service';
 
 export interface Project {
   id: string;
@@ -30,6 +32,8 @@ export interface Project {
   size?: number | null;
   isFavorite: boolean;
   archivedAt?: Date | null;
+  /** Set when the project's directory went missing; null while it is present. */
+  missingSince?: Date | null;
   preferredIde?: string | null;
   preferredTerminal?: string | null;
   createdAt: Date;
@@ -39,12 +43,20 @@ export interface Project {
 export interface ProjectWithDetails extends Project {
   technologies: import('./project-technology-service').Technology[];
   stats?: import('./project-stats-service').ProjectStats | null;
+  /** Main checkout first. Empty for a project that is not a git repository. */
+  worktrees?: import('./project-worktrees-service').Worktree[];
 }
 
 export interface ProjectFilters {
   search?: string;
   technologies?: string[];
   includeArchived?: boolean;
+  /**
+   * Include projects whose directory has gone missing. Excluded by default so
+   * they stop inflating counts and totals; the rescan sets this to find them
+   * again, and the UI sets it to show them for review.
+   */
+  includeMissing?: boolean;
 }
 
 class ProjectService {
@@ -67,6 +79,11 @@ class ProjectService {
       conditions.push(sql`${projects.archivedAt} IS NULL`);
     }
 
+    // A project whose directory is gone should not count towards totals.
+    if (!filters?.includeMissing) {
+      conditions.push(sql`${projects.missingSince} IS NULL`);
+    }
+
     if (filters?.search) {
       conditions.push(
         sql`(${projects.name} LIKE ${'%' + filters.search + '%'} OR ${projects.path} LIKE ${'%' + filters.search + '%'})`
@@ -85,15 +102,17 @@ class ProjectService {
     // Get technologies for each project
     const projectsWithDetails = await Promise.all(
       projectResults.map(async project => {
-        const [techs, stats] = await Promise.all([
+        const [techs, stats, worktrees] = await Promise.all([
           projectTechnologyService.getProjectTechnologies(project.id),
           projectStatsService.getProjectStats(project.id, false), // Don't include language stats in list view
+          projectWorktreesService.getWorktrees(project.id),
         ]);
 
         return {
           ...project,
           technologies: techs,
           stats,
+          worktrees,
         };
       })
     );
@@ -121,15 +140,17 @@ class ProjectService {
     }
 
     const project = result[0];
-    const [techs, stats] = await Promise.all([
+    const [techs, stats, worktrees] = await Promise.all([
       projectTechnologyService.getProjectTechnologies(project.id),
       projectStatsService.getProjectStats(project.id),
+      projectWorktreesService.getWorktrees(project.id),
     ]);
 
     return {
       ...project,
       technologies: techs,
       stats,
+      worktrees,
     };
   }
 
@@ -139,23 +160,41 @@ class ProjectService {
    * requiring the caller to already know the project ID.
    */
   async getProjectByPath(path: string): Promise<ProjectWithDetails | null> {
+    // A missing project cannot be the one the caller is standing in.
     const allProjects = await db
       .select()
       .from(projects)
-      .where(sql`${projects.archivedAt} IS NULL`);
+      .where(sql`${projects.archivedAt} IS NULL AND ${projects.missingSince} IS NULL`);
 
     const normalizedPath = path.replace(/[/\\]+$/, '');
 
-    let bestMatch: (typeof allProjects)[number] | null = null;
-    for (const project of allProjects) {
-      const projectPath = project.path.replace(/[/\\]+$/, '');
-      const isMatch =
-        normalizedPath === projectPath ||
-        normalizedPath.startsWith(projectPath + '/') ||
-        normalizedPath.startsWith(projectPath + '\\');
+    // Candidates are project roots plus every known worktree path. A linked
+    // worktree usually lives outside its project's directory (a sibling, or an
+    // entirely separate root), so matching on project paths alone would fail to
+    // resolve anything running from inside one.
+    const candidates: { projectId: string; path: string }[] = allProjects.map(project => ({
+      projectId: project.id,
+      path: project.path,
+    }));
 
-      if (isMatch && (!bestMatch || projectPath.length > bestMatch.path.length)) {
-        bestMatch = project;
+    const projectIds = new Set(allProjects.map(project => project.id));
+    const worktrees = await db.select().from(projectWorktrees);
+    for (const worktree of worktrees) {
+      if (projectIds.has(worktree.projectId)) {
+        candidates.push({ projectId: worktree.projectId, path: worktree.path });
+      }
+    }
+
+    let bestMatch: { projectId: string; path: string } | null = null;
+    for (const candidate of candidates) {
+      const candidatePath = candidate.path.replace(/[/\\]+$/, '');
+      const isMatch =
+        normalizedPath === candidatePath ||
+        normalizedPath.startsWith(candidatePath + '/') ||
+        normalizedPath.startsWith(candidatePath + '\\');
+
+      if (isMatch && (!bestMatch || candidatePath.length > bestMatch.path.length)) {
+        bestMatch = candidate;
       }
     }
 
@@ -163,7 +202,7 @@ class ProjectService {
       return null;
     }
 
-    return this.getProjectById(bestMatch.id);
+    return this.getProjectById(bestMatch.projectId);
   }
 
   /**
@@ -253,6 +292,10 @@ class ProjectService {
     // Save or update project stats
     await projectStatsService.saveProjectStats(projectId, projectInfo);
 
+    // Record this repository's checkouts. Cheap for a non-git directory: git
+    // fails and the sync leaves the (empty) rows alone.
+    await projectWorktreesService.syncWorktrees(projectId, projectInfo.path, projectInfo.gitInfo);
+
     // Return the complete project
     const project = await this.getProjectById(projectId);
     if (!project) {
@@ -310,22 +353,6 @@ class ProjectService {
   }
 
   /**
-   * Scan directories and save all found projects
-   */
-  async scanAndSaveProjects(
-    directories: string[],
-    maxDepth: number = 3
-  ): Promise<ProjectWithDetails[]> {
-    const scannedProjects = await projectScannerService.scanDirectories(directories, maxDepth);
-
-    const savedProjects = await Promise.all(
-      scannedProjects.map(projectInfo => this.saveProject(projectInfo))
-    );
-
-    return savedProjects;
-  }
-
-  /**
    * Rescan a single project by its path
    */
   async rescanProject(projectPath: string): Promise<ProjectWithDetails> {
@@ -361,16 +388,45 @@ class ProjectService {
   }
 
   /**
-   * Open a project in its preferred IDE
+   * Resolves which directory an "open" action should target.
+   *
+   * Defaults to the project root. A worktreePath is honoured only when it is one
+   * of this project's own worktrees, so the caller cannot open an arbitrary
+   * directory by passing a path.
    */
-  async openProjectInIDE(id: string, ideId?: string): Promise<void> {
+  private async resolveOpenTarget(
+    project: ProjectWithDetails,
+    worktreePath?: string
+  ): Promise<{ path: string; preferredIde: string | null }> {
+    if (!worktreePath) {
+      return { path: project.path, preferredIde: project.preferredIde ?? null };
+    }
+
+    const worktree = (project.worktrees ?? []).find(candidate => candidate.path === worktreePath);
+    if (!worktree) {
+      throw new Error('Worktree not found for this project');
+    }
+
+    // A worktree may have its own IDE preference; fall back to the project's.
+    return {
+      path: worktree.path,
+      preferredIde: worktree.preferredIde ?? project.preferredIde ?? null,
+    };
+  }
+
+  /**
+   * Open a project, or one of its worktrees, in the preferred IDE
+   */
+  async openProjectInIDE(id: string, ideId?: string, worktreePath?: string): Promise<void> {
     const project = await this.getProjectById(id);
 
     if (!project) {
       throw new Error('Project not found');
     }
 
-    await projectToolsService.openProjectInIDE(project.path, project.preferredIde, ideId);
+    const target = await this.resolveOpenTarget(project, worktreePath);
+
+    await projectToolsService.openProjectInIDE(target.path, target.preferredIde, ideId);
   }
 
   /**
@@ -397,15 +453,21 @@ class ProjectService {
   /**
    * Open a terminal at the project path
    */
-  async openTerminalAtProject(id: string, terminalId?: string): Promise<void> {
+  async openTerminalAtProject(
+    id: string,
+    terminalId?: string,
+    worktreePath?: string
+  ): Promise<void> {
     const project = await this.getProjectById(id);
 
     if (!project) {
       throw new Error('Project not found');
     }
 
+    const target = await this.resolveOpenTarget(project, worktreePath);
+
     await projectToolsService.openTerminalAtProject(
-      project.path,
+      target.path,
       project.preferredTerminal,
       terminalId
     );
@@ -509,6 +571,51 @@ class ProjectService {
    */
   async removeRelatedFolder(folderId: string) {
     return projectRelatedFoldersService.removeRelatedFolder(folderId);
+  }
+
+  /**
+   * Flag a project whose directory is gone or unreadable.
+   *
+   * Deliberately not a delete: a rescan cannot distinguish a deleted folder from
+   * an unmounted drive, and removing the row would cascade away the processes,
+   * accounts and exclusions the user configured.
+   */
+  async markProjectMissing(id: string): Promise<void> {
+    await db
+      .update(projects)
+      .set({ missingSince: new Date(), updatedAt: new Date() })
+      .where(eq(projects.id, id));
+  }
+
+  /**
+   * Clear the missing flag after a project's directory becomes readable again.
+   */
+  async markProjectFound(id: string): Promise<void> {
+    await db
+      .update(projects)
+      .set({ missingSince: null, updatedAt: new Date() })
+      .where(eq(projects.id, id));
+  }
+
+  /**
+   * Get all worktrees for a project, main checkout first
+   */
+  async getWorktrees(projectId: string) {
+    return projectWorktreesService.getWorktrees(projectId);
+  }
+
+  /**
+   * Re-read a project's worktrees from git
+   */
+  async syncWorktrees(projectId: string, repoPath: string) {
+    return projectWorktreesService.syncWorktrees(projectId, repoPath);
+  }
+
+  /**
+   * Set the preferred IDE for a single worktree
+   */
+  async setWorktreePreferredIde(worktreeId: string, preferredIde: string | null) {
+    return projectWorktreesService.setPreferredIde(worktreeId, preferredIde);
   }
 
   /**

@@ -21,6 +21,7 @@ import type {
 import { calculateStreaks, todayIsoDate } from '../../../shared/utils/git-streak';
 import { isDemoMode } from '../../../shared/config/runtime-mode';
 import { TECHNOLOGY_DETECTORS } from '../technology-detectors';
+import { getGitCommonDir } from './project-worktrees-service';
 
 // ISO weeks run Monday-Sunday and are what the `week=YYYY-Www` param addresses.
 // isoWeeksInYear needs isLeapYear, and it is what tells a 53-week year from a
@@ -239,8 +240,13 @@ class ProjectGitStatsService {
       });
     });
 
+    // `git log --all` reads the shared object store, so two checkouts of one
+    // repository return the identical commits -- scanning both would double every
+    // number. Collapse to one path per repository first.
+    const distinctPaths = await this.dedupeByRepository(projectPaths);
+
     const collected = await mapWithConcurrency(
-      projectPaths,
+      distinctPaths,
       PROJECT_CONCURRENCY,
       async projectPath => {
         // A repo may override the author email locally, so resolve per project
@@ -472,6 +478,54 @@ class ProjectGitStatsService {
    * that feed top-files and languages are free once we're already parsing
    * numstat output.
    */
+  /**
+   * One path per repository.
+   *
+   * Identity is the shared git directory, so every checkout of a repo collapses
+   * to a single entry while independent clones of the same remote stay separate.
+   *
+   * The surviving path must not depend on input order: callers pass projects
+   * ordered by lastModified, which changes as the user works, while the cache
+   * key is built from a sorted copy -- so an order-dependent winner would let a
+   * cache hit return stats computed against a different checkout. That matters
+   * because the winner is user-visible (reported as `perProject.projectPath`)
+   * and carries attribution (a checkout can override user.email locally).
+   *
+   * Prefers a repository's main checkout, which is the path a user recognises,
+   * falling back to the lexicographically first so the choice is still stable
+   * for a set of paths that contains no main checkout.
+   *
+   * A path whose repository cannot be resolved is kept as-is rather than
+   * dropped: it may still be a directory worth reading.
+   */
+  private async dedupeByRepository(projectPaths: string[]): Promise<string[]> {
+    const distinct: string[] = [];
+    const bestByRepo = new Map<string, string>();
+
+    for (const projectPath of [...projectPaths].sort()) {
+      const commonDir = await getGitCommonDir(projectPath);
+
+      if (!commonDir) {
+        distinct.push(projectPath);
+        continue;
+      }
+
+      const incumbent = bestByRepo.get(commonDir);
+      if (!incumbent) {
+        bestByRepo.set(commonDir, projectPath);
+        continue;
+      }
+
+      // `<repo>/.git` is the common dir of the main checkout itself.
+      const isMainCheckout = path.resolve(commonDir) === path.resolve(projectPath, '.git');
+      if (isMainCheckout) {
+        bestByRepo.set(commonDir, projectPath);
+      }
+    }
+
+    return [...distinct, ...bestByRepo.values()];
+  }
+
   private async getProjectGitData(
     projectPath: string,
     userEmails: string[],

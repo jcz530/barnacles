@@ -20,7 +20,6 @@ export interface DemoStats {
   linesOfCode: number;
   thirdPartySize: number;
   gitBranch: string;
-  gitStatus: string;
   gitRemoteUrl: string;
   lastCommitDaysAgo: number;
   lastCommitMessage: string;
@@ -36,7 +35,6 @@ export const DEMO_STATS: DemoStats[] = [
     linesOfCode: 38_412,
     thirdPartySize: 156_237_824,
     gitBranch: 'main',
-    gitStatus: 'clean',
     gitRemoteUrl: 'git@github.com:harborlabs/harbor-api.git',
     lastCommitDaysAgo: 0,
     lastCommitMessage: 'Add cursor pagination to the projects resolver',
@@ -55,7 +53,6 @@ export const DEMO_STATS: DemoStats[] = [
     linesOfCode: 24_907,
     thirdPartySize: 82_837_504,
     gitBranch: 'feat/tokens-v2',
-    gitStatus: 'modified',
     gitRemoteUrl: 'git@github.com:harborlabs/tidepool.git',
     lastCommitDaysAgo: 1,
     lastCommitMessage: 'Extract spacing scale into design tokens',
@@ -73,7 +70,6 @@ export const DEMO_STATS: DemoStats[] = [
     linesOfCode: 19_640,
     thirdPartySize: 128_974_848,
     gitBranch: 'main',
-    gitStatus: 'clean',
     gitRemoteUrl: 'git@github.com:harborlabs/lighthouse-web.git',
     lastCommitDaysAgo: 2,
     lastCommitMessage: 'Rewrite pricing page copy',
@@ -91,7 +87,6 @@ export const DEMO_STATS: DemoStats[] = [
     linesOfCode: 27_355,
     thirdPartySize: 41_943_040,
     gitBranch: 'main',
-    gitStatus: 'clean',
     gitRemoteUrl: 'git@github.com:harborlabs/sextant.git',
     lastCommitDaysAgo: 3,
     lastCommitMessage: 'Batch metric writes behind a bounded channel',
@@ -105,7 +100,6 @@ export const DEMO_STATS: DemoStats[] = [
     linesOfCode: 15_802,
     thirdPartySize: 22_020_096,
     gitBranch: 'main',
-    gitStatus: 'clean',
     gitRemoteUrl: 'git@github.com:harborlabs/ballast.git',
     lastCommitDaysAgo: 5,
     lastCommitMessage: 'Retry failed jobs with exponential backoff',
@@ -119,7 +113,6 @@ export const DEMO_STATS: DemoStats[] = [
     linesOfCode: 21_118,
     thirdPartySize: 241_172_480,
     gitBranch: 'main',
-    gitStatus: 'clean',
     gitRemoteUrl: 'git@github.com:harborlabs/driftwood.git',
     lastCommitDaysAgo: 8,
     lastCommitMessage: 'Tune seasonality window for weekly forecasts',
@@ -135,7 +128,6 @@ export const DEMO_STATS: DemoStats[] = [
     linesOfCode: 33_240,
     thirdPartySize: 386_924_544,
     gitBranch: 'release/2.4',
-    gitStatus: 'clean',
     gitRemoteUrl: 'git@github.com:harborlabs/seaglass.git',
     lastCommitDaysAgo: 12,
     lastCommitMessage: 'Persist window bounds across restarts',
@@ -153,7 +145,6 @@ export const DEMO_STATS: DemoStats[] = [
     linesOfCode: 17_889,
     thirdPartySize: 189_792_256,
     gitBranch: 'main',
-    gitStatus: 'clean',
     gitRemoteUrl: 'git@github.com:harborlabs/mooring-mobile.git',
     lastCommitDaysAgo: 16,
     lastCommitMessage: 'Fix safe-area insets on notched devices',
@@ -170,7 +161,6 @@ export const DEMO_STATS: DemoStats[] = [
     linesOfCode: 41_663,
     thirdPartySize: 74_448_896,
     gitBranch: 'main',
-    gitStatus: 'clean',
     gitRemoteUrl: 'git@github.com:harborlabs/anchor-admin.git',
     lastCommitDaysAgo: 24,
     lastCommitMessage: 'Add role-based policy checks to reports',
@@ -188,7 +178,6 @@ export const DEMO_STATS: DemoStats[] = [
     linesOfCode: 9_421,
     thirdPartySize: 8_388_608,
     gitBranch: 'main',
-    gitStatus: 'clean',
     gitRemoteUrl: 'git@github.com:harborlabs/kelp.git',
     lastCommitDaysAgo: 31,
     lastCommitMessage: 'Support --json output for every subcommand',
@@ -202,7 +191,6 @@ export const DEMO_STATS: DemoStats[] = [
     linesOfCode: 12_074,
     thirdPartySize: 63_963_136,
     gitBranch: 'spike/presence',
-    gitStatus: 'modified',
     gitRemoteUrl: 'git@github.com:harborlabs/spindrift.git',
     lastCommitDaysAgo: 45,
     lastCommitMessage: 'Prototype presence indicators over websockets',
@@ -219,7 +207,6 @@ export const DEMO_STATS: DemoStats[] = [
     linesOfCode: 22_508,
     thirdPartySize: 45_088_768,
     gitBranch: 'main',
-    gitStatus: 'clean',
     gitRemoteUrl: 'git@github.com:harborlabs/reef-scheduler.git',
     lastCommitDaysAgo: 63,
     lastCommitMessage: 'Upgrade to the 21 LTS runtime',

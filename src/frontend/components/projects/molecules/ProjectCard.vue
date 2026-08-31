@@ -8,6 +8,8 @@ import { Button } from '../../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../ui/card';
 import ProjectActionsDropdown from './ProjectActionsDropdown.vue';
 import { RouteNames } from '@/router';
+import { computed } from 'vue';
+import { getMainBranch, hasMainWorktreeChanges } from '@/utils/worktrees';
 
 const props = defineProps<{
   project: ProjectWithDetails;
@@ -20,6 +22,10 @@ const emit = defineEmits<{
 }>();
 
 const { formatSize, formatDate } = useFormatters();
+
+// List views show the repository's current state, which is its main checkout.
+const mainBranch = computed(() => getMainBranch(props.project));
+const hasChanges = computed(() => hasMainWorktreeChanges(props.project));
 
 const handleToggleFavorite = (e: Event) => {
   e.stopPropagation();
@@ -125,11 +131,11 @@ const handleToggleFavorite = (e: Event) => {
           <span>{{ formatSize(project.size) }}</span>
         </div>
 
-        <div v-if="project.stats?.gitBranch" class="col-span-2 flex items-center gap-1.5">
+        <div v-if="mainBranch" class="col-span-2 flex items-center gap-1.5">
           <GitBranch class="h-3.5 w-3.5" />
-          <span>{{ project.stats.gitBranch }}</span>
+          <span>{{ mainBranch }}</span>
           <span
-            v-if="project.stats.hasUncommittedChanges"
+            v-if="hasChanges"
             class="bg-tertiary-100/60 text-tertiary-700 ml-auto rounded px-1.5 py-0.5 text-xs font-medium"
           >
             Uncommitted changes

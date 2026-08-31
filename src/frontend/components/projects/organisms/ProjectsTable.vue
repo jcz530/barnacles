@@ -16,6 +16,7 @@ import { type DataTableFeatures, features } from '../../tables/features';
 import TableHeader from '../../tables/TableHeader.vue';
 import { Button } from '../../ui/button';
 import { provideProcessStatusContext } from '@/composables/useProcessStatusContext';
+import { getMainBranch, hasMainWorktreeChanges } from '@/utils/worktrees';
 
 const props = defineProps<{
   projects: ProjectWithDetails[];
@@ -198,13 +199,13 @@ const table = useTable({
 
                   <!-- Git Info -->
                   <template v-else-if="cell.column.id === 'stats'">
-                    <div v-if="row.original.stats?.gitBranch" class="space-y-1">
+                    <div v-if="getMainBranch(row.original)" class="space-y-1">
                       <div class="flex items-center gap-1.5 text-slate-600">
                         <GitBranch class="h-3.5 w-3.5" />
-                        <span class="text-xs">{{ row.original.stats.gitBranch }}</span>
+                        <span class="text-xs">{{ getMainBranch(row.original) }}</span>
                       </div>
                       <span
-                        v-if="row.original.stats.hasUncommittedChanges"
+                        v-if="hasMainWorktreeChanges(row.original)"
                         class="bg-tertiary-100 text-tertiary-700 inline-flex rounded px-1.5 py-0.5 text-xs font-medium"
                       >
                         Uncommitted

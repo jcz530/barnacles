@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import fs from 'fs/promises';
 import ignore from 'ignore';
 import path from 'path';
@@ -7,7 +7,100 @@ import type { TechnologyDetector } from './technology-detectors';
 import { TECHNOLOGY_DETECTORS } from './technology-detectors';
 import { settingsService } from './settings-service';
 
-const execAsync = promisify(exec);
+// execFile rather than exec for git: an argv array is never shell-parsed, so a
+// project path containing a quote or a semicolon is just a path.
+const execFileAsync = promisify(execFile);
+
+// `git status --porcelain` in a repo with a large untracked tree exceeds the 1MB
+// default, and an overflow rejects into the catch below -- which would drop the
+// project's git info entirely. Matches GIT_MAX_BUFFER in project-git-stats-service.
+const GIT_MAX_BUFFER = 32 * 1024 * 1024;
+
+// A git call can hang indefinitely (stale index.lock, an unresponsive network
+// mount, a network-backed fsmonitor). Without a timeout that hangs the whole scan.
+const GIT_TIMEOUT_MS = 30_000;
+
+const GIT_EXEC_OPTIONS = { maxBuffer: GIT_MAX_BUFFER, timeout: GIT_TIMEOUT_MS };
+
+// Extensions whose contents are never line-countable. Reading these decodes binary
+// data as UTF-8 purely to count newlines: wasted I/O, and the resulting garbage
+// inflates lines_of_code. A single repo can hold tens of MB of these.
+const BINARY_FILE_EXTENSIONS = new Set([
+  // images
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.bmp',
+  '.ico',
+  '.icns',
+  '.webp',
+  '.avif',
+  '.tiff',
+  '.psd',
+  // video / audio
+  '.mp4',
+  '.mov',
+  '.avi',
+  '.mkv',
+  '.webm',
+  '.mp3',
+  '.wav',
+  '.flac',
+  '.ogg',
+  '.m4a',
+  // archives
+  '.zip',
+  '.gz',
+  '.tgz',
+  '.bz2',
+  '.xz',
+  '.7z',
+  '.rar',
+  '.tar',
+  '.jar',
+  '.war',
+  // fonts
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.otf',
+  '.eot',
+  // documents
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.xls',
+  '.xlsx',
+  '.ppt',
+  '.pptx',
+  // compiled / binary artifacts
+  '.exe',
+  '.dll',
+  '.so',
+  '.dylib',
+  '.o',
+  '.a',
+  '.class',
+  '.pyc',
+  '.pyo',
+  '.wasm',
+  // databases and disk images
+  '.db',
+  '.sqlite',
+  '.sqlite3',
+  '.dmg',
+  '.iso',
+  '.bin',
+]);
+
+// Files above this size are not line-counted. Reading one into a JS string and
+// splitting it allocates several times its size, and a multi-MB file is
+// essentially never hand-written source: surveying the repos on a real machine,
+// everything over this threshold was a log, a SQLite database, a WAL segment, a
+// Redis AOF or a media file. Raising the cap mainly re-admits those to the line
+// counts. (It is not a crash guard -- V8 tolerates strings up to ~512MB.)
+const MAX_LINE_COUNT_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 
 // Re-export TechnologyDetector type for external use
 export type { TechnologyDetector };
@@ -132,41 +225,47 @@ class ProjectScannerService {
       const gitDir = path.join(projectPath, '.git');
       await fs.access(gitDir);
 
+      const gitOptions = { cwd: projectPath, ...GIT_EXEC_OPTIONS };
+
       // Get current branch
-      const { stdout: branch } = await execAsync('git rev-parse --abbrev-ref HEAD', {
-        cwd: projectPath,
-      });
+      const { stdout: branch } = await execFileAsync(
+        'git',
+        ['rev-parse', '--abbrev-ref', 'HEAD'],
+        gitOptions
+      );
 
       // Get git status
-      const { stdout: status } = await execAsync('git status --porcelain', {
-        cwd: projectPath,
-      });
+      const { stdout: status } = await execFileAsync('git', ['status', '--porcelain'], gitOptions);
 
       // Get remote URL
       let remoteUrl: string | undefined;
       try {
-        const { stdout: remote } = await execAsync('git config --get remote.origin.url', {
-          cwd: projectPath,
-        });
+        const { stdout: remote } = await execFileAsync(
+          'git',
+          ['config', '--get', 'remote.origin.url'],
+          gitOptions
+        );
         remoteUrl = remote.trim();
       } catch {
         // No remote configured
       }
 
-      // Get last commit info
+      // Get last commit info. Date and subject come from a single call, separated
+      // by a NUL so a subject containing any printable character stays intact.
       let lastCommitDate: Date | undefined;
       let lastCommitMessage: string | undefined;
 
       try {
-        const { stdout: commitDate } = await execAsync('git log -1 --format=%cI', {
-          cwd: projectPath,
-        });
-        lastCommitDate = new Date(commitDate.trim());
-
-        const { stdout: commitMessage } = await execAsync('git log -1 --format=%s', {
-          cwd: projectPath,
-        });
-        lastCommitMessage = commitMessage.trim();
+        const { stdout: lastCommit } = await execFileAsync(
+          'git',
+          ['log', '-1', '--format=%cI%x00%s'],
+          gitOptions
+        );
+        const [commitDate, commitMessage] = lastCommit.split('\0');
+        if (commitDate?.trim()) {
+          lastCommitDate = new Date(commitDate.trim());
+        }
+        lastCommitMessage = commitMessage?.trim();
       } catch {
         // No commits yet
       }
@@ -276,12 +375,19 @@ class ProjectScannerService {
     try {
       // Use 'du' command on Unix-like systems (macOS, Linux) for much faster calculation
       // -sk: sum in kilobytes, -s: summarize (don't show subdirectories)
-      const { stdout } = await execAsync(`du -sk "${dirPath}"`, {
+      // execFile, not exec: the path is not interpolated into a shell string, so a
+      // directory name containing a quote or a semicolon is just a name.
+      const { stdout } = await execFileAsync('du', ['-sk', dirPath], {
         timeout: 30000, // 30 second timeout
       });
 
       // Output format: "size\tpath"
       const sizeInKB = parseInt(stdout.split('\t')[0], 10);
+      if (!Number.isFinite(sizeInKB)) {
+        // Unexpected output (e.g. a warning line): fall back rather than
+        // propagating NaN into the project's size.
+        return await this.getDirectorySizeRecursive(dirPath);
+      }
       return sizeInKB * 1024; // Convert KB to bytes
     } catch {
       // Fallback to slower recursive method if 'du' fails
@@ -359,6 +465,7 @@ class ProjectScannerService {
       '.nuxt',
       '__pycache__',
       'venv',
+      '.venv',
       'target',
     ];
 
@@ -396,26 +503,38 @@ class ProjectScannerService {
           } else if (entry.isFile()) {
             fileCount++;
 
-            // Track file extension
             const ext = path.extname(entry.name).toLowerCase();
             if (ext) {
               fileExtensions.add(ext);
               extensionCounts[ext] = (extensionCounts[ext] || 0) + 1;
-
-              // Count lines for code files
-              const lines = await projectScannerService.countLines(fullPath);
-              totalLinesOfCode += lines;
-              extensionLines[ext] = (extensionLines[ext] || 0) + lines;
             }
 
+            // stat first so its size can gate line counting without a second syscall
+            let fileSize: number | undefined;
             try {
               const stats = await fs.stat(fullPath);
+              fileSize = stats.size;
               totalSize += stats.size;
               if (stats.mtime > lastModified) {
                 lastModified = stats.mtime;
               }
             } catch {
               // Skip files we can't stat
+            }
+
+            // Count lines for text files only. Binary formats and very large files
+            // are skipped -- reading them wastes I/O and pollutes the line counts.
+            // A file we could not stat is also skipped: readFile would fail for the
+            // same reason and countLines would return 0 anyway.
+            if (
+              ext &&
+              !BINARY_FILE_EXTENSIONS.has(ext) &&
+              fileSize !== undefined &&
+              fileSize <= MAX_LINE_COUNT_FILE_SIZE
+            ) {
+              const lines = await projectScannerService.countLines(fullPath);
+              totalLinesOfCode += lines;
+              extensionLines[ext] = (extensionLines[ext] || 0) + lines;
             }
           }
         }
@@ -540,59 +659,6 @@ class ProjectScannerService {
       },
       gitInfo,
     };
-  }
-
-  /**
-   * Scans multiple directories for projects
-   */
-  async scanDirectories(basePaths: string[], maxDepth: number = 3): Promise<ProjectInfo[]> {
-    const projects: ProjectInfo[] = [];
-    const scanned = new Set<string>();
-
-    async function scanRecursive(dirPath: string, depth: number): Promise<void> {
-      // Resolve symlinks so the same real directory isn't revisited under a
-      // different path (e.g. symlink-heavy pnpm workspaces), which would
-      // otherwise cause the same project to be scanned/saved many times.
-      let realDirPath: string;
-      try {
-        realDirPath = await fs.realpath(dirPath);
-      } catch {
-        return;
-      }
-
-      if (depth > maxDepth || scanned.has(realDirPath)) {
-        return;
-      }
-
-      scanned.add(realDirPath);
-
-      try {
-        // Check if current directory is a project
-        const projectInfo = await projectScannerService.scanProject(dirPath);
-        if (projectInfo) {
-          projects.push(projectInfo);
-          // Don't scan subdirectories if we found a project
-          return;
-        }
-
-        // Otherwise, scan subdirectories
-        const entries = await fs.readdir(dirPath, { withFileTypes: true });
-
-        for (const entry of entries) {
-          if (entry.isDirectory() && !entry.name.startsWith('.')) {
-            await scanRecursive(path.join(dirPath, entry.name), depth + 1);
-          }
-        }
-      } catch {
-        // Skip directories we can't access
-      }
-    }
-
-    for (const basePath of basePaths) {
-      await scanRecursive(basePath, 0);
-    }
-
-    return projects;
   }
 
   /**

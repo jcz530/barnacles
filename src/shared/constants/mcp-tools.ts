@@ -79,7 +79,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     name: 'get_project_status',
     title: 'Get Project Status',
     description:
-      'Get the status of a single Barnacles project by ID: git branch, uncommitted changes, last commit, and stats. Use get_project_by_path if you know the project directory, or list_projects otherwise, to find the project ID.',
+      'Get the status of a single Barnacles project by ID: its git worktrees (each with branch, uncommitted changes and last commit), the git remote, and file stats. A project with multiple worktrees is one repository checked out in several places. Use get_project_by_path if you know the project directory, or list_projects otherwise, to find the project ID.',
     category: 'projects',
     inputs: [
       {

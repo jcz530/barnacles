@@ -77,14 +77,18 @@ export class ProjectsCommand extends Command {
       log.message(`Technologies: ${techList}`);
     }
 
-    if (project.stats) {
-      const stats = project.stats;
-      if (stats.fileCount) {
-        log.message(`Files: ${stats.fileCount.toLocaleString()}`);
-      }
-      if (stats.gitBranch) {
-        log.message(`Git Branch: ${stats.gitBranch}`);
-      }
+    if (project.stats?.fileCount) {
+      log.message(`Files: ${project.stats.fileCount.toLocaleString()}`);
+    }
+
+    // Branch is per-checkout; show the main one, and note any others.
+    const worktrees = project.worktrees ?? [];
+    const mainWorktree = worktrees.find(worktree => worktree.isMain) ?? worktrees[0];
+    if (mainWorktree?.branch) {
+      log.message(`Git Branch: ${mainWorktree.branch}`);
+    }
+    if (worktrees.length > 1) {
+      log.message(`Worktrees: ${worktrees.length}`);
     }
 
     // Show available actions

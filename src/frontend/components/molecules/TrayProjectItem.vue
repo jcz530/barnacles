@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { RUNTIME_CONFIG } from '../../../shared/constants';
 import type { ProjectWithDetails } from '../../../backend/services/project';
+import { getMainBranch } from '@/utils/worktrees';
 
 // Configure dayjs
 dayjs.extend(relativeTime);
@@ -53,7 +54,7 @@ const sanitizedProjectName = computed(() => {
 
 // Sanitized git branch (from project stats)
 const sanitizedGitBranch = computed(() => {
-  const branch = props.project.stats?.gitBranch || 'main';
+  const branch = getMainBranch(props.project) || 'main';
   return sanitizeText(branch);
 });
 
