@@ -35,7 +35,14 @@ const statusLabel = computed(() => {
           <div class="text-sm font-medium text-slate-500">Path</div>
           <CopyButton :value="project.path" />
         </div>
-        <div class="mt-1 overflow-scroll rounded bg-slate-100 p-1 font-mono text-sm text-slate-700">
+        <!-- Collapsed, the path is start-truncated (dir="rtl") so the tail — the
+             part that identifies the project — stays visible. On hover it becomes
+             scrollable on one line: overflow-x-auto only shows a scrollbar while
+             hovered, so there is no permanent gutter, and the text never wraps. -->
+        <div
+          dir="rtl"
+          class="mt-1 truncate rounded bg-slate-100 p-1 text-left font-mono text-sm text-slate-700 hover:overflow-x-auto hover:text-clip"
+        >
           {{ project.path }}
         </div>
       </div>
