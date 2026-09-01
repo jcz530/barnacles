@@ -10,8 +10,7 @@ export function registerStripExifDataTool(server: McpServer): RegisteredTool {
     {
       title: 'Strip EXIF Data',
       description:
-        'Remove EXIF metadata (including GPS location) from a JPEG image and write the result to a new file. ' +
-        'Only JPEG/JPG images are supported. The original file is never modified; an output path must be provided.',
+        'Remove EXIF metadata, including GPS coordinates, from a JPEG — use when preparing an image for publication or sharing and its embedded location or camera data should not travel with it. Writes to a new file; the original is never modified. JPEG/JPG only.',
       inputSchema: {
         imagePath: z.string().describe('Path to the source JPEG image'),
         outputPath: z

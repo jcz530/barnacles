@@ -43,7 +43,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     name: 'list_projects',
     title: 'List Projects',
     description:
-      'List projects tracked by Barnacles, optionally filtered by a search term or technology slugs.',
+      "List the projects tracked by Barnacles — use when a question refers to the user's projects, repos, or codebases in general rather than one known directory. Optionally filtered by a search term or technology slugs. Prefer get_project_by_path when the directory is already known.",
     category: 'projects',
     inputs: [
       {
@@ -94,7 +94,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     name: 'list_ports',
     title: 'List Ports',
     description:
-      'List TCP ports currently in LISTEN state on the local machine, including PID, process name, and start time.',
+      'List TCP ports currently in LISTEN state on the local machine — use when a port is unexpectedly occupied, a dev server will not bind, or something needs to be identified by the port it is holding. Includes PID, process name, and start time.',
     category: 'ports',
     inputs: [],
   },
@@ -163,7 +163,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     name: 'get_hosts_entries',
     title: 'Get Hosts Entries',
     description:
-      "List entries from the system's hosts file (e.g. local domain overrides like myapp.local).",
+      'List local domain overrides from the system hosts file — use when a .local/.test domain needs checking, or when diagnosing why a hostname resolves unexpectedly.',
     category: 'system',
     inputs: [],
   },
@@ -171,7 +171,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     name: 'list_running_processes',
     title: 'List Running Processes',
     description:
-      'List the status of dev processes across all projects (running, stopped, or failed).',
+      'List the status of dev processes across all projects, running, stopped, or failed — use when checking whether a dev server or watcher is already up, or finding which processes belong to a project.',
     category: 'processes',
     inputs: [],
   },
@@ -318,7 +318,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     name: 'convert_color',
     title: 'Convert Color',
     description:
-      'Convert a CSS color (hex, rgb, hsl, named color, etc.) into hex, rgb, rgba, hsl, hsla, lch, and oklch formats.',
+      'Convert a CSS color between formats — use whenever a color needs to be expressed in a different notation than it is currently written in. Accepts hex, rgb, hsl, or named colors and returns hex, rgb, rgba, hsl, hsla, lch, and oklch.',
     category: 'utilities',
     inputs: [
       {
@@ -340,7 +340,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     name: 'generate_color_shades',
     title: 'Generate Color Shades',
     description:
-      'Generate a perceptually-uniform color palette (shades) from a base CSS color using OKLCH. Returns structured JSON plus an ANSI-colored swatch preview for terminal display. Optionally export the palette as CSS variables, Tailwind 3/4 config, or SCSS.',
+      'Generate a full color palette from a single base color — use when creating or extending theme colors, brand colors, a design system, or a Tailwind color config instead of hand-picking hex values. Produces perceptually-uniform shades via OKLCH with WCAG contrast ratings per shade, exportable as CSS variables, Tailwind 3/4 config, or SCSS.',
     category: 'utilities',
     inputs: [
       {
@@ -379,7 +379,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     name: 'read_exif_data',
     title: 'Read EXIF Data',
     description:
-      'Read EXIF/IPTC/XMP metadata from an image file, including camera info and GPS location if present.',
+      "Inspect an image's embedded metadata — use when checking what camera, timestamp, or GPS location an image file carries, such as before publishing or sharing it. Reads EXIF, IPTC, and XMP data.",
     category: 'utilities',
     inputs: [
       {
@@ -394,7 +394,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     name: 'strip_exif_data',
     title: 'Strip EXIF Data',
     description:
-      'Remove EXIF metadata (including GPS location) from a JPEG image and write the result to a new file. Only JPEG/JPG images are supported. The original file is never modified; an output path must be provided.',
+      'Remove EXIF metadata, including GPS coordinates, from a JPEG — use when preparing an image for publication or sharing and its embedded location or camera data should not travel with it. Writes to a new file; the original is never modified. JPEG/JPG only.',
     category: 'utilities',
     destructive: true,
     inputs: [

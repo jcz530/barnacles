@@ -9,7 +9,7 @@ export function registerReadExifDataTool(server: McpServer): RegisteredTool {
     {
       title: 'Read EXIF Data',
       description:
-        'Read EXIF/IPTC/XMP metadata from an image file, including camera info and GPS location if present.',
+        "Inspect an image's embedded metadata — use when checking what camera, timestamp, or GPS location an image file carries, such as before publishing or sharing it. Reads EXIF, IPTC, and XMP data.",
       inputSchema: {
         imagePath: z.string().describe('Absolute or relative path to the image file'),
       },

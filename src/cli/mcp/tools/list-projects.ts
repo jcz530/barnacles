@@ -10,7 +10,7 @@ export function registerListProjectsTool(server: McpServer): RegisteredTool {
     {
       title: 'List Projects',
       description:
-        'List projects tracked by Barnacles, optionally filtered by a search term or technology slugs.',
+        "List the projects tracked by Barnacles — use when a question refers to the user's projects, repos, or codebases in general rather than one known directory. Optionally filtered by a search term or technology slugs. Prefer get_project_by_path when the directory is already known.",
       inputSchema: {
         search: z.string().optional().describe('Filter projects by name'),
         technologies: z
