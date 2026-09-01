@@ -1,6 +1,10 @@
 import { Hono } from 'hono';
 import { settingsService } from '../services/settings-service';
 import { toggleTrayIcon, toggleCliInstallation } from '../../main/main';
+import {
+  scanDirectoryService,
+  ScanDirectoryRejectedError,
+} from '../services/scan-directory-service';
 
 const settings = new Hono();
 
@@ -132,6 +136,40 @@ settings.delete('/:key', async c => {
  * POST /api/settings/reset
  * Reset all settings to defaults
  */
+/**
+ * POST /scan-directories
+ * Append one directory to the scan list.
+ *
+ * Separate from `PUT /:key` because that replaces the whole value: a client
+ * doing its own read-then-write could drop entries edited in between.
+ */
+settings.post('/scan-directories', async c => {
+  try {
+    const body: { path?: unknown } | null = await c.req.json().catch((): null => null);
+    const path = body?.path;
+
+    if (!path || typeof path !== 'string') {
+      return c.json({ error: 'path is required' }, 400);
+    }
+
+    const result = await scanDirectoryService.add(path);
+
+    return c.json({
+      data: result,
+      message: result.alreadyPresent
+        ? `"${result.added}" is already a scan directory.`
+        : `Added "${result.added}" to the scan directories.`,
+    });
+  } catch (error) {
+    if (error instanceof ScanDirectoryRejectedError) {
+      return c.json({ error: error.message }, 422);
+    }
+
+    console.error('Error adding scan directory:', error);
+    return c.json({ error: 'Failed to add scan directory' }, 500);
+  }
+});
+
 settings.post('/reset', async c => {
   try {
     await settingsService.resetToDefaults();

@@ -12,3 +12,20 @@ export function expandTilde(filepath: string): string {
   }
   return filepath;
 }
+
+/**
+ * Collapses the user's home directory in a path back to a tilde, so stored
+ * paths match the `~/...` form used by the default scan directories.
+ * @param filepath - Absolute path that may live under the home directory
+ * @returns Path with the home directory replaced by `~`, or the input unchanged
+ */
+export function collapseTilde(filepath: string): string {
+  const home = os.homedir();
+  if (filepath === home) {
+    return '~';
+  }
+  if (filepath.startsWith(home + path.sep)) {
+    return `~${path.sep}${path.relative(home, filepath)}`;
+  }
+  return filepath;
+}

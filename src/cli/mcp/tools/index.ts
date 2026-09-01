@@ -1,5 +1,7 @@
 import type { McpServer, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerListProjectsTool } from './list-projects.js';
+import { registerAddProjectTool } from './add-project.js';
+import { registerAddScanDirectoryTool } from './add-scan-directory.js';
 import { registerGetProjectByPathTool } from './get-project-by-path.js';
 import { registerGetProjectStatusTool } from './get-project-status.js';
 import { registerListPortsTool } from './list-ports.js';
@@ -49,6 +51,8 @@ export function registerTools(server: McpServer): Record<string, RegisteredTool>
     remove_project_process: registerRemoveProjectProcessTool(server),
     convert_color: registerConvertColorTool(server),
     generate_color_shades: registerGenerateColorShadesTool(server),
+    add_project: registerAddProjectTool(server),
+    add_scan_directory: registerAddScanDirectoryTool(server),
     read_exif_data: registerReadExifDataTool(server),
     strip_exif_data: registerStripExifDataTool(server),
   };
