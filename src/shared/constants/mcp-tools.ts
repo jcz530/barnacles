@@ -43,7 +43,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     name: 'list_projects',
     title: 'List Projects',
     description:
-      'List projects tracked by Barnacles, optionally filtered by a search term or technology slugs.',
+      "List the projects tracked by Barnacles — use when a question refers to the user's projects, repos, or codebases in general rather than one known directory. Optionally filtered by a search term or technology slugs. Prefer get_project_by_path when the directory is already known.",
     category: 'projects',
     inputs: [
       {
@@ -94,7 +94,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     name: 'list_ports',
     title: 'List Ports',
     description:
-      'List TCP ports currently in LISTEN state on the local machine, including PID, process name, and start time.',
+      'List TCP ports currently in LISTEN state on the local machine — use when a port is unexpectedly occupied, a dev server will not bind, or something needs to be identified by the port it is holding. Includes PID, process name, and start time.',
     category: 'ports',
     inputs: [],
   },
@@ -171,7 +171,7 @@ export const MCP_TOOLS: McpToolInfo[] = [
     name: 'list_running_processes',
     title: 'List Running Processes',
     description:
-      'List the status of dev processes across all projects (running, stopped, or failed).',
+      'List the status of dev processes across all projects, running, stopped, or failed — use when checking whether a dev server or watcher is already up, or finding which processes belong to a project.',
     category: 'processes',
     inputs: [],
   },

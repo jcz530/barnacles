@@ -9,7 +9,7 @@ export function registerListPortsTool(server: McpServer): RegisteredTool {
     {
       title: 'List Ports',
       description:
-        'List TCP ports currently in LISTEN state on the local machine, including PID, process name, and start time.',
+        'List TCP ports currently in LISTEN state on the local machine — use when a port is unexpectedly occupied, a dev server will not bind, or something needs to be identified by the port it is holding. Includes PID, process name, and start time.',
       inputSchema: {},
     },
     async () => {

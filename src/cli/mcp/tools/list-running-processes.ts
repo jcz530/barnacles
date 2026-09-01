@@ -9,7 +9,7 @@ export function registerListRunningProcessesTool(server: McpServer): RegisteredT
     {
       title: 'List Running Processes',
       description:
-        'List the status of dev processes across all projects (running, stopped, or failed).',
+        'List the status of dev processes across all projects, running, stopped, or failed — use when checking whether a dev server or watcher is already up, or finding which processes belong to a project.',
       inputSchema: {},
     },
     async () => {
