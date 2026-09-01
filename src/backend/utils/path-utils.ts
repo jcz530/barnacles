@@ -7,7 +7,12 @@ import path from 'path';
  * @returns Expanded absolute path
  */
 export function expandTilde(filepath: string): string {
-  if (filepath.startsWith('~/') || filepath === '~') {
+  // Accept the native separator too: stored paths use `~/`, but a caller on
+  // Windows may well hand us `~\\projects`.
+  if (filepath === '~') {
+    return os.homedir();
+  }
+  if (filepath.startsWith('~/') || filepath.startsWith('~\\')) {
     return path.join(os.homedir(), filepath.slice(2));
   }
   return filepath;
@@ -25,7 +30,9 @@ export function collapseTilde(filepath: string): string {
     return '~';
   }
   if (filepath.startsWith(home + path.sep)) {
-    return `~${path.sep}${path.relative(home, filepath)}`;
+    // Always emit `~/`, matching the stored defaults, so the value round-trips
+    // through expandTilde on every platform.
+    return `~/${path.relative(home, filepath).split(path.sep).join('/')}`;
   }
   return filepath;
 }

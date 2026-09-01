@@ -1,5 +1,5 @@
 import os from 'os';
-import path from 'path';
+import nodePath from 'path';
 import fs from 'fs/promises';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createIntegrationTestContext } from '@test/contexts';
@@ -32,7 +32,7 @@ function errorOf(response: { data: unknown }): string {
  * Created under the OS temp dir so nothing touches the user's actual tree.
  */
 async function makeTempDir(name: string): Promise<string> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), `barnacles-${name}-`));
+  const dir = await fs.mkdtemp(nodePath.join(os.tmpdir(), `barnacles-${name}-`));
   return dir;
 }
 
@@ -119,7 +119,7 @@ describe('Scan Directories API Integration Tests', () => {
       // A path under home that need not exist is no good — the route stats it.
       // Use the home directory's own temp-safe child: the OS temp dir on macOS
       // lives outside home, so build one explicitly.
-      const dir = await fs.mkdtemp(path.join(os.homedir(), '.barnacles-test-'));
+      const dir = await fs.mkdtemp(nodePath.join(os.homedir(), '.barnacles-test-'));
       tempDirs.push(dir);
 
       const response = await post(app, '/api/settings/scan-directories', { path: dir });
@@ -141,7 +141,7 @@ describe('Scan Directories API Integration Tests', () => {
       const { app } = context.get();
 
       const response = await post(app, '/api/settings/scan-directories', {
-        path: path.parse(os.homedir()).root,
+        path: nodePath.parse(os.homedir()).root,
       });
 
       expect(response.status).toBe(422);
@@ -152,7 +152,7 @@ describe('Scan Directories API Integration Tests', () => {
       const { app } = context.get();
 
       const response = await post(app, '/api/settings/scan-directories', {
-        path: path.join(os.tmpdir(), 'barnacles-does-not-exist-xyz'),
+        path: nodePath.join(os.tmpdir(), 'barnacles-does-not-exist-xyz'),
       });
 
       expect(response.status).toBe(422);
@@ -163,13 +163,71 @@ describe('Scan Directories API Integration Tests', () => {
       const { app } = context.get();
       const dir = await makeTempDir('file');
       tempDirs.push(dir);
-      const file = path.join(dir, 'not-a-dir.txt');
+      const file = nodePath.join(dir, 'not-a-dir.txt');
       await fs.writeFile(file, 'x');
 
       const response = await post(app, '/api/settings/scan-directories', { path: file });
 
       expect(response.status).toBe(422);
       expect(errorOf(response)).toMatch(/not a directory/i);
+    });
+
+    it('rejects an ancestor of the home directory', async () => {
+      const { app } = context.get();
+
+      // `~/..` is /Users — the home directory plus every other account.
+      const response = await post(app, '/api/settings/scan-directories', {
+        path: nodePath.dirname(os.homedir()),
+      });
+
+      expect(response.status).toBe(422);
+      expect(errorOf(response)).toMatch(/too broad/i);
+    });
+
+    it('rejects a system directory', async () => {
+      const { app } = context.get();
+
+      const response = await post(app, '/api/settings/scan-directories', { path: '/Volumes' });
+
+      expect(response.status).toBe(422);
+      expect(errorOf(response)).toMatch(/system directory/i);
+    });
+
+    it('does not re-add a directory reached through a symlink', async () => {
+      const { app } = context.get();
+      const target = await makeTempDir('link-target');
+      tempDirs.push(target);
+      const link = nodePath.join(await makeTempDir('link-parent'), 'alias');
+      tempDirs.push(nodePath.dirname(link));
+      await fs.symlink(target, link);
+
+      await post(app, '/api/settings/scan-directories', { path: target });
+      const viaLink = await post(app, '/api/settings/scan-directories', { path: link });
+
+      expect(bodyOf(viaLink).data.alreadyPresent).toBe(true);
+    });
+
+    it('does not lose an entry when two appends run concurrently', async () => {
+      const { app } = context.get();
+      const first = await makeTempDir('concurrent-a');
+      const second = await makeTempDir('concurrent-b');
+      tempDirs.push(first, second);
+
+      const [, last] = await Promise.all([
+        post(app, '/api/settings/scan-directories', { path: first }),
+        post(app, '/api/settings/scan-directories', { path: second }),
+      ]);
+
+      // Both reads would otherwise see the pre-append list and the second write
+      // would clobber the first.
+      const after = await get(app, '/api/settings/scanIncludedDirectories');
+      const persisted: string[] = JSON.parse(
+        (after.data as { data: { value: string } }).data.value
+      );
+
+      expect(persisted).toContain(bodyOf(last).data.added);
+      expect(persisted).toHaveLength(new Set(persisted).size);
+      expect(persisted.filter(d => d.includes('concurrent-'))).toHaveLength(2);
     });
 
     it('requires a path', async () => {

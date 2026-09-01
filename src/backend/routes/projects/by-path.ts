@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { projectService } from '../../services/project';
 import nodePath from 'path';
+import fs from 'fs/promises';
 import { scanDirectoryService } from '../../services/scan-directory-service';
 import { projectScannerService } from '../../services/project-scanner-service';
 import { expandTilde } from '../../utils/path-utils';
@@ -44,21 +45,42 @@ byPath.get('/meta/by-path', async c => {
  */
 byPath.post('/meta/by-path', async c => {
   const body: { path?: unknown } | null = await c.req.json().catch((): null => null);
-  const path = body?.path;
+  const input = body?.path;
 
-  if (!path || typeof path !== 'string') {
+  if (!input || typeof input !== 'string') {
     return c.json({ error: 'path is required' }, 400);
   }
 
-  const existing = await projectService.getProjectByPath(path);
+  const expanded = expandTilde(input);
+
+  // A relative path would be resolved against the backend's cwd, which has
+  // nothing to do with the caller's. Storing it would leave a row whose meaning
+  // changes if the backend ever starts somewhere else.
+  if (!nodePath.isAbsolute(expanded)) {
+    return c.json({ error: `"${input}" is not an absolute path.` }, 400);
+  }
+
+  // Canonicalise once and use that single value everywhere below: projects are
+  // upserted on an exact path match, so "/x" and "/x/" would otherwise become
+  // two rows for one directory.
+  let projectPath: string;
+  try {
+    projectPath = await fs.realpath(nodePath.resolve(expanded));
+  } catch {
+    return c.json({ error: `"${input}" does not exist.` }, 422);
+  }
+
+  // Exact match, not the containing-project resolver: a subdirectory of a
+  // tracked project is a new project here, not the parent being refreshed.
+  const existing = await projectService.getProjectByExactPath(projectPath);
 
   // Check the marker files up front so an unrecognised directory is reported as
   // such, rather than being lumped in with genuine scan failures below.
-  if (!(await projectScannerService.isValidProject(nodePath.resolve(expandTilde(path))))) {
+  if (!(await projectScannerService.isValidProject(projectPath))) {
     return c.json(
       {
         error:
-          `"${path}" does not look like a project. Barnacles identifies projects by a ` +
+          `"${input}" does not look like a project. Barnacles identifies projects by a ` +
           'marker file (package.json, composer.json, Cargo.toml, go.mod, requirements.txt, ' +
           'pom.xml, build.gradle) or a .git directory.',
       },
@@ -66,7 +88,7 @@ byPath.post('/meta/by-path', async c => {
     );
   }
 
-  const project = await projectService.rescanProject(path);
+  const project = await projectService.rescanProject(projectPath);
 
   const withinScanDirectories = await scanDirectoryService.covers(project.path);
 

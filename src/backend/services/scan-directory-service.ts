@@ -18,10 +18,60 @@ export interface AddScanDirectoryResult {
 export class ScanDirectoryRejectedError extends Error {}
 
 /**
- * Directories too broad to scan. Adding one of these would make every future
- * scan walk an enormous tree, so they are refused rather than merely warned
- * about — a misbehaving client should not be able to wreck scan performance.
+ * macOS and Windows filesystems are case-insensitive by default, so `~/code`
+ * and `~/Code` are one directory. Comparing them byte-for-byte would store both
+ * and scan the same tree twice.
  */
+const CASE_INSENSITIVE_FS = process.platform === 'darwin' || process.platform === 'win32';
+
+function samePath(a: string, b: string): boolean {
+  return CASE_INSENSITIVE_FS ? a.toLowerCase() === b.toLowerCase() : a === b;
+}
+
+function isInside(child: string, parent: string): boolean {
+  const prefix = parent.endsWith(path.sep) ? parent : parent + path.sep;
+  return CASE_INSENSITIVE_FS
+    ? child.toLowerCase().startsWith(prefix.toLowerCase())
+    : child.startsWith(prefix);
+}
+
+/**
+ * Resolve to a real path where possible. A configured directory that no longer
+ * exists still needs comparing, so fall back to the lexical form.
+ */
+async function canonicalize(inputPath: string): Promise<string> {
+  const resolved = path.resolve(expandTilde(inputPath));
+  return fs.realpath(resolved).catch((): string => resolved);
+}
+
+/**
+ * Directories whose whole subtree is system-owned. Scanning one walks an
+ * enormous tree on every future scan, so they are refused outright rather than
+ * merely discouraged in the MCP tool description — a model acting on untrusted
+ * repo content should not be able to wreck scan performance.
+ *
+ * Only these roots themselves are denied, not everything beneath them: macOS
+ * temp directories realpath into /private/var, and a project legitimately
+ * living under /Volumes/ssd is fine. The risk is scanning the broad root, not
+ * a specific directory inside it.
+ */
+const DENIED_ROOTS = [
+  '/System',
+  '/Library',
+  '/Applications',
+  '/usr',
+  '/bin',
+  '/sbin',
+  '/etc',
+  '/var',
+  '/private',
+  '/dev',
+  '/proc',
+  '/Volumes',
+  '/mnt',
+  '/media',
+];
+
 function assertScannable(absolutePath: string): void {
   const home = os.homedir();
   const { root } = path.parse(absolutePath);
@@ -32,15 +82,31 @@ function assertScannable(absolutePath: string): void {
     );
   }
 
-  if (absolutePath === home) {
+  // Home itself and, crucially, every ancestor of it: `~/..` resolves to
+  // /Users, which is home plus every other account on the machine.
+  if (absolutePath === home || home.startsWith(absolutePath + path.sep)) {
     throw new ScanDirectoryRejectedError(
-      'The home directory is too broad to scan — every future scan would walk all of it. ' +
+      `"${absolutePath}" is too broad to scan — every future scan would walk all of it. ` +
+        'Choose the directory your projects live in, e.g. ~/clients.'
+    );
+  }
+
+  if (DENIED_ROOTS.includes(absolutePath)) {
+    throw new ScanDirectoryRejectedError(
+      `"${absolutePath}" is a system directory and too broad to scan. ` +
         'Choose the directory your projects live in, e.g. ~/clients.'
     );
   }
 }
 
 class ScanDirectoryService {
+  /**
+   * Serialises appends. The read and the write are separate awaits, so two
+   * concurrent calls would otherwise both read the old list and the second
+   * would drop the first one's entry.
+   */
+  private pendingAdd: Promise<unknown> = Promise.resolve();
+
   /**
    * Read the configured scan directories in their stored (`~/...`) form.
    *
@@ -65,11 +131,20 @@ class ScanDirectoryService {
    * read-then-write could clobber a list edited in between.
    */
   async add(inputPath: string): Promise<AddScanDirectoryResult> {
-    const absolutePath = path.resolve(expandTilde(inputPath));
+    const run = this.pendingAdd.then(
+      () => this.addInternal(inputPath),
+      () => this.addInternal(inputPath)
+    );
+    // Keep the chain going even when this call rejects, so one bad path does
+    // not wedge every later append.
+    this.pendingAdd = run.catch((): undefined => undefined);
+    return run;
+  }
 
-    assertScannable(absolutePath);
+  private async addInternal(inputPath: string): Promise<AddScanDirectoryResult> {
+    const requested = path.resolve(expandTilde(inputPath));
 
-    const stats = await fs.stat(absolutePath).catch((): null => null);
+    const stats = await fs.stat(requested).catch((): null => null);
     if (!stats) {
       throw new ScanDirectoryRejectedError(`"${inputPath}" does not exist.`);
     }
@@ -77,13 +152,17 @@ class ScanDirectoryService {
       throw new ScanDirectoryRejectedError(`"${inputPath}" is not a directory.`);
     }
 
+    // Resolve symlinks before the guardrails, so a link pointing at / cannot
+    // smuggle a denied root past them.
+    const absolutePath = await fs.realpath(requested);
+    assertScannable(absolutePath);
+
     const directories = await this.listStored();
     const stored = collapseTilde(absolutePath);
 
-    // Compare expanded, so `~/clients` and `/Users/me/clients` are one entry.
-    const alreadyPresent = directories.some(
-      (dir: string) => path.resolve(expandTilde(dir)) === absolutePath
-    );
+    // Compare canonicalised, so `~/clients`, `/Users/me/clients` and a symlink
+    // to either are one entry.
+    const alreadyPresent = await this.alreadyListed(directories, absolutePath);
 
     if (alreadyPresent) {
       return { directories, added: stored, alreadyPresent: true };
@@ -100,13 +179,28 @@ class ScanDirectoryService {
    * shown after adding a project the scanner would never find on its own.
    */
   async covers(inputPath: string): Promise<boolean> {
-    const absolutePath = path.resolve(expandTilde(inputPath));
+    const absolutePath = await canonicalize(inputPath);
     const directories = await this.listStored();
 
-    return directories.some((dir: string) => {
-      const scanRoot = path.resolve(expandTilde(dir));
-      return absolutePath === scanRoot || absolutePath.startsWith(scanRoot + path.sep);
-    });
+    for (const dir of directories) {
+      const scanRoot = await canonicalize(dir);
+      if (samePath(absolutePath, scanRoot) || isInside(absolutePath, scanRoot)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /** Whether any stored entry already points at this directory. */
+  private async alreadyListed(directories: string[], absolutePath: string): Promise<boolean> {
+    for (const dir of directories) {
+      if (samePath(await canonicalize(dir), absolutePath)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
 
