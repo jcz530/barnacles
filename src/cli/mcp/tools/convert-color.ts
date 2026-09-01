@@ -8,7 +8,7 @@ export function registerConvertColorTool(server: McpServer): RegisteredTool {
     {
       title: 'Convert Color',
       description:
-        'Convert a CSS color (hex, rgb, hsl, named color, etc.) into hex, rgb, rgba, hsl, hsla, lch, and oklch formats.',
+        'Convert a CSS color between formats — use whenever a color needs to be expressed in a different notation than it is currently written in. Accepts hex, rgb, hsl, or named colors and returns hex, rgb, rgba, hsl, hsla, lch, and oklch.',
       inputSchema: {
         color: z
           .string()

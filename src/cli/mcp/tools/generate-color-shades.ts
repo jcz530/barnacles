@@ -35,9 +35,7 @@ export function registerGenerateColorShadesTool(server: McpServer): RegisteredTo
     {
       title: 'Generate Color Shades',
       description:
-        'Generate a perceptually-uniform color palette (shades) from a base CSS color using OKLCH. ' +
-        'Returns structured JSON plus an ANSI-colored swatch preview for terminal display. ' +
-        'Optionally export the palette as CSS variables, Tailwind 3/4 config, or SCSS.',
+        'Generate a full color palette from a single base color — use when creating or extending theme colors, brand colors, a design system, or a Tailwind color config instead of hand-picking hex values. Produces perceptually-uniform shades via OKLCH with WCAG contrast ratings per shade, exportable as CSS variables, Tailwind 3/4 config, or SCSS.',
       inputSchema: {
         baseColor: z.string().describe('Base color in any CSS format (e.g. "#3b82f6")'),
         count: z

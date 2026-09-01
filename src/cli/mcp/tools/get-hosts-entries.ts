@@ -14,7 +14,7 @@ export function registerGetHostsEntriesTool(server: McpServer): RegisteredTool {
     {
       title: 'Get Hosts Entries',
       description:
-        "List entries from the system's hosts file (e.g. local domain overrides like myapp.local).",
+        'List local domain overrides from the system hosts file — use when a .local/.test domain needs checking, or when diagnosing why a hostname resolves unexpectedly.',
       inputSchema: {},
     },
     async () => {
