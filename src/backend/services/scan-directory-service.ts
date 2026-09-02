@@ -144,6 +144,11 @@ class ScanDirectoryService {
   private async addInternal(inputPath: string): Promise<AddScanDirectoryResult> {
     const requested = path.resolve(expandTilde(inputPath));
 
+    // Check the requested path before touching the filesystem, so a denied root
+    // is reported as such rather than as "does not exist" on a platform where
+    // it happens not to be present.
+    assertScannable(requested);
+
     const stats = await fs.stat(requested).catch((): null => null);
     if (!stats) {
       throw new ScanDirectoryRejectedError(`"${inputPath}" does not exist.`);
@@ -152,8 +157,8 @@ class ScanDirectoryService {
       throw new ScanDirectoryRejectedError(`"${inputPath}" is not a directory.`);
     }
 
-    // Resolve symlinks before the guardrails, so a link pointing at / cannot
-    // smuggle a denied root past them.
+    // Re-check the resolved path: a symlink pointing at a denied root would
+    // otherwise smuggle one past the check above.
     const absolutePath = await fs.realpath(requested);
     assertScannable(absolutePath);
 

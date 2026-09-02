@@ -184,14 +184,31 @@ describe('Scan Directories API Integration Tests', () => {
       expect(errorOf(response)).toMatch(/too broad/i);
     });
 
-    it('rejects a system directory', async () => {
+    // DENIED_ROOTS holds POSIX paths, and `path.resolve('/usr')` becomes
+    // `C:\\usr` on Windows, so this list only applies off Windows. The
+    // cross-platform guardrail is the home-ancestor check above.
+    it.skipIf(process.platform === 'win32')('rejects a system directory', async () => {
       const { app } = context.get();
 
-      const response = await post(app, '/api/settings/scan-directories', { path: '/Volumes' });
+      const response = await post(app, '/api/settings/scan-directories', { path: '/usr' });
 
       expect(response.status).toBe(422);
       expect(errorOf(response)).toMatch(/system directory/i);
     });
+
+    // /proc exists on Linux but not macOS. The guardrail runs before the
+    // existence check, so the reason given is the same on both.
+    it.skipIf(process.platform === 'win32')(
+      'reports a denied root as such even where it does not exist',
+      async () => {
+        const { app } = context.get();
+
+        const response = await post(app, '/api/settings/scan-directories', { path: '/proc' });
+
+        expect(response.status).toBe(422);
+        expect(errorOf(response)).toMatch(/system directory/i);
+      }
+    );
 
     it('does not re-add a directory reached through a symlink', async () => {
       const { app } = context.get();
