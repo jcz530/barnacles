@@ -14,7 +14,11 @@ function fakeTool(handler: unknown): RegisteredTool {
 }
 
 function fakeReporter() {
-  return { record: vi.fn(), setClient: vi.fn() } as unknown as EventReporter & {
+  return {
+    record: vi.fn(),
+    setClient: vi.fn(),
+    setEnvironment: vi.fn(),
+  } as unknown as EventReporter & {
     record: ReturnType<typeof vi.fn>;
   };
 }
@@ -268,6 +272,33 @@ describe('EventReporter', () => {
       clientName: 'claude-code',
       clientVersion: '2.0.0',
     });
+  });
+
+  it('attaches the launch directory and terminal to recorded events', async () => {
+    const reporter = new EventReporter();
+    reporter.setEnvironment('/Users/dev/Development/harbor-api', 'ghostty');
+    reporter.record({ name: 'list_ports', status: 'success', durationMs: 1 });
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.events[0]).toMatchObject({
+      workingDir: '/Users/dev/Development/harbor-api',
+      terminal: 'ghostty',
+    });
+  });
+
+  it('omits the origin when it could not be determined', async () => {
+    const reporter = new EventReporter();
+    // What a GUI-launched client with an unreadable cwd looks like.
+    reporter.setEnvironment(null, null);
+    reporter.record({ name: 'list_ports', status: 'success', durationMs: 1 });
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.events[0].workingDir).toBeUndefined();
+    expect(body.events[0].terminal).toBeUndefined();
   });
 
   it('swallows transport failures', async () => {

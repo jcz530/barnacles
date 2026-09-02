@@ -2,8 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createIntegrationTestContext } from '@test/contexts';
 import { del, get, post } from '@test/helpers/api-client';
 import events from '@backend/routes/events';
-import { events as eventsSchema, settings as settingsSchema } from '@shared/database/schema';
+import {
+  events as eventsSchema,
+  projects as projectsSchema,
+  projectWorktrees as projectWorktreesSchema,
+  settings as settingsSchema,
+} from '@shared/database/schema';
 import { createEventData } from '@test/factories/event.factory';
+import { createProjectData } from '@test/factories/project.factory';
 
 /** Build a valid POST payload entry. */
 function eventInput(overrides: Record<string, unknown> = {}) {
@@ -365,6 +371,145 @@ describe('Events API Integration Tests', () => {
       const remaining = await db.select().from(eventsSchema);
       expect(remaining).toHaveLength(1);
       expect(remaining[0].source).toBe('cli');
+    });
+  });
+
+  describe('origin: working directory, terminal, and project resolution', () => {
+    it('round-trips workingDir and terminal through ingest', async () => {
+      const { db, app } = context.get();
+
+      await post(app, '/api/events', {
+        events: [eventInput({ workingDir: '/tmp/demo/harbor-api', terminal: 'ghostty' })],
+      });
+
+      const [row] = await db.select().from(eventsSchema);
+      expect(row.workingDir).toBe('/tmp/demo/harbor-api');
+      expect(row.terminal).toBe('ghostty');
+    });
+
+    it('ignores non-string workingDir and terminal rather than rejecting the batch', async () => {
+      const { db, app } = context.get();
+
+      const response = await post(app, '/api/events', {
+        events: [eventInput({ workingDir: 42, terminal: { id: 'iterm' } })],
+      });
+
+      expect(response.status).toBe(200);
+      const [row] = await db.select().from(eventsSchema);
+      expect(row.workingDir).toBeNull();
+      expect(row.terminal).toBeNull();
+    });
+
+    it('caps an oversized workingDir server-side', async () => {
+      const { db, app } = context.get();
+
+      await post(app, '/api/events', {
+        events: [eventInput({ workingDir: '/' + 'x'.repeat(900), terminal: 't'.repeat(200) })],
+      });
+
+      const [row] = await db.select().from(eventsSchema);
+      expect(row.workingDir!.length).toBe(512);
+      expect(row.terminal!.length).toBe(64);
+    });
+
+    it('resolves a project from an exact working directory match', async () => {
+      const { db, app } = context.get();
+
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ name: 'harbor-api', path: '/tmp/demo/harbor-api' }))
+        .returning();
+
+      await db.insert(eventsSchema).values(createEventData({ workingDir: '/tmp/demo/harbor-api' }));
+
+      const response = await get(app, '/api/events');
+      const [event] = (response.data as any).data.events;
+
+      expect(event.project).toMatchObject({ id: project.id, name: 'harbor-api' });
+    });
+
+    it('resolves a project from a subdirectory of its root', async () => {
+      const { db, app } = context.get();
+
+      await db
+        .insert(projectsSchema)
+        .values(createProjectData({ name: 'harbor-api', path: '/tmp/demo/harbor-api' }));
+
+      await db
+        .insert(eventsSchema)
+        .values(createEventData({ workingDir: '/tmp/demo/harbor-api/src/backend' }));
+
+      const response = await get(app, '/api/events');
+      const [event] = (response.data as any).data.events;
+
+      expect(event.project?.name).toBe('harbor-api');
+    });
+
+    it('resolves a project from one of its linked worktrees', async () => {
+      const { db, app } = context.get();
+
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ name: 'harbor-api', path: '/tmp/demo/harbor-api' }))
+        .returning();
+
+      // A linked worktree normally lives outside the project root, so matching
+      // on project paths alone would not find it.
+      await db.insert(projectWorktreesSchema).values({
+        projectId: project.id,
+        path: '/tmp/demo/harbor-api-feature',
+        branch: 'feat/x',
+        isMain: false,
+      });
+
+      await db
+        .insert(eventsSchema)
+        .values(createEventData({ workingDir: '/tmp/demo/harbor-api-feature/src' }));
+
+      const response = await get(app, '/api/events');
+      const [event] = (response.data as any).data.events;
+
+      expect(event.project?.id).toBe(project.id);
+    });
+
+    it('does not match a sibling directory sharing a name prefix', async () => {
+      const { db, app } = context.get();
+
+      await db
+        .insert(projectsSchema)
+        .values(createProjectData({ name: 'harbor', path: '/tmp/demo/harbor' }));
+
+      await db.insert(eventsSchema).values(createEventData({ workingDir: '/tmp/demo/harbor-api' }));
+
+      const response = await get(app, '/api/events');
+      const [event] = (response.data as any).data.events;
+
+      expect(event.project).toBeNull();
+    });
+
+    it('returns a null project for an unmatched directory', async () => {
+      const { db, app } = context.get();
+
+      await db
+        .insert(eventsSchema)
+        .values(createEventData({ workingDir: '/tmp/somewhere/untracked' }));
+
+      const response = await get(app, '/api/events');
+      const [event] = (response.data as any).data.events;
+
+      expect(event.project).toBeNull();
+    });
+
+    it('leaves the project unset when no working directory was recorded', async () => {
+      const { db, app } = context.get();
+
+      await db.insert(eventsSchema).values(createEventData({ workingDir: null }));
+
+      const response = await get(app, '/api/events');
+      const [event] = (response.data as any).data.events;
+
+      expect(event.project).toBeNull();
+      expect(event.workingDir).toBeNull();
     });
   });
 });

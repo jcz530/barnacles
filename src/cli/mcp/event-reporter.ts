@@ -98,6 +98,8 @@ export class EventReporter {
   private inFlight: Promise<void> | null = null;
   private clientName: string | undefined;
   private clientVersion: string | undefined;
+  private workingDir: string | undefined;
+  private terminal: string | undefined;
   private cachedBaseUrl: string | null = null;
   private backendUnavailableUntil = 0;
 
@@ -105,6 +107,21 @@ export class EventReporter {
   setClient(name?: string, version?: string): void {
     this.clientName = name;
     this.clientVersion = version;
+  }
+
+  /**
+   * Attach where this server was launched from to subsequent events.
+   *
+   * Captured once at startup, not per call: an MCP stdio server is long-lived
+   * and its working directory is fixed at spawn, so every event from one agent
+   * session shares these values. Both are best-effort — a GUI-launched client
+   * has no terminal, and its cwd is wherever the app happened to start.
+   *
+   * Unlike args, these bypass `sanitizeArgs`, so the path is capped here.
+   */
+  setEnvironment(workingDir?: string | null, terminal?: string | null): void {
+    this.workingDir = workingDir ? workingDir.slice(0, MAX_STRING_CHARS) : undefined;
+    this.terminal = terminal ? terminal.slice(0, MAX_STRING_CHARS) : undefined;
   }
 
   /**
@@ -123,6 +140,8 @@ export class EventReporter {
         errorMessage: call.errorMessage?.slice(0, MAX_ERROR_CHARS),
         clientName: this.clientName,
         clientVersion: this.clientVersion,
+        workingDir: this.workingDir,
+        terminal: this.terminal,
         metadata: metadata ? { args: metadata } : undefined,
         occurredAt: new Date().toISOString(),
       });

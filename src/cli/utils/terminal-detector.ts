@@ -1,3 +1,5 @@
+import { terminalDisplayName } from '../../shared/constants/terminals.js';
+
 /**
  * Detects which terminal the CLI is currently running in
  * by checking environment variables
@@ -63,21 +65,12 @@ export function detectCurrentTerminal(): string | null {
 }
 
 /**
- * Gets a human-readable name for the detected terminal
+ * Gets a human-readable name for the detected terminal.
+ *
+ * Names live in shared/ because the renderer displays the same ids and cannot
+ * import CLI code; keeping a second table here meant a newly supported terminal
+ * landed in one map and not the other.
  */
 export function getTerminalName(terminalId: string | null): string {
-  const names: Record<string, string> = {
-    iterm: 'iTerm2',
-    terminal: 'Terminal',
-    warp: 'Warp',
-    hyper: 'Hyper',
-    alacritty: 'Alacritty',
-    kitty: 'Kitty',
-    wezterm: 'WezTerm',
-    'gnome-terminal': 'GNOME Terminal',
-    konsole: 'Konsole',
-    xterm: 'xterm',
-  };
-
-  return terminalId ? names[terminalId] || 'Unknown Terminal' : 'Unknown Terminal';
+  return terminalDisplayName(terminalId) ?? 'Unknown Terminal';
 }

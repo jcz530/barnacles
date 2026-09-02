@@ -452,6 +452,11 @@ export const events = sqliteTable(
     errorMessage: text('error_message'), // truncated server-side
     clientName: text('client_name'), // e.g. 'claude-code'
     clientVersion: text('client_version'),
+    // Where the producer was launched from. Captured once per process, so every
+    // event from one agent session shares them; null for GUI-launched clients.
+    // The project is resolved from working_dir at read time, not stored.
+    workingDir: text('working_dir'),
+    terminal: text('terminal'), // normalized id, e.g. 'iterm'
     metadata: text('metadata'), // JSON stringified object, e.g. {"args":{...}}
     occurredAt: integer('occurred_at', { mode: 'timestamp' })
       .notNull()

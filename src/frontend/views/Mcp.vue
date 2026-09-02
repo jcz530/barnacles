@@ -16,7 +16,7 @@ import {
   MCP_TOOL_CATEGORIES,
   type McpToolCategory,
 } from '../../shared/constants/mcp-tools';
-import { SETTING_KEYS } from '../../shared/types/api';
+import { SETTING_KEYS, type ProjectWithDetails } from '../../shared/types/api';
 import { RouteNames } from '../router';
 
 const { setBreadcrumbs } = useBreadcrumbs();
@@ -29,6 +29,7 @@ const {
   useEventsQuery,
   useEventSeriesQuery,
   useClearEventsMutation,
+  useProjectsQuery,
 } = useQueries();
 
 const settingsQuery = useSettingsQuery({ enabled: true });
@@ -37,6 +38,20 @@ const countsQuery = useEventCountsQuery({ source: 'mcp' });
 const seriesQuery = useEventSeriesQuery({ source: 'mcp', days: 14 });
 const eventsQuery = useEventsQuery({ source: 'mcp', limit: 50 });
 const clearEventsMutation = useClearEventsMutation();
+
+// Archived projects are included deliberately: events outlive the projects they
+// reference, and an archived project still has a working detail page. Without
+// this, calls against an archived project would fall back to a raw id.
+const projectsQuery = useProjectsQuery({ includeArchived: true });
+
+/** Lookup for turning a recorded project id into something linkable. */
+const projectsById = computed(() => {
+  const map = new Map<string, ProjectWithDetails>();
+  for (const project of projectsQuery.data.value ?? []) {
+    map.set(project.id, project);
+  }
+  return map;
+});
 
 const isCliInstalled = computed(() => {
   const setting = settingsQuery.data.value?.find(s => s.key === SETTING_KEYS.INSTALL_CLI_COMMAND);
@@ -229,6 +244,7 @@ const categories = computed(() =>
 
         <McpEventsTable
           :events="events"
+          :projects-by-id="projectsById"
           :is-loading="eventsQuery.isLoading.value"
           :sorting="activitySorting"
           @update:sorting="activitySorting = $event"
