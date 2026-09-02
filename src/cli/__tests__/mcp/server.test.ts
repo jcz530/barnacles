@@ -14,6 +14,8 @@ describe('createMcpServer', () => {
     const { tools } = await client.listTools();
 
     expect(tools.map(t => t.name).sort()).toEqual([
+      'add_project',
+      'add_scan_directory',
       'convert_color',
       'generate_color_shades',
       'get_hosts_entries',

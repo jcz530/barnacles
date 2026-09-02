@@ -159,6 +159,26 @@ class ProjectService {
    * Used to resolve "the project I'm currently in" from a cwd, without
    * requiring the caller to already know the project ID.
    */
+  /**
+   * Resolve a project by its own root path, ignoring containment.
+   *
+   * `getProjectByPath` answers "which project am I standing in", so it matches
+   * parent projects and worktrees. Callers deciding whether a directory is
+   * already its own project need the stricter question.
+   */
+  async getProjectByExactPath(path: string): Promise<ProjectWithDetails | null> {
+    const normalizedPath = path.replace(/[/\\]+$/, '');
+
+    const matches = await db
+      .select()
+      .from(projects)
+      .where(sql`${projects.archivedAt} IS NULL AND ${projects.missingSince} IS NULL`);
+
+    const match = matches.find(project => project.path.replace(/[/\\]+$/, '') === normalizedPath);
+
+    return match ? this.getProjectById(match.id) : null;
+  }
+
   async getProjectByPath(path: string): Promise<ProjectWithDetails | null> {
     // A missing project cannot be the one the caller is standing in.
     const allProjects = await db

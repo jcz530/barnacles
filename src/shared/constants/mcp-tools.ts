@@ -160,6 +160,36 @@ export const MCP_TOOLS: McpToolInfo[] = [
     ],
   },
   {
+    name: 'add_project',
+    title: 'Add Project',
+    description:
+      'Start tracking the project at a filesystem path — use when get_project_by_path found nothing and the directory should be tracked by Barnacles. Works for paths anywhere on disk, including outside the configured scan directories. Adding an already-tracked project just refreshes it.',
+    category: 'projects',
+    inputs: [
+      {
+        name: 'path',
+        type: 'string',
+        required: true,
+        description: 'Absolute filesystem path to the project, e.g. the current working directory',
+      },
+    ],
+  },
+  {
+    name: 'add_scan_directory',
+    title: 'Add Scan Directory',
+    description:
+      'Add a directory to the folders Barnacles scans for projects — use only after the user has been asked and agreed. This changes a persistent setting that affects every future scan, so offer it and wait for confirmation rather than calling it as an automatic follow-up to add_project. Pass the directory that contains the projects (e.g. "~/clients"), not an individual project. Adding a directory twice is harmless.',
+    category: 'system',
+    inputs: [
+      {
+        name: 'path',
+        type: 'string',
+        required: true,
+        description: 'Directory containing projects, e.g. "~/clients" or "/Volumes/ssd/code"',
+      },
+    ],
+  },
+  {
     name: 'get_hosts_entries',
     title: 'Get Hosts Entries',
     description:
