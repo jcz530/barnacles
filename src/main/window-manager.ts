@@ -79,13 +79,13 @@ export const createWindow = async (apiPort?: number): Promise<BrowserWindow> => 
   });
 
   // Load the appropriate content
-  const isDevServer = await checkViteDevServer();
+  // A packaged build must always load its own bundled renderer. Probing the
+  // dev-server port alone would make the production app pick up a running
+  // `npm run dev` server and render the dev UI.
+  const isDevServer = !app.isPackaged && (await checkViteDevServer());
   if (isDevServer) {
     mainWindow.loadURL(`http://localhost:${APP_CONFIG.VITE_DEV_SERVER_PORT}`);
-    // Open DevTools only in development (not in production build)
-    if (!app.isPackaged) {
-      mainWindow.webContents.openDevTools();
-    }
+    mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   }
