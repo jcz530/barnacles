@@ -3,6 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { registerTools } from './tools/index.js';
 import { instrumentServer } from './instrumentation.js';
 import { eventReporter } from './event-reporter.js';
+import { detectCurrentTerminal } from '../utils/terminal-detector.js';
 
 export function createMcpServer(): McpServer {
   const server = new McpServer(
@@ -27,8 +28,28 @@ export function createMcpServer(): McpServer {
   return server;
 }
 
+/**
+ * The directory the client was launched from.
+ *
+ * Clients spawn the server with their own cwd, so this is the project the user
+ * is actually working in. `process.cwd()` throws if that directory has since
+ * been deleted or become unreadable, and this runs before `connect()` — letting
+ * it escape would take down the whole server rather than lose one field.
+ */
+function currentWorkingDir(): string | null {
+  try {
+    return process.cwd();
+  } catch {
+    return null;
+  }
+}
+
 export async function startMcpServer(): Promise<void> {
   const server = createMcpServer();
+
+  // Where the call came from. Known immediately, unlike the client identity
+  // below, which has to wait for the handshake.
+  eventReporter.setEnvironment(currentWorkingDir(), detectCurrentTerminal());
 
   // Capture which client connected (Claude Code, Cursor, …) once the handshake
   // completes, so usage can be attributed rather than anonymous.

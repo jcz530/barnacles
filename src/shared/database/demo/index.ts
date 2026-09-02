@@ -287,6 +287,11 @@ async function seedMcpEvents(): Promise<void> {
       errorMessage: event.errorMessage ?? null,
       clientName: event.clientName,
       clientVersion: event.clientVersion,
+      // Resolved against the real demo workspace, not the cosmetic /Users/dev
+      // path, because that is where projects and worktrees are actually stored
+      // — a hardcoded path would resolve to no project.
+      workingDir: event.workingDir ? demoProjectPath(event.workingDir) : null,
+      terminal: event.terminal ?? null,
       metadata: event.args ? JSON.stringify({ args: event.args }) : null,
       occurredAt,
       createdAt: occurredAt,

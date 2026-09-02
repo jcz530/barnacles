@@ -1,6 +1,7 @@
 import { and, avg, count, desc, eq, gte, lt, max, sql } from 'drizzle-orm';
 import { db } from '../../shared/database/connection';
-import { events } from '../../shared/database/schema';
+import { events, projects, projectWorktrees } from '../../shared/database/schema';
+import { matchPathToCandidate, type PathCandidate } from './project/project-path-matcher';
 import { settingsService } from './settings-service';
 import { SETTING_KEYS } from '../../shared/types/api';
 import type {
@@ -18,6 +19,8 @@ import type {
 const MAX_BATCH_SIZE = 200;
 const MAX_METADATA_BYTES = 2048;
 const MAX_ERROR_MESSAGE_CHARS = 500;
+const MAX_WORKING_DIR_CHARS = 512;
+const MAX_TERMINAL_CHARS = 64;
 const MAX_LIST_LIMIT = 200;
 const DEFAULT_LIST_LIMIT = 50;
 const MAX_SERIES_DAYS = 90;
@@ -68,10 +71,75 @@ function toEventRecord(row: EventRow): EventRecord {
     errorMessage: row.errorMessage,
     clientName: row.clientName,
     clientVersion: row.clientVersion,
+    workingDir: row.workingDir,
+    terminal: row.terminal,
     metadata: parseMetadata(row.metadata),
     occurredAt: row.occurredAt,
     createdAt: row.createdAt,
   };
+}
+
+/**
+ * Resolve each event's `workingDir` to the project containing it.
+ *
+ * Done on read rather than at ingest so attribution stays correct as projects
+ * are added, re-pathed, or gain worktrees — an event logged before a project
+ * existed still links once it does.
+ *
+ * The candidate set is loaded once for the whole page and matched in memory;
+ * calling `getProjectByPath` per row would re-query the project and worktree
+ * tables for every event in the list.
+ *
+ * Archived and missing projects are included here, unlike in `getProjectByPath`:
+ * an event genuinely happened in that directory, and the detail page still works.
+ */
+async function attachProjects(records: EventRecord[]): Promise<EventRecord[]> {
+  // A page of pre-migration events has nothing to resolve; skip both queries.
+  const needsProject = records.some(record => record.workingDir);
+  if (!needsProject) return records.map((record): EventRecord => ({ ...record, project: null }));
+
+  const allProjects = await db
+    .select({ id: projects.id, name: projects.name, path: projects.path, icon: projects.icon })
+    .from(projects);
+
+  const candidates: PathCandidate[] = allProjects.map(project => ({
+    projectId: project.id,
+    path: project.path,
+  }));
+
+  const projectIds = new Set(allProjects.map(project => project.id));
+  const worktrees = await db
+    .select({ projectId: projectWorktrees.projectId, path: projectWorktrees.path })
+    .from(projectWorktrees);
+  for (const worktree of worktrees) {
+    if (projectIds.has(worktree.projectId)) {
+      candidates.push({ projectId: worktree.projectId, path: worktree.path });
+    }
+  }
+
+  const projectById = new Map(allProjects.map(project => [project.id, project]));
+
+  // Agent sessions are long-lived, so a page of events usually holds only a
+  // handful of distinct directories.
+  const resolved = new Map<string, EventRecord['project']>();
+
+  // Always set `project`, even to null, so consumers see one shape rather than
+  // having to distinguish "no directory recorded" from "directory matched
+  // nothing" by the field's absence.
+  return records.map(record => {
+    if (!record.workingDir) return { ...record, project: null };
+
+    if (!resolved.has(record.workingDir)) {
+      const match = matchPathToCandidate(record.workingDir, candidates);
+      const project = match ? projectById.get(match.projectId) : undefined;
+      resolved.set(
+        record.workingDir,
+        project ? { id: project.id, name: project.name, icon: project.icon } : null
+      );
+    }
+
+    return { ...record, project: resolved.get(record.workingDir) ?? null };
+  });
 }
 
 /**
@@ -160,6 +228,8 @@ class EventService {
         errorMessage: input.errorMessage?.slice(0, MAX_ERROR_MESSAGE_CHARS) ?? null,
         clientName: input.clientName ?? null,
         clientVersion: input.clientVersion ?? null,
+        workingDir: input.workingDir?.slice(0, MAX_WORKING_DIR_CHARS) ?? null,
+        terminal: input.terminal?.slice(0, MAX_TERMINAL_CHARS) ?? null,
         metadata: serializeMetadata(input.metadata),
         occurredAt: validOccurredAt,
       };
@@ -199,7 +269,7 @@ class EventService {
     const [totals] = await db.select({ value: count() }).from(events).where(where);
 
     return {
-      events: rows.map(toEventRecord),
+      events: await attachProjects(rows.map(toEventRecord)),
       total: totals?.value ?? 0,
     };
   }

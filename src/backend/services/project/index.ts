@@ -14,6 +14,7 @@ import { projectPackageService } from './project-package-service';
 import { projectRelatedFoldersService } from './project-related-folders-service';
 import { projectExclusionsService } from './project-exclusions-service';
 import { projectWorktreesService } from './project-worktrees-service';
+import { matchPathToCandidate, type PathCandidate } from './project-path-matcher';
 
 // Re-export types
 export type { Technology } from './project-technology-service';
@@ -186,13 +187,11 @@ class ProjectService {
       .from(projects)
       .where(sql`${projects.archivedAt} IS NULL AND ${projects.missingSince} IS NULL`);
 
-    const normalizedPath = path.replace(/[/\\]+$/, '');
-
     // Candidates are project roots plus every known worktree path. A linked
     // worktree usually lives outside its project's directory (a sibling, or an
     // entirely separate root), so matching on project paths alone would fail to
     // resolve anything running from inside one.
-    const candidates: { projectId: string; path: string }[] = allProjects.map(project => ({
+    const candidates: PathCandidate[] = allProjects.map(project => ({
       projectId: project.id,
       path: project.path,
     }));
@@ -205,18 +204,7 @@ class ProjectService {
       }
     }
 
-    let bestMatch: { projectId: string; path: string } | null = null;
-    for (const candidate of candidates) {
-      const candidatePath = candidate.path.replace(/[/\\]+$/, '');
-      const isMatch =
-        normalizedPath === candidatePath ||
-        normalizedPath.startsWith(candidatePath + '/') ||
-        normalizedPath.startsWith(candidatePath + '\\');
-
-      if (isMatch && (!bestMatch || candidatePath.length > bestMatch.path.length)) {
-        bestMatch = candidate;
-      }
-    }
+    const bestMatch = matchPathToCandidate(path, candidates);
 
     if (!bestMatch) {
       return null;

@@ -71,6 +71,8 @@ function validateEventInput(raw: unknown, index: number): EventInput {
     errorMessage: typeof input.errorMessage === 'string' ? input.errorMessage : undefined,
     clientName: typeof input.clientName === 'string' ? input.clientName : undefined,
     clientVersion: typeof input.clientVersion === 'string' ? input.clientVersion : undefined,
+    workingDir: typeof input.workingDir === 'string' ? input.workingDir : undefined,
+    terminal: typeof input.terminal === 'string' ? input.terminal : undefined,
     metadata:
       typeof input.metadata === 'object' && input.metadata !== null
         ? (input.metadata as Record<string, unknown>)

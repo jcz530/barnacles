@@ -358,6 +358,15 @@ export interface EventRecord {
   errorMessage?: string | null;
   clientName?: string | null;
   clientVersion?: string | null;
+  /** Directory the producer was launched from; absent for GUI-launched clients. */
+  workingDir?: string | null;
+  /** Normalized terminal id (e.g. 'iterm', 'ghostty'), or null when undetectable. */
+  terminal?: string | null;
+  /**
+   * The project containing `workingDir`, resolved when the event is read rather
+   * than stored, so it stays correct as projects are added or re-pathed.
+   */
+  project?: { id: string; name: string; icon?: string | null } | null;
   metadata?: Record<string, unknown> | null;
   occurredAt: Date;
   createdAt: Date;
@@ -373,6 +382,8 @@ export interface EventInput {
   errorMessage?: string;
   clientName?: string;
   clientVersion?: string;
+  workingDir?: string;
+  terminal?: string;
   metadata?: Record<string, unknown>;
   occurredAt?: string; // ISO string; defaults to now when omitted
 }

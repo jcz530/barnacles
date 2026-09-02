@@ -4,11 +4,15 @@ import { type ColumnDef, createColumnHelper, type SortingState } from '@tanstack
 import DataTable from '../../tables/DataTable.vue';
 import { type DataTableFeatures } from '../../tables/features';
 import McpStatusBadge from '../atoms/McpStatusBadge.vue';
-import type { EventRecord } from '../../../../shared/types/api';
+import ProjectLink from '../../projects/atoms/ProjectLink.vue';
+import type { EventRecord, ProjectWithDetails } from '../../../../shared/types/api';
+import { terminalDisplayName } from '../../../../shared/constants/terminals';
 import { useFormatters } from '@/composables/useFormatters';
 
 const props = defineProps<{
   events: EventRecord[];
+  /** Resolves recorded project ids to something linkable; see Mcp.vue. */
+  projectsById?: Map<string, ProjectWithDetails>;
   isLoading?: boolean;
   sorting?: SortingState;
 }>();
@@ -31,6 +35,13 @@ const columnHelper = createColumnHelper<DataTableFeatures, EventRow>();
 const columns: ColumnDef<DataTableFeatures, EventRow, any>[] = [
   columnHelper.accessor('occurredAt', { header: 'When', enableSorting: true }),
   columnHelper.accessor('name', { header: 'Tool', enableSorting: true }),
+  // Sorts by resolved name so unattributed calls group together, rather than by
+  // the raw path, which would interleave them by directory.
+  columnHelper.accessor(row => row.project?.name ?? '', {
+    id: 'project',
+    header: 'Project',
+    enableSorting: true,
+  }),
   columnHelper.accessor('status', { header: 'Status', enableSorting: true }),
   columnHelper.accessor('durationMs', { header: 'Duration', enableSorting: true }),
   columnHelper.accessor('clientName', { header: 'Client', enableSorting: true }),
@@ -38,11 +49,55 @@ const columns: ColumnDef<DataTableFeatures, EventRow, any>[] = [
 
 const getRowId = (event: EventRow) => event.id;
 
-/** Args live in metadata as a JSON blob; show them formatted in the drill-down. */
-function argsFor(event: EventRow): string | null {
+/**
+ * Last path segment of the working directory.
+ *
+ * Used where a full path would not fit. The complete path stays available in
+ * the drill-down and in the `title` attribute.
+ */
+function directoryLabel(event: EventRow): string | null {
+  if (!event.workingDir) return null;
+  const segments = event.workingDir.split(/[/\\]/).filter(Boolean);
+  return segments[segments.length - 1] ?? event.workingDir;
+}
+
+/**
+ * Args live in metadata as a JSON blob.
+ *
+ * Rendered as one line per key rather than a single `JSON.stringify` dump so a
+ * project id can be annotated with the project it refers to. The raw value is
+ * always kept: when a call fails, the literal id the agent sent is the thing
+ * worth seeing.
+ */
+interface ArgEntry {
+  key: string;
+  value: string;
+  /** Set only for a project id that resolved; drives the inline link. */
+  project: ProjectWithDetails | null;
+}
+
+/**
+ * Match on the key name, not the value's shape. These ids are cuid2, not UUIDs,
+ * so there is no reliable pattern to detect them by.
+ */
+const PROJECT_ID_KEY = 'projectId';
+
+function argEntriesFor(event: EventRow): ArgEntry[] | null {
   const args = (event.metadata as { args?: unknown } | null)?.args;
-  if (args === undefined || args === null) return null;
-  return JSON.stringify(args, null, 2);
+  if (typeof args !== 'object' || args === null || Array.isArray(args)) return null;
+
+  const entries = Object.entries(args as Record<string, unknown>);
+  if (entries.length === 0) return null;
+
+  return entries.map(([key, value]) => ({
+    key,
+    // Nested objects still get JSON, just scoped to the one value.
+    value: typeof value === 'string' ? value : JSON.stringify(value),
+    project:
+      key === PROJECT_ID_KEY && typeof value === 'string'
+        ? (props.projectsById?.get(value) ?? null)
+        : null,
+  }));
 }
 </script>
 
@@ -66,6 +121,16 @@ function argsFor(event: EventRow): string | null {
       <code class="font-mono text-slate-900">{{ row.name }}</code>
     </template>
 
+    <template #cell-project="{ row }">
+      <!-- Falls back to the bare directory name: the call still came from
+           somewhere real, even when that path is not a tracked project. -->
+      <ProjectLink
+        :project="row.project"
+        :fallback="directoryLabel(row)"
+        :fallback-title="row.workingDir"
+      />
+    </template>
+
     <template #cell-status="{ row }">
       <McpStatusBadge :status="row.status" />
     </template>
@@ -84,6 +149,38 @@ function argsFor(event: EventRow): string | null {
 
     <template #expanded-row="{ row }">
       <div class="space-y-3 px-4 py-3">
+        <!-- Where the call came from. Captured once per MCP server process, so
+             every call in one agent session shares these values. -->
+        <div v-if="row.workingDir || row.terminal || row.project">
+          <div class="mb-1 text-xs font-semibold text-slate-500 uppercase">Origin</div>
+          <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+            <template v-if="row.project">
+              <dt class="text-slate-500">Project</dt>
+              <dd><ProjectLink :project="row.project" /></dd>
+            </template>
+
+            <template v-if="row.workingDir">
+              <dt class="text-slate-500">Directory</dt>
+              <dd class="min-w-0">
+                <!-- Truncates from the left so the meaningful tail stays
+                     visible, matching ProjectCard. -->
+                <div
+                  dir="rtl"
+                  class="truncate text-left font-mono text-xs text-slate-700"
+                  :title="row.workingDir"
+                >
+                  {{ row.workingDir }}
+                </div>
+              </dd>
+            </template>
+
+            <template v-if="row.terminal">
+              <dt class="text-slate-500">Terminal</dt>
+              <dd class="text-slate-700">{{ terminalDisplayName(row.terminal) }}</dd>
+            </template>
+          </dl>
+        </div>
+
         <div v-if="row.errorMessage">
           <div class="mb-1 text-xs font-semibold text-slate-500 uppercase">Error</div>
           <div class="text-danger-500 text-sm">{{ row.errorMessage }}</div>
@@ -91,10 +188,21 @@ function argsFor(event: EventRow): string | null {
 
         <div>
           <div class="mb-1 text-xs font-semibold text-slate-500 uppercase">Arguments</div>
-          <pre
-            v-if="argsFor(row)"
-            class="bg-muted overflow-x-auto rounded-md p-3 text-xs"
-          ><code>{{ argsFor(row) }}</code></pre>
+          <div v-if="argEntriesFor(row)" class="bg-muted overflow-x-auto rounded-md p-3">
+            <div
+              v-for="entry in argEntriesFor(row)"
+              :key="entry.key"
+              class="flex flex-wrap items-center gap-x-2 font-mono text-xs leading-6"
+            >
+              <span class="text-slate-500">{{ entry.key }}:</span>
+              <span class="text-slate-900">{{ entry.value }}</span>
+              <!-- Resolved project sits beside the raw id, never replacing it. -->
+              <template v-if="entry.project">
+                <span class="text-slate-400">→</span>
+                <ProjectLink :project="entry.project" :show-icon="false" />
+              </template>
+            </div>
+          </div>
           <div v-else class="text-sm text-slate-500">No arguments</div>
         </div>
 
