@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Clock, FolderGit2, GitBranch, RefreshCw, SquareTerminal } from 'lucide-vue-next';
+import {
+  ChartLine,
+  Clock,
+  FolderGit2,
+  GitBranch,
+  RefreshCw,
+  SquareTerminal,
+} from 'lucide-vue-next';
 import type { ProjectWithDetails } from '../../../../shared/types/api';
 import { useFormatters } from '../../../composables/useFormatters';
 import { useQueries } from '../../../composables/useQueries';
@@ -8,6 +15,8 @@ import { useProjectActions } from '@/composables/useProjectActions';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { ScrollArea } from '../../ui/scroll-area';
+import { RouterLink } from 'vue-router';
+import { RouteNames } from '@/router';
 import { getMainWorktree } from '@/utils/worktrees';
 import { toastDanger, toastSuccess } from '../../ui/sonner';
 
@@ -96,16 +105,24 @@ const handleOpenTerminal = async (worktreePath: string) => {
             ({{ worktrees.length }})
           </span>
         </span>
-        <Button
-          v-if="showWorktreeList"
-          variant="ghost"
-          size="sm"
-          :disabled="syncMutation.isPending.value"
-          title="Re-read worktrees from git"
-          @click="handleSync"
-        >
-          <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': syncMutation.isPending.value }" />
-        </Button>
+        <span class="flex items-center">
+          <Button
+            v-if="showWorktreeList"
+            variant="ghost"
+            size="sm"
+            :disabled="syncMutation.isPending.value"
+            title="Re-read worktrees from git"
+            @click="handleSync"
+          >
+            <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': syncMutation.isPending.value }" />
+          </Button>
+          <!-- Opens the stats page already filtered to this project. -->
+          <Button variant="ghost" size="sm" as-child title="View commit stats for this project">
+            <RouterLink :to="{ name: RouteNames.Stats, query: { projectId: project.id } }">
+              <ChartLine class="h-4 w-4" />
+            </RouterLink>
+          </Button>
+        </span>
       </CardTitle>
     </CardHeader>
     <CardContent>

@@ -12,7 +12,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const { formatDate } = useFormatters();
+const { formatDate, formatRelativeDate } = useFormatters();
 
 // "Missing" outranks "Archived": it is the state that needs the user's attention.
 const statusLabel = computed(() => {
@@ -35,7 +35,14 @@ const statusLabel = computed(() => {
           <div class="text-sm font-medium text-slate-500">Path</div>
           <CopyButton :value="project.path" />
         </div>
-        <div class="mt-1 overflow-scroll rounded bg-slate-100 p-1 font-mono text-sm text-slate-700">
+        <!-- Collapsed, the path is start-truncated (dir="rtl") so the tail — the
+             part that identifies the project — stays visible. On hover it becomes
+             scrollable on one line: overflow-x-auto only shows a scrollbar while
+             hovered, so there is no permanent gutter, and the text never wraps. -->
+        <div
+          dir="rtl"
+          class="mt-1 truncate rounded bg-slate-100 p-1 text-left font-mono text-sm text-slate-700 hover:overflow-x-auto hover:text-clip"
+        >
           {{ project.path }}
         </div>
       </div>
@@ -62,14 +69,14 @@ const statusLabel = computed(() => {
       </div>
       <div>
         <div class="text-sm font-medium text-slate-500">Created</div>
-        <div class="mt-1 text-sm text-slate-900">
-          {{ formatDate(project.createdAt) }}
+        <div class="mt-1 text-sm text-slate-900" :title="formatDate(project.createdAt)">
+          {{ formatRelativeDate(project.createdAt) }}
         </div>
       </div>
       <div>
         <div class="text-sm font-medium text-slate-500">Last Updated</div>
-        <div class="mt-1 text-sm text-slate-900">
-          {{ formatDate(project.updatedAt) }}
+        <div class="mt-1 text-sm text-slate-900" :title="formatDate(project.updatedAt)">
+          {{ formatRelativeDate(project.updatedAt) }}
         </div>
       </div>
     </CardContent>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   Archive,
+  ChartLine,
   Copy,
   ExternalLink as ExternalLinkIcon,
   FolderOpen,
@@ -23,6 +24,8 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from '../../ui/dropdown-menu';
+import { RouterLink } from 'vue-router';
+import { RouteNames } from '@/router';
 import { useProcessStatusContext } from '@/composables/useProcessStatusContext';
 
 interface Props {
@@ -379,6 +382,13 @@ const handleOpenUrl = (url: string) => {
   <DropdownMenuItem v-if="gitProvider" @click="handleOpenGitRemote">
     <ExternalLinkIcon class="mr-2 h-4 w-4" />
     View on {{ gitProvider.name }}
+  </DropdownMenuItem>
+  <!-- Opens the stats page already filtered to this project. -->
+  <DropdownMenuItem as-child>
+    <RouterLink :to="{ name: RouteNames.Stats, query: { projectId } }">
+      <ChartLine class="mr-2 h-4 w-4" />
+      View Stats
+    </RouterLink>
   </DropdownMenuItem>
   <DropdownMenuSeparator />
   <DropdownMenuItem @click="handleCopyPath">
