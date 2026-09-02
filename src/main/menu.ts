@@ -7,6 +7,40 @@ const ISSUES_URL = 'https://github.com/jcz530/barnacles/issues';
 const SITE_URL = 'https://barnacles.app';
 
 /**
+ * Focus a main window and ask its renderer to route to Settings, creating a
+ * window first if every one is closed (macOS keeps the menu bar alive then).
+ * Utility windows -- the tray popup, the find overlay -- have no router, so
+ * they are filtered out the same way the window IPC bridge does it.
+ */
+const openSettings = async (): Promise<void> => {
+  const isMainWindow = (win: BrowserWindow): boolean =>
+    !win.isDestroyed() && win.isResizable() && !win.isAlwaysOnTop();
+
+  const focused = BrowserWindow.getFocusedWindow();
+  const target =
+    focused && isMainWindow(focused) ? focused : BrowserWindow.getAllWindows().find(isMainWindow);
+
+  let window = target;
+
+  if (!window) {
+    // A brand new window returns before its renderer has loaded, so the
+    // navigation message would land before anything is listening for it.
+    window = await createAppWindow();
+    if (window.webContents.isLoading()) {
+      await new Promise<void>(resolve => {
+        window.webContents.once('did-finish-load', () => resolve());
+      });
+    }
+  }
+
+  if (!window.isVisible()) {
+    window.show();
+  }
+  window.focus();
+  window.webContents.send('navigate-to-project', '/settings');
+};
+
+/**
  * Tag links out to the marketing site so analytics can tell app traffic apart
  * from every other source, and tell which menu item sent it.
  */
@@ -51,6 +85,17 @@ export const createMenu = (): void => {
     },
   };
 
+  // The renderer owns routing, so the menu asks it to navigate rather than
+  // loading a URL itself. Accelerator matches the Cmd+, / Ctrl+, hotkey the
+  // renderer already handles -- listing it here is what makes it discoverable.
+  const settingsItem: MenuItemConstructorOptions = {
+    label: isMac ? 'Settings...' : 'Settings',
+    accelerator: isMac ? 'Cmd+,' : 'Ctrl+,',
+    click: () => {
+      void openSettings();
+    },
+  };
+
   // Helper function to get window menu items
   const getWindowMenuItems = (): MenuItemConstructorOptions[] => {
     const windows = BrowserWindow.getAllWindows();
@@ -76,6 +121,8 @@ export const createMenu = (): void => {
               { type: 'separator' as const },
               checkForUpdatesItem,
               { type: 'separator' as const },
+              settingsItem,
+              { type: 'separator' as const },
               { role: 'services' as const },
               { type: 'separator' as const },
               { role: 'hide' as const },
@@ -99,6 +146,7 @@ export const createMenu = (): void => {
           },
         },
         { type: 'separator' as const },
+        ...(isMac ? [] : [settingsItem, { type: 'separator' as const }]),
         isMac ? { role: 'close' as const } : { role: 'quit' as const },
       ],
     },
