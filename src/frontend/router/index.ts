@@ -32,6 +32,7 @@ import AccountForm from '../views/AccountForm.vue';
 export const RouteNames = {
   TrayPopup: 'TrayPopup',
   FindOverlay: 'FindOverlay',
+  CommandPalette: 'CommandPalette',
   Home: 'Home',
   Projects: 'Projects',
   ProjectDetail: 'ProjectDetail',

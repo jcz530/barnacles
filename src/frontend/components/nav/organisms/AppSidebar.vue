@@ -19,20 +19,10 @@ import { useApi } from '@/composables/useApi';
 import { useConfigs } from '@/composables/useConfigs';
 import { useQueries } from '@/composables/useQueries';
 import { useQuery } from '@tanstack/vue-query';
-import {
-  ChartNoAxesColumn,
-  FileText,
-  FolderGit2,
-  Network,
-  Radio,
-  Plug,
-  Sparkles,
-  SquareTerminal,
-  Terminal,
-} from 'lucide-vue-next';
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { API_ROUTES } from '../../../../shared/constants';
+import { NAV_MAIN, NAV_SECONDARY } from '@/constants/navigation';
 
 const props = withDefaults(defineProps<SidebarProps>(), {
   variant: 'inset',
@@ -75,78 +65,22 @@ const data = computed(() => ({
     avatar: '',
     initials: 'US',
   },
-  navMain: [
-    {
-      title: 'Dashboard',
-      url: '/',
-      icon: SquareTerminal,
-      isActive: route.path === '/',
-    },
-    {
-      title: 'Projects',
-      url: '/projects',
-      icon: FolderGit2,
-      count: projects.value?.length ?? 0,
-      isActive: route.path.startsWith('/projects'),
-      items: favorites.value,
-    },
-    {
-      title: 'Processes',
-      url: '/terminals',
-      icon: SquareTerminal,
-      count: processes.value?.length ?? 0,
-      isActive: route.path.startsWith('/terminals'),
-    },
-    {
-      title: 'Ports',
-      url: '/ports',
-      icon: Radio,
-      isActive: route.path.startsWith('/ports'),
-    },
-    {
-      title: 'Stats',
-      url: '/stats',
-      icon: ChartNoAxesColumn,
-      isActive: route.path.startsWith('/stats'),
-    },
-    {
-      title: 'Utilities',
-      url: '/utilities',
-      icon: Sparkles,
-      isActive: route.path.startsWith('/utilities'),
-    },
-    {
-      title: 'MCP',
-      url: '/mcp',
-      icon: Plug,
-      isActive: route.path.startsWith('/mcp'),
-    },
-  ],
-  navSecondary: [
-    // {
-    //   title: 'Developer',
-    //   url: '#',
-    //   icon: LifeBuoy,
-    // },
-    {
-      title: 'Hosts',
-      url: '/hosts',
-      icon: Network,
-      isActive: route.path.startsWith('/hosts'),
-    },
-    {
-      title: 'Aliases',
-      url: '/aliases',
-      icon: Terminal,
-      isActive: route.path.startsWith('/aliases'),
-    },
-    {
-      title: 'Config Files',
-      url: '/configs',
-      icon: FileText,
-      isActive: route.path.startsWith('/configs'),
-    },
-  ],
+  navMain: NAV_MAIN.map(item => ({
+    title: item.title,
+    url: item.url,
+    icon: item.icon,
+    isActive: item.url === '/' ? route.path === '/' : route.path.startsWith(item.url),
+    ...(item.url === '/projects'
+      ? { count: projects.value?.length ?? 0, items: favorites.value }
+      : {}),
+    ...(item.url === '/terminals' ? { count: processes.value?.length ?? 0 } : {}),
+  })),
+  navSecondary: NAV_SECONDARY.map(item => ({
+    title: item.title,
+    url: item.url,
+    icon: item.icon,
+    isActive: route.path.startsWith(item.url),
+  })),
   // projects: [
   //   {
   //     name: 'Other Section',
