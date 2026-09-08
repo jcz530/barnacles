@@ -43,6 +43,16 @@ export interface Command {
   subtitle?: string;
   group: CommandGroupId;
   icon?: Component;
+  /**
+   * Render the project's own icon instead of `icon`, matching what the projects
+   * page shows. Described as data rather than a component so providers stay
+   * free of .vue imports; the palette resolves it at render time.
+   */
+  projectIcon?: {
+    projectId: string;
+    projectName: string;
+    hasIcon: boolean;
+  };
   /** Extra fuzzy-match terms that aren't in the title or subtitle. */
   keywords?: string[];
   /**

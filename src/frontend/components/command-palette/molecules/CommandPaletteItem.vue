@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ComboboxItem } from 'reka-ui';
 import type { Command } from '@/commands/types';
+import ProjectIcon from '@/components/projects/atoms/ProjectIcon.vue';
 
 defineProps<{ command: Command }>();
 
@@ -18,7 +19,13 @@ const emit = defineEmits<{ select: [] }>();
     class="data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm outline-hidden select-none"
     @select="emit('select')"
   >
-    <component :is="command.icon" v-if="command.icon" class="size-4 shrink-0 opacity-70" />
+    <ProjectIcon
+      v-if="command.projectIcon"
+      v-bind="command.projectIcon"
+      size="sm"
+      class="shrink-0"
+    />
+    <component :is="command.icon" v-else-if="command.icon" class="size-4 shrink-0 opacity-70" />
     <span class="truncate">{{ command.title }}</span>
     <span v-if="command.subtitle" class="text-muted-foreground ml-auto truncate pl-4 text-xs">
       {{ command.subtitle }}

@@ -1,4 +1,4 @@
-import { Clipboard, FolderGit2, FolderOpen, MonitorPlay, SquareTerminal } from 'lucide-vue-next';
+import { Clipboard, FolderOpen, MonitorPlay, SquareTerminal } from 'lucide-vue-next';
 import type { ProjectWithDetails } from '../../../shared/types/api';
 import type { Command } from '../types';
 
@@ -30,13 +30,25 @@ export const projectCommands = (
     const priority = project.isFavorite ? 2 : 0;
     const keywords = [project.path, ...project.technologies.map(tech => tech.name)];
 
+    // Enough for the palette to render the project's own icon, the same one the
+    // projects page shows. The component itself is resolved at render time --
+    // a command is plain data and importing a .vue file here would drag the
+    // whole renderer into the provider (and into its tests).
+    const projectIcon = {
+      projectIcon: {
+        projectId: project.id,
+        projectName: project.name,
+        hasIcon: !!project.icon,
+      },
+    };
+
     return [
       {
         id: `project.open:${project.id}`,
         title: project.name,
         subtitle: project.path,
         group: 'projects' as const,
-        icon: FolderGit2,
+        ...projectIcon,
         keywords,
         priority,
         run: ctx => ctx.navigate(`/projects/${project.id}`),
