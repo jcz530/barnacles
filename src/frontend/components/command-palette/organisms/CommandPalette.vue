@@ -94,9 +94,19 @@ const runCommand = (command: Command) => {
 </script>
 
 <template>
+  <!--
+    reset-search-term-on-select must be off. Selecting an item sets Reka's own
+    model to that item's value -- ComboboxItem calls onValueChange(props.value)
+    whether or not a v-model is bound -- and this flag then writes that value
+    back into the search box, pasting a command id like
+    "project.open:anla4gsy..." into the input. The floating window outlives a
+    single open, so it persisted there until the window was rebuilt.
+  -->
   <ComboboxRoot
     :open="true"
     :ignore-filter="true"
+    :reset-search-term-on-select="false"
+    :reset-search-term-on-blur="false"
     :class="['flex flex-col overflow-hidden', heightClass ?? 'max-h-[60vh]']"
   >
     <div class="flex items-center gap-2 border-b px-4">
