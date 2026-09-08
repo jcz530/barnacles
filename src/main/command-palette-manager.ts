@@ -127,6 +127,13 @@ const createPaletteWindow = async (): Promise<BrowserWindow> => {
     height: PALETTE_HEIGHT,
     show: false,
     frame: false,
+    // NSPanel semantics on macOS: a panel takes keyboard focus without
+    // activating the application, so showing it cannot drag the app's other
+    // windows forward. This is how Spotlight and Raycast-style launchers
+    // behave, and it is the only option that stops the main window being
+    // raised. Not in Electron's typings, but `type` is a plain string there
+    // and the behaviour is supported (electron/electron#40307).
+    ...(process.platform === 'darwin' ? { type: 'panel' } : {}),
     // Transparency is unreliable on some Linux compositors, where it renders
     // black rather than clear.
     transparent: process.platform === 'darwin',
