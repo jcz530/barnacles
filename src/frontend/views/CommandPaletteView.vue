@@ -42,7 +42,9 @@ onMounted(() => {
     paletteRef.value?.reset();
     void queryClient.invalidateQueries({ queryKey: ['projects'] });
     void queryClient.invalidateQueries({ queryKey: ['ports'] });
-    void queryClient.invalidateQueries({ queryKey: ['project', 'process-status'] });
+    // Keyed 'process-status-all' when no projectId is passed, which is how the
+    // registry queries it; ['project', id, 'process-status'] is the per-project form.
+    void queryClient.invalidateQueries({ queryKey: ['process-status-all'] });
   });
 });
 

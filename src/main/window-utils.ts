@@ -5,7 +5,7 @@ import { app, BrowserWindow } from 'electron';
  * Long enough for macOS to deliver the `activate` event that showing a window
  * from an unfocused app triggers.
  */
-export const ACTIVATE_EVENT_DELAY = 300;
+const ACTIVATE_EVENT_DELAY = 300;
 
 // Set while a utility window (tray popup, command palette) is being shown, so
 // the `activate` handler doesn't resurrect hidden main windows behind it.
@@ -66,10 +66,10 @@ export const trackApplicationActivation = (): void => {
     // in another app. That left the flag stuck true, so the palette believed
     // Barnacles was frontmost and handed the hotkey to the in-app modal.
     app.on('did-become-active', () => {
-      // Focusing a utility window activates the app too, even in accessory
-      // mode. That is the palette taking keyboard focus so you can type in it,
-      // not you switching to Barnacles -- counting it made dismissing the
-      // palette look like the app was already in front, so it stayed there.
+      // Showing a utility window can activate the app as a side effect. That
+      // is the palette taking keyboard focus so you can type in it, not you
+      // switching to Barnacles -- counting it made dismissing the palette look
+      // like the app was already in front, so it stayed there.
       if (isShowingUtilityWindow) return;
       isAppActive = true;
     });
@@ -96,9 +96,13 @@ export const trackApplicationActivation = (): void => {
 
   app.on('browser-window-blur', () => {
     // Focus moving between our own windows blurs one and focuses the next, so
-    // only treat this as leaving once nothing of ours holds focus.
+    // only treat this as leaving once nothing of ours holds focus. A utility
+    // window holding focus is not the app being in front -- the floating
+    // palette takes focus so you can type in it, and counting that would leave
+    // the flag stuck true and route the next hotkey press to the in-app modal.
     setImmediate(() => {
-      isAppActive = BrowserWindow.getFocusedWindow() !== null;
+      const focused = BrowserWindow.getFocusedWindow();
+      isAppActive = focused !== null && isMainWindow(focused);
     });
   });
 };

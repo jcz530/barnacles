@@ -3,6 +3,7 @@ import {
   defaultCommands,
   effectiveScore,
   groupRankedCommands,
+  MAX_DEFAULT_RESULTS,
   MAX_PER_GROUP,
   MAX_RESULTS,
   type ScoredCommand,
@@ -111,6 +112,19 @@ describe('defaultCommands', () => {
     const shown = groups.flatMap(group => group.commands.map(entry => entry.id));
     expect(shown).toEqual(['running', 'favorite']);
     expect(shown).not.toContain('inert');
+  });
+
+  it('still applies the per-group cap, so one group cannot fill the list', () => {
+    // MAX_DEFAULT_RESULTS is an upper bound, not a target: someone with a dozen
+    // favourite projects sees five, not twelve. The existing tests all used
+    // fewer commands than the cap, so this went unexercised.
+    const favourites = Array.from({ length: MAX_DEFAULT_RESULTS }, (_, index) =>
+      command(`fav-${index}`, 'projects', 2)
+    );
+
+    const shown = defaultCommands(favourites).flatMap(group => group.commands);
+
+    expect(shown).toHaveLength(MAX_PER_GROUP);
   });
 
   it('is empty when nothing is prioritized', () => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import {
   DialogContent,
   DialogDescription,
@@ -20,9 +20,13 @@ const router = useRouter();
 const { commands } = useCommandRegistry(open);
 const paletteRef = ref<InstanceType<typeof CommandPalette> | null>(null);
 
-// A fresh search each time it opens.
-watch(open, isOpen => {
-  if (isOpen) paletteRef.value?.reset();
+// A fresh search each time it opens. Awaits the render: the palette lives
+// inside DialogPortal, so on the first open the child does not exist yet when
+// this fires and the reset would be silently dropped.
+watch(open, async isOpen => {
+  if (!isOpen) return;
+  await nextTick();
+  paletteRef.value?.reset();
 });
 
 const runCommand = async (command: Command) => {

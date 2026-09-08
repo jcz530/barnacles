@@ -192,6 +192,15 @@ const createPaletteWindow = async (): Promise<BrowserWindow> => {
     paletteWindow = null;
   });
 
+  // The window is kept alive for the life of the app, so a dead renderer would
+  // otherwise be handed back on every future press -- showing an empty frame
+  // with no way to recover short of restarting. Drop it and let the next press
+  // build a fresh one.
+  win.webContents.on('render-process-gone', () => {
+    if (!win.isDestroyed()) win.destroy();
+    paletteWindow = null;
+  });
+
   return win;
 };
 
@@ -210,9 +219,9 @@ const showCommandPalette = async (): Promise<void> => {
   // windows follow it onto whatever space you are working in.
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   positionOnActiveDisplay(win);
-  // showInactive, not show: showing a regular app's window activates the app,
-  // and activating brings every other window of ours forward with it -- which
-  // is what put the main window on top of whatever you were working in.
+  // showInactive rather than show: belt and braces alongside the panel type
+  // above, since show() is the call that activates an app and drags its other
+  // windows forward with it.
   win.showInactive();
   win.focus();
 
@@ -252,6 +261,8 @@ export const hideCommandPalette = (options?: { viaBlur?: boolean }): void => {
  * this branch Cmd+K would open the floating window while the app is focused.
  */
 export const toggleCommandPalette = async (): Promise<void> => {
+  if (isQuitting) return;
+
   // A press landing while the window is still being built would otherwise find
   // paletteWindow null, fall through, and start building a second one. Ignore
   // it: the palette is already on its way to the screen.
@@ -295,7 +306,15 @@ export const toggleCommandPalette = async (): Promise<void> => {
   }
 };
 
+/**
+ * Set once shutdown starts. Quit is deferred while processes are cleaned up, and
+ * the View menu item stays clickable in that window -- without this, a click
+ * would build a fresh window during teardown.
+ */
+let isQuitting = false;
+
 export const destroyCommandPalette = (): void => {
+  isQuitting = true;
   if (paletteWindow && !paletteWindow.isDestroyed()) {
     paletteWindow.destroy();
   }

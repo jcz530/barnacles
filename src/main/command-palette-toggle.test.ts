@@ -26,11 +26,10 @@ describe('decideToggleAction', () => {
     ).toBe('hide');
   });
 
-  it('swallows the press that dismissed the palette', () => {
-    // Pressing the shortcut while the palette has focus blurs it, and the blur
-    // handler hides it before the shortcut callback runs. The palette therefore
-    // looks closed by now -- without this the press would fall through and
-    // summon the app, which is what it used to do.
+  it('swallows a press that lands just after a blur-driven hide', () => {
+    // Covers the ordering rule only. Whether lastHiddenAt is set at all is
+    // decided by hideCommandPalette's viaBlur gating, which this pure function
+    // never sees -- so this does not pin that half of the behaviour.
     expect(
       decideToggleAction({
         paletteVisible: false,

@@ -333,7 +333,7 @@ app.on('activate', async () => {
   // Don't show main window if we're currently showing the tray popup
   if (getShowingUtilityWindow()) {
     if (process.env.NODE_ENV === 'development') {
-      console.log('[App] Ignoring activate event - tray popup is being shown');
+      console.log('[App] Ignoring activate event - a utility window is being shown');
     }
     return;
   }

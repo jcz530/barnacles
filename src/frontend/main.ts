@@ -59,6 +59,17 @@ const app = createApp(App);
 app.use(router);
 app.use(VueQueryPlugin, { queryClient });
 
-applyApiConfig().finally(() => {
+/**
+ * Never let a wedged IPC call cost the user a blank window: a handler that
+ * throws makes invoke reject, but one that never replies would leave the app
+ * unmounted forever. Running on the compiled-in default port is a far better
+ * failure than no UI at all.
+ */
+const CONFIG_TIMEOUT_MS = 2000;
+
+Promise.race([
+  applyApiConfig(),
+  new Promise(resolve => setTimeout(resolve, CONFIG_TIMEOUT_MS)),
+]).finally(() => {
   app.mount('#app');
 });

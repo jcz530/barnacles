@@ -73,7 +73,6 @@ declare global {
       navigateToProject: (path: string) => Promise<{ success: boolean; error?: string }>;
       onNavigateToProject: (callback: (path: string) => void) => () => void;
       commandPalette: {
-        toggle: () => void;
         close: () => void;
         getShortcutStatus: () => Promise<{
           accelerator: string | null;

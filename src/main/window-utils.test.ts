@@ -29,6 +29,20 @@ const mainWindow = {
   isAlwaysOnTop: () => false,
 };
 
+/** The floating palette: always-on-top and non-resizable, so not a main window. */
+const paletteWindow = { ...mainWindow, isAlwaysOnTop: () => true, isResizable: () => false };
+
+/** Run a block with process.platform forced, since the branches differ by OS. */
+const withPlatform = async (platform: string, run: () => Promise<void>) => {
+  const original = Object.getOwnPropertyDescriptor(process, 'platform');
+  Object.defineProperty(process, 'platform', { value: platform, configurable: true });
+  try {
+    await run();
+  } finally {
+    if (original) Object.defineProperty(process, 'platform', original);
+  }
+};
+
 describe('trackApplicationActivation', () => {
   beforeEach(() => {
     listeners.clear();
@@ -70,9 +84,9 @@ describe('trackApplicationActivation', () => {
   it('ignores the activation that showing a utility window causes', async () => {
     const { isApplicationActive, setShowingUtilityWindow } = await load();
 
-    // Focusing the floating palette so the user can type in it activates the
-    // app, even in accessory mode. Counting that made dismissing the palette
-    // look like Barnacles was already frontmost, so it stayed there instead of
+    // Showing the floating palette can activate the app as a side effect of it
+    // taking keyboard focus. Counting that made dismissing the palette look
+    // like Barnacles was already frontmost, so it stayed there instead of
     // returning focus to the app underneath.
     setShowingUtilityWindow(true);
     emit('did-become-active');
@@ -115,9 +129,84 @@ describe('trackApplicationActivation', () => {
   it('does not treat the floating palette as the app being frontmost', async () => {
     const { isApplicationActive } = await load();
 
-    // The palette runs in accessory mode precisely so showing it does not
-    // activate the app; nothing about it should flip this flag.
+    // The palette is an NSPanel, so showing it takes keyboard focus without
+    // activating the app; nothing about it should flip this flag.
     emit('browser-window-focus', {}, { ...mainWindow, isAlwaysOnTop: () => true });
+
+    expect(isApplicationActive()).toBe(false);
+  });
+});
+
+/**
+ * did-become-active/did-resign-active are macOS-only, so elsewhere the flag is
+ * driven by window focus. These run with the platform forced, since otherwise
+ * the branch is unreachable on a macOS dev machine and went untested.
+ */
+describe('trackApplicationActivation on other platforms', () => {
+  beforeEach(() => {
+    listeners.clear();
+    focusedWindow = null;
+    vi.resetModules();
+  });
+
+  const loadFor = async (platform: string) => {
+    let module!: typeof import('./window-utils');
+    await withPlatform(platform, async () => {
+      module = await import('./window-utils');
+      module.trackApplicationActivation();
+    });
+    return module;
+  };
+
+  it('becomes active when a main window takes focus', async () => {
+    const { isApplicationActive } = await loadFor('win32');
+
+    emit('browser-window-focus', {}, mainWindow);
+
+    expect(isApplicationActive()).toBe(true);
+  });
+
+  it('does not become active when only the palette has focus', async () => {
+    const { isApplicationActive } = await loadFor('win32');
+
+    emit('browser-window-focus', {}, paletteWindow);
+
+    expect(isApplicationActive()).toBe(false);
+  });
+
+  it('goes inactive once no main window holds focus', async () => {
+    const { isApplicationActive } = await loadFor('linux');
+
+    emit('browser-window-focus', {}, mainWindow);
+    focusedWindow = null;
+    emit('browser-window-blur');
+    await new Promise(resolve => setImmediate(resolve));
+
+    expect(isApplicationActive()).toBe(false);
+  });
+
+  it('stays active while focus moves between our own main windows', async () => {
+    const { isApplicationActive } = await loadFor('win32');
+
+    emit('browser-window-focus', {}, mainWindow);
+    // Blur fires as focus moves to the next window, which is still ours.
+    focusedWindow = mainWindow;
+    emit('browser-window-blur');
+    await new Promise(resolve => setImmediate(resolve));
+
+    expect(isApplicationActive()).toBe(true);
+  });
+
+  it('does not treat the palette taking focus as the app being active', async () => {
+    const { isApplicationActive } = await loadFor('win32');
+
+    // The exact hole this branch had: the palette holding focus after a blur
+    // left the flag true, so the next hotkey press opened the in-app modal
+    // over whatever the user was working in.
+    emit('browser-window-focus', {}, mainWindow);
+    focusedWindow = paletteWindow;
+    emit('browser-window-blur');
+    await new Promise(resolve => setImmediate(resolve));
 
     expect(isApplicationActive()).toBe(false);
   });

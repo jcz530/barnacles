@@ -87,7 +87,6 @@ contextBridge.exposeInMainWorld('electron', {
     return () => ipcRenderer.removeListener('navigate-to-project', handler);
   },
   commandPalette: {
-    toggle: () => ipcRenderer.send('command-palette:toggle'),
     close: () => ipcRenderer.send('command-palette:close'),
     getShortcutStatus: () => ipcRenderer.invoke('command-palette:shortcut-status'),
     onToggle: (callback: () => void) => {

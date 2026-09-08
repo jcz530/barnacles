@@ -73,6 +73,11 @@ export const groupRankedCommands = (scored: ScoredCommand[]): RankedGroup[] => {
  * What the palette shows before anything is typed: the highest-priority
  * commands, grouped. Dumping the whole registry here would be unreadable and
  * slow, since it can run to hundreds of entries.
+ *
+ * MAX_DEFAULT_RESULTS is an upper bound, not a target: grouping still applies
+ * the per-group cap, so twenty favourite projects show five rows, not twelve.
+ * That is deliberate -- the empty state is meant to be a sample of what the
+ * palette can do, not a project list.
  */
 export const defaultCommands = (commands: Command[]): RankedGroup[] => {
   const byPriority = [...commands]

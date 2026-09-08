@@ -149,7 +149,7 @@ onMounted(async () => {
         <Card>
           <CardHeader>
             <CardTitle>Keyboard Shortcuts</CardTitle>
-            <CardDescription>Open the command palette with Cmd+K inside the app</CardDescription>
+            <CardDescription>Choose how you open the command palette</CardDescription>
           </CardHeader>
           <CardContent>
             <SettingWrapper
