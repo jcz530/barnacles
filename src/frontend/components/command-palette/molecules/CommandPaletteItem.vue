@@ -3,6 +3,8 @@ import { ComboboxItem } from 'reka-ui';
 import type { Command } from '@/commands/types';
 
 defineProps<{ command: Command }>();
+
+const emit = defineEmits<{ select: [] }>();
 </script>
 
 <template>
@@ -14,6 +16,7 @@ defineProps<{ command: Command }>();
   <ComboboxItem
     :value="command.id"
     class="data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm outline-hidden select-none"
+    @select="emit('select')"
   >
     <component :is="command.icon" v-if="command.icon" class="size-4 shrink-0 opacity-70" />
     <span class="truncate">{{ command.title }}</span>

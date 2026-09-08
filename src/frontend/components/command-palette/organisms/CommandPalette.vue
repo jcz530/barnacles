@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import {
   ComboboxContent,
   ComboboxEmpty,
@@ -52,8 +52,6 @@ const groups = computed(() => {
   );
 });
 
-const flatCommands = computed(() => groups.value.flatMap(group => group.commands));
-
 /** Each open should start clean rather than resuming the last search. */
 const reset = () => {
   query.value = '';
@@ -62,26 +60,23 @@ const reset = () => {
 defineExpose({ reset });
 
 /**
- * Reka tracks selection by value, so the id is the handle rather than the
- * command object -- the arrays are rebuilt as results change and identity
- * comparison would break.
+ * Running a command is a one-shot action, not a value the palette holds, so
+ * items report through their own select event and no selection is bound to the
+ * root.
+ *
+ * Binding one is actively harmful here: ComboboxInput watches the root's model
+ * value and writes it back into the search box (resetSearchTermOnSelect, on by
+ * default), which stringifies a command id straight into the input. The
+ * floating window outlives a single open, so that id then persisted across
+ * every subsequent open.
  */
-const selected = ref<string | undefined>(undefined);
-
-watch(selected, id => {
-  if (id === undefined) return;
-
-  const command = flatCommands.value.find(entry => entry.id === id);
-  // Cleared straight away so picking the same command twice in a row still
-  // emits; the highlight is Reka's business, not ours.
-  selected.value = undefined;
-  if (command) emit('select', command);
-});
+const runCommand = (command: Command) => {
+  emit('select', command);
+};
 </script>
 
 <template>
   <ComboboxRoot
-    v-model="selected"
     :open="true"
     :ignore-filter="true"
     :class="['flex flex-col overflow-hidden', heightClass ?? 'max-h-[60vh]']"
@@ -120,6 +115,7 @@ watch(selected, id => {
           v-for="command in group.commands"
           :key="command.id"
           :command="command"
+          @select="runCommand(command)"
         />
       </ComboboxGroup>
     </ComboboxContent>
