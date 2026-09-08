@@ -39,12 +39,20 @@ onMounted(() => {
   // Reopening shows the same long-lived renderer, so its cache would otherwise
   // be as stale as the last time the window was used.
   unsubscribeOpened = window.electron.commandPalette.onOpened(() => {
+    // Clearing the query and focusing the input is all that has to happen before
+    // the window paints.
     paletteRef.value?.reset();
-    void queryClient.invalidateQueries({ queryKey: ['projects'] });
-    void queryClient.invalidateQueries({ queryKey: ['ports'] });
-    // Keyed 'process-status-all' when no projectId is passed, which is how the
-    // registry queries it; ['project', id, 'process-status'] is the per-project form.
-    void queryClient.invalidateQueries({ queryKey: ['process-status-all'] });
+
+    // Refetching is deferred past the opening frame. TanStack serves the cached
+    // list meanwhile, so the palette is usable immediately; /api/ports shells out
+    // to lsof and takes ~150ms, which would otherwise compete with the paint.
+    requestAnimationFrame(() => {
+      void queryClient.invalidateQueries({ queryKey: ['projects'] });
+      void queryClient.invalidateQueries({ queryKey: ['ports'] });
+      // Keyed 'process-status-all' when no projectId is passed, which is how the
+      // registry queries it; ['project', id, 'process-status'] is the per-project form.
+      void queryClient.invalidateQueries({ queryKey: ['process-status-all'] });
+    });
   });
 });
 

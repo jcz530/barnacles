@@ -18,6 +18,7 @@ import {
 } from './window-utils';
 import {
   destroyCommandPalette,
+  prewarmCommandPalette,
   registerPaletteShortcut,
   type ShortcutRegistration,
   unregisterPaletteShortcut,
@@ -208,6 +209,12 @@ const initialize = async (): Promise<void> => {
     const paletteResult = await syncCommandPaletteShortcut();
     if (!paletteResult.success) {
       console.warn('[CommandPalette] Shortcut not registered:', paletteResult.error);
+    }
+
+    // Deliberately not awaited: the first hotkey press should not be the thing
+    // that pays to build the window, but startup should not wait on it either.
+    if (paletteResult.success) {
+      void prewarmCommandPalette();
     }
 
     // Install CLI command if enabled in settings

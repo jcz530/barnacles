@@ -134,6 +134,10 @@ const createPaletteWindow = async (): Promise<BrowserWindow> => {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      // The window is hidden between uses, and Chromium throttles hidden
+      // renderers to roughly a frame a second. That throttle is paid back on
+      // show, as the lag between pressing the hotkey and seeing the palette.
+      backgroundThrottling: false,
     },
   });
 
@@ -213,7 +217,11 @@ const createPaletteWindow = async (): Promise<BrowserWindow> => {
 const showCommandPalette = async (): Promise<void> => {
   setShowingUtilityWindow(true);
 
-  const win = await ensurePaletteWindow();
+  // Taken synchronously when the window already exists. Awaiting unconditionally
+  // costs an event-loop hop, and on a busy main process that measured as
+  // 100-280ms of dead time between the keypress and the window appearing.
+  const cached = paletteWindow && !paletteWindow.isDestroyed() ? paletteWindow : null;
+  const win = cached ?? (await ensurePaletteWindow());
 
   // Scoped to the time the palette is up: leaving it on makes the app's other
   // windows follow it onto whatever space you are working in.
@@ -325,6 +333,23 @@ export interface ShortcutRegistration {
   success: boolean;
   error?: string;
 }
+
+/**
+ * Build the palette window ahead of the first press.
+ *
+ * Creating it lazily costs ~400ms on the first hotkey of a session, which is
+ * exactly the moment the palette should feel instant. Building it at startup
+ * moves that cost somewhere nobody is waiting.
+ */
+export const prewarmCommandPalette = async (): Promise<void> => {
+  if (isQuitting) return;
+  try {
+    await ensurePaletteWindow();
+  } catch (error) {
+    // Non-fatal: the next press will simply build it the slow way.
+    console.error('[CommandPalette] Prewarm failed:', error);
+  }
+};
 
 export const unregisterPaletteShortcut = (): void => {
   // Only ever release our own binding -- unregisterAll() would clobber any
