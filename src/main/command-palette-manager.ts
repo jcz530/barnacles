@@ -145,10 +145,20 @@ const showCommandPalette = async (): Promise<void> => {
 
   positionOnActiveDisplay(paletteWindow);
   paletteWindow.show();
+  // Without this the window is visible but not key, so the renderer cannot take
+  // keyboard focus and the caret never lands in the search box.
   paletteWindow.focus();
+
   // The renderer outlives a single open, so its cached data would otherwise go
-  // stale; it refetches and clears the query on this.
-  paletteWindow.webContents.send('command-palette:opened');
+  // stale; it refetches, clears the query, and refocuses the input on this.
+  // On the very first open the renderer may still be loading, in which case
+  // nothing is listening yet -- wait for it rather than dropping the message.
+  const notifyOpened = () => paletteWindow?.webContents.send('command-palette:opened');
+  if (paletteWindow.webContents.isLoading()) {
+    paletteWindow.webContents.once('did-finish-load', notifyOpened);
+  } else {
+    notifyOpened();
+  }
 };
 
 export const hideCommandPalette = (): void => {

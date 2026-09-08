@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import {
   ComboboxContent,
   ComboboxEmpty,
@@ -52,12 +52,30 @@ const groups = computed(() => {
   );
 });
 
+const inputRef = ref<InstanceType<typeof ComboboxInput> | null>(null);
+
+/**
+ * Put the caret in the search box.
+ *
+ * ComboboxInput's auto-focus only runs on mount, which is enough for the
+ * in-app dialog (it mounts fresh every time) but not for the floating window,
+ * which mounts once and is merely shown thereafter.
+ */
+const focusInput = () => {
+  nextTick(() => {
+    const el = inputRef.value?.$el as HTMLInputElement | undefined;
+    el?.focus();
+    el?.select();
+  });
+};
+
 /** Each open should start clean rather than resuming the last search. */
 const reset = () => {
   query.value = '';
+  focusInput();
 };
 
-defineExpose({ reset });
+defineExpose({ reset, focusInput });
 
 /**
  * Running a command is a one-shot action, not a value the palette holds, so
@@ -84,6 +102,7 @@ const runCommand = (command: Command) => {
     <div class="flex items-center gap-2 border-b px-4">
       <SearchIcon class="size-4 shrink-0 opacity-50" />
       <ComboboxInput
+        ref="inputRef"
         v-model="query"
         :placeholder="placeholder ?? 'Search projects, ports, and commands…'"
         class="placeholder:text-muted-foreground h-12 w-full bg-transparent text-sm outline-hidden"
