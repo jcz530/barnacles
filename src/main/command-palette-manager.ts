@@ -310,22 +310,29 @@ export const toggleCommandPalette = async (): Promise<void> => {
   const visible = Boolean(
     paletteWindow && !paletteWindow.isDestroyed() && paletteWindow.isVisible()
   );
-  // getFocusedWindow() reports the window focused *within this application* and
-  // keeps naming one while you are in another app, so app activation -- not
-  // window focus -- is what decides between the two palettes.
   const focused = BrowserWindow.getFocusedWindow();
-  const target = focused && isMainWindow(focused) ? focused : getMainWindows()[0];
+  const focusedIsMain = Boolean(focused && isMainWindow(focused));
+
+  // Only the tracked flag can answer "is Barnacles the frontmost app?".
+  // getFocusedWindow() keeps naming one of our windows while you are in another
+  // app entirely -- verified: it reported a main window while Finder was in
+  // front -- so it says which window would receive the message, never whether
+  // the app is active.
+  const appActive = isApplicationActive();
+  const target = focusedIsMain ? focused : getMainWindows()[0];
 
   trace('toggle', {
     visible,
     msSinceBlurHide: Date.now() - lastHiddenAt,
-    appActive: isApplicationActive(),
+    appActive,
+    trackedActive: isApplicationActive(),
+    focusedIsMain,
     hasTarget: Boolean(target),
   });
   const action = decideToggleAction({
     paletteVisible: visible,
     msSinceBlurHide: Date.now() - lastHiddenAt,
-    appActive: isApplicationActive(),
+    appActive,
     hasMainWindow: Boolean(target),
   });
 

@@ -73,6 +73,15 @@ export const trackApplicationActivation = (): void => {
       if (isShowingUtilityWindow) return;
       isAppActive = true;
     });
+
+    // A real window taking focus means the app is genuinely in front, whatever
+    // the utility-window flag still says. That flag is cleared on a timer after
+    // the palette hides, and clicking into a window inside that gap would
+    // otherwise be swallowed by the guard above, leaving the flag stuck false
+    // so the next hotkey press floated the palette over the focused window.
+    app.on('browser-window-focus', (_event, window) => {
+      if (isMainWindow(window)) isAppActive = true;
+    });
     app.on('did-resign-active', () => {
       isAppActive = false;
     });

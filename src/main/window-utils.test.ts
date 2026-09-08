@@ -47,15 +47,16 @@ describe('trackApplicationActivation', () => {
     expect(isApplicationActive()).toBe(false);
   });
 
-  it('ignores window focus on macOS, which lies about activation', async () => {
+  it('treats a real window taking focus as the app being active', async () => {
     const { isApplicationActive } = await load();
 
-    // Creating a window fires this even when the app never came to the front --
-    // every dev restart while you work in another app. Trusting it left the flag
-    // stuck true and sent the global hotkey to the in-app modal.
+    // Needed because the utility-window flag is cleared on a timer: clicking
+    // into a window inside that gap is swallowed by the did-become-active
+    // guard, and without this the flag stayed false and the hotkey floated the
+    // palette over the window the user was looking at.
     emit('browser-window-focus', {}, mainWindow);
 
-    expect(isApplicationActive()).toBe(false);
+    expect(isApplicationActive()).toBe(true);
   });
 
   it('becomes active only when macOS says the app activated', async () => {
