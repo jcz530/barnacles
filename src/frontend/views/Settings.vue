@@ -11,6 +11,7 @@ import ScanExcludedDirectoriesSetting from '../components/settings/organisms/Sca
 import DefaultIDESetting from '../components/settings/organisms/DefaultIDESetting.vue';
 import DefaultTerminalSetting from '../components/settings/organisms/DefaultTerminalSetting.vue';
 import ShowTrayIconSetting from '../components/settings/organisms/ShowTrayIconSetting.vue';
+import CommandPaletteShortcutSetting from '../components/settings/organisms/CommandPaletteShortcutSetting.vue';
 import ShowDashboardStatsSetting from '../components/settings/organisms/ShowDashboardStatsSetting.vue';
 import InstallCliCommandSetting from '../components/settings/organisms/InstallCliCommandSetting.vue';
 import McpServerSetting from '../components/settings/organisms/McpServerSetting.vue';
@@ -141,6 +142,22 @@ onMounted(async () => {
                 <ShowTrayIconSetting />
               </SettingWrapper>
             </div>
+          </CardContent>
+        </Card>
+
+        <!-- Keyboard Shortcuts -->
+        <Card>
+          <CardHeader>
+            <CardTitle>Keyboard Shortcuts</CardTitle>
+            <CardDescription>Open the command palette with Cmd+K inside the app</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SettingWrapper
+              :setting-key="SETTING_KEYS.COMMAND_PALETTE_SHORTCUT"
+              :highlighted="highlightedSetting"
+            >
+              <CommandPaletteShortcutSetting />
+            </SettingWrapper>
           </CardContent>
         </Card>
 

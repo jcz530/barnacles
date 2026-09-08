@@ -15,6 +15,7 @@ import { getMainWindows, getShowingUtilityWindow } from './window-utils';
 import {
   destroyCommandPalette,
   registerPaletteShortcut,
+  type ShortcutRegistration,
   unregisterPaletteShortcut,
 } from './command-palette-manager';
 
@@ -35,9 +36,6 @@ let apiPort: number | undefined;
 
 // Track if the app is quitting
 let isQuitting = false;
-
-/** Replaced by the user's configured shortcut once Settings can record one. */
-const DEFAULT_PALETTE_SHORTCUT = 'CommandOrControl+Shift+P';
 
 /** How long shutdown waits for processes to stop before giving up and exiting. */
 const SHUTDOWN_CLEANUP_TIMEOUT_MS = 5000;
@@ -95,6 +93,23 @@ export const toggleTrayIcon = async (enabled: boolean): Promise<void> => {
   } else {
     destroyTray();
   }
+};
+
+/**
+ * Bind or release the global command palette hotkey to match settings.
+ *
+ * Called at startup and whenever either palette setting changes.
+ */
+export const syncCommandPaletteShortcut = async (): Promise<ShortcutRegistration> => {
+  const enabled = await settingsService.getValue<boolean>('commandPaletteShortcutEnabled');
+
+  if (!enabled) {
+    unregisterPaletteShortcut();
+    return { success: true };
+  }
+
+  const accelerator = await settingsService.getValue<string>('commandPaletteShortcut');
+  return registerPaletteShortcut(accelerator ?? '');
 };
 
 /**
@@ -182,7 +197,7 @@ const initialize = async (): Promise<void> => {
 
     // Bind the global command palette hotkey. Non-fatal: a combo another app
     // already owns must never stop the app from starting.
-    const paletteResult = registerPaletteShortcut(DEFAULT_PALETTE_SHORTCUT);
+    const paletteResult = await syncCommandPaletteShortcut();
     if (!paletteResult.success) {
       console.warn('[CommandPalette] Shortcut not registered:', paletteResult.error);
     }
