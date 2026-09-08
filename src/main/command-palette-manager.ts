@@ -1,4 +1,5 @@
 import { app, BrowserWindow, globalShortcut, screen } from 'electron';
+import { appendFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { APP_CONFIG } from '../shared/constants';
@@ -12,6 +13,23 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/**
+ * Opt-in trace of the palette's focus decisions, for diagnosing "the app came
+ * forward" reports. Enable with BARNACLES_PALETTE_TRACE=1; writes to
+ * /tmp/barnacles-palette-debug.log.
+ */
+const trace = (label: string, data?: unknown): void => {
+  if (!process.env.BARNACLES_PALETTE_TRACE) return;
+  try {
+    appendFileSync(
+      '/tmp/barnacles-palette-debug.log',
+      `${new Date().toISOString()} ${label} ${JSON.stringify(data ?? {})}\n`
+    );
+  } catch {
+    // best effort
+  }
+};
 
 const PALETTE_WIDTH = 640;
 const PALETTE_HEIGHT = 420;
@@ -77,6 +95,7 @@ const suppressActivation = (): void => {
 
   app.setActivationPolicy('accessory');
   activationPolicyOverridden = true;
+  trace('accessory-on');
 };
 
 export const restoreActivationPolicy = (): void => {
@@ -84,6 +103,7 @@ export const restoreActivationPolicy = (): void => {
 
   app.setActivationPolicy('regular');
   activationPolicyOverridden = false;
+  trace('accessory-off');
 };
 /** Bundle id of the app that was frontmost when the palette opened. */
 let registeredAccelerator: string | null = null;
@@ -260,6 +280,12 @@ export const toggleCommandPalette = async (): Promise<void> => {
   const focused = BrowserWindow.getFocusedWindow();
   const target = focused && isMainWindow(focused) ? focused : getMainWindows()[0];
 
+  trace('toggle', {
+    visible,
+    msSinceBlurHide: Date.now() - lastHiddenAt,
+    appActive: isApplicationActive(),
+    hasTarget: Boolean(target),
+  });
   const action = decideToggleAction({
     paletteVisible: visible,
     msSinceBlurHide: Date.now() - lastHiddenAt,
