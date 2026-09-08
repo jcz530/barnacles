@@ -18,7 +18,41 @@ const PALETTE_HEIGHT = 420;
 /** Spotlight sits above centre; dead-centre reads as a modal rather than a launcher. */
 const VERTICAL_POSITION = 0.22;
 
+/**
+ * How long after hiding the palette a hotkey press still counts as the press
+ * that dismissed it.
+ *
+ * Pressing the shortcut while the palette has focus blurs it, and the blur
+ * handler hides it before the shortcut callback runs. Without this window the
+ * toggle would see an already-hidden palette and open something new -- which
+ * looked like the hotkey summoning the app instead of closing the palette.
+ */
+const DISMISS_GRACE_MS = 250;
+
+/** What a hotkey press should do, given the palette's current state. */
+export type ToggleAction = 'hide' | 'ignore' | 'in-app' | 'show';
+
+/**
+ * Decide what a hotkey press means. Pure so the ordering rules below can be
+ * tested without standing up real windows.
+ */
+export const decideToggleAction = (state: {
+  paletteVisible: boolean;
+  msSinceBlurHide: number;
+  appActive: boolean;
+  hasMainWindow: boolean;
+}): ToggleAction => {
+  if (state.paletteVisible) return 'hide';
+  // The press that blurred the palette lands here, after the blur handler has
+  // already hidden it. Swallow it rather than treating it as a fresh open.
+  if (state.msSinceBlurHide < DISMISS_GRACE_MS) return 'ignore';
+  if (state.appActive && state.hasMainWindow) return 'in-app';
+  return 'show';
+};
+
 let paletteWindow: BrowserWindow | null = null;
+/** When the palette was last hidden, for the dismiss grace window above. */
+let lastHiddenAt = 0;
 let registeredAccelerator: string | null = null;
 let lastRegistrationError: string | null = null;
 
@@ -92,7 +126,7 @@ const createPaletteWindow = async (): Promise<BrowserWindow> => {
       // Detached devtools steal focus; hiding then would make the palette
       // impossible to inspect.
       if (!app.isPackaged && win.webContents.isDevToolsOpened()) return;
-      hideCommandPalette();
+      hideCommandPalette({ viaBlur: true });
     });
   });
 
@@ -161,8 +195,12 @@ const showCommandPalette = async (): Promise<void> => {
   }
 };
 
-export const hideCommandPalette = (): void => {
+export const hideCommandPalette = (options?: { viaBlur?: boolean }): void => {
   if (paletteWindow && !paletteWindow.isDestroyed() && paletteWindow.isVisible()) {
+    // Only a blur-driven hide arms the grace window below. Escape, or running a
+    // command, is an explicit dismissal and must leave the next press free to
+    // reopen immediately.
+    lastHiddenAt = options?.viaBlur ? Date.now() : 0;
     paletteWindow.hide();
     resetUtilityWindowFlag();
   }
@@ -178,27 +216,37 @@ export const hideCommandPalette = (): void => {
  * this branch Cmd+K would open the floating window while the app is focused.
  */
 export const toggleCommandPalette = async (): Promise<void> => {
-  if (paletteWindow && !paletteWindow.isDestroyed() && paletteWindow.isVisible()) {
-    hideCommandPalette();
-    return;
-  }
+  const visible = Boolean(
+    paletteWindow && !paletteWindow.isDestroyed() && paletteWindow.isVisible()
+  );
+  // getFocusedWindow() reports the window focused *within this application* and
+  // keeps naming one while you are in another app, so app activation -- not
+  // window focus -- is what decides between the two palettes.
+  const focused = BrowserWindow.getFocusedWindow();
+  const target = focused && isMainWindow(focused) ? focused : getMainWindows()[0];
 
-  // Only hand off to the in-app palette when Barnacles is genuinely the
-  // frontmost app. getFocusedWindow() is not that test -- it reports the
-  // focused window *within this application* and keeps naming one while you
-  // are in another app, which sent every global invocation to the modal.
-  if (isApplicationActive()) {
-    const focused = BrowserWindow.getFocusedWindow();
-    const target = focused && isMainWindow(focused) ? focused : getMainWindows()[0];
+  const action = decideToggleAction({
+    paletteVisible: visible,
+    msSinceBlurHide: Date.now() - lastHiddenAt,
+    appActive: isApplicationActive(),
+    hasMainWindow: Boolean(target),
+  });
 
-    if (target) {
-      if (!target.isVisible()) target.show();
-      target.webContents.send('command-palette:toggle');
+  switch (action) {
+    case 'hide':
+      hideCommandPalette();
       return;
-    }
+    case 'ignore':
+      return;
+    case 'in-app':
+      if (target) {
+        if (!target.isVisible()) target.show();
+        target.webContents.send('command-palette:toggle');
+      }
+      return;
+    case 'show':
+      await showCommandPalette();
   }
-
-  await showCommandPalette();
 };
 
 export const destroyCommandPalette = (): void => {
