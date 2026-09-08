@@ -11,6 +11,7 @@ import { settingsService } from '../backend/services/settings-service';
 import { processManagerService } from '../backend/services/process-manager-service';
 import { processWebSocketService } from '../backend/services/process-websocket-service';
 import { installCli, uninstallCli, isCliInstalled } from './cli-manager';
+import { getMainWindows, getShowingUtilityWindow } from './window-utils';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (started) {
@@ -33,28 +34,10 @@ let isQuitting = false;
 /** How long shutdown waits for processes to stop before giving up and exiting. */
 const SHUTDOWN_CLEANUP_TIMEOUT_MS = 5000;
 
-// Track if we're currently showing the tray popup to prevent activate event interference
-let isShowingTrayPopup = false;
-
-/**
- * Set flag to indicate tray popup is being shown
- * This prevents the activate event from showing hidden main windows
- */
-export const setShowingTrayPopup = (showing: boolean): void => {
-  isShowingTrayPopup = showing;
-};
-
 // Enable right-click context menu with Inspect Element in development mode
 contextMenu({
   showInspectElement: !app.isPackaged,
 });
-
-// Main windows are resizable and not always-on-top; this excludes the tray
-// popup and other utility windows from window-focus/activation logic.
-const getMainWindows = (): BrowserWindow[] =>
-  BrowserWindow.getAllWindows().filter(
-    win => !win.isDestroyed() && win.isResizable() && !win.isAlwaysOnTop()
-  );
 
 // Function to create and track a new window
 export const createAppWindow = async (): Promise<BrowserWindow> => {
@@ -299,11 +282,13 @@ app.on('window-all-closed', async () => {
 
 app.on('activate', async () => {
   if (process.env.NODE_ENV === 'development') {
-    console.log('[App] Activate event triggered', { isShowingTrayPopup });
+    console.log('[App] Activate event triggered', {
+      isShowingUtilityWindow: getShowingUtilityWindow(),
+    });
   }
 
   // Don't show main window if we're currently showing the tray popup
-  if (isShowingTrayPopup) {
+  if (getShowingUtilityWindow()) {
     if (process.env.NODE_ENV === 'development') {
       console.log('[App] Ignoring activate event - tray popup is being shown');
     }

@@ -1,15 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { createMenu } from '../menu';
 import { createAppWindow } from '../main';
-
-/**
- * Helper to filter out utility windows (like tray popup) and return only main app windows
- */
-const getMainWindows = (): BrowserWindow[] => {
-  return BrowserWindow.getAllWindows().filter(
-    win => !win.isDestroyed() && win.isResizable() && !win.isAlwaysOnTop()
-  );
-};
+import { getMainWindows } from '../window-utils';
 
 export const setupWindowBridge = (): void => {
   // Handle window title updates from renderer

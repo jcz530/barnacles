@@ -1,7 +1,7 @@
 import { BrowserWindow, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { setShowingTrayPopup } from './main';
+import { resetUtilityWindowFlag, setShowingUtilityWindow } from './window-utils';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,16 +11,8 @@ const POPUP_WIDTH = 380;
 const POPUP_HEIGHT = 500;
 const EDGE_PADDING = 8;
 const TRAY_OFFSET = 4;
-const ACTIVATE_EVENT_DELAY = 300; // Delay before resetting flag to prevent activate event
 
 let popupWindow: BrowserWindow | null = null;
-
-/**
- * Helper function to reset the activate event flag after a delay
- */
-const resetActivateFlag = (): void => {
-  setTimeout(() => setShowingTrayPopup(false), ACTIVATE_EVENT_DELAY);
-};
 
 /**
  * Calculates the optimal position for the tray popup window
@@ -85,7 +77,7 @@ export const createTrayPopup = (trayBounds: Electron.Rectangle): BrowserWindow =
   }
 
   // Set flag to prevent activate event from showing main window
-  setShowingTrayPopup(true);
+  setShowingUtilityWindow(true);
 
   // If window exists, toggle its visibility
   if (popupWindow && !popupWindow.isDestroyed()) {
@@ -94,7 +86,7 @@ export const createTrayPopup = (trayBounds: Electron.Rectangle): BrowserWindow =
         console.log('[Tray] Hiding existing visible popup');
       }
       popupWindow.hide();
-      resetActivateFlag();
+      resetUtilityWindowFlag();
       return popupWindow;
     } else {
       if (process.env.NODE_ENV === 'development') {
@@ -165,7 +157,7 @@ export const createTrayPopup = (trayBounds: Electron.Rectangle): BrowserWindow =
     setImmediate(() => {
       if (popupWindow && !popupWindow.isDestroyed() && !popupWindow.isFocused()) {
         popupWindow.hide();
-        resetActivateFlag();
+        resetUtilityWindowFlag();
       }
     });
   });
@@ -218,7 +210,7 @@ export const destroyTrayPopup = (): void => {
     popupWindow.destroy();
     popupWindow = null;
     // Reset the flag to prevent any stale state
-    setShowingTrayPopup(false);
+    setShowingUtilityWindow(false);
   }
 };
 

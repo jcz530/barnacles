@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu, MenuItemConstructorOptions, shell } from 'ele
 import { createAppWindow } from './main';
 import { toggleFindOverlay } from './find-overlay-manager';
 import { checkForUpdatesInteractive } from './updater';
+import { getMainWindows, isMainWindow } from './window-utils';
 
 const ISSUES_URL = 'https://github.com/jcz530/barnacles/issues';
 const SITE_URL = 'https://barnacles.app';
@@ -13,12 +14,8 @@ const SITE_URL = 'https://barnacles.app';
  * they are filtered out the same way the window IPC bridge does it.
  */
 const openSettings = async (): Promise<void> => {
-  const isMainWindow = (win: BrowserWindow): boolean =>
-    !win.isDestroyed() && win.isResizable() && !win.isAlwaysOnTop();
-
   const focused = BrowserWindow.getFocusedWindow();
-  const target =
-    focused && isMainWindow(focused) ? focused : BrowserWindow.getAllWindows().find(isMainWindow);
+  const target = focused && isMainWindow(focused) ? focused : getMainWindows()[0];
 
   let window = target;
 
@@ -98,7 +95,9 @@ export const createMenu = (): void => {
 
   // Helper function to get window menu items
   const getWindowMenuItems = (): MenuItemConstructorOptions[] => {
-    const windows = BrowserWindow.getAllWindows();
+    // Only real app windows -- the tray popup, find overlay, and command palette
+    // are utility windows and don't belong in the Window menu.
+    const windows = getMainWindows();
     return windows.map((window, index) => ({
       label: window.getTitle() || `Window ${index + 1}`,
       type: 'checkbox' as const,

@@ -4,7 +4,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { BrowserWindow } from 'electron';
+import { getMainWindows } from '../../main/window-utils';
 import { expandTilde } from '../utils/path-utils';
 import { fontService } from '../services/font-service';
 import { getElevatedMoveCommand } from '../../shared/utils/platform';
@@ -409,9 +409,7 @@ system.post('/focus-project', async c => {
       return c.json({ error: 'path is required and must start with /' }, 400);
     }
 
-    const mainWindows = BrowserWindow.getAllWindows().filter(
-      win => !win.isDestroyed() && win.isResizable() && !win.isAlwaysOnTop()
-    );
+    const mainWindows = getMainWindows();
 
     if (mainWindows.length === 0) {
       return c.json({ error: 'No main window found' }, 404);
