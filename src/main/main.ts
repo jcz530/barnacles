@@ -11,7 +11,11 @@ import { settingsService } from '../backend/services/settings-service';
 import { processManagerService } from '../backend/services/process-manager-service';
 import { processWebSocketService } from '../backend/services/process-websocket-service';
 import { installCli, uninstallCli, isCliInstalled } from './cli-manager';
-import { getMainWindows, getShowingUtilityWindow } from './window-utils';
+import {
+  getMainWindows,
+  getShowingUtilityWindow,
+  trackApplicationActivation,
+} from './window-utils';
 import {
   destroyCommandPalette,
   registerPaletteShortcut,
@@ -182,6 +186,10 @@ const initialize = async (): Promise<void> => {
 
     // Setup IPC communication
     setupIPC();
+
+    // Track whether the app is frontmost, so the global palette shortcut can
+    // tell "Barnacles is in front" from "some other app is".
+    trackApplicationActivation();
 
     // Initialize auto-updater
     initializeUpdater();

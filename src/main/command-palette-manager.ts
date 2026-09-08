@@ -2,7 +2,13 @@ import { app, BrowserWindow, globalShortcut, screen } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { APP_CONFIG } from '../shared/constants';
-import { isMainWindow, resetUtilityWindowFlag, setShowingUtilityWindow } from './window-utils';
+import {
+  getMainWindows,
+  isApplicationActive,
+  isMainWindow,
+  resetUtilityWindowFlag,
+  setShowingUtilityWindow,
+} from './window-utils';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -167,10 +173,19 @@ export const toggleCommandPalette = async (): Promise<void> => {
     return;
   }
 
-  const focused = BrowserWindow.getFocusedWindow();
-  if (focused && isMainWindow(focused)) {
-    focused.webContents.send('command-palette:toggle');
-    return;
+  // Only hand off to the in-app palette when Barnacles is genuinely the
+  // frontmost app. getFocusedWindow() is not that test -- it reports the
+  // focused window *within this application* and keeps naming one while you
+  // are in another app, which sent every global invocation to the modal.
+  if (isApplicationActive()) {
+    const focused = BrowserWindow.getFocusedWindow();
+    const target = focused && isMainWindow(focused) ? focused : getMainWindows()[0];
+
+    if (target) {
+      if (!target.isVisible()) target.show();
+      target.webContents.send('command-palette:toggle');
+      return;
+    }
   }
 
   await showCommandPalette();
