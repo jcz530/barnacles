@@ -3,6 +3,7 @@ import { createAppWindow } from './main';
 import { toggleFindOverlay } from './find-overlay-manager';
 import { checkForUpdatesInteractive } from './updater';
 import { getMainWindows, isMainWindow } from './window-utils';
+import { toggleCommandPalette } from './command-palette-manager';
 
 const ISSUES_URL = 'https://github.com/jcz530/barnacles/issues';
 const SITE_URL = 'https://barnacles.app';
@@ -202,6 +203,16 @@ export const createMenu = (): void => {
     {
       label: 'View',
       submenu: [
+        // Deliberately no accelerator: a registered globalShortcut swallows its
+        // combo before the menu ever sees it, so an accelerator here would
+        // render in the menu but never fire. Settings owns the binding.
+        {
+          label: 'Command Palette',
+          click: () => {
+            void toggleCommandPalette();
+          },
+        },
+        { type: 'separator' as const },
         { role: 'reload' as const },
         { role: 'forceReload' as const },
         ...(!app.isPackaged ? [{ role: 'toggleDevTools' as const }] : []),

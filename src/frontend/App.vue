@@ -29,7 +29,18 @@ const CHROMELESS_ROUTES: string[] = [
 ];
 const isChromelessRoute = computed(() => CHROMELESS_ROUTES.includes(route.name as string));
 
-const { isOpen: isPaletteOpen } = useCommandPaletteState();
+const { isOpen: isPaletteOpen, toggle: togglePalette } = useCommandPaletteState();
+
+// The global hotkey fires even when this window is focused. Main asks us to
+// open the in-app palette in that case rather than floating a separate window
+// over the one already in front.
+let unsubscribePalette: (() => void) | undefined;
+
+if (window.electron?.commandPalette) {
+  unsubscribePalette = window.electron.commandPalette.onToggle(() => {
+    togglePalette();
+  });
+}
 
 // Set up dark mode with automatic color inversion
 const { reinitializeColors } = useColorInversion();
@@ -86,6 +97,7 @@ onMounted(() => {
 // Clean up listener on unmount
 onUnmounted(() => {
   unsubscribeNav?.();
+  unsubscribePalette?.();
 });
 </script>
 

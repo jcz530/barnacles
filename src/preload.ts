@@ -86,6 +86,21 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('navigate-to-project', handler);
     return () => ipcRenderer.removeListener('navigate-to-project', handler);
   },
+  commandPalette: {
+    toggle: () => ipcRenderer.send('command-palette:toggle'),
+    close: () => ipcRenderer.send('command-palette:close'),
+    getShortcutStatus: () => ipcRenderer.invoke('command-palette:shortcut-status'),
+    onToggle: (callback: () => void) => {
+      const handler = () => callback();
+      ipcRenderer.on('command-palette:toggle', handler);
+      return () => ipcRenderer.removeListener('command-palette:toggle', handler);
+    },
+    onOpened: (callback: () => void) => {
+      const handler = () => callback();
+      ipcRenderer.on('command-palette:opened', handler);
+      return () => ipcRenderer.removeListener('command-palette:opened', handler);
+    },
+  },
   onToggleFind: (callback: () => void) => {
     const handler = () => callback();
     ipcRenderer.on('toggle-find', handler);

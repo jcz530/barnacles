@@ -24,6 +24,7 @@ import ThemeEditor from '../views/ThemeEditor.vue';
 import UpdateTest from '../views/UpdateTest.vue';
 import TrayPopup from '../views/TrayPopup.vue';
 import FindOverlayView from '../views/FindOverlayView.vue';
+import CommandPaletteView from '../views/CommandPaletteView.vue';
 import Utilities from '../views/Utilities.vue';
 import DesignSystem from '../views/DesignSystem.vue';
 import AccountForm from '../views/AccountForm.vue';
@@ -77,6 +78,12 @@ const routes: RouteRecordRaw[] = [
     path: '/find-overlay',
     name: RouteNames.FindOverlay,
     component: FindOverlayView,
+  },
+  // Floating command palette window (no layout)
+  {
+    path: '/command-palette',
+    name: RouteNames.CommandPalette,
+    component: CommandPaletteView,
   },
   {
     path: '/',

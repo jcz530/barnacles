@@ -12,6 +12,11 @@ import { processManagerService } from '../backend/services/process-manager-servi
 import { processWebSocketService } from '../backend/services/process-websocket-service';
 import { installCli, uninstallCli, isCliInstalled } from './cli-manager';
 import { getMainWindows, getShowingUtilityWindow } from './window-utils';
+import {
+  destroyCommandPalette,
+  registerPaletteShortcut,
+  unregisterPaletteShortcut,
+} from './command-palette-manager';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (started) {
@@ -30,6 +35,9 @@ let apiPort: number | undefined;
 
 // Track if the app is quitting
 let isQuitting = false;
+
+/** Replaced by the user's configured shortcut once Settings can record one. */
+const DEFAULT_PALETTE_SHORTCUT = 'CommandOrControl+Shift+P';
 
 /** How long shutdown waits for processes to stop before giving up and exiting. */
 const SHUTDOWN_CLEANUP_TIMEOUT_MS = 5000;
@@ -172,6 +180,13 @@ const initialize = async (): Promise<void> => {
       createTray();
     }
 
+    // Bind the global command palette hotkey. Non-fatal: a combo another app
+    // already owns must never stop the app from starting.
+    const paletteResult = registerPaletteShortcut(DEFAULT_PALETTE_SHORTCUT);
+    if (!paletteResult.success) {
+      console.warn('[CommandPalette] Shortcut not registered:', paletteResult.error);
+    }
+
     // Install CLI command if enabled in settings
     const shouldInstallCli = await settingsService.getValue<boolean>('installCliCommand');
     if (shouldInstallCli !== false) {
@@ -242,6 +257,11 @@ let processCleanupDone = false;
  * is too early -- it can still be cancelled.
  */
 app.on('will-quit', event => {
+  // Ahead of the early-return below so the combo is released on the first pass
+  // regardless of which path the quit takes.
+  unregisterPaletteShortcut();
+  destroyCommandPalette();
+
   if (processCleanupDone) {
     return;
   }

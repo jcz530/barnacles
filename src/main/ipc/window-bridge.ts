@@ -3,6 +3,17 @@ import { createMenu } from '../menu';
 import { createAppWindow } from '../main';
 import { getMainWindows } from '../window-utils';
 
+/**
+ * Resolve once a window's renderer has loaded, so a message sent straight after
+ * creating it isn't dropped before anything is listening.
+ */
+const waitForRenderer = async (window: BrowserWindow): Promise<void> => {
+  if (!window.webContents.isLoading()) return;
+  await new Promise<void>(resolve => {
+    window.webContents.once('did-finish-load', () => resolve());
+  });
+};
+
 export const setupWindowBridge = (): void => {
   // Handle window title updates from renderer
   ipcMain.on('update-window-title', (event, title: string) => {
@@ -29,8 +40,11 @@ export const setupWindowBridge = (): void => {
         return { success: true, windowId: existingWindow.id, wasExisting: true };
       }
 
-      // No existing window, create a new one
+      // No existing window, create a new one. Wait for the renderer to finish
+      // loading: createAppWindow resolves as soon as the window object exists,
+      // and a navigate-to-project sent before then lands with nothing listening.
       const newWindow = await createAppWindow();
+      await waitForRenderer(newWindow);
       return { success: true, windowId: newWindow.id, wasExisting: false };
     } catch (error) {
       console.error('Failed to show or create window:', error);
@@ -54,18 +68,19 @@ export const setupWindowBridge = (): void => {
     try {
       const mainWindows = getMainWindows();
 
-      if (mainWindows.length > 0) {
-        const targetWindow = mainWindows[0];
-        if (!targetWindow.isVisible()) {
-          targetWindow.show();
-        }
-        targetWindow.focus();
-        // Send navigation command to the renderer
-        targetWindow.webContents.send('navigate-to-project', path);
-        return { success: true };
-      }
+      // Create one when every window is closed rather than failing: the tray
+      // popup and the floating command palette both navigate from a state where
+      // there may be no window at all.
+      const targetWindow = mainWindows[0] ?? (await createAppWindow());
+      await waitForRenderer(targetWindow);
 
-      return { success: false, error: 'No main window found' };
+      if (!targetWindow.isVisible()) {
+        targetWindow.show();
+      }
+      targetWindow.focus();
+      // Send navigation command to the renderer
+      targetWindow.webContents.send('navigate-to-project', path);
+      return { success: true };
     } catch (error) {
       console.error('Failed to navigate to project:', error);
       return { success: false, error: String(error) };

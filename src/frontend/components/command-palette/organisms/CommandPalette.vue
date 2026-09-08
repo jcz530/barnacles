@@ -11,6 +11,11 @@ const props = defineProps<{
   commands: Command[];
   /** Placeholder for the search input. */
   placeholder?: string;
+  /**
+   * Height constraint for the list. The dialog caps against the viewport; the
+   * floating window is already a fixed size and should fill it.
+   */
+  heightClass?: string;
 }>();
 
 const emit = defineEmits<{ select: [command: Command]; dismiss: [] }>();
@@ -68,7 +73,7 @@ watch(groups, () => {
     v-model="selected"
     :open="true"
     :ignore-filter="true"
-    class="flex max-h-[60vh] flex-col overflow-hidden"
+    :class="['flex flex-col overflow-hidden', heightClass ?? 'max-h-[60vh]']"
     @update:model-value="onSelect"
   >
     <div class="flex items-center gap-2 border-b px-4">
