@@ -13,6 +13,10 @@ export interface PortCommandDeps {
  *
  * "Kill port 3000" from another app, without raising the window, is one of the
  * strongest reasons for the global hotkey to exist.
+ *
+ * Ids carry the port as well as the pid: one process commonly holds several
+ * ports (IPv4 and IPv6 for the same server, or a dev server plus its HMR
+ * socket), and keying on pid alone produces duplicates.
  */
 export const portCommands = (ports: PortEntry[], deps: PortCommandDeps): Command[] =>
   ports.flatMap(entry => {
@@ -21,7 +25,7 @@ export const portCommands = (ports: PortEntry[], deps: PortCommandDeps): Command
 
     return [
       {
-        id: `port.kill:${entry.pid}`,
+        id: `port.kill:${entry.pid}:${entry.port}`,
         title: `Kill port ${entry.port}`,
         subtitle: label,
         group: 'ports' as const,
@@ -33,7 +37,7 @@ export const portCommands = (ports: PortEntry[], deps: PortCommandDeps): Command
         },
       },
       {
-        id: `port.copy:${entry.pid}`,
+        id: `port.copy:${entry.pid}:${entry.port}`,
         title: `Copy port ${entry.port}`,
         subtitle: label,
         group: 'ports' as const,
@@ -45,7 +49,7 @@ export const portCommands = (ports: PortEntry[], deps: PortCommandDeps): Command
         },
       },
       {
-        id: `port.open:${entry.pid}`,
+        id: `port.open:${entry.pid}:${entry.port}`,
         title: `Open localhost:${entry.port}`,
         subtitle: label,
         group: 'ports' as const,

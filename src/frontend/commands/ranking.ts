@@ -34,15 +34,23 @@ export const effectiveScore = (scored: ScoredCommand): number =>
  * typing an exact project name puts Projects first instead of burying it under
  * whichever group happens to sort earlier. Each group is capped so one project
  * matching six ways can't crowd out every other kind of result.
+ *
+ * Ids are deduplicated on the way through: they are the render keys, so a
+ * provider emitting the same id twice would otherwise surface as a duplicate-key
+ * warning and a row that cannot be highlighted.
  */
 export const groupRankedCommands = (scored: ScoredCommand[]): RankedGroup[] => {
   const ordered = [...scored].sort((a, b) => effectiveScore(a) - effectiveScore(b));
 
   const groups = new Map<CommandGroupId, Command[]>();
+  const seen = new Set<string>();
   let taken = 0;
 
   for (const entry of ordered) {
     if (taken >= MAX_RESULTS) break;
+    // Keeps the best-ranked of any duplicate, since ordered is sorted already.
+    if (seen.has(entry.item.id)) continue;
+    seen.add(entry.item.id);
     const existing = groups.get(entry.item.group);
     if (existing) {
       if (existing.length >= MAX_PER_GROUP) continue;

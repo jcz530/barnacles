@@ -85,6 +85,19 @@ describe('groupRankedCommands', () => {
   it('returns nothing for no matches', () => {
     expect(groupRankedCommands([])).toEqual([]);
   });
+
+  it('drops duplicate ids, keeping the best-ranked one', () => {
+    // Ids are the render keys. A provider emitting one twice would otherwise be
+    // a duplicate-key warning plus a row that cannot be highlighted.
+    const groups = groupRankedCommands([
+      { item: { ...command('dupe', 'ports'), subtitle: 'worse' }, score: 0.6 },
+      { item: { ...command('dupe', 'ports'), subtitle: 'better' }, score: 0.1 },
+    ]);
+
+    const commands = groups.flatMap(group => group.commands);
+    expect(commands).toHaveLength(1);
+    expect(commands[0].subtitle).toBe('better');
+  });
 });
 
 describe('defaultCommands', () => {

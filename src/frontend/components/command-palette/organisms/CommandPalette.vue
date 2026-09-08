@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { ComboboxGroup, ComboboxInput, ComboboxLabel, ComboboxRoot } from 'reka-ui';
+import {
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxInput,
+  ComboboxLabel,
+  ComboboxRoot,
+} from 'reka-ui';
 import { SearchIcon } from 'lucide-vue-next';
 import { useFuse } from '@vueuse/integrations/useFuse';
 import type { Command } from '@/commands/types';
@@ -47,12 +54,6 @@ const groups = computed(() => {
 
 const flatCommands = computed(() => groups.value.flatMap(group => group.commands));
 
-/** Reka works in values; map the selected id back to its command. */
-const onSelect = (id: unknown) => {
-  const command = flatCommands.value.find(entry => entry.id === id);
-  if (command) emit('select', command);
-};
-
 /** Each open should start clean rather than resuming the last search. */
 const reset = () => {
   query.value = '';
@@ -60,11 +61,21 @@ const reset = () => {
 
 defineExpose({ reset });
 
+/**
+ * Reka tracks selection by value, so the id is the handle rather than the
+ * command object -- the arrays are rebuilt as results change and identity
+ * comparison would break.
+ */
 const selected = ref<string | undefined>(undefined);
 
-// Keep the highlight on a real row as results change under the cursor.
-watch(groups, () => {
+watch(selected, id => {
+  if (id === undefined) return;
+
+  const command = flatCommands.value.find(entry => entry.id === id);
+  // Cleared straight away so picking the same command twice in a row still
+  // emits; the highlight is Reka's business, not ours.
   selected.value = undefined;
+  if (command) emit('select', command);
 });
 </script>
 
@@ -74,7 +85,6 @@ watch(groups, () => {
     :open="true"
     :ignore-filter="true"
     :class="['flex flex-col overflow-hidden', heightClass ?? 'max-h-[60vh]']"
-    @update:model-value="onSelect"
   >
     <div class="flex items-center gap-2 border-b px-4">
       <SearchIcon class="size-4 shrink-0 opacity-50" />
@@ -87,11 +97,20 @@ watch(groups, () => {
       />
     </div>
 
-    <div class="min-h-0 flex-1 overflow-y-auto p-2">
-      <div v-if="groups.length === 0" class="text-muted-foreground px-3 py-8 text-center text-sm">
+    <!--
+      Items have to sit inside ComboboxContent for Reka to register them as
+      navigable -- in a plain div the arrow keys do nothing. position="inline"
+      keeps the list in flow rather than floating it as a dropdown.
+    -->
+    <ComboboxContent
+      position="inline"
+      class="min-h-0 flex-1 overflow-y-auto p-2"
+      @escape-key-down="emit('dismiss')"
+    >
+      <ComboboxEmpty class="text-muted-foreground px-3 py-8 text-center text-sm">
         <template v-if="query.trim()">No results for “{{ query }}”</template>
         <template v-else>Start typing to search</template>
-      </div>
+      </ComboboxEmpty>
 
       <ComboboxGroup v-for="group in groups" :key="group.id" class="pb-1">
         <ComboboxLabel class="text-muted-foreground px-3 py-1.5 text-xs font-medium">
@@ -103,6 +122,6 @@ watch(groups, () => {
           :command="command"
         />
       </ComboboxGroup>
-    </div>
+    </ComboboxContent>
   </ComboboxRoot>
 </template>

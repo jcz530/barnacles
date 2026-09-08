@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui';
-import { VisuallyHidden } from 'reka-ui';
+import {
+  DialogContent,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogRoot,
+  DialogTitle,
+  VisuallyHidden,
+} from 'reka-ui';
 import { useRouter } from 'vue-router';
 import { useCommandRegistry } from '@/commands/useCommandRegistry';
 import type { Command } from '@/commands/types';
@@ -45,8 +52,12 @@ const runCommand = async (command: Command) => {
       <DialogContent
         class="bg-popover data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 fixed top-[20%] left-1/2 z-50 w-[92vw] max-w-2xl -translate-x-1/2 overflow-hidden rounded-xl border shadow-2xl"
       >
+        <!-- Reka warns when a dialog has no title or description to announce. -->
         <VisuallyHidden>
           <DialogTitle>Command palette</DialogTitle>
+          <DialogDescription>
+            Search projects, ports, processes, and pages, then press Enter to run a command.
+          </DialogDescription>
         </VisuallyHidden>
         <CommandPalette
           ref="paletteRef"
