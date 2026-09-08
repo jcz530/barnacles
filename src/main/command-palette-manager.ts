@@ -53,6 +53,39 @@ export const decideToggleAction = (state: {
 let paletteWindow: BrowserWindow | null = null;
 /** When the palette was last hidden, for the dismiss grace window above. */
 let lastHiddenAt = 0;
+/** Set while the palette has forced the app into accessory mode. */
+let activationPolicyOverridden = false;
+
+/**
+ * Stop the app becoming frontmost while the floating palette is up.
+ *
+ * Showing and hiding an ordinary app's window activates that app, so dismissing
+ * the palette pulled the whole of Barnacles forward -- Escape, or the hotkey
+ * again, would leave you staring at the app instead of the work you were doing.
+ *
+ * An accessory app has no Dock icon or menu bar and cannot be activated that
+ * way, so its windows come and go without disturbing whatever is in front. The
+ * policy is restored the moment the palette closes, so a real window opened
+ * afterwards still behaves like a normal app.
+ *
+ * Skipped entirely when Barnacles is already frontmost: there the palette is
+ * expected to belong to the app in front of you.
+ */
+const suppressActivation = (): void => {
+  if (process.platform !== 'darwin') return;
+  if (activationPolicyOverridden || isApplicationActive()) return;
+
+  app.setActivationPolicy('accessory');
+  activationPolicyOverridden = true;
+};
+
+export const restoreActivationPolicy = (): void => {
+  if (process.platform !== 'darwin' || !activationPolicyOverridden) return;
+
+  app.setActivationPolicy('regular');
+  activationPolicyOverridden = false;
+};
+/** Bundle id of the app that was frontmost when the palette opened. */
 let registeredAccelerator: string | null = null;
 let lastRegistrationError: string | null = null;
 
@@ -171,6 +204,7 @@ const createPaletteWindow = async (): Promise<BrowserWindow> => {
  * instant rather than paying a renderer boot each time.
  */
 const showCommandPalette = async (): Promise<void> => {
+  suppressActivation();
   setShowingUtilityWindow(true);
 
   if (!paletteWindow || paletteWindow.isDestroyed()) {
@@ -203,6 +237,7 @@ export const hideCommandPalette = (options?: { viaBlur?: boolean }): void => {
     lastHiddenAt = options?.viaBlur ? Date.now() : 0;
     paletteWindow.hide();
     resetUtilityWindowFlag();
+    restoreActivationPolicy();
   }
 };
 

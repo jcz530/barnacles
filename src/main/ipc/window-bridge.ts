@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import { createMenu } from '../menu';
 import { createAppWindow } from '../main';
 import { getMainWindows } from '../window-utils';
+import { restoreActivationPolicy } from '../command-palette-manager';
 
 /**
  * Resolve once a window's renderer has loaded, so a message sent straight after
@@ -28,6 +29,9 @@ export const setupWindowBridge = (): void => {
   // Handle showing existing window or creating one if none exist
   ipcMain.handle('show-or-create-window', async () => {
     try {
+      // The floating palette puts the app in accessory mode while it is up. A
+      // real window must not inherit that, or it opens with no Dock icon.
+      restoreActivationPolicy();
       const mainWindows = getMainWindows();
 
       // If there's an existing main window, show and focus it
