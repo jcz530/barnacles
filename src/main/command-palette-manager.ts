@@ -1,5 +1,4 @@
 import { app, BrowserWindow, globalShortcut, screen } from 'electron';
-import { appendFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { APP_CONFIG } from '../shared/constants';
@@ -13,23 +12,6 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-/**
- * Opt-in trace of the palette's focus decisions, for diagnosing "the app came
- * forward" reports. Enable with BARNACLES_PALETTE_TRACE=1; writes to
- * /tmp/barnacles-palette-debug.log.
- */
-const trace = (label: string, data?: unknown): void => {
-  if (!process.env.BARNACLES_PALETTE_TRACE) return;
-  try {
-    appendFileSync(
-      '/tmp/barnacles-palette-debug.log',
-      `${new Date().toISOString()} ${label} ${JSON.stringify(data ?? {})}\n`
-    );
-  } catch {
-    // best effort
-  }
-};
 
 const PALETTE_WIDTH = 640;
 const PALETTE_HEIGHT = 420;
@@ -250,11 +232,6 @@ const showCommandPalette = async (): Promise<void> => {
 
 export const hideCommandPalette = (options?: { viaBlur?: boolean }): void => {
   if (paletteWindow && !paletteWindow.isDestroyed() && paletteWindow.isVisible()) {
-    trace('hide', {
-      viaBlur: !!options?.viaBlur,
-      paletteFocused: paletteWindow.isFocused(),
-      appActive: isApplicationActive(),
-    });
     // Only a blur-driven hide arms the grace window below. Escape, or running a
     // command, is an explicit dismissal and must leave the next press free to
     // reopen immediately.
@@ -294,14 +271,6 @@ export const toggleCommandPalette = async (): Promise<void> => {
   const appActive = isApplicationActive();
   const target = focusedIsMain ? focused : getMainWindows()[0];
 
-  trace('toggle', {
-    visible,
-    msSinceBlurHide: Date.now() - lastHiddenAt,
-    appActive,
-    trackedActive: isApplicationActive(),
-    focusedIsMain,
-    hasTarget: Boolean(target),
-  });
   const action = decideToggleAction({
     paletteVisible: visible,
     msSinceBlurHide: Date.now() - lastHiddenAt,
