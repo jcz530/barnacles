@@ -324,6 +324,17 @@ app.on('window-all-closed', async () => {
 });
 
 app.on('activate', async () => {
+  if (process.env.BARNACLES_PALETTE_TRACE) {
+    try {
+      const { appendFileSync } = await import('fs');
+      appendFileSync(
+        '/tmp/barnacles-palette-debug.log',
+        `${new Date().toISOString()} app-activate {"utilityFlag":${getShowingUtilityWindow()}}\n`
+      );
+    } catch {
+      // best effort
+    }
+  }
   if (process.env.NODE_ENV === 'development') {
     console.log('[App] Activate event triggered', {
       isShowingUtilityWindow: getShowingUtilityWindow(),

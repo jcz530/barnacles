@@ -151,7 +151,6 @@ const createPaletteWindow = async (): Promise<BrowserWindow> => {
   // A plain always-on-top window will not draw over another app's full-screen
   // space, which is exactly where the global hotkey gets used.
   win.setAlwaysOnTop(true, 'floating');
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
   const isDevServer = !app.isPackaged && (await checkViteDevServer());
   if (isDevServer) {
@@ -218,10 +217,14 @@ const showCommandPalette = async (): Promise<void> => {
 
   const win = await ensurePaletteWindow();
 
+  // Scoped to the time the palette is up: leaving it on makes the app's other
+  // windows follow it onto whatever space you are working in.
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   positionOnActiveDisplay(win);
-  win.show();
-  // Without this the window is visible but not key, so the renderer cannot take
-  // keyboard focus and the caret never lands in the search box.
+  // showInactive, not show: showing a regular app's window activates the app,
+  // and activating brings every other window of ours forward with it -- which
+  // is what put the main window on top of whatever you were working in.
+  win.showInactive();
   win.focus();
 
   // The renderer outlives a single open, so its cached data would otherwise go
@@ -250,6 +253,7 @@ export const hideCommandPalette = (options?: { viaBlur?: boolean }): void => {
     // reopen immediately.
     lastHiddenAt = options?.viaBlur ? Date.now() : 0;
     paletteWindow.hide();
+    paletteWindow.setVisibleOnAllWorkspaces(false);
     resetUtilityWindowFlag();
   }
 };
