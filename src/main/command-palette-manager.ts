@@ -69,6 +69,31 @@ export const decideToggleAction = (state: {
 };
 
 let paletteWindow: BrowserWindow | null = null;
+/**
+ * In-flight window creation.
+ *
+ * createPaletteWindow awaits loadURL, so a second hotkey press during that gap
+ * would find paletteWindow still null and build another window. The orphans
+ * stayed on screen while the tracked reference pointed at the newest one, so
+ * every later press reported the palette as not visible and did nothing.
+ */
+let paletteWindowPromise: Promise<BrowserWindow> | null = null;
+
+const ensurePaletteWindow = async (): Promise<BrowserWindow> => {
+  if (paletteWindow && !paletteWindow.isDestroyed()) return paletteWindow;
+  if (paletteWindowPromise) return paletteWindowPromise;
+
+  paletteWindowPromise = createPaletteWindow()
+    .then(win => {
+      paletteWindow = win;
+      return win;
+    })
+    .finally(() => {
+      paletteWindowPromise = null;
+    });
+
+  return paletteWindowPromise;
+};
 /** When the palette was last hidden, for the dismiss grace window above. */
 let lastHiddenAt = 0;
 /** Set while the palette has forced the app into accessory mode. */
@@ -227,23 +252,23 @@ const showCommandPalette = async (): Promise<void> => {
   suppressActivation();
   setShowingUtilityWindow(true);
 
-  if (!paletteWindow || paletteWindow.isDestroyed()) {
-    paletteWindow = await createPaletteWindow();
-  }
+  const win = await ensurePaletteWindow();
 
-  positionOnActiveDisplay(paletteWindow);
-  paletteWindow.show();
+  positionOnActiveDisplay(win);
+  win.show();
   // Without this the window is visible but not key, so the renderer cannot take
   // keyboard focus and the caret never lands in the search box.
-  paletteWindow.focus();
+  win.focus();
 
   // The renderer outlives a single open, so its cached data would otherwise go
   // stale; it refetches, clears the query, and refocuses the input on this.
   // On the very first open the renderer may still be loading, in which case
   // nothing is listening yet -- wait for it rather than dropping the message.
-  const notifyOpened = () => paletteWindow?.webContents.send('command-palette:opened');
-  if (paletteWindow.webContents.isLoading()) {
-    paletteWindow.webContents.once('did-finish-load', notifyOpened);
+  const notifyOpened = () => {
+    if (!win.isDestroyed()) win.webContents.send('command-palette:opened');
+  };
+  if (win.webContents.isLoading()) {
+    win.webContents.once('did-finish-load', notifyOpened);
   } else {
     notifyOpened();
   }
@@ -277,6 +302,11 @@ export const hideCommandPalette = (options?: { viaBlur?: boolean }): void => {
  * this branch Cmd+K would open the floating window while the app is focused.
  */
 export const toggleCommandPalette = async (): Promise<void> => {
+  // A press landing while the window is still being built would otherwise find
+  // paletteWindow null, fall through, and start building a second one. Ignore
+  // it: the palette is already on its way to the screen.
+  if (paletteWindowPromise) return;
+
   const visible = Boolean(
     paletteWindow && !paletteWindow.isDestroyed() && paletteWindow.isVisible()
   );
