@@ -66,6 +66,11 @@ export const trackApplicationActivation = (): void => {
     // in another app. That left the flag stuck true, so the palette believed
     // Barnacles was frontmost and handed the hotkey to the in-app modal.
     app.on('did-become-active', () => {
+      // Focusing a utility window activates the app too, even in accessory
+      // mode. That is the palette taking keyboard focus so you can type in it,
+      // not you switching to Barnacles -- counting it made dismissing the
+      // palette look like the app was already in front, so it stayed there.
+      if (isShowingUtilityWindow) return;
       isAppActive = true;
     });
     app.on('did-resign-active', () => {

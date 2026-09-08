@@ -251,6 +251,12 @@ const showCommandPalette = async (): Promise<void> => {
 
 export const hideCommandPalette = (options?: { viaBlur?: boolean }): void => {
   if (paletteWindow && !paletteWindow.isDestroyed() && paletteWindow.isVisible()) {
+    trace('hide', {
+      viaBlur: !!options?.viaBlur,
+      paletteFocused: paletteWindow.isFocused(),
+      appActive: isApplicationActive(),
+      accessory: activationPolicyOverridden,
+    });
     // Only a blur-driven hide arms the grace window below. Escape, or running a
     // command, is an explicit dismissal and must leave the next press free to
     // reopen immediately.

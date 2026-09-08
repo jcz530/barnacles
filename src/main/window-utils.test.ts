@@ -66,6 +66,30 @@ describe('trackApplicationActivation', () => {
     expect(isApplicationActive()).toBe(true);
   });
 
+  it('ignores the activation that showing a utility window causes', async () => {
+    const { isApplicationActive, setShowingUtilityWindow } = await load();
+
+    // Focusing the floating palette so the user can type in it activates the
+    // app, even in accessory mode. Counting that made dismissing the palette
+    // look like Barnacles was already frontmost, so it stayed there instead of
+    // returning focus to the app underneath.
+    setShowingUtilityWindow(true);
+    emit('did-become-active');
+
+    expect(isApplicationActive()).toBe(false);
+  });
+
+  it('still activates normally once no utility window is showing', async () => {
+    const { isApplicationActive, setShowingUtilityWindow } = await load();
+
+    setShowingUtilityWindow(true);
+    emit('did-become-active');
+    setShowingUtilityWindow(false);
+    emit('did-become-active');
+
+    expect(isApplicationActive()).toBe(true);
+  });
+
   it('goes inactive when the app resigns to another application', async () => {
     const { isApplicationActive } = await load();
 
