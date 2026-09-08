@@ -19,7 +19,6 @@ import {
 import {
   destroyCommandPalette,
   registerPaletteShortcut,
-  restoreActivationPolicy,
   type ShortcutRegistration,
   unregisterPaletteShortcut,
 } from './command-palette-manager';
@@ -52,10 +51,6 @@ contextMenu({
 
 // Function to create and track a new window
 export const createAppWindow = async (): Promise<BrowserWindow> => {
-  // A real window must never inherit the accessory mode the floating palette
-  // uses, or it opens with no Dock icon and no menu bar.
-  restoreActivationPolicy();
-
   const newWindow = await createWindow(apiPort);
   windows.add(newWindow);
 
