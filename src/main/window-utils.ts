@@ -59,16 +59,12 @@ export const isApplicationActive = (): boolean => isAppActive;
  * Start tracking whether the app is frontmost. Call once, after app ready.
  */
 export const trackApplicationActivation = (): void => {
-  // browser-window-focus is cross-platform and fires for the first window the
-  // app opens, which covers the launch activation that did-become-active on its
-  // own would miss (it does not fire for the state the app starts in).
-  app.on('browser-window-focus', (_event, window) => {
-    if (isMainWindow(window)) isAppActive = true;
-  });
-
   if (process.platform === 'darwin') {
-    // Fires on every activation, including via the App Switcher, and -- unlike
-    // window focus -- resign tells us the app itself went to the background.
+    // These two are the only honest signal on macOS. Window focus is not:
+    // creating a window fires browser-window-focus even when the app never came
+    // to the front -- which happens on every dev restart while you are working
+    // in another app. That left the flag stuck true, so the palette believed
+    // Barnacles was frontmost and handed the hotkey to the in-app modal.
     app.on('did-become-active', () => {
       isAppActive = true;
     });
@@ -78,8 +74,12 @@ export const trackApplicationActivation = (): void => {
     return;
   }
 
-  // did-resign-active is macOS-only. Elsewhere, losing window focus is the
-  // available signal that the app went to the background.
+  // Elsewhere window focus does follow the application, so it is a faithful
+  // stand-in for the macOS-only events above.
+  app.on('browser-window-focus', (_event, window) => {
+    if (isMainWindow(window)) isAppActive = true;
+  });
+
   app.on('browser-window-blur', () => {
     // Focus moving between our own windows blurs one and focuses the next, so
     // only treat this as leaving once nothing of ours holds focus.

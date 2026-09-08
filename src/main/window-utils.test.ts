@@ -47,10 +47,21 @@ describe('trackApplicationActivation', () => {
     expect(isApplicationActive()).toBe(false);
   });
 
-  it('becomes active when a main window takes focus', async () => {
+  it('ignores window focus on macOS, which lies about activation', async () => {
     const { isApplicationActive } = await load();
 
+    // Creating a window fires this even when the app never came to the front --
+    // every dev restart while you work in another app. Trusting it left the flag
+    // stuck true and sent the global hotkey to the in-app modal.
     emit('browser-window-focus', {}, mainWindow);
+
+    expect(isApplicationActive()).toBe(false);
+  });
+
+  it('becomes active only when macOS says the app activated', async () => {
+    const { isApplicationActive } = await load();
+
+    emit('did-become-active');
 
     expect(isApplicationActive()).toBe(true);
   });
@@ -58,7 +69,7 @@ describe('trackApplicationActivation', () => {
   it('goes inactive when the app resigns to another application', async () => {
     const { isApplicationActive } = await load();
 
-    emit('browser-window-focus', {}, mainWindow);
+    emit('did-become-active');
     // The signal that another app came to the front. Window focus alone never
     // reports this, which is why the palette used to open the in-app modal
     // while the user was in a different application.
@@ -76,11 +87,11 @@ describe('trackApplicationActivation', () => {
     expect(isApplicationActive()).toBe(true);
   });
 
-  it('ignores focus from utility windows', async () => {
+  it('does not treat the floating palette as the app being frontmost', async () => {
     const { isApplicationActive } = await load();
 
-    // The floating palette is always-on-top, so it is not evidence the app
-    // itself is frontmost.
+    // The palette runs in accessory mode precisely so showing it does not
+    // activate the app; nothing about it should flip this flag.
     emit('browser-window-focus', {}, { ...mainWindow, isAlwaysOnTop: () => true });
 
     expect(isApplicationActive()).toBe(false);
