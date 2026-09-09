@@ -5,6 +5,7 @@ import { useQueries } from '@/composables/useQueries';
 import { useProjectActions } from '@/composables/useProjectActions';
 import { useApi } from '@/composables/useApi';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
+import { getAllUtilities } from '@/utilities';
 import { API_ROUTES } from '../../shared/constants';
 import type { ApiResponse } from '../../shared/types/api';
 import { appCommands } from './providers/app';
@@ -37,6 +38,11 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
   } = useQueries();
 
   const { openInFinder, copyPath } = useProjectActions();
+
+  // Fixed for the lifetime of the renderer: utilities are registered when the
+  // registry module is evaluated, so this cannot change and has no business
+  // being rebuilt every time a project does.
+  const utilities = getAllUtilities();
   const { startScan } = useProjectScanWebSocket();
 
   const { data: projects } = useProjectsQuery({ enabled: isOpen });
@@ -93,7 +99,7 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
         openExternal: url => window.electron.shell.openExternal(url),
       }),
       ...navigationCommands(),
-      ...utilityCommands(),
+      ...utilityCommands(utilities),
       ...appCommands({
         addProject: async () => {
           const selection = await window.electron.files.selectFolder();

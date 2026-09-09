@@ -59,30 +59,44 @@ class UtilityRegistry {
 export const utilityRegistry = new UtilityRegistry();
 
 /**
- * Auto-discover and register all utilities
- * Uses Vite's import.meta.glob to find all utility index files
+ * Every utility registration, loaded when this module is evaluated.
+ *
+ * Eager on purpose. Discovery used to be async and was only ever triggered by
+ * the /utilities routes, so anything that read the registry without visiting
+ * one of those pages first -- the command palette, most of all -- saw it empty.
+ * The floating palette window has no router at all and so could never populate
+ * it. Registering at module-eval time means every consumer sees a full registry
+ * on first read, with no ordering to get wrong.
+ *
+ * The cost is small: this pattern matches only the per-utility `index.ts`
+ * registration files, each of which is a plain metadata object whose page stays
+ * behind its own `component: () => import(...)`. The views are still lazy.
+ *
+ * The corollary is that a registration file must stay side-effect-free and
+ * import only types and pure helpers. A module that throws while loading now
+ * takes the renderer down with it, where the old per-utility try/catch would
+ * have logged and carried on.
+ */
+const utilityModules = import.meta.glob<{ default: UtilityRegistration }>('./*/index.ts', {
+  eager: true,
+});
+
+for (const [path, module] of Object.entries(utilityModules)) {
+  if (module.default) {
+    utilityRegistry.register(module.default);
+  } else {
+    console.error(`Utility at ${path} has no default export; skipping.`);
+  }
+}
+
+/**
+ * Kept for callers that ran discovery before reading the registry.
+ *
+ * Registration now happens above, when this module is first evaluated, so this
+ * is a no-op that resolves immediately.
  */
 export async function discoverUtilities(): Promise<void> {
-  // Import all utility registration files
-  // Pattern matches: ./[utility-name]/index.ts
-  const utilityModules = import.meta.glob<{ default: UtilityRegistration }>('./**/index.ts', {
-    eager: false,
-  });
-
-  // Register each utility
-  for (const [path, importFn] of Object.entries(utilityModules)) {
-    // Skip the main index file (this file)
-    if (path === './index.ts') continue;
-
-    try {
-      const module = await importFn();
-      if (module.default) {
-        utilityRegistry.register(module.default);
-      }
-    } catch (error) {
-      console.error(`Failed to register utility from ${path}:`, error);
-    }
-  }
+  // Intentionally empty -- see utilityModules above.
 }
 
 /**
