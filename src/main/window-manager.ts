@@ -62,6 +62,16 @@ export const createWindow = async (apiPort?: number): Promise<BrowserWindow> => 
     height: APP_CONFIG.WINDOW_SIZE.height,
     minWidth: APP_CONFIG.WINDOW_SIZE.minWidth,
     minHeight: APP_CONFIG.WINDOW_SIZE.minHeight,
+    /*
+     * What the window paints before the renderer has drawn anything. Without it
+     * that first moment is Electron's default grey.
+     *
+     * A literal rather than a theme token: this is read in the main process,
+     * before any renderer exists to resolve a CSS variable. It matches
+     * slate-200, the default theme's sidebar, so a custom slate will not move
+     * it.
+     */
+    backgroundColor: '#e2e8f0',
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,

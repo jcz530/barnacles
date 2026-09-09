@@ -54,8 +54,13 @@ const runCommand = async (command: Command) => {
 <template>
   <DialogRoot v-model:open="open">
     <DialogPortal>
+      <!--
+        Above the title bar's z-1000, so the dim covers the whole window. At
+        z-50 the bar sat on top of it and stayed bright while everything else
+        dimmed, which read as the overlay stopping short of the top.
+      -->
       <DialogOverlay
-        class="data-[state=open]:animate-in data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-slate-950/50"
+        class="data-[state=open]:animate-in data-[state=open]:fade-in-0 fixed inset-0 z-[1100] bg-slate-950/50"
       />
       <!--
         Not ui/dialog's DialogContent: that hardcodes sm:max-w-lg and always
@@ -68,7 +73,7 @@ const runCommand = async (command: Command) => {
         palette marks the event handled and the layer leaves the dialog open.
       -->
       <DialogContent
-        class="bg-popover data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 fixed top-[20%] left-1/2 z-50 w-[92vw] max-w-2xl -translate-x-1/2 overflow-hidden rounded-xl border shadow-2xl"
+        class="bg-popover data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 fixed top-[20%] left-1/2 z-[1101] w-[92vw] max-w-2xl -translate-x-1/2 overflow-hidden rounded-xl border shadow-2xl"
       >
         <!-- Reka warns when a dialog has no title or description to announce. -->
         <VisuallyHidden>
