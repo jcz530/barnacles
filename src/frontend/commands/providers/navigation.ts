@@ -10,6 +10,17 @@ import type { Command } from '../types';
 const DEFAULT_VISIBLE = new Set(['/', '/projects', '/terminals', '/ports', '/utilities']);
 
 /**
+ * Pages the app already has a keyboard shortcut for, so the palette can show
+ * the faster way of getting there rather than being it.
+ *
+ * Only shortcuts the menu genuinely registers belong here -- a hint for a key
+ * that does nothing is worse than no hint. See src/main/menu.ts.
+ */
+const ACCELERATORS: Record<string, string> = {
+  '/settings': 'CommandOrControl+,',
+};
+
+/**
  * One command per navigable page, sourced from the same constants the sidebar
  * renders, so a new page appears here without a second edit.
  */
@@ -22,5 +33,6 @@ export const navigationCommands = (): Command[] =>
     keywords: [...(item.keywords ?? []), 'go to', 'open', 'navigate'],
     priority: DEFAULT_VISIBLE.has(item.url) ? 1 : 0,
     primaryActionLabel: 'Go To',
+    accelerator: ACCELERATORS[item.url],
     run: ctx => ctx.navigate(item.url),
   }));

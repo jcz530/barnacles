@@ -53,6 +53,9 @@ export const appCommands = (deps: AppCommandDeps): Command[] => [
     icon: SquarePlus,
     keywords: ['open', 'another'],
     priority: 1,
+    // The File menu registers this, so the palette can point at the faster way
+    // rather than being the only way.
+    accelerator: 'CommandOrControl+N',
     run: async ctx => {
       await deps.newWindow();
       ctx.dismiss();
