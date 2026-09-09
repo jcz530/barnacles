@@ -1,8 +1,10 @@
-import { computed, ref, type Ref } from 'vue';
-import type { PaletteItem } from './types';
+import { computed, ref, watch, type Ref } from 'vue';
+import type { CommandContext, PaletteItem } from './types';
 
 /** One pushed level: an item's actions, plus the search state that belongs to it. */
 export interface Level {
+  /** The id of the item drilled into, so the level can be rebuilt. */
+  sourceId: string;
   /** Breadcrumb text -- the title of the item that was drilled into. */
   title: string;
   items: PaletteItem[];
@@ -20,6 +22,19 @@ export interface Level {
  * pushing and popping do to the query -- and the component keeps only the
  * reka-ui wiring.
  */
+/**
+ * Context for rebuilding a level's items.
+ *
+ * Providers use the context to build actions, not to run them -- running goes
+ * back out through the component so the host supplies a real one -- so an inert
+ * context is right here, and calling any of it would be a bug.
+ */
+const buildRefreshContext = (): CommandContext => ({
+  surface: 'in-app',
+  navigate: () => {},
+  dismiss: () => {},
+});
+
 export const useLevelStack = (rootItems: Ref<PaletteItem[]>) => {
   const levels = ref<Level[]>([]);
   const rootQuery = ref('');
@@ -57,6 +72,9 @@ export const useLevelStack = (rootItems: Ref<PaletteItem[]>) => {
    * Builds the actions now rather than at registry time, and does nothing when
    * an item has none, so callers can offer the gesture on every row without
    * checking first.
+   *
+   * The item's id is kept so the level can be rebuilt when the data behind it
+   * changes -- see the watcher below.
    */
   const push = (item: PaletteItem, buildActions: () => PaletteItem[]): boolean => {
     if (!item.actions) return false;
@@ -65,6 +83,7 @@ export const useLevelStack = (rootItems: Ref<PaletteItem[]>) => {
     if (items.length === 0) return false;
 
     levels.value.push({
+      sourceId: item.id,
       title: item.title,
       items,
       query: '',
@@ -72,6 +91,40 @@ export const useLevelStack = (rootItems: Ref<PaletteItem[]>) => {
     });
     return true;
   };
+
+  /**
+   * Keep open levels in step with the data they were built from.
+   *
+   * A level holds the actions built at the moment it was opened, and ports
+   * refetch every few seconds. Left alone, a picker sitting open across a
+   * refresh would keep acting on what was true when it was opened -- and since
+   * "kill port" closes over a pid, and pids get reused, that is not merely a
+   * stale label.
+   *
+   * Rebuilding in place keeps the level where it is. A level whose subject has
+   * gone entirely -- the port closed, the project was removed -- has nothing
+   * left to act on, so it and everything under it are dropped.
+   */
+  watch(rootItems, items => {
+    if (levels.value.length === 0) return;
+
+    const rebuilt: Level[] = [];
+    // Only the first level is anchored to a root item; deeper ones are actions
+    // of actions, which are rebuilt from their parent as it is regenerated.
+    let parents = items;
+
+    for (const level of levels.value) {
+      const source = parents.find(item => item.id === level.sourceId);
+      const next = source?.actions?.(buildRefreshContext());
+
+      if (!next || next.length === 0) break;
+
+      rebuilt.push({ ...level, items: next });
+      parents = next;
+    }
+
+    levels.value = rebuilt;
+  });
 
   /** Back out one level. False at the root, where the caller should dismiss. */
   const pop = (): boolean => {

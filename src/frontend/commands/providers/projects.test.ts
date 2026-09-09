@@ -182,4 +182,18 @@ describe('opening a project’s tools', () => {
     expect(findAction(command, 'reveal')).toBeDefined();
     expect(findAction(command, 'copy-path')).toBeDefined();
   });
+
+  it('points at settings when nothing is installed to open with', () => {
+    // The alternative is a row whose list would be empty: pushing an empty
+    // level is refused, so pressing Enter would appear to do nothing at all.
+    const [command] = projectCommands([project()], deps({ ides: [] }));
+    const openIde = findAction(command, 'open-ide');
+    const context = ctx();
+
+    expect(openIde?.subtitle).toBe('No editors detected');
+    expect(openIde?.actions).toBeUndefined();
+
+    openIde?.run?.(context);
+    expect(context.navigate).toHaveBeenCalledWith('/settings');
+  });
 });

@@ -118,6 +118,7 @@ const projectActions = (
     setDefault: toolId => deps.setPreferredIde(project.id, toolId),
     projectName: project.name,
     idPrefix: `project.open-ide:${project.id}`,
+    toolNoun: 'editors',
   }),
   toolAction({
     id: `project.open-terminal:${project.id}`,
@@ -130,6 +131,7 @@ const projectActions = (
     setDefault: toolId => deps.setPreferredTerminal(project.id, toolId),
     projectName: project.name,
     idPrefix: `project.open-terminal:${project.id}`,
+    toolNoun: 'terminals',
   }),
   {
     id: `project.reveal:${project.id}`,
@@ -167,6 +169,8 @@ interface ToolActionSpec<T extends { id: string; name: string }> {
   setDefault: (toolId: string) => void | Promise<void>;
   projectName: string;
   idPrefix: string;
+  /** Plural, for the "none detected" subtitle: "editors", "terminals". */
+  toolNoun: string;
 }
 
 /**
@@ -177,23 +181,40 @@ interface ToolActionSpec<T extends { id: string; name: string }> {
  * the picker instead of guessing -- the same thing the project page's split
  * button does when it has no preference to act on.
  */
-const toolAction = <T extends { id: string; name: string }>(spec: ToolActionSpec<T>): Command => ({
-  id: spec.id,
-  title: spec.preferred ? `${spec.verb} ${spec.preferred.name}` : spec.fallbackTitle,
-  group: 'projects' as const,
-  icon: spec.icon,
-  primaryActionLabel: spec.preferred ? `${spec.verb} ${spec.preferred.name}` : 'Choose',
-  // Passing the resolved id rather than letting the backend fall back: it only
-  // consults the project's own preference and throws otherwise, so a project
-  // relying on the global default would fail silently.
-  run: spec.preferred
-    ? async ctx => {
-        await spec.open(spec.preferred?.id);
-        ctx.dismiss();
-      }
-    : undefined,
-  actions: () => toolPickerActions(spec),
-});
+const toolAction = <T extends { id: string; name: string }>(spec: ToolActionSpec<T>): Command => {
+  // Nothing detected at all. Offer the way to fix that rather than a row whose
+  // list would be empty -- an empty level is a dead end you have to back out
+  // of, and pushing one is refused, so the row would simply not respond.
+  if (spec.installed.length === 0) {
+    return {
+      id: spec.id,
+      title: spec.fallbackTitle,
+      subtitle: `No ${spec.toolNoun} detected`,
+      group: 'projects' as const,
+      icon: spec.icon,
+      primaryActionLabel: 'Open Settings',
+      run: ctx => ctx.navigate('/settings'),
+    };
+  }
+
+  return {
+    id: spec.id,
+    title: spec.preferred ? `${spec.verb} ${spec.preferred.name}` : spec.fallbackTitle,
+    group: 'projects' as const,
+    icon: spec.icon,
+    primaryActionLabel: spec.preferred ? `${spec.verb} ${spec.preferred.name}` : 'Choose',
+    // Passing the resolved id rather than letting the backend fall back: it
+    // only consults the project's own preference and throws otherwise, so a
+    // project relying on the global default would fail silently.
+    run: spec.preferred
+      ? async ctx => {
+          await spec.open(spec.preferred?.id);
+          ctx.dismiss();
+        }
+      : undefined,
+    actions: () => toolPickerActions(spec),
+  };
+};
 
 /**
  * The tools to choose from, then the same list again as defaults to set.

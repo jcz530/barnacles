@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import type { PaletteItem } from './types';
 import { useLevelStack } from './useLevelStack';
 
@@ -132,5 +132,66 @@ describe('useLevelStack', () => {
 
     expect(s.depth.value).toBe(0);
     expect(s.activeQuery.value).toBe('');
+  });
+});
+
+describe('keeping open levels current', () => {
+  const port = (pid: number) =>
+    item('port:3000', {
+      title: 'Port 3000',
+      actions: () => [item(`kill:${pid}`, { title: `Kill (pid ${pid})` })],
+    });
+
+  it('rebuilds an open level when the data behind it changes', async () => {
+    // Ports refetch every few seconds. A picker left open across a refresh
+    // would otherwise keep acting on the pid that was true when it opened --
+    // and pids get reused, so that is not merely a stale label.
+    const items = ref([port(100)]);
+    const s = useLevelStack(items);
+
+    s.push(items.value[0], () => items.value[0].actions!({} as never));
+    expect(s.activeItems.value[0].id).toBe('kill:100');
+
+    items.value = [port(200)];
+    await nextTick();
+
+    expect(s.activeItems.value[0].id).toBe('kill:200');
+  });
+
+  it('keeps the level open and its search intact while rebuilding', async () => {
+    const items = ref([port(100)]);
+    const s = useLevelStack(items);
+    s.push(items.value[0], () => items.value[0].actions!({} as never));
+    s.activeQuery.value = 'kill';
+
+    items.value = [port(200)];
+    await nextTick();
+
+    expect(s.depth.value).toBe(1);
+    expect(s.activeQuery.value).toBe('kill');
+  });
+
+  it('drops the level when its subject disappears entirely', async () => {
+    // The port closed, or the project was removed. There is nothing left to
+    // act on, so staying in the level would offer actions that cannot work.
+    const items = ref([port(100)]);
+    const s = useLevelStack(items);
+    s.push(items.value[0], () => items.value[0].actions!({} as never));
+
+    items.value = [];
+    await nextTick();
+
+    expect(s.depth.value).toBe(0);
+  });
+
+  it('leaves the root alone when nothing is open', async () => {
+    const items = ref([port(100)]);
+    const s = useLevelStack(items);
+
+    items.value = [port(200)];
+    await nextTick();
+
+    expect(s.depth.value).toBe(0);
+    expect(s.activeItems.value[0].id).toBe('port:3000');
   });
 });
