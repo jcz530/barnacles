@@ -118,13 +118,23 @@ class ProjectPackageService {
     ]);
 
     // One detection per group rather than per script.
+    //
+    // A workspace with no lockfile of its own inherits the root's manager. In a
+    // real pnpm or yarn monorepo the lockfile lives only at the root, so
+    // detecting per directory in isolation reported npm for every workspace --
+    // and `npm run` inside a pnpm workspace writes a stray package-lock.json
+    // and a divergent node_modules.
+    const rootManager = await this.detectPackageManager(projectPath);
     const managers = new Map<string, 'npm' | 'yarn' | 'pnpm'>();
     await Promise.all(
       npmGroups.map(async group => {
-        managers.set(
-          group.relativeDir,
-          await this.detectPackageManager(projectPath, group.relativeDir || undefined)
-        );
+        if (!group.relativeDir) {
+          managers.set('', rootManager);
+          return;
+        }
+
+        const own = await this.detectPackageManagerIfLocked(projectPath, group.relativeDir);
+        managers.set(group.relativeDir, own ?? rootManager);
       })
     );
 
@@ -170,6 +180,33 @@ class ProjectPackageService {
     }
 
     return scripts;
+  }
+
+  /**
+   * The package manager a directory declares for itself, or null if it declares
+   * none.
+   *
+   * detectPackageManager cannot answer this: it defaults to npm, so "npm is
+   * what the lockfile says" and "there is no lockfile" come back identical --
+   * and a workspace in a pnpm monorepo is the second case, not the first.
+   */
+  private async detectPackageManagerIfLocked(
+    projectPath: string,
+    subPath: string
+  ): Promise<'npm' | 'yarn' | 'pnpm' | null> {
+    const basePath = path.join(projectPath, subPath);
+
+    const exists = async (file: string): Promise<boolean> =>
+      fs
+        .access(path.join(basePath, file))
+        .then(() => true)
+        .catch(() => false);
+
+    if (await exists('pnpm-lock.yaml')) return 'pnpm';
+    if (await exists('yarn.lock')) return 'yarn';
+    if (await exists('package-lock.json')) return 'npm';
+
+    return null;
   }
 
   private async readScriptsFromFile(filePath: string): Promise<Record<string, string>> {

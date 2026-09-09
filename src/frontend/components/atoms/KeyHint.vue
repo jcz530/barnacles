@@ -30,8 +30,14 @@ const isMac = useIsMac();
 // and a hint you cannot read precisely is not a hint.
 const parts = computed(() => acceleratorParts(props.accelerator, isMac.value));
 
+// leading-none rides along with the size rather than sitting in the base
+// string: tailwind-merge groups line-height with font-size, so a text-* class
+// arriving later evicts it and the chip's glyphs drift off-centre inside their
+// fixed height.
 const sizeClasses = computed(() =>
-  props.size === 'sm' ? 'h-5 min-w-5 gap-0.5 px-1.5 text-xs' : 'h-7 min-w-7 gap-1 px-2 text-base'
+  props.size === 'sm'
+    ? 'h-5 min-w-5 gap-0.5 px-1.5 text-xs leading-none'
+    : 'h-7 min-w-7 gap-1 px-2 text-base leading-none'
 );
 </script>
 
@@ -43,7 +49,7 @@ const sizeClasses = computed(() =>
   <kbd
     :class="
       cn(
-        'bg-muted text-muted-foreground inline-flex items-center justify-center rounded border font-sans leading-none group-data-[highlighted]:border-current/30 group-data-[highlighted]:bg-transparent group-data-[highlighted]:text-current',
+        'bg-muted text-muted-foreground inline-flex items-center justify-center rounded border font-sans group-data-[highlighted]:border-current/30 group-data-[highlighted]:bg-transparent group-data-[highlighted]:text-current',
         sizeClasses
       )
     "

@@ -192,12 +192,17 @@ processes.post('/:id/processes/:processId/stop', loadProject, async (c: ProjectC
 /**
  * Start one configured process, replacing whatever the manager holds for it.
  *
- * The stop is not redundant. A process that exited stays in the manager's map
- * with status 'failed' -- nothing sweeps exited processes -- and
- * startProjectProcesses skips any id already present, returning the stale
- * status as though it had started something. Without evicting first, starting
- * a crashed process is a silent no-op. Stopping something already gone is
- * harmless, so both start and restart take the same path.
+ * The stop is not redundant, and it has to complete rather than merely be
+ * requested. A process that exited stays in the manager's map with status
+ * 'failed' -- nothing sweeps exited processes -- and startProjectProcesses
+ * skips any id already present, returning the stale status as though it had
+ * started something. Without evicting first, starting a crashed process is a
+ * silent no-op.
+ *
+ * For restart the process is usually alive, so the stop is a real kill: it is
+ * awaited to completion before the replacement spawns, or the two overlap on
+ * the same port. Stopping something already gone is harmless, so both start
+ * and restart take the same path.
  */
 const startConfiguredProcess = async (c: ProjectContext, message: string) => {
   const project = c.get('project');
@@ -215,7 +220,23 @@ const startConfiguredProcess = async (c: ProjectContext, message: string) => {
     );
   }
 
-  await processManagerService.stopProcess(project.id, processId);
+  // Waits for the old process to actually exit, not just to be signalled: the
+  // replacement would otherwise spawn while the original still held its port,
+  // and a dev server that cannot bind either fails or quietly moves ports.
+  const stopped = await processManagerService.stopProcessAndWait(project.id, processId);
+
+  // A process we could not signal stays tracked, and startProjectProcesses
+  // skips ids it already holds -- so starting here would spawn nothing and
+  // still report success. Say so instead.
+  if (!stopped) {
+    return c.json(
+      {
+        error: 'Could not stop the running process, so it was not restarted',
+      },
+      500
+    );
+  }
+
   await processManagerService.startProjectProcesses(project.id, project.path, [config]);
 
   // The project's whole status, not what startProjectProcesses returned: that

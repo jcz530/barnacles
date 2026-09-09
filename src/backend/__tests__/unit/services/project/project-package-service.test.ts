@@ -350,11 +350,11 @@ describe('ProjectPackageService', () => {
       );
     };
 
-    it('resolves the package manager per directory, not once for the project', async () => {
-      // The reason this lives on the server. A monorepo root and a workspace can
-      // use different managers, and a client resolving that per subdirectory
-      // shows the wrong command until each reply lands -- one keystroke from
-      // running it.
+    it('gives a workspace with no lockfile the root’s package manager', async () => {
+      // The usual monorepo shape: pnpm or yarn keeps one lockfile at the root
+      // and the workspaces carry none. Resolving each directory in isolation
+      // reported npm for every workspace, and `npm run` inside a pnpm workspace
+      // writes a stray package-lock.json and a divergent node_modules.
       const projectPath = '/test/monorepo';
       mockProject(
         {
@@ -362,7 +362,6 @@ describe('ProjectPackageService', () => {
           [path.join(projectPath, 'api', 'package.json')]: { scripts: { build: 'tsc' } },
         },
         ['api'],
-        // pnpm at the root, nothing in api/ -- so api/ falls back to npm.
         [path.join(projectPath, 'pnpm-lock.yaml')]
       );
 
@@ -382,10 +381,26 @@ describe('ProjectPackageService', () => {
           relativeDir: 'api',
           name: 'build',
           script: 'tsc',
-          command: 'npm run build',
+          command: 'pnpm build',
           manifest: 'api/package.json',
         },
       ]);
+    });
+
+    it('lets a workspace with its own lockfile override the root', async () => {
+      const projectPath = '/test/monorepo';
+      mockProject(
+        {
+          [path.join(projectPath, 'package.json')]: { scripts: { build: 'turbo build' } },
+          [path.join(projectPath, 'legacy', 'package.json')]: { scripts: { build: 'tsc' } },
+        },
+        ['legacy'],
+        [path.join(projectPath, 'pnpm-lock.yaml'), path.join(projectPath, 'legacy', 'yarn.lock')]
+      );
+
+      const result = await projectPackageService.getRunnableScripts(projectPath);
+
+      expect(result.map(entry => entry.command)).toEqual(['pnpm build', 'yarn build']);
     });
 
     it('gives npm the run verb and yarn the bare script name', async () => {

@@ -213,9 +213,12 @@ const processRow = (
 ): Command => {
   const state = stateOf(status, entry.id);
   const live = liveEntry(status, entry.id);
-  // The configured url is what the row promises; a detected one is better,
-  // since a dev server that picked its own port knows where it actually is.
-  const url = live?.url ?? live?.detectedUrl ?? entry.url;
+  // The detected url first: a dev server that picked its own port knows where
+  // it actually is, and the configured one is then a stale guess. Checking
+  // live.url ahead of it never reached the detected value at all -- status
+  // builds that field as `configuredUrl || detectedUrl`, so it is the
+  // configured one whenever there is one.
+  const url = live?.detectedUrl ?? live?.url ?? entry.url;
 
   const subtitles: Record<ProcessRowState, string> = {
     running: 'Running',

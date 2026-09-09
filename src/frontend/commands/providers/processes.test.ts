@@ -246,9 +246,14 @@ describe('projectProcessActions', () => {
 
   it('prefers a detected URL over the configured one', () => {
     // A dev server that picked its own port knows where it actually is.
+    //
+    // The fixture mirrors what the backend really sends: status builds `url` as
+    // `configuredUrl || detectedUrl`, so a configured process reports BOTH, with
+    // url holding the configured value. Testing with url absent passed against a
+    // shape the backend never emits.
     const actions = projectProcessActions(
       project(),
-      [status([live({ detectedUrl: 'http://localhost:5174' })])],
+      [status([live({ url: 'http://localhost:3000', detectedUrl: 'http://localhost:5174' })])],
       loaded([configured({ url: 'http://localhost:3000' })]),
       deps()
     );

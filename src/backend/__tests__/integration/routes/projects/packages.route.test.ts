@@ -182,10 +182,10 @@ describe('Projects Packages API Integration Tests', () => {
       ]);
     });
 
-    it('resolves each workspace against its own package manager', async () => {
-      // The whole reason the command is built on the server: the root and a
-      // workspace can disagree, and the client cannot know without a request
-      // per subdirectory.
+    it('resolves a workspace against the root lockfile when it has none', async () => {
+      // The usual monorepo shape: one lockfile at the root, none in the
+      // workspaces. Resolving each directory alone reported npm for the
+      // workspace, which is the wrong command to run there.
       const { db, app } = context.get();
 
       const dir = await makeProject(
@@ -207,7 +207,7 @@ describe('Projects Packages API Integration Tests', () => {
       );
       expect(commands).toEqual([
         ['', 'pnpm build'],
-        ['api', 'npm run build'],
+        ['api', 'pnpm build'],
       ]);
     });
 

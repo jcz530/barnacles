@@ -33,6 +33,8 @@ vi.mock('@backend/services/process-manager-service', () => ({
     }),
     getAllProcessStatuses: vi.fn().mockReturnValue([]),
     stopProcess: vi.fn().mockResolvedValue(undefined),
+    // Resolves true: the stop succeeded and the entry left the map.
+    stopProcessAndWait: vi.fn().mockResolvedValue(true),
     getProcessOutput: vi.fn().mockReturnValue(['line1\n', 'line2\n', 'line3\n']),
   },
 }));
@@ -284,7 +286,8 @@ describe('Projects Processes API Integration Tests', () => {
 
       await post(app, `/api/projects/${project.id}/processes/dev/start`);
 
-      const stopOrder = vi.mocked(processManagerService.stopProcess).mock.invocationCallOrder[0];
+      const stopOrder = vi.mocked(processManagerService.stopProcessAndWait).mock
+        .invocationCallOrder[0];
       const startOrder = vi.mocked(processManagerService.startProjectProcesses).mock
         .invocationCallOrder[0];
       expect(stopOrder).toBeLessThan(startOrder);
@@ -301,6 +304,21 @@ describe('Projects Processes API Integration Tests', () => {
 
       expect(processManagerService.getProcessStatus).toHaveBeenCalledWith(project.id);
       expect((response.data as any).data).toEqual({ projectId: 'test-id', processes: [] });
+    });
+
+    it('should report failure when the running process could not be stopped', async () => {
+      // startProjectProcesses skips ids already in the manager's map, so
+      // starting after a failed stop spawns nothing. Reporting success there
+      // left the palette showing a process it had not actually started.
+      const { db, app } = context.get();
+
+      const { project } = await createProjectWithProcess(db);
+      vi.mocked(processManagerService.stopProcessAndWait).mockResolvedValueOnce(false);
+
+      const response = await post(app, `/api/projects/${project.id}/processes/dev/start`);
+
+      expect(response.status).toBe(500);
+      expect(processManagerService.startProjectProcesses).not.toHaveBeenCalled();
     });
 
     it('should return 404 for a process that is not configured', async () => {
@@ -333,9 +351,10 @@ describe('Projects Processes API Integration Tests', () => {
 
       expect(response.status).toBe(200);
       expect((response.data as any).message).toBe('Process restarted successfully');
-      expect(processManagerService.stopProcess).toHaveBeenCalledWith(project.id, 'dev');
+      expect(processManagerService.stopProcessAndWait).toHaveBeenCalledWith(project.id, 'dev');
 
-      const stopOrder = vi.mocked(processManagerService.stopProcess).mock.invocationCallOrder[0];
+      const stopOrder = vi.mocked(processManagerService.stopProcessAndWait).mock
+        .invocationCallOrder[0];
       const startOrder = vi.mocked(processManagerService.startProjectProcesses).mock
         .invocationCallOrder[0];
       expect(stopOrder).toBeLessThan(startOrder);
