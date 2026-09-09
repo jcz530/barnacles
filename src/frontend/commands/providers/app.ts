@@ -1,11 +1,16 @@
-import { MoonStar, RefreshCw, SquarePlus, Sun } from 'lucide-vue-next';
-import type { Command } from '../types';
+import { Keyboard, MoonStar, RefreshCw, SquarePlus, Sun } from 'lucide-vue-next';
+import type { Command, CommandContext } from '../types';
 
 export interface AppCommandDeps {
   rescanAll: () => void | Promise<void>;
   toggleTheme: () => void;
   isDark: () => boolean;
   newWindow: () => void | Promise<void>;
+  /**
+   * Whether the global shortcut is already on. It ships off, and the row that
+   * offers to set it up is only worth showing to someone who has not.
+   */
+  globalShortcutEnabled: boolean;
 }
 
 /**
@@ -45,6 +50,29 @@ export const appCommands = (deps: AppCommandDeps): Command[] => [
       ctx.dismiss();
     },
   },
+  // Only for people who have not set it up. Reaching this row means the palette
+  // is already open and being used, which is the moment its "from anywhere"
+  // half is worth explaining -- and the one place the setting can be offered
+  // without the circularity of needing the global shortcut to find it.
+  ...(deps.globalShortcutEnabled
+    ? []
+    : [
+        {
+          id: 'app.enable-global-shortcut',
+          title: 'Open the palette from anywhere',
+          subtitle: 'Set up a global shortcut',
+          group: 'app' as const,
+          icon: Keyboard,
+          keywords: ['global', 'shortcut', 'hotkey', 'anywhere', 'background', 'keybinding'],
+          priority: 1,
+          primaryActionLabel: 'Set Up',
+          // Settings rather than a toggle here: the combo has to be chosen and
+          // the registration can fail against whatever already owns it, and
+          // neither a picker nor that error has anywhere to live in a palette
+          // row that dismisses itself.
+          run: (ctx: CommandContext) => ctx.navigate('/settings'),
+        },
+      ]),
   {
     id: 'app.new-window',
     title: 'New window',

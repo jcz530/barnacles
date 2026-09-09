@@ -283,6 +283,7 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
         newWindow: async () => {
           await window.electron.createNewWindow();
         },
+        globalShortcutEnabled: settingValue('commandPaletteShortcutEnabled') === 'true',
       }),
     ];
   });

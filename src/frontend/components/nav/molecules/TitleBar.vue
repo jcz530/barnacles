@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Button } from '@/components/ui/button';
+import PaletteSearchButton from './PaletteSearchButton.vue';
 
 const router = useRouter();
 
@@ -95,6 +96,12 @@ updateNavigationButtons();
 
     <!-- Draggable area for window movement -->
     <div class="drag-region flex-1" />
+
+    <!--
+      The only on-screen way in to the palette. Without it both the shortcut and
+      the palette itself are invisible unless somebody already knows.
+    -->
+    <PaletteSearchButton class="mr-3" />
   </div>
 </template>
 

@@ -42,7 +42,7 @@ const DEFAULT_SETTINGS = {
   // Off by default: a system-wide hotkey should be opted into, not sprung on
   // someone. Deliberately not Cmd+K, which the in-app palette uses -- a global
   // grab would swallow it before the renderer ever saw it.
-  commandPaletteShortcut: { value: 'CommandOrControl+Shift+P', type: 'string' as const },
+  commandPaletteShortcut: { value: 'Alt+B', type: 'string' as const },
   commandPaletteShortcutEnabled: { value: 'false', type: 'boolean' as const },
   showDashboardStats: { value: 'true', type: 'boolean' as const },
   installCliCommand: { value: 'true', type: 'boolean' as const },
