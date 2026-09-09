@@ -8,7 +8,7 @@ import CommandPalette from '@/components/command-palette/organisms/CommandPalett
 // This window has no router of its own, and it stays alive (hidden) between
 // invocations, so the registry is always "open" here.
 const isOpen = ref(true);
-const { commands } = useCommandRegistry(isOpen);
+const { commands, resetLazyState } = useCommandRegistry(isOpen);
 const queryClient = useQueryClient();
 const paletteRef = ref<InstanceType<typeof CommandPalette> | null>(null);
 
@@ -56,6 +56,10 @@ onMounted(() => {
     // Clearing the query and focusing the input is all that has to happen before
     // the window paints.
     paletteRef.value?.reset();
+    // Configured processes are fetched lazily and kept in the registry, which
+    // outlives an open along with this window -- so a reopen must not serve the
+    // list from the last time it was used.
+    resetLazyState();
 
     // Refetching is deferred past the opening frame. TanStack serves the cached
     // list meanwhile, so the palette is usable immediately; /api/ports shells out
@@ -66,6 +70,10 @@ onMounted(() => {
       // Keyed 'process-status-all' when no projectId is passed, which is how the
       // registry queries it; ['project', id, 'process-status'] is the per-project form.
       void queryClient.invalidateQueries({ queryKey: ['process-status-all'] });
+      // Prefix-matches every ['project', id, ...] key, so a project's configured
+      // processes are refetched too -- they have a five-minute staleTime, long
+      // enough that a process added in the app would not otherwise show up here.
+      void queryClient.invalidateQueries({ queryKey: ['project'] });
     });
   });
 });

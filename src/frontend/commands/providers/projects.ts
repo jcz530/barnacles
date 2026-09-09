@@ -7,6 +7,13 @@ import {
   Star,
 } from 'lucide-vue-next';
 import type { DetectedIDE, DetectedTerminal, ProjectWithDetails } from '../../../shared/types/api';
+import type { ProjectProcessStatus } from '../../../shared/types/process';
+import {
+  projectProcessActions,
+  type ProcessCommandDeps,
+  type ProcessCommandState,
+} from './processes';
+import { scriptCommands, type ScriptCommandDeps, type ScriptCommandState } from './scripts';
 import { resolvePreferred } from '../preferences';
 import type { Command, CommandContext } from '../types';
 
@@ -24,6 +31,20 @@ export interface ProjectCommandDeps {
   setPreferredTerminal: (projectId: string, terminalId: string) => void | Promise<void>;
   revealInFinder: (projectPath: string) => void;
   copyPath: (projectPath: string) => void | Promise<void>;
+
+  /** What is running, and what each project has configured to run. */
+  processStatuses: ProjectProcessStatus[];
+  processState: ProcessCommandState;
+  processDeps: ProcessCommandDeps;
+  /** The project's runnable scripts, and how to run one. */
+  scriptState: ScriptCommandState;
+  scriptDeps: ScriptCommandDeps;
+  /**
+   * Start fetching a project's configured processes and its scripts. Called as
+   * the project's level opens, since that is the only place either is shown.
+   */
+  loadProcesses: (projectId: string) => void;
+  loadScripts: (projectId: string) => void;
 }
 
 /**
@@ -87,6 +108,13 @@ export const projectCommands = (
       priority,
       primaryActionLabel: 'Open Project',
       run: ctx => ctx.navigate(`/projects/${project.id}`),
+      // The processes shown in this project's level are the only thing here
+      // that has to be fetched, and only this project's are needed -- so they
+      // are asked for as the level opens rather than for every project up front.
+      prepare: () => {
+        deps.loadProcesses(project.id);
+        deps.loadScripts(project.id);
+      },
       actions: () => projectActions(project, deps, preferredIde, preferredTerminal),
     };
   });
@@ -156,6 +184,10 @@ const projectActions = (
       ctx.dismiss();
     },
   },
+  // Appended, so the level always opens with the project's own verbs on screen
+  // and the processes fill in beneath them once they arrive.
+  ...projectProcessActions(project, deps.processStatuses, deps.processState, deps.processDeps),
+  ...scriptCommands(project, deps.scriptState, deps.scriptDeps),
 ];
 
 interface ToolActionSpec<T extends { id: string; name: string }> {

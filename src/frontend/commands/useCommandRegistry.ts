@@ -1,7 +1,8 @@
-import { computed, type Ref } from 'vue';
+import { computed, ref, type Ref } from 'vue';
 import { useDark, useLocalStorage } from '@vueuse/core';
 import { toast } from 'vue-sonner';
 import { useQueries } from '@/composables/useQueries';
+import type { RunnableScript, StartProcess } from '@shared/types/process';
 import { useProjectActions } from '@/composables/useProjectActions';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
 import { handlePermissionError } from '@/utils/error-handlers';
@@ -32,6 +33,12 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
     useKillPortMutation,
     useStartProjectProcessesMutation,
     useStopProjectProcessesMutation,
+    useStartProcessMutation,
+    useRestartProcessMutation,
+    useStopProcessMutation,
+    fetchStartProcesses,
+    fetchRunnableScripts,
+    useCreateProcessMutation,
     useDetectedIDEsQuery,
     useDetectedTerminalsQuery,
     useSettingsQuery,
@@ -63,6 +70,10 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
   const killPort = useKillPortMutation();
   const startProcesses = useStartProjectProcessesMutation();
   const stopProcesses = useStopProjectProcessesMutation();
+  const startProcess = useStartProcessMutation();
+  const restartProcess = useRestartProcessMutation();
+  const stopProcess = useStopProcessMutation();
+  const createProcess = useCreateProcessMutation();
   const updatePreferredIde = useUpdatePreferredIDEMutation();
   const updatePreferredTerminal = useUpdatePreferredTerminalMutation();
 
@@ -97,11 +108,120 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
   });
   const themeMode = useLocalStorage<'light' | 'dark' | 'auto'>('vueuse-color-scheme', 'auto');
 
+  /**
+   * Configured processes, per project, for the projects someone has opened.
+   *
+   * Fetched lazily: they are only ever shown inside a project's own level, and
+   * fetching every project's up front would be a request per project on every
+   * palette open for a level most opens never reach.
+   *
+   * Held here rather than on the level because the level stack rebuilds every
+   * open level from `actions` whenever this list changes. Keeping the data in
+   * the registry means that rebuild reproduces the same rows -- and is in fact
+   * what puts the fetched ones on screen.
+   */
+  const configuredProcesses = ref<Record<string, StartProcess[]>>({});
+  const loadingProcesses = ref<Record<string, boolean>>({});
+
+  const loadProcesses = (projectId: string) => {
+    if (configuredProcesses.value[projectId] || loadingProcesses.value[projectId]) return;
+    loadingProcesses.value = { ...loadingProcesses.value, [projectId]: true };
+
+    void fetchStartProcesses(projectId)
+      .then(data => {
+        // Replacing the object rather than mutating it: the commands computed
+        // below has to see a change, or the open level would never rebuild.
+        configuredProcesses.value = { ...configuredProcesses.value, [projectId]: data ?? [] };
+      })
+      .catch(() => {
+        // Leave the group empty rather than stuck on a skeleton. The project's
+        // own actions are unaffected.
+        configuredProcesses.value = { ...configuredProcesses.value, [projectId]: [] };
+      })
+      .finally(() => {
+        const { [projectId]: _done, ...rest } = loadingProcesses.value;
+        loadingProcesses.value = rest;
+      });
+  };
+
+  /**
+   * A project's runnable scripts, fetched on the same trigger as its processes.
+   *
+   * Separate from the processes cache because they are separate things: these
+   * are read from package.json/composer.json on disk and run as ad-hoc
+   * processes, where configured processes are DB-backed and tracked by id.
+   */
+  const scripts = ref<Record<string, RunnableScript[]>>({});
+  const loadingScripts = ref<Record<string, boolean>>({});
+
+  const loadScripts = (projectId: string) => {
+    if (scripts.value[projectId] || loadingScripts.value[projectId]) return;
+    loadingScripts.value = { ...loadingScripts.value, [projectId]: true };
+
+    void fetchRunnableScripts(projectId)
+      .then(data => {
+        scripts.value = { ...scripts.value, [projectId]: data ?? [] };
+      })
+      .catch(() => {
+        scripts.value = { ...scripts.value, [projectId]: [] };
+      })
+      .finally(() => {
+        const { [projectId]: _done, ...rest } = loadingScripts.value;
+        loadingScripts.value = rest;
+      });
+  };
+
+  /**
+   * Forget what was fetched lazily, so reopening does not serve a list from the
+   * last time this window was used -- the floating renderer outlives an open.
+   */
+  const resetLazyState = () => {
+    configuredProcesses.value = {};
+    loadingProcesses.value = {};
+    scripts.value = {};
+    loadingScripts.value = {};
+  };
+
   const commands = computed<Command[]>(() => {
     if (!isOpen.value) return [];
 
     const projectList = projects.value ?? [];
     const statusList = processStatuses.value ?? [];
+
+    const processState = {
+      configured: configuredProcesses.value,
+      loading: loadingProcesses.value,
+    };
+
+    const scriptState = {
+      scripts: scripts.value,
+      loading: loadingScripts.value,
+    };
+
+    const scriptDeps = {
+      runScript: async (projectId: string, cwd: string, command: string) => {
+        await createProcess.mutateAsync({ projectId, cwd, command, title: command });
+      },
+    };
+
+    const processDeps = {
+      startProcesses: async (projectId: string) => {
+        await startProcesses.mutateAsync(projectId);
+      },
+      stopProcesses: async (projectId: string) => {
+        await stopProcesses.mutateAsync(projectId);
+      },
+      startProcess: async (projectId: string, processId: string) => {
+        await startProcess.mutateAsync({ projectId, processId });
+      },
+      stopProcess: async (projectId: string, processId: string) => {
+        await stopProcess.mutateAsync({ projectId, processId });
+      },
+      restartProcess: async (projectId: string, processId: string) => {
+        await restartProcess.mutateAsync({ projectId, processId });
+      },
+      openExternal: (url: string) => window.electron.shell.openExternal(url),
+    };
 
     return [
       ...projectCommands(projectList, {
@@ -133,15 +253,15 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
         },
         revealInFinder: openInFinder,
         copyPath,
+        processStatuses: statusList,
+        processState,
+        processDeps,
+        scriptState,
+        scriptDeps,
+        loadProcesses,
+        loadScripts,
       }),
-      ...processCommands(projectList, statusList, {
-        startProcesses: async projectId => {
-          await startProcesses.mutateAsync(projectId);
-        },
-        stopProcesses: async projectId => {
-          await stopProcesses.mutateAsync(projectId);
-        },
-      }),
+      ...processCommands(projectList, statusList, processState, processDeps),
       ...portCommands(ports.value ?? [], {
         killPort: async pid => {
           await killPort.mutateAsync(pid);
@@ -167,5 +287,5 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
     ];
   });
 
-  return { commands };
+  return { commands, resetLazyState };
 };

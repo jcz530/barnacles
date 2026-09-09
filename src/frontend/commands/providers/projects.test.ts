@@ -19,6 +19,20 @@ const deps = (overrides: Partial<ProjectCommandDeps> = {}): ProjectCommandDeps =
   setPreferredTerminal: vi.fn(),
   revealInFinder: vi.fn(),
   copyPath: vi.fn(),
+  processStatuses: [],
+  processState: { configured: {}, loading: {} },
+  processDeps: {
+    startProcesses: vi.fn(),
+    stopProcesses: vi.fn(),
+    startProcess: vi.fn(),
+    stopProcess: vi.fn(),
+    restartProcess: vi.fn(),
+    openExternal: vi.fn(),
+  },
+  scriptState: { scripts: {}, loading: {} },
+  scriptDeps: { runScript: vi.fn() },
+  loadProcesses: vi.fn(),
+  loadScripts: vi.fn(),
   ...overrides,
 });
 
@@ -76,6 +90,75 @@ describe('projectCommands', () => {
     const [command] = projectCommands([project({ icon: null })], deps());
 
     expect(command.projectIcon).toMatchObject({ hasIcon: false });
+  });
+
+  it('asks for the project’s processes and scripts as its level opens', () => {
+    const dependencies = deps();
+    const [command] = projectCommands([project()], dependencies);
+
+    command.prepare?.();
+
+    expect(dependencies.loadProcesses).toHaveBeenCalledWith('p1');
+    expect(dependencies.loadScripts).toHaveBeenCalledWith('p1');
+  });
+
+  it('puts Run Script after the processes once its scripts are known', () => {
+    const actions = actionsOf(
+      projectCommands(
+        [project()],
+        deps({
+          scriptState: {
+            scripts: {
+              p1: [
+                {
+                  source: 'npm',
+                  relativeDir: '',
+                  name: 'dev',
+                  script: 'vite',
+                  command: 'npm run dev',
+                  manifest: 'NPM',
+                },
+              ],
+            },
+            loading: {},
+          },
+        })
+      )[0]
+    );
+
+    expect(actions.at(-1)?.title).toBe('Run Script');
+  });
+
+  it('opens with the project’s own verbs before any process has loaded', () => {
+    // The level must never be empty or blocked on a fetch: pushing an empty
+    // level is refused, so the row would simply not respond.
+    const actions = actionsOf(projectCommands([project()], deps())[0]);
+
+    expect(actions.map(action => action.title)).toEqual([
+      'Open Project',
+      'Open in IDE',
+      'Open Terminal',
+      'Reveal in Finder',
+      'Copy Path',
+    ]);
+  });
+
+  it('appends the processes beneath the project’s own verbs once loaded', () => {
+    const actions = actionsOf(
+      projectCommands(
+        [project()],
+        deps({
+          processState: {
+            configured: { p1: [{ id: 'web', name: 'web', commands: ['npm run dev'] }] },
+            loading: {},
+          },
+        })
+      )[0]
+    );
+
+    // Still led by the project's verbs, with the processes after them.
+    expect(actions[0].title).toBe('Open Project');
+    expect(actions.at(-1)?.id).toBe('process:p1:web');
   });
 
   it('builds its actions only when they are asked for', () => {

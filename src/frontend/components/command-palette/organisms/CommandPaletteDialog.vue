@@ -17,7 +17,7 @@ import CommandPalette from './CommandPalette.vue';
 const open = defineModel<boolean>('open', { required: true });
 
 const router = useRouter();
-const { commands } = useCommandRegistry(open);
+const { commands, resetLazyState } = useCommandRegistry(open);
 const paletteRef = ref<InstanceType<typeof CommandPalette> | null>(null);
 
 // A fresh search each time it opens. Awaits the render: the palette lives
@@ -25,6 +25,10 @@ const paletteRef = ref<InstanceType<typeof CommandPalette> | null>(null);
 // this fires and the reset would be silently dropped.
 watch(open, async isOpen => {
   if (!isOpen) return;
+  // Lazily-fetched process lists are held in the registry, which lives as long
+  // as this dialog does -- so drop them rather than showing what was configured
+  // the last time the palette was opened.
+  resetLazyState();
   await nextTick();
   paletteRef.value?.reset();
 });
