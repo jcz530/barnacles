@@ -55,6 +55,10 @@ export const API_ROUTES = {
   PROJECTS_PROCESS_STATUS: '/api/projects/process-status',
   PROJECTS_STOP_PROCESS: (id: string, processId: string) =>
     `/api/projects/${id}/processes/${processId}/stop`,
+  PROJECTS_START_PROCESS: (id: string, processId: string) =>
+    `/api/projects/${id}/processes/${processId}/start`,
+  PROJECTS_RESTART_PROCESS: (id: string, processId: string) =>
+    `/api/projects/${id}/processes/${processId}/restart`,
   PROJECTS_PROCESS_OUTPUT: (id: string, processId: string) =>
     `/api/projects/${id}/processes/${processId}/output`,
   SETTINGS: '/api/settings',

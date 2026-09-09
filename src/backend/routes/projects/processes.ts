@@ -190,6 +190,80 @@ processes.post('/:id/processes/:processId/stop', loadProject, async (c: ProjectC
 });
 
 /**
+ * Start one configured process, replacing whatever the manager holds for it.
+ *
+ * The stop is not redundant. A process that exited stays in the manager's map
+ * with status 'failed' -- nothing sweeps exited processes -- and
+ * startProjectProcesses skips any id already present, returning the stale
+ * status as though it had started something. Without evicting first, starting
+ * a crashed process is a silent no-op. Stopping something already gone is
+ * harmless, so both start and restart take the same path.
+ */
+const startConfiguredProcess = async (c: ProjectContext, message: string) => {
+  const project = c.get('project');
+  const processId = c.req.param('processId');
+
+  const startProcesses: StartProcess[] = await projectService.getStartProcesses(project.id);
+  const config = startProcesses.find(startProcess => startProcess.id === processId);
+
+  if (!config) {
+    return c.json(
+      {
+        error: 'Process not configured for this project',
+      },
+      404
+    );
+  }
+
+  await processManagerService.stopProcess(project.id, processId);
+  await processManagerService.startProjectProcesses(project.id, project.path, [config]);
+
+  // The project's whole status, not what startProjectProcesses returned: that
+  // reports only the processes it was handed, which a client would read as the
+  // project's other processes having disappeared.
+  return c.json({
+    data: processManagerService.getProcessStatus(project.id),
+    message,
+  });
+};
+
+/**
+ * POST /:id/processes/:processId/start
+ * Start a single configured process, leaving the project's others alone
+ */
+processes.post('/:id/processes/:processId/start', loadProject, async (c: ProjectContext) => {
+  try {
+    return await startConfiguredProcess(c, 'Process started successfully');
+  } catch (error) {
+    console.error('Error starting process:', error);
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to start process',
+      },
+      500
+    );
+  }
+});
+
+/**
+ * POST /:id/processes/:processId/restart
+ * Stop a single configured process and start it again
+ */
+processes.post('/:id/processes/:processId/restart', loadProject, async (c: ProjectContext) => {
+  try {
+    return await startConfiguredProcess(c, 'Process restarted successfully');
+  } catch (error) {
+    console.error('Error restarting process:', error);
+    return c.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to restart process',
+      },
+      500
+    );
+  }
+});
+
+/**
  * GET /:id/processes/:processId/output
  * Get the output from a specific process
  */

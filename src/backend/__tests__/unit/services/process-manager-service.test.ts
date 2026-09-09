@@ -454,6 +454,37 @@ describe('ProcessManagerService', () => {
 
       expect(spawned).toHaveLength(1);
     });
+
+    it('leaves a project’s other processes running when one is started alone', async () => {
+      // What the palette's per-process Start relies on: starting one process
+      // must add to the project's map rather than replace it.
+      await startOne(service, { id: 'web', name: 'web' });
+      await startOne(service, { id: 'worker', name: 'worker' });
+
+      const status = service.getProcessStatus('project-1');
+
+      expect(status.processes.map(entry => entry.processId).sort()).toEqual(['web', 'worker']);
+      expect(status.processes.every(entry => entry.status === 'running')).toBe(true);
+    });
+
+    it('refuses to restart a crashed process until it is evicted', async () => {
+      // Why the start/restart routes stop first. A process that exited stays in
+      // the map as 'failed', and the guard above then skips it -- so starting
+      // it again silently does nothing until the entry is removed.
+      const { processId, pty } = await startOne(service);
+      pty.emitExit(1);
+
+      await startOne(service, { id: processId });
+      expect(spawned).toHaveLength(1);
+      expect(service.getProcessStatus('project-1').processes[0].status).toBe('failed');
+
+      vi.spyOn(process, 'kill').mockImplementation(() => true);
+      await service.stopProcess('project-1', processId);
+      await startOne(service, { id: processId });
+
+      expect(spawned).toHaveLength(2);
+      expect(service.getProcessStatus('project-1').processes[0].status).toBe('running');
+    });
   });
 
   describe('killProcessTree', () => {
