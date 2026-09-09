@@ -26,6 +26,7 @@ export const appCommands = (deps: AppCommandDeps): Command[] => [
     group: 'app',
     icon: RefreshCw,
     keywords: ['refresh', 'discover', 'find'],
+    priority: 1,
     run: async ctx => {
       await deps.rescanAll();
       ctx.dismiss();
@@ -38,6 +39,7 @@ export const appCommands = (deps: AppCommandDeps): Command[] => [
     group: 'app',
     icon: deps.isDark() ? Sun : MoonStar,
     keywords: ['theme', 'dark', 'light', 'appearance'],
+    priority: 1,
     run: ctx => {
       deps.toggleTheme();
       ctx.dismiss();
@@ -50,6 +52,7 @@ export const appCommands = (deps: AppCommandDeps): Command[] => [
     group: 'app',
     icon: SquarePlus,
     keywords: ['open', 'another'],
+    priority: 1,
     run: async ctx => {
       await deps.newWindow();
       ctx.dismiss();

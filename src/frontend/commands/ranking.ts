@@ -97,20 +97,39 @@ export const groupRankedCommands = (
  * commands, grouped. Dumping the whole registry here would be unreadable and
  * slow, since it can run to hundreds of entries.
  *
- * MAX_DEFAULT_RESULTS is an upper bound, not a target: grouping still applies
- * the per-group cap, so twenty favourite projects show five rows, not twelve.
- * That is deliberate -- the empty state is meant to be a sample of what the
- * palette can do, not a project list.
+ * The per-group cap does the trimming, so twenty favourite projects show five
+ * rows rather than crowding out everything else -- the empty state is meant to
+ * be a sample of what the palette can do, not a project list.
+ *
+ * MAX_DEFAULT_RESULTS is applied after that capping rather than before it.
+ * Truncating the ranked list up front let a busy machine spend the whole budget
+ * on running processes and favourites, leaving the groups below them with a
+ * row or two each -- a lone "Dashboard" under "Go to" reads as a glitch rather
+ * than a shortcut. Capping first means each group is either properly
+ * represented or absent.
  */
 export const defaultCommands = (commands: PaletteItem[]): RankedGroup[] => {
   const byPriority = [...commands]
     .filter(command => (command.priority ?? 0) > 0)
-    .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
-    .slice(0, MAX_DEFAULT_RESULTS);
+    .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
 
   // A flat score leaves effectiveScore ordering purely by priority, preserving
   // the sort above.
-  return groupRankedCommands(byPriority.map(item => ({ item, score: 0 })));
+  const grouped = groupRankedCommands(byPriority.map(item => ({ item, score: 0 })));
+
+  const kept: RankedGroup[] = [];
+  let taken = 0;
+
+  for (const group of grouped) {
+    // A group that would only partly fit is left out entirely.
+    if (taken + group.commands.length > MAX_DEFAULT_RESULTS) break;
+    kept.push(group);
+    taken += group.commands.length;
+  }
+
+  // Never show nothing: if the first group alone exceeds the budget it is still
+  // the most useful thing there is, so keep it.
+  return kept.length > 0 ? kept : grouped.slice(0, 1);
 };
 
 /**

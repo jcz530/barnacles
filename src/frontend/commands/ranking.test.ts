@@ -187,3 +187,44 @@ describe('levelDefaultItems', () => {
     expect(levelDefaultItems(items)).toHaveLength(2);
   });
 });
+
+describe('defaultCommands budget', () => {
+  it('drops a group that would only partly fit', () => {
+    // A busy machine used to spend the whole budget on running processes and
+    // favourites, leaving a lone "Dashboard" under "Go to" -- which reads as a
+    // glitch rather than a shortcut.
+    const many = [
+      ...Array.from({ length: 5 }, (_, i) => command(`proc-${i}`, 'processes', 3)),
+      ...Array.from({ length: 5 }, (_, i) => command(`fav-${i}`, 'projects', 2)),
+      ...Array.from({ length: 5 }, (_, i) => command(`nav-${i}`, 'navigation', 1)),
+    ];
+
+    const groups = defaultCommands(many);
+    const shown = groups.flatMap(group => group.commands);
+
+    expect(shown.length).toBeLessThanOrEqual(MAX_DEFAULT_RESULTS);
+    // Either a group is properly represented or it is absent.
+    for (const group of groups) {
+      expect(group.commands.length).toBe(MAX_PER_GROUP);
+    }
+  });
+
+  it('keeps whole groups while they fit', () => {
+    const commands = [
+      ...Array.from({ length: 3 }, (_, i) => command(`nav-${i}`, 'navigation', 1)),
+      ...Array.from({ length: 3 }, (_, i) => command(`app-${i}`, 'app', 1)),
+    ];
+
+    expect(defaultCommands(commands).map(group => group.id)).toEqual(['navigation', 'app']);
+  });
+
+  it('shows the leading group even when it alone fills the budget', () => {
+    // Never render an empty palette: the top group is still the most useful
+    // thing available.
+    const commands = Array.from({ length: MAX_DEFAULT_RESULTS + 5 }, (_, i) =>
+      command(`fav-${i}`, 'projects', 2)
+    );
+
+    expect(defaultCommands(commands)).toHaveLength(1);
+  });
+});

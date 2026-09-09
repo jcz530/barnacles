@@ -1,8 +1,13 @@
 import { ALL_NAV_ITEMS } from '@/constants/navigation';
 import type { Command } from '../types';
 
-/** Top-level destinations worth showing before anything is typed. */
-const DEFAULT_VISIBLE = new Set(['/projects', '/ports', '/terminals']);
+/**
+ * Destinations worth offering before anything is typed.
+ *
+ * Five, which is what one group can show, so the empty palette is a useful
+ * starting point rather than a hint that you should type something.
+ */
+const DEFAULT_VISIBLE = new Set(['/', '/projects', '/terminals', '/ports', '/utilities']);
 
 /**
  * One command per navigable page, sourced from the same constants the sidebar
