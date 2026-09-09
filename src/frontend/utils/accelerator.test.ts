@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   eventToAccelerator,
+  acceleratorParts,
   formatAccelerator,
   isRiskyAccelerator,
   normalizeKey,
@@ -109,6 +110,43 @@ describe('isRiskyAccelerator', () => {
 
   it('leaves an unclaimed combo alone', () => {
     expect(isRiskyAccelerator('CommandOrControl+Shift+P')).toBe(false);
+  });
+});
+
+describe('acceleratorParts', () => {
+  it('splits a mac combo into its keys, for spacing them apart', () => {
+    // Run together the glyphs read as one dense mark at chip size.
+    expect(acceleratorParts('CommandOrControl+Shift+P', true)).toEqual(['⌘', '⇧', 'P']);
+  });
+
+  it('keeps the separators as parts of their own elsewhere', () => {
+    expect(acceleratorParts('CommandOrControl+Shift+P', false)).toEqual([
+      'Ctrl',
+      '+',
+      'Shift',
+      '+',
+      'P',
+    ]);
+  });
+
+  it('renders a single key as one part', () => {
+    expect(acceleratorParts('Right', true)).toEqual(['→']);
+    expect(acceleratorParts('Return', false)).toEqual(['↩']);
+  });
+
+  it('has nothing to render for an empty accelerator', () => {
+    expect(acceleratorParts('', true)).toEqual([]);
+  });
+
+  it('joins back to what formatAccelerator produces on mac', () => {
+    // The two must not drift: the chip renders the parts, and everything else
+    // still reads the joined string.
+    expect(acceleratorParts('CommandOrControl+Shift+P', true).join('')).toBe(
+      formatAccelerator('CommandOrControl+Shift+P', true)
+    );
+    expect(acceleratorParts('CommandOrControl+N', false).join('')).toBe(
+      formatAccelerator('CommandOrControl+N', false)
+    );
   });
 });
 

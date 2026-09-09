@@ -157,6 +157,28 @@ export const formatAccelerator = (accelerator: string, isMac: boolean): string =
   return parts.map(part => NON_MAC_LABELS[part] ?? KEY_SYMBOLS[part] ?? part).join('+');
 };
 
+/**
+ * The same rendering, split into its keys.
+ *
+ * macOS writes shortcuts as glyphs run together, which at this size reads as
+ * one dense blob -- so the chip spaces them itself rather than relying on the
+ * joined string. Elsewhere the "+" separators are kept as their own parts, so
+ * they can be dimmed against the keys they join.
+ */
+export const acceleratorParts = (accelerator: string, isMac: boolean): string[] => {
+  if (!accelerator) return [];
+
+  const parts = accelerator.split('+');
+
+  if (isMac) {
+    return parts.map(part => MAC_SYMBOLS[part] ?? KEY_SYMBOLS[part] ?? part);
+  }
+
+  return parts
+    .map(part => NON_MAC_LABELS[part] ?? KEY_SYMBOLS[part] ?? part)
+    .flatMap((part, index) => (index === 0 ? [part] : ['+', part]));
+};
+
 /** Combos the OS or common apps already own; worth warning about, not blocking. */
 const RISKY_ACCELERATORS = new Set([
   'CommandOrControl+Space',

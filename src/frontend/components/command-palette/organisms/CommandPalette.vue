@@ -251,7 +251,12 @@ watch(depth, value => emit('depthChange', value), { immediate: true });
     :class="['flex flex-col overflow-hidden', heightClass ?? 'max-h-[60vh]']"
     @highlight="highlightedId = ($event?.value as string) ?? null"
   >
-    <div class="flex items-center gap-2 border-b px-4">
+    <!--
+      A step darker than the default border token, which is slate-100: this rule
+      separates the search box from the results rather than dividing rows within
+      a list, and at slate-100 it read as a seam rather than an edge.
+    -->
+    <div class="flex items-center gap-2 border-b border-b-slate-400/60 px-4">
       <SearchIcon class="size-4 shrink-0 opacity-50" />
       <ComboboxInput
         ref="inputRef"

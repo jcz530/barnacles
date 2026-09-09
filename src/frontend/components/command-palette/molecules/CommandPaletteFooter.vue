@@ -28,11 +28,11 @@ const label = computed(() => props.primaryLabel || 'Select');
 
 <template>
   <div
-    class="text-muted-foreground flex h-10 shrink-0 items-center justify-between gap-3 border-t px-3 text-xs"
+    class="text-muted-foreground flex h-10 shrink-0 items-center justify-between gap-3 border-t border-t-slate-400/60 bg-slate-200 px-3 text-xs"
   >
     <div class="flex min-w-0 items-center gap-1.5">
       <template v-for="(crumb, index) in breadcrumb" :key="`${index}-${crumb.title}`">
-        <ChevronRight v-if="index > 0" class="size-3 shrink-0 opacity-50" />
+        <ChevronRight v-if="index > 0" class="size-6 shrink-0 opacity-50" />
         <!--
           The same icon the row carried, so a level reads as belonging to the
           thing it was opened from rather than as a bare name.
@@ -43,7 +43,7 @@ const label = computed(() => props.primaryLabel || 'Select');
           size="sm"
           class="shrink-0"
         />
-        <component :is="crumb.icon" v-else-if="crumb.icon" class="size-3.5 shrink-0 opacity-70" />
+        <component :is="crumb.icon" v-else-if="crumb.icon" class="size-6 shrink-0 opacity-70" />
         <span class="truncate" :class="{ 'text-foreground': index === breadcrumb.length - 1 }">
           {{ crumb.title }}
         </span>
@@ -63,7 +63,7 @@ const label = computed(() => props.primaryLabel || 'Select');
         matter when the caret is mid-query where the arrows move it instead.
       -->
       <template v-if="hasActions">
-        <span class="bg-border h-4 w-px" aria-hidden="true" />
+        <span class="h-4 w-px bg-slate-300" aria-hidden="true" />
         <span class="flex items-center gap-1.5">
           Actions
           <KeyHint accelerator="Right" />
