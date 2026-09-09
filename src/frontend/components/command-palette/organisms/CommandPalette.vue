@@ -177,16 +177,17 @@ const goBack = (): boolean => {
 /**
  * Escape from inside the search box.
  *
- * Backing out of a level consumes the key, so whatever would otherwise close
- * the surface doesn't: reka's dismissable layer dismisses only when the event
- * was not already handled, and the floating window's host checks the same
- * thing before telling the main process to hide.
+ * Inside a level it backs out one and stops there. At the root it asks the host
+ * to close, rather than letting the key travel and hoping something catches it:
+ * the combobox consumes Escape of its own accord, so reka's dismissable layer
+ * never saw it and the in-app dialog simply stayed open.
  *
- * At the root it does nothing and lets the event through, because closing is
- * the surface's business -- a dialog and a panel close differently.
+ * The floating window's host intercepts Escape in the main process before this
+ * renderer runs at all, so it is unaffected either way.
  */
 const handleEscapeKey = (event: KeyboardEvent) => {
-  if (goBack()) event.preventDefault();
+  event.preventDefault();
+  if (!goBack()) emit('dismiss');
 };
 
 // goBack is exposed because the in-app dialog owns Escape: reka's dismissable
@@ -269,8 +270,6 @@ watch(depth, value => emit('depthChange', value), { immediate: true });
         @keydown.escape="handleEscapeKey"
         @keydown.left="backFromCaretStart"
         @keydown.right="openFromCaretEnd"
-        @keydown.meta.k.prevent="openActions(highlighted)"
-        @keydown.ctrl.k.prevent="openActions(highlighted)"
         @keydown.tab.exact.prevent="openActions(highlighted)"
         @keydown.tab.shift.prevent="goBack()"
       />

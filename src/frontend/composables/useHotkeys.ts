@@ -1,4 +1,4 @@
-import { useMagicKeys, whenever } from '@vueuse/core';
+import { useEventListener, useMagicKeys, whenever } from '@vueuse/core';
 import { useRouter } from 'vue-router';
 import { RouteNames } from '@/router';
 import { useCommandPaletteState } from '@/composables/useCommandPaletteState';
@@ -16,20 +16,33 @@ export const useHotkeys = () => {
     void router.push({ name: RouteNames.Settings });
   });
 
-  // Cmd+K or Ctrl+K - Open the command palette. Unlike the bare-key shortcuts
-  // below, a modifier combo is safe to fire while an input has focus.
-  //
-  // Only opens. Once the palette is up, Cmd+K belongs to it -- that is how you
-  // reach the highlighted item's actions -- and this listener is on window, so
-  // without the guard it would close the palette out from under that gesture.
-  // Escape and the global hotkey still close it.
-  const openPalette = () => {
-    if (palette.isOpen.value) return;
-    palette.open();
-  };
+  /*
+   * Cmd+K or Ctrl+K - Toggle the command palette.
+   *
+   * It toggles because the palette no longer binds the combo itself: reaching a
+   * row's actions is the right arrow or tab now, so the same keystroke that
+   * opened the palette can close it again.
+   *
+   * Listened for directly rather than through useMagicKeys. That tracks which
+   * keys are down and fires when the combination becomes true, so holding Cmd
+   * and pressing K a second time never re-fires -- the combination was already
+   * true and never went false in between. A keydown is the gesture itself, and
+   * repeats regardless of what is still being held.
+   *
+   * A modifier combo is safe to bind while an input has focus, unlike the
+   * bare-key shortcuts above.
+   */
+  useEventListener(window, 'keydown', (event: KeyboardEvent) => {
+    if (event.key !== 'k' && event.key !== 'K') return;
+    if (!event.metaKey && !event.ctrlKey) return;
+    // Let the OS keep Cmd+Alt+K and friends; only the plain combo is ours.
+    if (event.altKey || event.shiftKey) return;
+    // Holding the key down repeats the event; one press is one toggle.
+    if (event.repeat) return;
 
-  whenever(keys['Meta+K'], openPalette);
-  whenever(keys['Ctrl+K'], openPalette);
+    event.preventDefault();
+    palette.toggle();
+  });
 
   // Add more global hotkeys here in the future
 };

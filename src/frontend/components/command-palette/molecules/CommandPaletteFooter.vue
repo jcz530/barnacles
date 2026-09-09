@@ -59,8 +59,10 @@ const label = computed(() => props.primaryLabel || 'Select');
       <!--
         The arrow rather than Cmd+K, which this used to advertise. Right is the
         gesture people reach for -- it pairs with Left going back out, and it is
-        what the row's chevron already suggests. Cmd+K and Tab still work, and
-        matter when the caret is mid-query where the arrows move it instead.
+        what the row's chevron already suggests. Tab does the same, and matters
+        when the caret is mid-query where the arrows move it instead. Cmd+K no
+        longer opens actions: it belongs to the palette itself, so pressing it
+        again closes what it opened.
       -->
       <template v-if="hasActions">
         <span class="h-4 w-px bg-slate-300" aria-hidden="true" />
