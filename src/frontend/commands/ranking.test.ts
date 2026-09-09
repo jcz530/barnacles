@@ -3,6 +3,7 @@ import {
   defaultCommands,
   effectiveScore,
   groupRankedCommands,
+  levelDefaultItems,
   MAX_DEFAULT_RESULTS,
   MAX_PER_GROUP,
   MAX_RESULTS,
@@ -129,5 +130,60 @@ describe('defaultCommands', () => {
 
   it('is empty when nothing is prioritized', () => {
     expect(defaultCommands([command('a', 'projects'), command('b', 'ports')])).toEqual([]);
+  });
+});
+
+describe('grouping limits', () => {
+  it('lifts the per-group cap when asked', () => {
+    // A nested level is a curated list of one item's actions. Capping it at
+    // five would silently hide a sixth installed IDE from its own picker.
+    const many: ScoredCommand[] = Array.from({ length: MAX_PER_GROUP + 3 }, (_, index) =>
+      scored(`ide-${index}`, 'projects', 0.1)
+    );
+
+    const groups = groupRankedCommands(many, { maxPerGroup: Number.POSITIVE_INFINITY });
+
+    expect(groups[0].commands).toHaveLength(MAX_PER_GROUP + 3);
+  });
+
+  it('still applies the default cap when no limits are given', () => {
+    const many: ScoredCommand[] = Array.from({ length: MAX_PER_GROUP + 3 }, (_, index) =>
+      scored(`ide-${index}`, 'projects', 0.1)
+    );
+
+    expect(groupRankedCommands(many)[0].commands).toHaveLength(MAX_PER_GROUP);
+  });
+});
+
+describe('levelDefaultItems', () => {
+  it('shows every action, including the unprioritized ones', () => {
+    // defaultCommands filters to priority > 0, which is right for the root and
+    // would leave a level empty -- an item's actions rarely carry a priority.
+    const items = [
+      command('reveal', 'projects'),
+      command('copy-path', 'projects'),
+      command('open-ide', 'projects'),
+    ];
+
+    const shown = levelDefaultItems(items).flatMap(group => group.commands);
+
+    expect(shown).toHaveLength(3);
+  });
+
+  it('keeps more actions than a root group would allow', () => {
+    const items = Array.from({ length: MAX_PER_GROUP + 2 }, (_, index) =>
+      command(`ide-${index}`, 'projects')
+    );
+
+    expect(levelDefaultItems(items).flatMap(group => group.commands)).toHaveLength(
+      MAX_PER_GROUP + 2
+    );
+  });
+
+  it('groups actions so a level can separate them visually', () => {
+    // "Set as default" rows sit in their own group to read as a distinct block.
+    const items = [command('open-ide', 'projects'), command('set-default', 'app')];
+
+    expect(levelDefaultItems(items)).toHaveLength(2);
   });
 });

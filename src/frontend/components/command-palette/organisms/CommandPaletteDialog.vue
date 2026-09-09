@@ -30,6 +30,10 @@ watch(open, async isOpen => {
 });
 
 const runCommand = async (command: Command) => {
+  // An item can carry actions instead of a default verb, in which case the
+  // palette opens its level rather than emitting it here.
+  if (!command.run) return;
+
   await command.run({
     surface: 'in-app',
     navigate: async path => {
