@@ -114,6 +114,26 @@ const MAC_SYMBOLS: Record<string, string> = {
   Shift: '⇧',
 };
 
+/**
+ * Glyphs for the non-modifier keys that have one.
+ *
+ * Shared by both platforms: an arrow or a return glyph reads the same
+ * everywhere, unlike the modifiers, which macOS alone writes as symbols. Keys
+ * without a conventional glyph keep their name.
+ */
+const KEY_SYMBOLS: Record<string, string> = {
+  Return: '↩',
+  Tab: '⇥',
+  Escape: '⎋',
+  Backspace: '⌫',
+  Delete: '⌦',
+  Up: '↑',
+  Down: '↓',
+  Left: '←',
+  Right: '→',
+  Space: '␣',
+};
+
 const NON_MAC_LABELS: Record<string, string> = {
   CommandOrControl: 'Ctrl',
   Command: 'Win',
@@ -131,10 +151,10 @@ export const formatAccelerator = (accelerator: string, isMac: boolean): string =
   const parts = accelerator.split('+');
 
   if (isMac) {
-    return parts.map(part => MAC_SYMBOLS[part] ?? part).join('');
+    return parts.map(part => MAC_SYMBOLS[part] ?? KEY_SYMBOLS[part] ?? part).join('');
   }
 
-  return parts.map(part => NON_MAC_LABELS[part] ?? part).join('+');
+  return parts.map(part => NON_MAC_LABELS[part] ?? KEY_SYMBOLS[part] ?? part).join('+');
 };
 
 /** Combos the OS or common apps already own; worth warning about, not blocking. */

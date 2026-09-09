@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import { eventToAccelerator, formatAccelerator } from '@/utils/accelerator';
+import { useIsMac } from '@/composables/useIsMac';
 
 const props = defineProps<{ disabled?: boolean }>();
 
@@ -10,7 +11,7 @@ const accelerator = defineModel<string>({ required: true });
 const isRecording = ref(false);
 const hint = ref<string | null>(null);
 
-const isMac = computed(() => navigator.platform.toLowerCase().includes('mac'));
+const isMac = useIsMac();
 const display = computed(() =>
   accelerator.value ? formatAccelerator(accelerator.value, isMac.value) : 'Not set'
 );

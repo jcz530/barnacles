@@ -111,3 +111,29 @@ describe('isRiskyAccelerator', () => {
     expect(isRiskyAccelerator('CommandOrControl+Shift+P')).toBe(false);
   });
 });
+
+describe('formatAccelerator key glyphs', () => {
+  it('writes keys that have a conventional glyph as one', () => {
+    // "Return" spelled out reads as a word in a row of symbols; the palette
+    // footer wants ↩ next to ⌘K.
+    expect(formatAccelerator('Return', true)).toBe('↩');
+    expect(formatAccelerator('Tab', true)).toBe('⇥');
+    expect(formatAccelerator('Right', true)).toBe('→');
+  });
+
+  it('uses the same key glyphs off macOS', () => {
+    // Only the modifiers differ per platform; an arrow is an arrow.
+    expect(formatAccelerator('Return', false)).toBe('↩');
+    expect(formatAccelerator('CommandOrControl+Return', false)).toBe('Ctrl+↩');
+  });
+
+  it('combines modifier symbols with key glyphs', () => {
+    expect(formatAccelerator('CommandOrControl+Return', true)).toBe('⌘↩');
+    expect(formatAccelerator('Shift+CommandOrControl+Return', true)).toBe('⇧⌘↩');
+  });
+
+  it('leaves keys without a glyph as their name', () => {
+    expect(formatAccelerator('CommandOrControl+K', true)).toBe('⌘K');
+    expect(formatAccelerator('F5', true)).toBe('F5');
+  });
+});

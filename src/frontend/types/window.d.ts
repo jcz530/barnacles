@@ -74,6 +74,7 @@ declare global {
       onNavigateToProject: (callback: (path: string) => void) => () => void;
       commandPalette: {
         close: () => void;
+        setDepth: (depth: number) => void;
         getShortcutStatus: () => Promise<{
           accelerator: string | null;
           registered: boolean;

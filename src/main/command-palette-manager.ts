@@ -14,7 +14,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PALETTE_WIDTH = 640;
-const PALETTE_HEIGHT = 420;
+/** Tall enough that the footer's action hints don't cost the list a row. */
+const PALETTE_HEIGHT = 460;
 /** Spotlight sits above centre; dead-centre reads as a modal rather than a launcher. */
 const VERTICAL_POSITION = 0.22;
 
@@ -50,6 +51,16 @@ export const decideToggleAction = (state: {
   return 'show';
 };
 
+/**
+ * What Escape means in the floating palette, given how deep its action stack is.
+ *
+ * The main process sees Escape before the renderer does, so it has to decide
+ * whether to swallow the key and hide the window or let it through for the
+ * renderer to back out one level. Pure so that decision can be tested.
+ */
+export const decideEscapeAction = (depth: number): 'hide' | 'forward' =>
+  depth > 0 ? 'forward' : 'hide';
+
 let paletteWindow: BrowserWindow | null = null;
 /**
  * In-flight window creation.
@@ -77,6 +88,23 @@ const ensurePaletteWindow = async (): Promise<BrowserWindow> => {
   return paletteWindowPromise;
 };
 /** When the palette was last hidden, for the dismiss grace window above. */
+/**
+ * How deep the palette's action stack is, as last reported by the renderer.
+ *
+ * Escape is intercepted here, before the renderer ever sees it, so this is the
+ * only way to tell "back out of an item's actions" from "close the palette".
+ *
+ * Reported on every change rather than asked for on demand: the keystroke has
+ * to be decided synchronously. The send happens on the same tick as the push
+ * that caused it, and Escape needs a human keypress, so the window in which
+ * this could be stale is not one a person can hit.
+ */
+let paletteDepth = 0;
+
+export const setPaletteDepth = (depth: number): void => {
+  paletteDepth = Math.max(0, depth);
+};
+
 let lastHiddenAt = 0;
 let registeredAccelerator: string | null = null;
 let lastRegistrationError: string | null = null;
@@ -169,6 +197,10 @@ const createPaletteWindow = async (): Promise<BrowserWindow> => {
     if (input.type !== 'keyDown') return;
 
     if (input.key === 'Escape') {
+      // Inside an item's actions Escape means "go back", which only the
+      // renderer can do -- so let it through rather than closing the window.
+      if (decideEscapeAction(paletteDepth) === 'forward') return;
+
       event.preventDefault();
       hideCommandPalette();
       return;
@@ -248,6 +280,10 @@ const showCommandPalette = async (): Promise<void> => {
 };
 
 export const hideCommandPalette = (options?: { viaBlur?: boolean }): void => {
+  // Whatever level it was on is gone; a stale depth would leave Escape unable
+  // to close the window on the next open.
+  paletteDepth = 0;
+
   if (paletteWindow && !paletteWindow.isDestroyed() && paletteWindow.isVisible()) {
     // Only a blur-driven hide arms the grace window below. Escape, or running a
     // command, is an explicit dismissal and must leave the next press free to

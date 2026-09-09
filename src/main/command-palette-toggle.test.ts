@@ -9,7 +9,7 @@ vi.mock('electron', () => ({
   screen: { getCursorScreenPoint: vi.fn(), getDisplayNearestPoint: vi.fn() },
 }));
 
-const { decideToggleAction } = await import('./command-palette-manager');
+const { decideEscapeAction, decideToggleAction } = await import('./command-palette-manager');
 
 /** Comfortably outside the dismiss grace window. */
 const LONG_AGO = 10_000;
@@ -96,5 +96,23 @@ describe('decideToggleAction', () => {
         hasMainWindow: true,
       })
     ).toBe('hide');
+  });
+});
+
+describe('decideEscapeAction', () => {
+  it('closes the palette from the root', () => {
+    expect(decideEscapeAction(0)).toBe('hide');
+  });
+
+  it('lets the renderer back out of an item’s actions', () => {
+    // Escape reaches the main process first. Swallowing it at depth would close
+    // the whole palette when the person meant to leave one level.
+    expect(decideEscapeAction(1)).toBe('forward');
+    expect(decideEscapeAction(3)).toBe('forward');
+  });
+
+  it('treats a nonsense depth as the root', () => {
+    // Better to close than to make Escape do nothing at all.
+    expect(decideEscapeAction(-1)).toBe('hide');
   });
 });

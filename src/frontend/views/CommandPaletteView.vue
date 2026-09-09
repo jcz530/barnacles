@@ -35,6 +35,16 @@ const runCommand = async (command: Command) => {
   await command.run({ surface: 'floating', navigate, dismiss });
 };
 
+/**
+ * Tell the main process how deep the action stack is.
+ *
+ * Escape is intercepted there, before this renderer sees it, so without this
+ * it would close the window even when the person meant to back out one level.
+ */
+const reportDepth = (depth: number) => {
+  window.electron.commandPalette.setDepth(depth);
+};
+
 let unsubscribeOpened: (() => void) | undefined;
 
 onMounted(() => {
@@ -74,6 +84,7 @@ onUnmounted(() => {
       height-class="h-full"
       @select="runCommand"
       @dismiss="dismiss"
+      @depth-change="reportDepth"
     />
   </div>
 </template>

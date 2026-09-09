@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, ref, toRef, watch } from 'vue';
 import {
   ComboboxContent,
   ComboboxEmpty,
@@ -10,12 +10,20 @@ import {
 } from 'reka-ui';
 import { SearchIcon } from 'lucide-vue-next';
 import { useFuse } from '@vueuse/integrations/useFuse';
-import type { Command } from '@/commands/types';
-import { defaultCommands, groupRankedCommands, MAX_RESULTS } from '@/commands/ranking';
+import type { CommandContext, PaletteItem } from '@/commands/types';
+import {
+  defaultCommands,
+  groupRankedCommands,
+  LEVEL_LIMITS,
+  levelDefaultItems,
+  MAX_RESULTS,
+} from '@/commands/ranking';
+import { useLevelStack } from '@/commands/useLevelStack';
 import CommandPaletteItem from '../molecules/CommandPaletteItem.vue';
+import CommandPaletteFooter from '../molecules/CommandPaletteFooter.vue';
 
 const props = defineProps<{
-  commands: Command[];
+  commands: PaletteItem[];
   /** Placeholder for the search input. */
   placeholder?: string;
   /**
@@ -25,11 +33,17 @@ const props = defineProps<{
   heightClass?: string;
 }>();
 
-const emit = defineEmits<{ select: [command: Command]; dismiss: [] }>();
+const emit = defineEmits<{
+  select: [command: PaletteItem];
+  dismiss: [];
+  /** Depth of the action stack, so the host can tell "go back" from "close". */
+  depthChange: [depth: number];
+}>();
 
-const query = ref('');
+const stack = useLevelStack(toRef(props, 'commands'));
+const { activeItems, activeQuery, breadcrumb, depth } = stack;
 
-const { results } = useFuse(query, () => props.commands, {
+const { results } = useFuse(activeQuery, activeItems, {
   fuseOptions: {
     threshold: 0.3,
     includeScore: true,
@@ -46,9 +60,17 @@ const { results } = useFuse(query, () => props.commands, {
 });
 
 const groups = computed(() => {
-  if (!query.value.trim()) return defaultCommands(props.commands);
+  const inLevel = depth.value > 0;
+
+  if (!activeQuery.value.trim()) {
+    // A level is a short curated list, so it shows everything; the root would
+    // be hundreds of rows and shows only what it ranks highest.
+    return inLevel ? levelDefaultItems(activeItems.value) : defaultCommands(activeItems.value);
+  }
+
   return groupRankedCommands(
-    results.value.slice(0, MAX_RESULTS).map(result => ({ item: result.item, score: result.score }))
+    results.value.slice(0, MAX_RESULTS).map(result => ({ item: result.item, score: result.score })),
+    inLevel ? LEVEL_LIMITS : undefined
   );
 });
 
@@ -71,26 +93,88 @@ const focusInput = () => {
 
 /** Each open should start clean rather than resuming the last search. */
 const reset = () => {
-  query.value = '';
+  stack.reset();
   focusInput();
 };
 
 defineExpose({ reset, focusInput });
 
 /**
- * Running a command is a one-shot action, not a value the palette holds, so
- * items report through their own select event and no selection is bound to the
- * root.
+ * The row the keyboard is on.
  *
- * Binding one is actively harmful here: ComboboxInput watches the root's model
- * value and writes it back into the search box (resetSearchTermOnSelect, on by
- * default), which stringifies a command id straight into the input. The
- * floating window outlives a single open, so that id then persisted across
- * every subsequent open.
+ * Tracked from Reka's own highlight event rather than by binding a model to
+ * ComboboxRoot: selecting an item sets the root's model, and ComboboxInput
+ * writes that value back into the search box, which pastes a command id like
+ * "project.open:anla4gsy..." into the input. See the template comment below.
  */
-const runCommand = (command: Command) => {
-  emit('select', command);
+const highlightedId = ref<string | null>(null);
+
+const highlighted = computed<PaletteItem | null>(
+  () => activeItems.value.find(item => item.id === highlightedId.value) ?? null
+);
+
+const buildContext = (): CommandContext => ({
+  surface: 'in-app',
+  navigate: () => {},
+  dismiss: () => emit('dismiss'),
+  pop: () => {
+    stack.pop();
+    focusInput();
+  },
+});
+
+/**
+ * Open an item's actions.
+ *
+ * The context handed to `actions` is only used to build the list, never to run
+ * anything, so the navigate/dismiss it carries are the palette's own; running
+ * an action still goes out through `select` so the host supplies the real one.
+ */
+const openActions = (item: PaletteItem | null) => {
+  if (!item?.actions) return false;
+
+  const opened = stack.push(item, () => item.actions?.(buildContext()) ?? []);
+  if (opened) {
+    highlightedId.value = null;
+    focusInput();
+  }
+  return opened;
 };
+
+/**
+ * Enter. An item with no verb of its own opens its actions instead, which is
+ * how "no preferred IDE is set" behaves -- the choice is the action.
+ */
+const activate = (item: PaletteItem) => {
+  if (item.run) {
+    emit('select', item);
+    return;
+  }
+  openActions(item);
+};
+
+/** Escape and Left back out one level before closing the palette. */
+const goBack = () => {
+  if (stack.pop()) {
+    highlightedId.value = null;
+    focusInput();
+    return;
+  }
+  emit('dismiss');
+};
+
+/** Left only backs out from an empty box, where it cannot mean "move the caret". */
+const backFromCaretStart = (event: KeyboardEvent) => {
+  const input = event.target as HTMLInputElement | null;
+  if (input && input.selectionStart === 0 && input.selectionEnd === 0) {
+    event.preventDefault();
+    goBack();
+  }
+};
+
+// The host needs to know how deep we are: in the floating window the main
+// process decides whether Escape closes the window, and at depth it must not.
+watch(depth, value => emit('depthChange', value), { immediate: true });
 </script>
 
 <template>
@@ -108,16 +192,23 @@ const runCommand = (command: Command) => {
     :reset-search-term-on-select="false"
     :reset-search-term-on-blur="false"
     :class="['flex flex-col overflow-hidden', heightClass ?? 'max-h-[60vh]']"
+    @highlight="highlightedId = ($event?.value as string) ?? null"
   >
     <div class="flex items-center gap-2 border-b px-4">
       <SearchIcon class="size-4 shrink-0 opacity-50" />
       <ComboboxInput
         ref="inputRef"
-        v-model="query"
-        :placeholder="placeholder ?? 'Search projects, ports, and commands…'"
+        v-model="activeQuery"
+        :placeholder="
+          stack.placeholder.value ?? placeholder ?? 'Search projects, ports, and commands…'
+        "
         class="placeholder:text-muted-foreground h-12 w-full bg-transparent text-sm outline-hidden"
         auto-focus
-        @keydown.escape="emit('dismiss')"
+        @keydown.escape.prevent="goBack"
+        @keydown.left="backFromCaretStart"
+        @keydown.meta.k.prevent="openActions(highlighted)"
+        @keydown.ctrl.k.prevent="openActions(highlighted)"
+        @keydown.tab.prevent="openActions(highlighted)"
       />
     </div>
 
@@ -129,10 +220,10 @@ const runCommand = (command: Command) => {
     <ComboboxContent
       position="inline"
       class="min-h-0 flex-1 overflow-y-auto p-2"
-      @escape-key-down="emit('dismiss')"
+      @escape-key-down="goBack"
     >
       <ComboboxEmpty class="text-muted-foreground px-3 py-8 text-center text-sm">
-        <template v-if="query.trim()">No results for “{{ query }}”</template>
+        <template v-if="activeQuery.trim()">No results for “{{ activeQuery }}”</template>
         <template v-else>Start typing to search</template>
       </ComboboxEmpty>
 
@@ -144,9 +235,15 @@ const runCommand = (command: Command) => {
           v-for="command in group.commands"
           :key="command.id"
           :command="command"
-          @select="runCommand(command)"
+          @select="activate(command)"
         />
       </ComboboxGroup>
     </ComboboxContent>
+
+    <CommandPaletteFooter
+      :breadcrumb="breadcrumb"
+      :primary-label="highlighted?.primaryActionLabel"
+      :has-actions="!!highlighted?.actions"
+    />
   </ComboboxRoot>
 </template>
