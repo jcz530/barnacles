@@ -4,7 +4,7 @@ import { get, post } from '@test/helpers/api-client';
 import { setupProjectRoutes } from '@test/helpers/route-test-setup';
 import { createProjectData } from '@test/factories/project.factory';
 import { projects as projectsSchema } from '@shared/database/schema';
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, rm, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -114,6 +114,123 @@ describe('Projects Packages API Integration Tests', () => {
       const { app } = context.get();
 
       const response = await get(app, '/api/projects/non-existent-id/composer-scripts');
+
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('GET /api/projects/:id/scripts', () => {
+    /** Temp project dirs, removed after each test in this block. */
+    const made: string[] = [];
+
+    const makeProject = async (
+      files: Record<string, unknown>,
+      locks: string[] = []
+    ): Promise<string> => {
+      const dir = join(tmpdir(), `test-project-scripts-${Date.now()}-${Math.random()}`);
+      made.push(dir);
+
+      for (const [relative, contents] of Object.entries(files)) {
+        const full = join(dir, relative);
+        await mkdir(join(full, '..'), { recursive: true });
+        await writeFile(full, JSON.stringify(contents, null, 2));
+      }
+      for (const lock of locks) {
+        await mkdir(join(dir, lock, '..'), { recursive: true });
+        await writeFile(join(dir, lock), '');
+      }
+
+      return dir;
+    };
+
+    afterEach(async () => {
+      await Promise.all(made.map(dir => rm(dir, { recursive: true, force: true })));
+      made.length = 0;
+    });
+
+    it('returns every script with its command already resolved', async () => {
+      const { db, app } = context.get();
+
+      const dir = await makeProject({
+        'package.json': { scripts: { dev: 'vite', build: 'vite build' } },
+      });
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ path: dir }))
+        .returning();
+
+      const response = await get(app, `/api/projects/${project.id}/scripts`);
+
+      expect(response.status).toBe(200);
+      expect((response.data as any).data).toEqual([
+        {
+          source: 'npm',
+          relativeDir: '',
+          name: 'dev',
+          script: 'vite',
+          command: 'npm run dev',
+          manifest: 'NPM',
+        },
+        {
+          source: 'npm',
+          relativeDir: '',
+          name: 'build',
+          script: 'vite build',
+          command: 'npm run build',
+          manifest: 'NPM',
+        },
+      ]);
+    });
+
+    it('resolves each workspace against its own package manager', async () => {
+      // The whole reason the command is built on the server: the root and a
+      // workspace can disagree, and the client cannot know without a request
+      // per subdirectory.
+      const { db, app } = context.get();
+
+      const dir = await makeProject(
+        {
+          'package.json': { scripts: { build: 'turbo build' } },
+          'api/package.json': { scripts: { build: 'tsc' } },
+        },
+        ['pnpm-lock.yaml']
+      );
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ path: dir }))
+        .returning();
+
+      const response = await get(app, `/api/projects/${project.id}/scripts`);
+
+      const commands = (response.data as any).data.map(
+        (entry: { relativeDir: string; command: string }) => [entry.relativeDir, entry.command]
+      );
+      expect(commands).toEqual([
+        ['', 'pnpm build'],
+        ['api', 'npm run build'],
+      ]);
+    });
+
+    it('returns an empty list for a project with no manifests', async () => {
+      const { db, app } = context.get();
+
+      const dir = await makeProject({});
+      await mkdir(dir, { recursive: true });
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ path: dir }))
+        .returning();
+
+      const response = await get(app, `/api/projects/${project.id}/scripts`);
+
+      expect(response.status).toBe(200);
+      expect((response.data as any).data).toEqual([]);
+    });
+
+    it('should return 404 for non-existent project', async () => {
+      const { app } = context.get();
+
+      const response = await get(app, '/api/projects/non-existent-id/scripts');
 
       expect(response.status).toBe(404);
     });

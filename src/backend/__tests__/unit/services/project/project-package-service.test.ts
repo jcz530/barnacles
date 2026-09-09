@@ -330,4 +330,167 @@ describe('ProjectPackageService', () => {
       expect(fs.access).toHaveBeenCalledWith(path.join(projectPath, 'backend', 'pnpm-lock.yaml'));
     });
   });
+  describe('getRunnableScripts', () => {
+    const dirent = (name: string) => ({ name, isDirectory: () => true });
+
+    /** Route reads and lock-file probes for a whole fake project in one go. */
+    const mockProject = (
+      files: Record<string, unknown>,
+      subdirs: string[] = [],
+      locks: string[] = []
+    ) => {
+      vi.mocked(fs.readdir).mockResolvedValue(subdirs.map(dirent) as never);
+      vi.mocked(fs.readFile).mockImplementation(async filePath => {
+        const found = files[filePath as string];
+        if (!found) throw new Error('ENOENT');
+        return JSON.stringify(found);
+      });
+      vi.mocked(fs.access).mockImplementation(async filePath =>
+        locks.includes(filePath as string) ? undefined : Promise.reject(new Error('ENOENT'))
+      );
+    };
+
+    it('resolves the package manager per directory, not once for the project', async () => {
+      // The reason this lives on the server. A monorepo root and a workspace can
+      // use different managers, and a client resolving that per subdirectory
+      // shows the wrong command until each reply lands -- one keystroke from
+      // running it.
+      const projectPath = '/test/monorepo';
+      mockProject(
+        {
+          [path.join(projectPath, 'package.json')]: { scripts: { build: 'turbo build' } },
+          [path.join(projectPath, 'api', 'package.json')]: { scripts: { build: 'tsc' } },
+        },
+        ['api'],
+        // pnpm at the root, nothing in api/ -- so api/ falls back to npm.
+        [path.join(projectPath, 'pnpm-lock.yaml')]
+      );
+
+      const result = await projectPackageService.getRunnableScripts(projectPath);
+
+      expect(result).toEqual([
+        {
+          source: 'npm',
+          relativeDir: '',
+          name: 'build',
+          script: 'turbo build',
+          command: 'pnpm build',
+          manifest: 'PNPM',
+        },
+        {
+          source: 'npm',
+          relativeDir: 'api',
+          name: 'build',
+          script: 'tsc',
+          command: 'npm run build',
+          manifest: 'api/package.json',
+        },
+      ]);
+    });
+
+    it('gives npm the run verb and yarn the bare script name', async () => {
+      const projectPath = '/test/project';
+      mockProject(
+        { [path.join(projectPath, 'package.json')]: { scripts: { dev: 'vite' } } },
+        [],
+        [path.join(projectPath, 'yarn.lock')]
+      );
+
+      expect((await projectPackageService.getRunnableScripts(projectPath))[0].command).toBe(
+        'yarn dev'
+      );
+
+      mockProject({ [path.join(projectPath, 'package.json')]: { scripts: { dev: 'vite' } } });
+
+      expect((await projectPackageService.getRunnableScripts(projectPath))[0].command).toBe(
+        'npm run dev'
+      );
+    });
+
+    it('runs composer scripts through composer whatever the package manager', async () => {
+      const projectPath = '/test/php';
+      mockProject(
+        { [path.join(projectPath, 'composer.json')]: { scripts: { test: 'phpunit' } } },
+        [],
+        [path.join(projectPath, 'pnpm-lock.yaml')]
+      );
+
+      const result = await projectPackageService.getRunnableScripts(projectPath);
+
+      expect(result).toEqual([
+        {
+          source: 'composer',
+          relativeDir: '',
+          name: 'test',
+          script: 'phpunit',
+          command: 'composer run-script test',
+          manifest: 'Composer',
+        },
+      ]);
+    });
+
+    it('reads a composer script written as a list of commands', async () => {
+      const projectPath = '/test/php';
+      mockProject({
+        [path.join(projectPath, 'composer.json')]: {
+          scripts: { check: ['phpstan analyse', 'phpunit'] },
+        },
+      });
+
+      const result = await projectPackageService.getRunnableScripts(projectPath);
+
+      expect(result[0].script).toBe('phpstan analyse && phpunit');
+    });
+
+    it('puts the root first, then subdirectories, npm before composer', async () => {
+      const projectPath = '/test/mixed';
+      mockProject(
+        {
+          [path.join(projectPath, 'package.json')]: { scripts: { dev: 'vite' } },
+          [path.join(projectPath, 'composer.json')]: { scripts: { lint: 'phpcs' } },
+          [path.join(projectPath, 'web', 'package.json')]: { scripts: { build: 'vite build' } },
+        },
+        ['web']
+      );
+
+      const result = await projectPackageService.getRunnableScripts(projectPath);
+
+      expect(result.map(entry => [entry.relativeDir, entry.source, entry.name])).toEqual([
+        ['', 'npm', 'dev'],
+        ['', 'composer', 'lint'],
+        ['web', 'npm', 'build'],
+      ]);
+    });
+
+    it('names each manifest the way the palette will head its section', async () => {
+      // The root reads better as its package manager; a workspace reads better
+      // as its path, since several workspaces can share one manager.
+      const projectPath = '/test/mixed';
+      mockProject(
+        {
+          [path.join(projectPath, 'package.json')]: { scripts: { dev: 'vite' } },
+          [path.join(projectPath, 'composer.json')]: { scripts: { lint: 'phpcs' } },
+          [path.join(projectPath, 'web', 'package.json')]: { scripts: { build: 'vite build' } },
+          [path.join(projectPath, 'web', 'composer.json')]: { scripts: { fix: 'php-cs-fixer' } },
+        },
+        ['web'],
+        [path.join(projectPath, 'yarn.lock')]
+      );
+
+      const result = await projectPackageService.getRunnableScripts(projectPath);
+
+      expect(result.map(entry => entry.manifest)).toEqual([
+        'YARN',
+        'Composer',
+        'web/package.json',
+        'web/composer.json',
+      ]);
+    });
+
+    it('returns nothing for a project with no manifests', async () => {
+      mockProject({});
+
+      expect(await projectPackageService.getRunnableScripts('/test/empty')).toEqual([]);
+    });
+  });
 });

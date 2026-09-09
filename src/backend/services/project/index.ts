@@ -532,6 +532,16 @@ class ProjectService {
   }
 
   /**
+   * Every script a project can run, with its command already assembled per
+   * directory. See ProjectPackageService.getRunnableScripts.
+   */
+  async getRunnableScripts(
+    projectPath: string
+  ): Promise<import('../../../shared/types/process').RunnableScript[]> {
+    return projectPackageService.getRunnableScripts(projectPath);
+  }
+
+  /**
    * Detect package manager from lock files. Pass `subPath` to detect the
    * package manager used by a specific workspace subdirectory.
    */
