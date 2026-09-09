@@ -100,6 +100,21 @@ describe('useLevelStack', () => {
     expect(depth.value).toBe(0);
   });
 
+  it('pops exactly one level per call', () => {
+    // Escape was wired in two places at once, so a single press popped two
+    // levels -- which looked like it working only when two levels deep.
+    const a = withActions('a', [item('a1')]);
+    const b = withActions('b', [item('b1')]);
+    const s = stack([a]);
+
+    s.push(a, () => [b]);
+    s.push(b, () => [item('b1')]);
+    expect(s.depth.value).toBe(2);
+
+    s.pop();
+    expect(s.depth.value).toBe(1);
+  });
+
   it('reports whether it handled a pop, so the caller can dismiss instead', () => {
     const parent = withActions('barnacles', [item('reveal')]);
     const s = stack([parent]);
@@ -119,7 +134,23 @@ describe('useLevelStack', () => {
     s.push(a, () => [b]);
     s.push(b, () => [item('b1')]);
 
-    expect(s.breadcrumb.value).toEqual(['Barnacles', 'Open in IDE']);
+    expect(s.breadcrumb.value.map(crumb => crumb.title)).toEqual(['Barnacles', 'Open in IDE']);
+  });
+
+  it('carries the drilled-into item’s icon into the breadcrumb', () => {
+    // A project's actions should still read as that project's, which the name
+    // alone does not convey once you are a level in.
+    const projectIcon = { projectId: 'p1', projectName: 'Barnacles', hasIcon: true };
+    const project = item('project:p1', {
+      title: 'Barnacles',
+      projectIcon,
+      actions: () => [item('reveal')],
+    });
+    const s = stack([project]);
+
+    s.push(project, () => [item('reveal')]);
+
+    expect(s.breadcrumb.value[0].projectIcon).toEqual(projectIcon);
   });
 
   it('returns to the root on reset', () => {

@@ -7,6 +7,9 @@ export interface Level {
   sourceId: string;
   /** Breadcrumb text -- the title of the item that was drilled into. */
   title: string;
+  /** The drilled-into item's own icon, so the breadcrumb can show it. */
+  projectIcon?: PaletteItem['projectIcon'];
+  icon?: PaletteItem['icon'];
   items: PaletteItem[];
   /** Saved per level so backing out restores what was typed there. */
   query: string;
@@ -63,8 +66,14 @@ export const useLevelStack = (rootItems: Ref<PaletteItem[]>) => {
 
   const placeholder = computed(() => current.value?.placeholder);
 
-  /** Level titles, outermost first, for the footer. */
-  const breadcrumb = computed(() => levels.value.map(level => level.title));
+  /** What the footer shows for each open level, outermost first. */
+  const breadcrumb = computed(() =>
+    levels.value.map(level => ({
+      title: level.title,
+      projectIcon: level.projectIcon,
+      icon: level.icon,
+    }))
+  );
 
   /**
    * Drill into an item's actions.
@@ -85,6 +94,8 @@ export const useLevelStack = (rootItems: Ref<PaletteItem[]>) => {
     levels.value.push({
       sourceId: item.id,
       title: item.title,
+      projectIcon: item.projectIcon,
+      icon: item.icon,
       items,
       query: '',
       placeholder: `Search ${item.title.toLowerCase()} actions…`,
@@ -119,7 +130,13 @@ export const useLevelStack = (rootItems: Ref<PaletteItem[]>) => {
 
       if (!next || next.length === 0) break;
 
-      rebuilt.push({ ...level, items: next });
+      rebuilt.push({
+        ...level,
+        title: source.title,
+        projectIcon: source.projectIcon,
+        icon: source.icon,
+        items: next,
+      });
       parents = next;
     }
 

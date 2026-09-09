@@ -97,8 +97,6 @@ const reset = () => {
   focusInput();
 };
 
-defineExpose({ reset, focusInput });
-
 /**
  * The row the keyboard is on.
  *
@@ -153,22 +151,48 @@ const activate = (item: PaletteItem) => {
   openActions(item);
 };
 
-/** Escape and Left back out one level before closing the palette. */
-const goBack = () => {
-  if (stack.pop()) {
-    highlightedId.value = null;
-    focusInput();
-    return;
-  }
-  emit('dismiss');
+/**
+ * Back out one level, or report that there was nowhere to go.
+ *
+ * Returns whether it handled the gesture so a host that owns the key -- the
+ * dialog's Escape, say -- can tell "went back" from "should close".
+ */
+const goBack = (): boolean => {
+  if (!stack.pop()) return false;
+
+  highlightedId.value = null;
+  focusInput();
+  return true;
 };
 
-/** Left only backs out from an empty box, where it cannot mean "move the caret". */
+/**
+ * Escape from inside the search box.
+ *
+ * Backing out of a level consumes the key, so whatever would otherwise close
+ * the surface doesn't: reka's dismissable layer dismisses only when the event
+ * was not already handled, and the floating window's host checks the same
+ * thing before telling the main process to hide.
+ *
+ * At the root it does nothing and lets the event through, because closing is
+ * the surface's business -- a dialog and a panel close differently.
+ */
+const handleEscapeKey = (event: KeyboardEvent) => {
+  if (goBack()) event.preventDefault();
+};
+
+// goBack is exposed because the in-app dialog owns Escape: reka's dismissable
+// layer listens on the document, so the palette cannot intercept it locally.
+defineExpose({ reset, focusInput, goBack });
+
+/**
+ * Left backs out a level, but only from the start of the box where it cannot
+ * mean "move the caret" -- and never closes the palette. Like Shift+Tab, it is
+ * a navigation key: closing on it at the root would be a surprise.
+ */
 const backFromCaretStart = (event: KeyboardEvent) => {
   const input = event.target as HTMLInputElement | null;
   if (input && input.selectionStart === 0 && input.selectionEnd === 0) {
-    event.preventDefault();
-    goBack();
+    if (goBack()) event.preventDefault();
   }
 };
 
@@ -204,11 +228,12 @@ watch(depth, value => emit('depthChange', value), { immediate: true });
         "
         class="placeholder:text-muted-foreground h-12 w-full bg-transparent text-sm outline-hidden"
         auto-focus
-        @keydown.escape.prevent="goBack"
+        @keydown.escape="handleEscapeKey"
         @keydown.left="backFromCaretStart"
         @keydown.meta.k.prevent="openActions(highlighted)"
         @keydown.ctrl.k.prevent="openActions(highlighted)"
-        @keydown.tab.prevent="openActions(highlighted)"
+        @keydown.tab.exact.prevent="openActions(highlighted)"
+        @keydown.tab.shift.prevent="goBack()"
       />
     </div>
 
@@ -217,11 +242,11 @@ watch(depth, value => emit('depthChange', value), { immediate: true });
       navigable -- in a plain div the arrow keys do nothing. position="inline"
       keeps the list in flow rather than floating it as a dropdown.
     -->
-    <ComboboxContent
-      position="inline"
-      class="min-h-0 flex-1 overflow-y-auto p-2"
-      @escape-key-down="goBack"
-    >
+    <!--
+      Escape is handled on the input alone. Wiring it here as well made one
+      press pop two levels, since both fire for the same keystroke.
+    -->
+    <ComboboxContent position="inline" class="min-h-0 flex-1 overflow-y-auto p-2">
       <ComboboxEmpty class="text-muted-foreground px-3 py-8 text-center text-sm">
         <template v-if="activeQuery.trim()">No results for “{{ activeQuery }}”</template>
         <template v-else>Start typing to search</template>
