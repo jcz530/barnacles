@@ -11,8 +11,13 @@ const props = defineProps<{
 const isMac = useIsMac();
 
 // Rendered per key rather than as one string: macOS runs its glyphs together,
-// which at this size reads as a single dense mark. Spacing them is what makes
-// a combo legible as separate keys.
+// which reads as a single dense mark. Spacing them is what makes a combo
+// legible as separate keys.
+//
+// The chip is deliberately larger than the text beside it. Symbols like the
+// command and shift glyphs are drawn small within their em box, so at the
+// surrounding text size they are a smudge rather than a key you can read --
+// and a hint you cannot read precisely is not a hint.
 const parts = computed(() => acceleratorParts(props.accelerator, isMac.value));
 </script>
 
@@ -22,7 +27,7 @@ const parts = computed(() => acceleratorParts(props.accelerator, isMac.value));
     primary fill, so it borrows the row's own colour there instead.
   -->
   <kbd
-    class="bg-muted text-muted-foreground inline-flex h-6 min-w-6 items-center justify-center gap-0.5 rounded border px-1.5 font-sans text-sm leading-none group-data-[highlighted]:border-current/30 group-data-[highlighted]:bg-transparent group-data-[highlighted]:text-current"
+    class="bg-muted text-muted-foreground inline-flex h-7 min-w-7 items-center justify-center gap-1 rounded border px-2 font-sans text-base leading-none group-data-[highlighted]:border-current/30 group-data-[highlighted]:bg-transparent group-data-[highlighted]:text-current"
   >
     <span v-for="(part, index) in parts" :key="`${index}-${part}`">{{ part }}</span>
   </kbd>
