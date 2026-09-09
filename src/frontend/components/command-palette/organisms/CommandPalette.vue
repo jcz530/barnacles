@@ -68,8 +68,13 @@ const groups = computed(() => {
     return inLevel ? levelDefaultItems(activeItems.value) : defaultCommands(activeItems.value);
   }
 
+  // A placeholder is not a result. It stands in for rows still arriving, which
+  // is worth showing in the empty state but never worth matching a search.
   return groupRankedCommands(
-    results.value.slice(0, MAX_RESULTS).map(result => ({ item: result.item, score: result.score })),
+    results.value
+      .slice(0, MAX_RESULTS)
+      .filter(result => !result.item.loading)
+      .map(result => ({ item: result.item, score: result.score })),
     inLevel ? LEVEL_LIMITS : undefined
   );
 });
@@ -144,6 +149,10 @@ const openActions = (item: PaletteItem | null) => {
  * how "no preferred IDE is set" behaves -- the choice is the action.
  */
 const activate = (item: PaletteItem) => {
+  // A placeholder is not rendered as a selectable row, so this should be
+  // unreachable -- but it costs a line and keeps a future refactor honest.
+  if (item.loading) return;
+
   if (item.run) {
     emit('select', item);
     return;
@@ -185,15 +194,39 @@ const handleEscapeKey = (event: KeyboardEvent) => {
 defineExpose({ reset, focusInput, goBack });
 
 /**
+ * Is the caret at `edge`, with nothing selected?
+ *
+ * The arrows double as navigation only where they cannot mean "move the
+ * caret" -- at the far end of what has been typed, and never across a
+ * selection. An empty box satisfies both edges, which is the common case.
+ */
+const caretAt = (event: KeyboardEvent, edge: 'start' | 'end'): boolean => {
+  const input = event.target as HTMLInputElement | null;
+  if (!input) return false;
+
+  const { selectionStart, selectionEnd, value } = input;
+  if (selectionStart === null || selectionStart !== selectionEnd) return false;
+
+  return edge === 'start' ? selectionStart === 0 : selectionStart === value.length;
+};
+
+/**
  * Left backs out a level, but only from the start of the box where it cannot
  * mean "move the caret" -- and never closes the palette. Like Shift+Tab, it is
  * a navigation key: closing on it at the root would be a surprise.
  */
 const backFromCaretStart = (event: KeyboardEvent) => {
-  const input = event.target as HTMLInputElement | null;
-  if (input && input.selectionStart === 0 && input.selectionEnd === 0) {
-    if (goBack()) event.preventDefault();
-  }
+  if (caretAt(event, 'start') && goBack()) event.preventDefault();
+};
+
+/**
+ * Right opens the highlighted row's actions, mirroring Left -- and only from
+ * the end of the box, where it cannot mean "move the caret".
+ *
+ * The same gesture as a file tree: Left goes out, Right goes in.
+ */
+const openFromCaretEnd = (event: KeyboardEvent) => {
+  if (caretAt(event, 'end') && openActions(highlighted.value)) event.preventDefault();
 };
 
 // The host needs to know how deep we are: in the floating window the main
@@ -230,6 +263,7 @@ watch(depth, value => emit('depthChange', value), { immediate: true });
         auto-focus
         @keydown.escape="handleEscapeKey"
         @keydown.left="backFromCaretStart"
+        @keydown.right="openFromCaretEnd"
         @keydown.meta.k.prevent="openActions(highlighted)"
         @keydown.ctrl.k.prevent="openActions(highlighted)"
         @keydown.tab.exact.prevent="openActions(highlighted)"
@@ -252,7 +286,11 @@ watch(depth, value => emit('depthChange', value), { immediate: true });
         <template v-else>Start typing to search</template>
       </ComboboxEmpty>
 
-      <ComboboxGroup v-for="group in groups" :key="group.id" class="pb-1">
+      <!--
+        Keyed on the label too: several groups can share an id now that a row
+        can name its own heading, and the id alone would repeat.
+      -->
+      <ComboboxGroup v-for="group in groups" :key="`${group.id}:${group.label}`" class="pb-1">
         <ComboboxLabel class="text-muted-foreground px-3 py-1.5 text-xs font-medium">
           {{ group.label }}
         </ComboboxLabel>

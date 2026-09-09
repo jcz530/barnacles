@@ -88,6 +88,11 @@ export const useLevelStack = (rootItems: Ref<PaletteItem[]>) => {
   const push = (item: PaletteItem, buildActions: () => PaletteItem[]): boolean => {
     if (!item.actions) return false;
 
+    // Ask for anything this level needs before building it, so a provider that
+    // reads a cache can start filling one. Fire-and-forget by design: the level
+    // has to open on this tick regardless -- see PaletteItem.prepare.
+    item.prepare?.();
+
     const items = buildActions();
     if (items.length === 0) return false;
 

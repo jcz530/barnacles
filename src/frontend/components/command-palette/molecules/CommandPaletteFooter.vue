@@ -56,11 +56,17 @@ const label = computed(() => props.primaryLabel || 'Select');
         <KeyHint accelerator="Return" />
       </span>
 
+      <!--
+        The arrow rather than Cmd+K, which this used to advertise. Right is the
+        gesture people reach for -- it pairs with Left going back out, and it is
+        what the row's chevron already suggests. Cmd+K and Tab still work, and
+        matter when the caret is mid-query where the arrows move it instead.
+      -->
       <template v-if="hasActions">
         <span class="bg-border h-4 w-px" aria-hidden="true" />
         <span class="flex items-center gap-1.5">
           Actions
-          <KeyHint accelerator="CommandOrControl+K" />
+          <KeyHint accelerator="Right" />
         </span>
       </template>
     </div>

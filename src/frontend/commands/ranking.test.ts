@@ -102,6 +102,34 @@ describe('groupRankedCommands', () => {
   });
 });
 
+describe('custom group headings', () => {
+  const labelled = (id: string, groupLabel?: string) => ({
+    item: { ...command(id, 'processes'), groupLabel },
+    score: 0,
+  });
+
+  it('splits rows that name their own heading into their own sections', () => {
+    // Scripts are all 'processes', but forty of them across three manifests in
+    // one flat list is unreadable.
+    const groups = groupRankedCommands([
+      labelled('a', 'NPM Scripts'),
+      labelled('b', 'Composer Scripts'),
+      labelled('c', 'NPM Scripts'),
+    ]);
+
+    expect(groups.map(group => [group.label, group.commands.length])).toEqual([
+      ['NPM Scripts', 2],
+      ['Composer Scripts', 1],
+    ]);
+  });
+
+  it('leaves rows without a heading of their own under the group’s', () => {
+    const groups = groupRankedCommands([labelled('a'), labelled('b', 'NPM Scripts')]);
+
+    expect(groups.map(group => group.label)).toEqual(['Processes', 'NPM Scripts']);
+  });
+});
+
 describe('defaultCommands', () => {
   it('shows only prioritized commands, best first', () => {
     const groups = defaultCommands([

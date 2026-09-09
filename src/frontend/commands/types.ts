@@ -50,6 +50,16 @@ export interface PaletteItem {
   /** Secondary line -- a project path, a port's process name. */
   subtitle?: string;
   group: CommandGroupId;
+  /**
+   * Override the group's heading, and split these rows into a section of their
+   * own under it.
+   *
+   * For groups a fixed CommandGroupId cannot name: "NPM Scripts" versus
+   * "Composer Scripts" versus "api/package.json Scripts" are all processes, but
+   * a flat list of forty scripts is unreadable without the manifest they came
+   * from. Rows sharing a group and a label group together.
+   */
+  groupLabel?: string;
   icon?: Component;
   /**
    * Render the project's own icon instead of `icon`, matching what the projects
@@ -86,6 +96,36 @@ export interface PaletteItem {
    * pushed, so it also closes over the freshest data.
    */
   actions?: (ctx: CommandContext) => PaletteItem[];
+  /**
+   * Fetch whatever this item's level needs, called as the level is pushed.
+   *
+   * Deliberately not an async `actions`. `actions` has to stay synchronous:
+   * useLevelStack rebuilds every open level by calling it on each root refresh
+   * and cannot await, so an async variant would be dropped there within a poll
+   * cycle. Pushing has to stay synchronous too -- depth is reported to the main
+   * process on the same tick, and Escape is decided from it there, so a
+   * deferred push would close the whole window instead of backing out a level.
+   *
+   * So this only starts the fetch. The result lands in the registry's own
+   * state, the root list recomputes, and the rebuild watcher runs `actions`
+   * again -- which is how the loaded rows arrive. The refresh that would have
+   * destroyed an async level is what fills this one in.
+   */
+  prepare?: () => void;
+  /**
+   * Put the subtitle under the title rather than opposite it.
+   *
+   * For rows whose subtitle is content rather than a hint -- a script's body
+   * runs to hundreds of characters, and set beside the name there is nothing
+   * left of the name.
+   */
+  stackSubtitle?: boolean;
+  /**
+   * A placeholder standing in for rows that are still arriving. Carries no verb
+   * and is not selectable; it exists so a group that is filling in has shape
+   * rather than appearing out of nowhere.
+   */
+  loading?: boolean;
   /**
    * Names the Enter action in the footer -- "Open Project", "Kill Port".
    * Falls back to a generic label when unset.

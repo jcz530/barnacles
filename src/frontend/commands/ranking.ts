@@ -65,7 +65,9 @@ export const groupRankedCommands = (
 
   const ordered = [...scored].sort((a, b) => effectiveScore(a) - effectiveScore(b));
 
-  const groups = new Map<CommandGroupId, PaletteItem[]>();
+  // Keyed on the label as well as the group id, so rows that name their own
+  // heading form their own section instead of merging into the group's.
+  const groups = new Map<string, { id: CommandGroupId; label: string; commands: PaletteItem[] }>();
   const seen = new Set<string>();
   let taken = 0;
 
@@ -74,20 +76,22 @@ export const groupRankedCommands = (
     // Keeps the best-ranked of any duplicate, since ordered is sorted already.
     if (seen.has(entry.item.id)) continue;
     seen.add(entry.item.id);
-    const existing = groups.get(entry.item.group);
+    const label = entry.item.groupLabel ?? COMMAND_GROUP_LABELS[entry.item.group];
+    const key = `${entry.item.group}\u0000${label}`;
+    const existing = groups.get(key);
     if (existing) {
-      if (existing.length >= maxPerGroup) continue;
-      existing.push(entry.item);
+      if (existing.commands.length >= maxPerGroup) continue;
+      existing.commands.push(entry.item);
     } else {
       // First hit for this group also fixes the group's position.
-      groups.set(entry.item.group, [entry.item]);
+      groups.set(key, { id: entry.item.group, label, commands: [entry.item] });
     }
     taken += 1;
   }
 
-  return [...groups.entries()].map(([id, commands]) => ({
+  return [...groups.values()].map(({ id, label, commands }) => ({
     id,
-    label: COMMAND_GROUP_LABELS[id],
+    label,
     commands,
   }));
 };

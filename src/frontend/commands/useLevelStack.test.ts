@@ -72,6 +72,27 @@ describe('useLevelStack', () => {
     expect(s.activeQuery.value).toBe('first');
   });
 
+  it('asks an item to prepare its data as the level opens', () => {
+    const prepare = vi.fn();
+    const parent = item('barnacles', { actions: () => [item('reveal')], prepare });
+    const { push } = stack([parent]);
+
+    push(parent, () => [item('reveal')]);
+
+    expect(prepare).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not prepare an item that has no level to open', () => {
+    // The actions guard runs first, so a row that cannot be drilled into never
+    // kicks off a fetch for a level nobody will see.
+    const prepare = vi.fn();
+    const leaf = item('reveal', { prepare });
+    const { push } = stack([leaf]);
+
+    expect(push(leaf, () => [])).toBe(false);
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
   it('builds a level’s items only when it is opened', () => {
     const build = vi.fn(() => [item('reveal')]);
     const parent = withActions('barnacles', [item('reveal')]);
@@ -187,6 +208,36 @@ describe('keeping open levels current', () => {
     await nextTick();
 
     expect(s.activeItems.value[0].id).toBe('kill:200');
+  });
+
+  it('fills a level in when the data its actions read arrives', async () => {
+    // The whole reason `actions` stays synchronous. A level built from a cache
+    // that is still filling would, with an async builder, be replaced by the
+    // sync result or dropped outright on the next root refresh -- and the root
+    // refreshes every few seconds. Here the rebuild is what delivers the rows:
+    // actions() reads the cache, so the refresh that follows the fetch is what
+    // puts the loaded items on screen.
+    const cache: { rows: PaletteItem[] } = { rows: [] };
+    const project = (): PaletteItem =>
+      item('project:1', {
+        title: 'Barnacles',
+        actions: () => [item('open'), ...cache.rows],
+      });
+
+    const items = ref([project()]);
+    const s = useLevelStack(items);
+    s.push(items.value[0], () => items.value[0].actions!({} as never));
+
+    // Opens immediately with only the static action -- never blocked on a fetch.
+    expect(s.depth.value).toBe(1);
+    expect(s.activeItems.value.map(entry => entry.id)).toEqual(['open']);
+
+    cache.rows = [item('process:web')];
+    items.value = [project()];
+    await nextTick();
+
+    expect(s.depth.value).toBe(1);
+    expect(s.activeItems.value.map(entry => entry.id)).toEqual(['open', 'process:web']);
   });
 
   it('keeps the level open and its search intact while rebuilding', async () => {
