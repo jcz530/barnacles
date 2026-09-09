@@ -3,12 +3,9 @@ import { useDark, useLocalStorage } from '@vueuse/core';
 import { toast } from 'vue-sonner';
 import { useQueries } from '@/composables/useQueries';
 import { useProjectActions } from '@/composables/useProjectActions';
-import { useApi } from '@/composables/useApi';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
 import { handlePermissionError } from '@/utils/error-handlers';
 import { getAllUtilities } from '@/utilities';
-import { API_ROUTES } from '../../shared/constants';
-import type { ApiResponse } from '../../shared/types/api';
 import { appCommands } from './providers/app';
 import { navigationCommands } from './providers/navigation';
 import { portCommands } from './providers/ports';
@@ -26,7 +23,6 @@ import type { Command } from './types';
  * nothing is showing.
  */
 export const useCommandRegistry = (isOpen: Ref<boolean>) => {
-  const { apiCall } = useApi();
   const {
     useProjectsQuery,
     usePortsQuery,
@@ -159,18 +155,6 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
       ...navigationCommands(),
       ...utilityCommands(utilities),
       ...appCommands({
-        addProject: async () => {
-          const selection = await window.electron.files.selectFolder();
-          if (!selection?.success || !selection.data) return;
-          const response = await apiCall<ApiResponse<{ name: string }>>(
-            'POST',
-            API_ROUTES.PROJECTS_ADD_BY_PATH,
-            { path: selection.data }
-          );
-          if (response?.data) {
-            toast.success(`Added ${response.data.name}`);
-          }
-        },
         rescanAll: () => startScan(),
         toggleTheme: () => {
           themeMode.value = isDark.value ? 'light' : 'dark';
