@@ -19,5 +19,6 @@ export const utilityCommands = (utilities: UtilityMetadata[]): Command[] =>
     // would make the group unscannable.
     icon: resolveLucideIcon(utility.icon),
     keywords: [...(utility.tags ?? []), utility.category ?? '', 'utility', 'tool'].filter(Boolean),
+    primaryActionLabel: 'Open Utility',
     run: ctx => ctx.navigate(utility.route),
   }));

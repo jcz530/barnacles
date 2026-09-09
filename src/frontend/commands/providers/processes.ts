@@ -39,6 +39,7 @@ export const processCommands = (
             subtitle: 'Running',
             group: 'processes' as const,
             icon: Square,
+            primaryActionLabel: 'Stop',
             keywords: [project.path, 'kill', 'halt', 'dev server'],
             // Running processes are what you most often want to act on.
             priority: 3,
@@ -52,6 +53,7 @@ export const processCommands = (
             title: `Start ${project.name}`,
             group: 'processes' as const,
             icon: Play,
+            primaryActionLabel: 'Start',
             keywords: [project.path, 'run', 'dev server', 'serve'],
             run: async ctx => {
               await deps.startProcesses(project.id);

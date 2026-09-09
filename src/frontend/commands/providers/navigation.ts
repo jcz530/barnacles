@@ -16,5 +16,6 @@ export const navigationCommands = (): Command[] =>
     icon: item.icon,
     keywords: [...(item.keywords ?? []), 'go to', 'open', 'navigate'],
     priority: DEFAULT_VISIBLE.has(item.url) ? 1 : 0,
+    primaryActionLabel: 'Go To',
     run: ctx => ctx.navigate(item.url),
   }));

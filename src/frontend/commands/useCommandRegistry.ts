@@ -5,6 +5,7 @@ import { useQueries } from '@/composables/useQueries';
 import { useProjectActions } from '@/composables/useProjectActions';
 import { useApi } from '@/composables/useApi';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
+import { handlePermissionError } from '@/utils/error-handlers';
 import { getAllUtilities } from '@/utilities';
 import { API_ROUTES } from '../../shared/constants';
 import type { ApiResponse } from '../../shared/types/api';
@@ -35,6 +36,11 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
     useKillPortMutation,
     useStartProjectProcessesMutation,
     useStopProjectProcessesMutation,
+    useDetectedIDEsQuery,
+    useDetectedTerminalsQuery,
+    useSettingsQuery,
+    useUpdatePreferredIDEMutation,
+    useUpdatePreferredTerminalMutation,
   } = useQueries();
 
   const { openInFinder, copyPath } = useProjectActions();
@@ -49,11 +55,43 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
   const { data: ports } = usePortsQuery({ enabled: isOpen });
   const { data: processStatuses } = useProcessStatusQuery(undefined, { enabled: isOpen });
 
+  // Neither detection query takes an enabled option, so unlike the polling
+  // queries above they can't be gated on isOpen. They are one-shot lookups with
+  // no refetch interval, so an idle palette costs nothing to keep them warm.
+  const { data: ides } = useDetectedIDEsQuery();
+  const { data: terminals } = useDetectedTerminalsQuery();
+  const { data: settings } = useSettingsQuery({ enabled: isOpen });
+
   const openProject = useOpenProjectMutation();
   const openTerminal = useOpenTerminalMutation();
   const killPort = useKillPortMutation();
   const startProcesses = useStartProjectProcessesMutation();
   const stopProcesses = useStopProjectProcessesMutation();
+  const updatePreferredIde = useUpdatePreferredIDEMutation();
+  const updatePreferredTerminal = useUpdatePreferredTerminalMutation();
+
+  const installedIdes = computed(() => (ides.value ?? []).filter(ide => ide.installed));
+  const installedTerminals = computed(() =>
+    (terminals.value ?? []).filter(terminal => terminal.installed)
+  );
+
+  const settingValue = (key: string): string | null =>
+    settings.value?.find(setting => setting.key === key)?.value || null;
+
+  /**
+   * Launching an editor or terminal can fail for reasons worth saying out loud
+   * -- most often macOS automation permissions. The palette used to swallow
+   * these, so a press of Enter simply did nothing.
+   *
+   * Toasts rather than alert(): the floating palette is a frameless panel, and
+   * a modal dialog over it has nowhere to go.
+   */
+  const reportLaunchFailure = (error: unknown, appType: 'terminal' | 'IDE') => {
+    const permissionMessage = handlePermissionError(error as never, appType);
+    toast.error(permissionMessage ?? `Could not open ${appType}`, {
+      description: permissionMessage ? undefined : 'Make sure it is installed and try again.',
+    });
+  };
 
   const isDark = useDark({
     selector: 'html',
@@ -71,11 +109,31 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
 
     return [
       ...projectCommands(projectList, {
-        openInIde: async projectId => {
-          await openProject.mutateAsync({ projectId });
+        ides: installedIdes.value,
+        terminals: installedTerminals.value,
+        defaultIdeId: settingValue('defaultIde'),
+        defaultTerminalId: settingValue('defaultTerminal'),
+        openInIde: async (projectId, ideId) => {
+          try {
+            await openProject.mutateAsync({ projectId, ideId });
+          } catch (error) {
+            reportLaunchFailure(error, 'IDE');
+          }
         },
-        openTerminal: async projectId => {
-          await openTerminal.mutateAsync({ projectId });
+        openTerminal: async (projectId, terminalId) => {
+          try {
+            await openTerminal.mutateAsync({ projectId, terminalId });
+          } catch (error) {
+            reportLaunchFailure(error, 'terminal');
+          }
+        },
+        setPreferredIde: async (projectId, ideId) => {
+          await updatePreferredIde.mutateAsync({ projectId, ideId });
+          toast.success('Default IDE updated');
+        },
+        setPreferredTerminal: async (projectId, terminalId) => {
+          await updatePreferredTerminal.mutateAsync({ projectId, terminalId });
+          toast.success('Default terminal updated');
         },
         revealInFinder: openInFinder,
         copyPath,

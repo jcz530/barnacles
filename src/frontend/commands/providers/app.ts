@@ -16,6 +16,7 @@ export const appCommands = (deps: AppCommandDeps): Command[] => [
   {
     id: 'app.add-project',
     title: 'Add project',
+    primaryActionLabel: 'Add Project',
     subtitle: 'Pick a folder to track',
     group: 'app',
     icon: FolderPlus,
@@ -29,6 +30,7 @@ export const appCommands = (deps: AppCommandDeps): Command[] => [
   {
     id: 'app.rescan',
     title: 'Scan for projects',
+    primaryActionLabel: 'Scan',
     subtitle: 'Search your configured directories',
     group: 'app',
     icon: RefreshCw,
@@ -41,6 +43,7 @@ export const appCommands = (deps: AppCommandDeps): Command[] => [
   {
     id: 'app.toggle-theme',
     title: deps.isDark() ? 'Switch to light mode' : 'Switch to dark mode',
+    primaryActionLabel: 'Switch Theme',
     group: 'app',
     icon: deps.isDark() ? Sun : MoonStar,
     keywords: ['theme', 'dark', 'light', 'appearance'],
@@ -52,6 +55,7 @@ export const appCommands = (deps: AppCommandDeps): Command[] => [
   {
     id: 'app.new-window',
     title: 'New window',
+    primaryActionLabel: 'New Window',
     group: 'app',
     icon: SquarePlus,
     keywords: ['open', 'another'],
