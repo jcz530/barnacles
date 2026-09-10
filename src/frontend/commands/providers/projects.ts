@@ -33,7 +33,14 @@ export interface ProjectCommandDeps {
   setPreferredTerminal: (projectId: string, terminalId: string) => void | Promise<void>;
   revealInFinder: (projectPath: string) => void;
   copyPath: (projectPath: string) => void | Promise<void>;
-  toggleFavorite: (projectId: string) => void | Promise<void>;
+  /**
+   * Flip a project's favourite state, resolving to what it now is.
+   *
+   * The new state comes back rather than being inferred from the old one: the
+   * endpoint is a blind flip and the palette stays open afterwards, so the row
+   * that was pressed may be a rebuild behind by the time the next press lands.
+   */
+  toggleFavorite: (projectId: string) => Promise<boolean>;
   /**
    * The project whose page is open, if one is.
    *
@@ -206,11 +213,16 @@ const projectActions = (
     // refetches -- so closing would hide the confirmation.
     run: async (ctx: CommandContext) => {
       try {
-        await deps.toggleFavorite(project.id);
+        // Reported from what came back, not from the isFavorite captured when
+        // this row was built. Pressing Enter twice in quick succession runs the
+        // same closure both times -- the rebuild needs a refetch to land -- so
+        // the captured value would announce "Added" for the press that removed
+        // it again.
+        const isFavorite = await deps.toggleFavorite(project.id);
         ctx.status(
-          project.isFavorite
-            ? `Removed ${project.name} from favorites`
-            : `Added ${project.name} to favorites`
+          isFavorite
+            ? `Added ${project.name} to favorites`
+            : `Removed ${project.name} from favorites`
         );
       } catch {
         ctx.status('Could not update favorites', 'error');

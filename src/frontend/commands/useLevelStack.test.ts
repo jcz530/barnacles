@@ -277,3 +277,22 @@ describe('keeping open levels current', () => {
     expect(s.activeItems.value[0].id).toBe('port:3000');
   });
 });
+
+describe('the query a level restores', () => {
+  it('changes value when a level is pushed or popped', () => {
+    // Not a feature of the stack so much as a hazard for anything watching
+    // activeQuery: it is a computed over each level's saved query, so pushing
+    // and popping move it as surely as typing does. The palette's status line
+    // clears on the input's own event for exactly this reason -- watching this
+    // wiped the message on the pop that "Set Default" performs as it reports.
+    const parent = withActions('barnacles', [item('open-ide')]);
+    const s = stack([parent]);
+
+    s.activeQuery.value = 'barn';
+    s.push(parent, () => [item('open-ide')]);
+    expect(s.activeQuery.value).toBe('');
+
+    s.pop();
+    expect(s.activeQuery.value).toBe('barn');
+  });
+});

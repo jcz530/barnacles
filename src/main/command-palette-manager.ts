@@ -222,7 +222,15 @@ const createPaletteWindow = async (): Promise<BrowserWindow> => {
     // Ctrl+C closes from any depth, unlike Escape which backs out one level at
     // a time. Handled here as well as in the renderer because this window's
     // keys are seen here first.
-    if (input.control && input.key.toLowerCase() === 'c') {
+    // Ctrl and nothing else: Ctrl+Shift+C and Cmd+Ctrl+C are other people's
+    // shortcuts, and closing the window out from under one would be a surprise.
+    if (
+      input.control &&
+      !input.shift &&
+      !input.alt &&
+      !input.meta &&
+      input.key.toLowerCase() === 'c'
+    ) {
       if (decideCtrlCAction(process.platform) === 'forward') return;
 
       event.preventDefault();

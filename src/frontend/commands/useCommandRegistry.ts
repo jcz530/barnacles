@@ -262,7 +262,8 @@ export const useCommandRegistry = (isOpen: Ref<boolean>, currentProjectId?: Ref<
         // which catches its own failure and alert()s -- it resolves either way,
         // so the palette would report a change that never happened.
         toggleFavorite: async (projectId: string) => {
-          await toggleFavorite.mutateAsync(projectId);
+          const result = await toggleFavorite.mutateAsync(projectId);
+          return !!result?.isFavorite;
         },
         currentProjectId: currentProjectId?.value ?? null,
         // Wrapped rather than passed straight through. The shared copyPath

@@ -285,12 +285,14 @@ watch(depth, value => emit('depthChange', value), { immediate: true });
 /**
  * Typing means the person has moved on from whatever was reported.
  *
- * Not watched on `depth`, deliberately: a message has to outlive the level it
- * was raised in. Killing a port from inside that port's own actions collapses
- * the level -- its subject is gone -- and clearing there would take the
- * confirmation with it. See useCommandStatus.
+ * Bound to the input's own event rather than watching `activeQuery`. That is a
+ * computed over each level's saved query, so it changes when a level is pushed
+ * or popped as well as when a key is pressed -- and clearing on that would take
+ * the message with it in exactly the two cases it matters most: "Set Default",
+ * which pops as it reports, and killing a port, which collapses the level the
+ * kill was run from. A message has to outlive the level that raised it.
  */
-watch(activeQuery, () => clearStatus());
+const handleQueryInput = () => clearStatus();
 </script>
 
 <template>
@@ -325,8 +327,9 @@ watch(activeQuery, () => clearStatus());
         "
         class="placeholder:text-muted-foreground h-12 w-full bg-transparent text-sm outline-hidden"
         auto-focus
+        @input="handleQueryInput"
         @keydown.escape="handleEscapeKey"
-        @keydown.ctrl.c="handleCtrlC"
+        @keydown.ctrl.c.exact="handleCtrlC"
         @keydown.left="backFromCaretStart"
         @keydown.right="openFromCaretEnd"
         @keydown.tab.exact.prevent="openActions(highlighted)"

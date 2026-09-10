@@ -19,7 +19,7 @@ const deps = (overrides: Partial<ProjectCommandDeps> = {}): ProjectCommandDeps =
   setPreferredTerminal: vi.fn(),
   revealInFinder: vi.fn(),
   copyPath: vi.fn(),
-  toggleFavorite: vi.fn(),
+  toggleFavorite: vi.fn().mockResolvedValue(true),
   processStatuses: [],
   processState: { configured: {}, loading: {} },
   processDeps: {
@@ -296,6 +296,21 @@ describe('opening a project’s tools', () => {
       expect(dependencies.toggleFavorite).toHaveBeenCalledWith('p1');
       expect(context.status).toHaveBeenCalledWith('Added Alchemy to favorites');
       expect(context.dismiss).not.toHaveBeenCalled();
+    });
+
+    it('reports what came back, not the state the row was built with', async () => {
+      // The palette stays open, so pressing Enter twice runs the same closure
+      // both times -- the row only rebuilds once a refetch lands. Reporting
+      // from the captured isFavorite announced "Added" for the press that
+      // removed it again.
+      const dependencies = deps();
+      vi.mocked(dependencies.toggleFavorite).mockResolvedValue(false);
+      const [command] = projectCommands([project({ isFavorite: false })], dependencies);
+      const context = ctx();
+
+      await findAction(command, 'favorite')?.run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Removed Alchemy from favorites');
     });
 
     it('says so when the change does not stick', async () => {

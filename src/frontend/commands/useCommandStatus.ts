@@ -1,4 +1,4 @@
-import { readonly, ref } from 'vue';
+import { onScopeDispose, readonly, ref } from 'vue';
 import type { CommandStatus, CommandStatusKind } from './types';
 
 /** How long a message stays up. Matches the toasts this replaces. */
@@ -62,6 +62,13 @@ export const useCommandStatus = () => {
       timer = undefined;
     }, STATUS_TIMEOUT_MS);
   };
+
+  // The in-app palette lives inside a portal and unmounts on every close, so a
+  // message raised in the last few seconds before closing would otherwise leave
+  // a timer waiting to write into a discarded ref.
+  // `true` because this is also called straight from tests, where there is no
+  // scope and the warning would be noise rather than a signal.
+  onScopeDispose(clearTimer, true);
 
   return { status: readonly(status), report, clear };
 };
