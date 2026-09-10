@@ -39,6 +39,7 @@ const ctx = (): CommandContext => ({
   navigate: vi.fn(),
   dismiss: vi.fn(),
   pop: vi.fn(),
+  status: vi.fn(),
 });
 
 const actionsOf = (command: Command) => command.actions?.(ctx()) ?? [];
@@ -199,5 +200,28 @@ describe('scriptCommands', () => {
     await actionsOf(row)[0].run?.(ctx());
 
     expect(dependencies.runScript).toHaveBeenCalledWith('p1', '/Users/dev/alchemy', 'pnpm dev');
+  });
+
+  describe('reporting the run', () => {
+    it('stays open, so several scripts can be started in a row', async () => {
+      const [row] = scriptCommands(project(), loaded([script({ name: 'dev' })]), deps());
+      const context = ctx();
+
+      await actionsOf(row)[0].run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Started dev');
+      expect(context.dismiss).not.toHaveBeenCalled();
+    });
+
+    it('says so when a script will not start', async () => {
+      const dependencies = deps();
+      vi.mocked(dependencies.runScript).mockRejectedValue(new Error('spawn failed'));
+      const [row] = scriptCommands(project(), loaded([script({ name: 'dev' })]), dependencies);
+      const context = ctx();
+
+      await actionsOf(row)[0].run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Could not start dev', 'error');
+    });
   });
 });

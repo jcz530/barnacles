@@ -47,6 +47,10 @@ const runCommand = async (command: Command) => {
     dismiss: () => {
       open.value = false;
     },
+    // The palette owns both -- it holds the level stack and renders the status
+    // line -- so a command that stays open reports back into it.
+    pop: () => paletteRef.value?.popLevel(),
+    status: (message, kind) => paletteRef.value?.report(message, kind),
   });
 };
 </script>

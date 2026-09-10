@@ -15,6 +15,7 @@ import {
 } from './processes';
 import { scriptCommands, type ScriptCommandDeps, type ScriptCommandState } from './scripts';
 import { resolvePreferred } from '../preferences';
+import { truncateValue } from '../useCommandStatus';
 import type { Command, CommandContext } from '../types';
 
 export interface ProjectCommandDeps {
@@ -179,9 +180,15 @@ const projectActions = (
     group: 'projects' as const,
     icon: Clipboard,
     primaryActionLabel: 'Copy',
+    // Stays open -- see the port copy actions. Nothing changes on screen, so
+    // the message is the only evidence the copy happened.
     run: async ctx => {
-      await deps.copyPath(project.path);
-      ctx.dismiss();
+      try {
+        await deps.copyPath(project.path);
+        ctx.status(`Copied ${truncateValue(project.path)}`);
+      } catch {
+        ctx.status('Could not copy the path', 'error');
+      }
     },
   },
   // Appended, so the level always opens with the project's own verbs on screen
@@ -279,9 +286,13 @@ const toolPickerActions = <T extends { id: string; name: string }>(
     primaryActionLabel: 'Set Default',
     run: async (ctx: CommandContext) => {
       await spec.setDefault(tool.id);
+      // Named rather than "Default updated": the row that was just pressed
+      // said "Always use X", and echoing the choice is what confirms the right
+      // one was pressed.
+      ctx.status(`${tool.name} is now the default for ${spec.projectName}`);
       // Back to the list rather than closing: setting a default is usually a
       // step before doing the thing, not the thing itself.
-      ctx.pop?.();
+      ctx.pop();
     },
   })),
 ];

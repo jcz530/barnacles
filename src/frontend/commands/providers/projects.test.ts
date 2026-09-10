@@ -53,6 +53,7 @@ const ctx = (): CommandContext => ({
   navigate: vi.fn(),
   dismiss: vi.fn(),
   pop: vi.fn(),
+  status: vi.fn(),
 });
 
 const actionsOf = (command: Command) => command.actions?.(ctx()) ?? [];
@@ -240,6 +241,8 @@ describe('opening a project’s tools', () => {
     // Back to the list rather than closing: setting a default is a step before
     // doing the thing, not the thing itself.
     expect(context.pop).toHaveBeenCalled();
+    // Named, so the confirmation echoes the choice that was just made.
+    expect(context.status).toHaveBeenCalledWith('VS Code is now the default for Alchemy');
   });
 
   it('separates setting a default from opening, so the level reads as two blocks', () => {
@@ -264,6 +267,43 @@ describe('opening a project’s tools', () => {
 
     expect(findAction(command, 'reveal')).toBeDefined();
     expect(findAction(command, 'copy-path')).toBeDefined();
+  });
+
+  describe('copying a path', () => {
+    it('stays open and confirms rather than closing', async () => {
+      const [command] = projectCommands([project()], deps());
+      const context = ctx();
+
+      await findAction(command, 'copy-path')?.run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Copied /Users/dev/alchemy');
+      expect(context.dismiss).not.toHaveBeenCalled();
+    });
+
+    it('keeps the end of a long path, which is the part that identifies it', async () => {
+      const path = `/Users/dev/${'nested/'.repeat(12)}alchemy`;
+      const [command] = projectCommands([project({ path })], deps());
+      const context = ctx();
+
+      await findAction(command, 'copy-path')?.run?.(context);
+
+      const [message] = vi.mocked(context.status).mock.calls[0];
+      expect(message).toContain('alchemy');
+      expect(message.startsWith('Copied …')).toBe(true);
+    });
+
+    it('says so when the clipboard refuses', async () => {
+      // The palette stays open for a copy, so a silent failure would look
+      // exactly like a successful one.
+      const dependencies = deps();
+      vi.mocked(dependencies.copyPath).mockRejectedValue(new Error('denied'));
+      const [command] = projectCommands([project()], dependencies);
+      const context = ctx();
+
+      await findAction(command, 'copy-path')?.run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Could not copy the path', 'error');
+    });
   });
 
   it('points at settings when nothing is installed to open with', () => {

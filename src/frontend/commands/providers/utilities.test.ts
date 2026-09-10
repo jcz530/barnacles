@@ -50,7 +50,13 @@ describe('utilityCommands', () => {
     const [command] = utilityCommands([utility()]);
     const navigate = vi.fn();
 
-    command.run({ surface: 'in-app', navigate, dismiss: vi.fn() });
+    command.run({
+      surface: 'in-app',
+      navigate,
+      dismiss: vi.fn(),
+      pop: vi.fn(),
+      status: vi.fn(),
+    });
 
     expect(navigate).toHaveBeenCalledWith('/utilities/color-converter');
   });

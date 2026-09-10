@@ -46,7 +46,7 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
     useUpdatePreferredTerminalMutation,
   } = useQueries();
 
-  const { openInFinder, copyPath } = useProjectActions();
+  const { openInFinder } = useProjectActions();
 
   // Fixed for the lifetime of the renderer: utilities are registered when the
   // registry module is evaluated, so this cannot change and has no business
@@ -243,16 +243,24 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
             reportLaunchFailure(error, 'terminal');
           }
         },
+        // The confirmations these used to toast are raised by the provider
+        // instead: it knows which tool was chosen, so it can say so by name.
         setPreferredIde: async (projectId, ideId) => {
           await updatePreferredIde.mutateAsync({ projectId, ideId });
-          toast.success('Default IDE updated');
         },
         setPreferredTerminal: async (projectId, terminalId) => {
           await updatePreferredTerminal.mutateAsync({ projectId, terminalId });
-          toast.success('Default terminal updated');
         },
         revealInFinder: openInFinder,
-        copyPath,
+        // Wrapped rather than passed straight through. The shared copyPath
+        // catches its own failure and alert()s, so it resolves either way --
+        // and the palette would go on to report a copy that never happened.
+        // Copy through the same channel the port actions use, so a failure
+        // rejects and the provider can say so. The shared one keeps its
+        // behaviour for the projects page, which is not this plan's to change.
+        copyPath: async (projectPath: string) => {
+          await window.electron.clipboard.writeText(projectPath);
+        },
         processStatuses: statusList,
         processState,
         processDeps,
@@ -268,7 +276,6 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
         },
         copyText: async text => {
           await window.electron.clipboard.writeText(text);
-          toast.success(`Copied ${text}`);
         },
         openExternal: url => window.electron.shell.openExternal(url),
       }),

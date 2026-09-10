@@ -23,6 +23,7 @@ const ctx = (): CommandContext => ({
   navigate: vi.fn(),
   dismiss: vi.fn(),
   pop: vi.fn(),
+  status: vi.fn(),
 });
 
 const actionsOf = (command: Command) => command.actions?.(ctx()) ?? [];
@@ -91,6 +92,79 @@ describe('portCommands', () => {
 
     expect(dependencies.copyText).toHaveBeenNthCalledWith(1, '5173');
     expect(dependencies.copyText).toHaveBeenNthCalledWith(2, 'http://localhost:5173');
+  });
+
+  describe('acting on a port', () => {
+    const portActions = (dependencies: ReturnType<typeof deps>) =>
+      actionsOf(portCommands([entry({ port: 5173 })], dependencies)[0]);
+
+    it('stays open and confirms, rather than closing on a copy', async () => {
+      // Nothing on screen changes when you copy, so a palette that closes
+      // leaves no evidence the copy happened at all.
+      const dependencies = deps();
+      const context = ctx();
+
+      await portActions(dependencies)
+        .find(a => a.id.startsWith('port.copy:'))
+        ?.run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Copied 5173');
+      expect(context.dismiss).not.toHaveBeenCalled();
+    });
+
+    it('says so when the clipboard refuses', async () => {
+      const dependencies = deps();
+      dependencies.copyText.mockRejectedValue(new Error('denied'));
+      const context = ctx();
+
+      await portActions(dependencies)
+        .find(a => a.id.startsWith('port.copy-url:'))
+        ?.run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Could not copy http://localhost:5173', 'error');
+    });
+
+    it('stays open on a kill, so the row can be watched leaving', async () => {
+      // The level this runs from collapses as the port disappears -- its
+      // subject is gone -- which is exactly why the status line does not clear
+      // on a level change. See useCommandStatus.
+      const dependencies = deps();
+      const context = ctx();
+
+      await portActions(dependencies)
+        .find(a => a.id.startsWith('port.kill:'))
+        ?.run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Killed port 5173');
+      expect(context.dismiss).not.toHaveBeenCalled();
+    });
+
+    it('says so when a port refuses to die', async () => {
+      // A process owned by another user, or one that outlives the signal.
+      // Silence here would read as the keypress having been ignored.
+      const dependencies = deps();
+      dependencies.killPort.mockRejectedValue(new Error('EPERM'));
+      const context = ctx();
+
+      await portActions(dependencies)
+        .find(a => a.id.startsWith('port.kill:'))
+        ?.run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Could not kill port 5173', 'error');
+    });
+
+    it('still closes when opening the port in a browser', async () => {
+      // The browser takes focus, so the floating palette is hidden by its own
+      // blur handler regardless -- staying open would be a promise it cannot keep.
+      const dependencies = deps();
+      const context = ctx();
+
+      await portActions(dependencies)
+        .find(a => a.id.startsWith('port.open:'))
+        ?.run?.(context);
+
+      expect(context.dismiss).toHaveBeenCalled();
+    });
   });
 
   it('gives every action a unique id across ports of one process', () => {

@@ -8,7 +8,7 @@ import {
   ComboboxLabel,
   ComboboxRoot,
 } from 'reka-ui';
-import { SearchIcon } from 'lucide-vue-next';
+import { Check, CircleAlert, SearchIcon } from 'lucide-vue-next';
 import { useFuse } from '@vueuse/integrations/useFuse';
 import type { CommandContext, PaletteItem } from '@/commands/types';
 import {
@@ -19,6 +19,7 @@ import {
   MAX_RESULTS,
 } from '@/commands/ranking';
 import { useLevelStack } from '@/commands/useLevelStack';
+import { useCommandStatus } from '@/commands/useCommandStatus';
 import CommandPaletteItem from '../molecules/CommandPaletteItem.vue';
 import CommandPaletteFooter from '../molecules/CommandPaletteFooter.vue';
 
@@ -41,6 +42,7 @@ const emit = defineEmits<{
 }>();
 
 const stack = useLevelStack(toRef(props, 'commands'));
+const { status, report, clear: clearStatus } = useCommandStatus();
 const { activeItems, activeQuery, breadcrumb, depth } = stack;
 
 const { results } = useFuse(activeQuery, activeItems, {
@@ -99,6 +101,7 @@ const focusInput = () => {
 /** Each open should start clean rather than resuming the last search. */
 const reset = () => {
   stack.reset();
+  clearStatus();
   focusInput();
 };
 
@@ -116,14 +119,23 @@ const highlighted = computed<PaletteItem | null>(
   () => activeItems.value.find(item => item.id === highlightedId.value) ?? null
 );
 
+/**
+ * Back out a level, if there is one, and put the caret back.
+ *
+ * A no-op at the root -- see CommandContext.pop. Commands use this to finish
+ * without closing, so it has to be safe to call from any depth.
+ */
+const popLevel = () => {
+  stack.pop();
+  focusInput();
+};
+
 const buildContext = (): CommandContext => ({
   surface: 'in-app',
   navigate: () => {},
   dismiss: () => emit('dismiss'),
-  pop: () => {
-    stack.pop();
-    focusInput();
-  },
+  pop: popLevel,
+  status: report,
 });
 
 /**
@@ -192,7 +204,12 @@ const handleEscapeKey = (event: KeyboardEvent) => {
 
 // goBack is exposed because the in-app dialog owns Escape: reka's dismissable
 // layer listens on the document, so the palette cannot intercept it locally.
-defineExpose({ reset, focusInput, goBack });
+//
+// report and popLevel are exposed for a different reason: a host builds the
+// real CommandContext (only it has a router, or the IPC to close a window), but
+// the status line and the level stack live here. This is how what a command
+// reports gets back in.
+defineExpose({ reset, focusInput, goBack, report, popLevel });
 
 /**
  * Is the caret at `edge`, with nothing selected?
@@ -233,6 +250,16 @@ const openFromCaretEnd = (event: KeyboardEvent) => {
 // The host needs to know how deep we are: in the floating window the main
 // process decides whether Escape closes the window, and at depth it must not.
 watch(depth, value => emit('depthChange', value), { immediate: true });
+
+/**
+ * Typing means the person has moved on from whatever was reported.
+ *
+ * Not watched on `depth`, deliberately: a message has to outlive the level it
+ * was raised in. Killing a port from inside that port's own actions collapses
+ * the level -- its subject is gone -- and clearing there would take the
+ * confirmation with it. See useCommandStatus.
+ */
+watch(activeQuery, () => clearStatus());
 </script>
 
 <template>
@@ -306,6 +333,35 @@ watch(depth, value => emit('depthChange', value), { immediate: true });
         />
       </ComboboxGroup>
     </ComboboxContent>
+
+    <!--
+      What the last command did, directly above the footer.
+
+      Below the list rather than under the search box: up there it displaced
+      every row on screen, and the list is the thing being read. Down here the
+      only thing it moves is itself and the footer, both already at the bottom
+      edge -- and it sits beside the footer's own verb, which is where the
+      result of pressing Enter belongs.
+
+      Keyed on the status id so a repeat of the same message -- copying one path
+      twice -- re-announces rather than sitting inert, and role="status" so a
+      screen reader hears it without focus moving.
+    -->
+    <div
+      v-if="status"
+      :key="status.id"
+      role="status"
+      aria-live="polite"
+      class="flex shrink-0 items-center gap-2 border-t border-t-slate-400/60 px-4 py-2 text-xs"
+      :class="status.kind === 'error' ? 'text-danger-500' : 'text-success-500'"
+    >
+      <!--
+        A bare check for success, but the circled alert for an error: the ring
+        is doing work there, marking the one case worth stopping for.
+      -->
+      <component :is="status.kind === 'error' ? CircleAlert : Check" class="size-3.5" />
+      <span class="truncate">{{ status.message }}</span>
+    </div>
 
     <CommandPaletteFooter
       :breadcrumb="breadcrumb"

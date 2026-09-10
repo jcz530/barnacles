@@ -32,7 +32,17 @@ const runCommand = async (command: Command) => {
   // palette opens its level rather than emitting it here.
   if (!command.run) return;
 
-  await command.run({ surface: 'floating', navigate, dismiss });
+  await command.run({
+    surface: 'floating',
+    navigate,
+    dismiss,
+    // The palette owns both -- it holds the level stack and renders the status
+    // line -- so a command that stays open reports back into it. This window is
+    // the reason the status line exists: dismiss() hides it a frame later, so a
+    // toast raised here would be painted into a window nobody sees.
+    pop: () => paletteRef.value?.popLevel(),
+    status: (message, kind) => paletteRef.value?.report(message, kind),
+  });
 };
 
 /**
