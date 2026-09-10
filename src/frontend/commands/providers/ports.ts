@@ -1,6 +1,7 @@
-import { Clipboard, Link, Radio, Skull } from 'lucide-vue-next';
+import { Copy, Radio, Skull } from 'lucide-vue-next';
 import type { PortEntry } from '../../../shared/types/api';
-import type { Command } from '../types';
+import { truncateValue } from '../useCommandStatus';
+import type { Command, CommandContext } from '../types';
 
 export interface PortCommandDeps {
   killPort: (pid: number) => void | Promise<void>;
@@ -23,6 +24,25 @@ export interface PortCommandDeps {
  * ports (IPv4 and IPv6 for the same server, or a dev server plus its HMR
  * socket), and keying on pid alone produces duplicates.
  */
+/**
+ * Copy, and say what happened either way.
+ *
+ * The palette stays open for these, so a failure has somewhere to be reported
+ * -- and must be, or the row would look like it had simply ignored the press.
+ */
+const copyAction = async (
+  ctx: CommandContext,
+  copy: () => void | Promise<void>,
+  label: string
+): Promise<void> => {
+  try {
+    await copy();
+    ctx.status(`Copied ${label}`);
+  } catch {
+    ctx.status(`Could not copy ${label}`, 'error');
+  }
+};
+
 export const portCommands = (ports: PortEntry[], deps: PortCommandDeps): Command[] =>
   ports.map(entry => {
     const label = entry.scriptName || entry.processName;
@@ -68,24 +88,24 @@ export const portCommands = (ports: PortEntry[], deps: PortCommandDeps): Command
           title: 'Copy Port Number',
           subtitle: String(entry.port),
           group: 'ports' as const,
-          icon: Clipboard,
+          icon: Copy,
           primaryActionLabel: 'Copy',
-          run: async ctx => {
-            await deps.copyText(String(entry.port));
-            ctx.dismiss();
-          },
+          // Stays open. Nothing on screen changes when you copy, so closing
+          // leaves no evidence it happened at all; the message is the whole
+          // confirmation, and it needs somewhere to live.
+          run: ctx => copyAction(ctx, () => deps.copyText(String(entry.port)), String(entry.port)),
         },
         {
           id: `port.copy-url:${entry.pid}:${entry.port}`,
           title: 'Copy URL',
           subtitle: url,
           group: 'ports' as const,
-          icon: Link,
+          // Copy rather than a link glyph: every row that puts something on the
+          // clipboard draws the same thing, whatever the something is. The link
+          // glyph belongs to rows that go somewhere -- see Open URL in processes.
+          icon: Copy,
           primaryActionLabel: 'Copy',
-          run: async ctx => {
-            await deps.copyText(url);
-            ctx.dismiss();
-          },
+          run: ctx => copyAction(ctx, () => deps.copyText(url), truncateValue(url)),
         },
         {
           id: `port.kill:${entry.pid}:${entry.port}`,
@@ -94,9 +114,20 @@ export const portCommands = (ports: PortEntry[], deps: PortCommandDeps): Command
           group: 'ports' as const,
           icon: Skull,
           primaryActionLabel: 'Kill',
+          // Stays open: the row leaving the list is the confirmation, and this
+          // is the one command where "did that work?" is worth answering --
+          // killing something that outlived the request is the whole point.
+          //
+          // The level this is run from collapses as the port disappears (its
+          // subject is gone), which is why the status line does not clear on a
+          // level change. See useCommandStatus.
           run: async ctx => {
-            await deps.killPort(entry.pid);
-            ctx.dismiss();
+            try {
+              await deps.killPort(entry.pid);
+              ctx.status(`Killed port ${entry.port}`);
+            } catch {
+              ctx.status(`Could not kill port ${entry.port}`, 'error');
+            }
           },
         },
       ],

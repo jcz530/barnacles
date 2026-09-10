@@ -156,6 +156,21 @@ describe('defaultCommands', () => {
     expect(shown).toHaveLength(MAX_PER_GROUP);
   });
 
+  it('keeps the project being looked at when favourites would fill the group', () => {
+    // The point of ranking it above favourites rather than merely marking it:
+    // with a dozen favourites the per-group cap would otherwise decide whether
+    // the project already on screen appears at all.
+    const favourites = Array.from({ length: MAX_DEFAULT_RESULTS }, (_, index) =>
+      command(`fav-${index}`, 'projects', 2)
+    );
+
+    const shown = defaultCommands([...favourites, command('current', 'projects', 3)]).flatMap(
+      group => group.commands.map(entry => entry.id)
+    );
+
+    expect(shown[0]).toBe('current');
+  });
+
   it('is empty when nothing is prioritized', () => {
     expect(defaultCommands([command('a', 'projects'), command('b', 'ports')])).toEqual([]);
   });

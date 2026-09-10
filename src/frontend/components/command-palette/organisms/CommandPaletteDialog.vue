@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import {
   DialogContent,
   DialogDescription,
@@ -9,15 +9,34 @@ import {
   DialogTitle,
   VisuallyHidden,
 } from 'reka-ui';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useCommandRegistry } from '@/commands/useCommandRegistry';
 import type { Command } from '@/commands/types';
+import { runCommand } from '@/commands/run-command';
 import CommandPalette from './CommandPalette.vue';
 
 const open = defineModel<boolean>('open', { required: true });
 
 const router = useRouter();
-const { commands, resetLazyState } = useCommandRegistry(open);
+const route = useRoute();
+
+/**
+ * The project whose page is open, so the palette ranks it first.
+ *
+ * Every project sub-page -- overview, files, terminals -- is a child of
+ * /projects/:id, so the param is present throughout and this need not name
+ * each one. Matched on the path as well as the param because `id` is not
+ * unique to this route: /themes/:id/edit has one too, and a theme's id would
+ * otherwise be handed over as a project's.
+ */
+const currentProjectId = computed(() => {
+  if (!route.path.startsWith('/projects/')) return null;
+
+  const id = route.params.id;
+  return typeof id === 'string' ? id : null;
+});
+
+const { commands, resetLazyState } = useCommandRegistry(open, currentProjectId);
 const paletteRef = ref<InstanceType<typeof CommandPalette> | null>(null);
 
 // A fresh search each time it opens. Awaits the render: the palette lives
@@ -33,12 +52,8 @@ watch(open, async isOpen => {
   paletteRef.value?.reset();
 });
 
-const runCommand = async (command: Command) => {
-  // An item can carry actions instead of a default verb, in which case the
-  // palette opens its level rather than emitting it here.
-  if (!command.run) return;
-
-  await command.run({
+const onSelect = (command: Command) =>
+  runCommand(command, () => ({
     surface: 'in-app',
     navigate: async path => {
       open.value = false;
@@ -47,8 +62,11 @@ const runCommand = async (command: Command) => {
     dismiss: () => {
       open.value = false;
     },
-  });
-};
+    // The palette owns both -- it holds the level stack and renders the status
+    // line -- so a command that stays open reports back into it.
+    pop: () => paletteRef.value?.popLevel(),
+    status: (message, kind) => paletteRef.value?.report(message, kind),
+  }));
 </script>
 
 <template>
@@ -85,7 +103,7 @@ const runCommand = async (command: Command) => {
         <CommandPalette
           ref="paletteRef"
           :commands="commands"
-          @select="runCommand"
+          @select="onSelect"
           @dismiss="open = false"
         />
       </DialogContent>

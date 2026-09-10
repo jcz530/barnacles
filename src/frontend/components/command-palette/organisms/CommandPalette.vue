@@ -8,7 +8,7 @@ import {
   ComboboxLabel,
   ComboboxRoot,
 } from 'reka-ui';
-import { SearchIcon } from 'lucide-vue-next';
+import { Check, CircleAlert, SearchIcon } from 'lucide-vue-next';
 import { useFuse } from '@vueuse/integrations/useFuse';
 import type { CommandContext, PaletteItem } from '@/commands/types';
 import {
@@ -19,6 +19,8 @@ import {
   MAX_RESULTS,
 } from '@/commands/ranking';
 import { useLevelStack } from '@/commands/useLevelStack';
+import { useCommandStatus } from '@/commands/useCommandStatus';
+import { useIsMac } from '@/composables/useIsMac';
 import CommandPaletteItem from '../molecules/CommandPaletteItem.vue';
 import CommandPaletteFooter from '../molecules/CommandPaletteFooter.vue';
 
@@ -41,6 +43,8 @@ const emit = defineEmits<{
 }>();
 
 const stack = useLevelStack(toRef(props, 'commands'));
+const isMac = useIsMac();
+const { status, report, clear: clearStatus } = useCommandStatus();
 const { activeItems, activeQuery, breadcrumb, depth } = stack;
 
 const { results } = useFuse(activeQuery, activeItems, {
@@ -99,6 +103,7 @@ const focusInput = () => {
 /** Each open should start clean rather than resuming the last search. */
 const reset = () => {
   stack.reset();
+  clearStatus();
   focusInput();
 };
 
@@ -116,14 +121,23 @@ const highlighted = computed<PaletteItem | null>(
   () => activeItems.value.find(item => item.id === highlightedId.value) ?? null
 );
 
+/**
+ * Back out a level, if there is one, and put the caret back.
+ *
+ * A no-op at the root -- see CommandContext.pop. Commands use this to finish
+ * without closing, so it has to be safe to call from any depth.
+ */
+const popLevel = () => {
+  stack.pop();
+  focusInput();
+};
+
 const buildContext = (): CommandContext => ({
   surface: 'in-app',
   navigate: () => {},
   dismiss: () => emit('dismiss'),
-  pop: () => {
-    stack.pop();
-    focusInput();
-  },
+  pop: popLevel,
+  status: report,
 });
 
 /**
@@ -190,9 +204,34 @@ const handleEscapeKey = (event: KeyboardEvent) => {
   if (!goBack()) emit('dismiss');
 };
 
+/**
+ * Ctrl+C closes outright, from any depth.
+ *
+ * Escape backs out one level at a time, which is right when you are stepping
+ * through actions but tedious when you are three levels down and simply done.
+ * Ctrl+C is what a developer's hands already reach for to mean "get me out of
+ * this" -- it is SIGINT in every shell on every platform.
+ *
+ * The exception is copying. In a GUI text field Windows and Linux use Ctrl+C
+ * for copy, so with a selection in the search box the key is left alone and
+ * the browser copies as usual. macOS copies with Cmd+C, so Ctrl+C is
+ * unambiguous there and closes whatever is selected.
+ */
+const handleCtrlC = (event: KeyboardEvent) => {
+  if (!isMac.value && hasSelection(event)) return;
+
+  event.preventDefault();
+  emit('dismiss');
+};
+
 // goBack is exposed because the in-app dialog owns Escape: reka's dismissable
 // layer listens on the document, so the palette cannot intercept it locally.
-defineExpose({ reset, focusInput, goBack });
+//
+// report and popLevel are exposed for a different reason: a host builds the
+// real CommandContext (only it has a router, or the IPC to close a window), but
+// the status line and the level stack live here. This is how what a command
+// reports gets back in.
+defineExpose({ reset, focusInput, goBack, report, popLevel });
 
 /**
  * Is the caret at `edge`, with nothing selected?
@@ -201,6 +240,15 @@ defineExpose({ reset, focusInput, goBack });
  * caret" -- at the far end of what has been typed, and never across a
  * selection. An empty box satisfies both edges, which is the common case.
  */
+/** Is any of the search box's text selected? */
+const hasSelection = (event: KeyboardEvent): boolean => {
+  const input = event.target as HTMLInputElement | null;
+  if (!input) return false;
+
+  const { selectionStart, selectionEnd } = input;
+  return selectionStart !== null && selectionEnd !== null && selectionStart !== selectionEnd;
+};
+
 const caretAt = (event: KeyboardEvent, edge: 'start' | 'end'): boolean => {
   const input = event.target as HTMLInputElement | null;
   if (!input) return false;
@@ -233,6 +281,18 @@ const openFromCaretEnd = (event: KeyboardEvent) => {
 // The host needs to know how deep we are: in the floating window the main
 // process decides whether Escape closes the window, and at depth it must not.
 watch(depth, value => emit('depthChange', value), { immediate: true });
+
+/**
+ * Typing means the person has moved on from whatever was reported.
+ *
+ * Bound to the input's own event rather than watching `activeQuery`. That is a
+ * computed over each level's saved query, so it changes when a level is pushed
+ * or popped as well as when a key is pressed -- and clearing on that would take
+ * the message with it in exactly the two cases it matters most: "Set Default",
+ * which pops as it reports, and killing a port, which collapses the level the
+ * kill was run from. A message has to outlive the level that raised it.
+ */
+const handleQueryInput = () => clearStatus();
 </script>
 
 <template>
@@ -267,7 +327,9 @@ watch(depth, value => emit('depthChange', value), { immediate: true });
         "
         class="placeholder:text-muted-foreground h-12 w-full bg-transparent text-sm outline-hidden"
         auto-focus
+        @input="handleQueryInput"
         @keydown.escape="handleEscapeKey"
+        @keydown.ctrl.c.exact="handleCtrlC"
         @keydown.left="backFromCaretStart"
         @keydown.right="openFromCaretEnd"
         @keydown.tab.exact.prevent="openActions(highlighted)"
@@ -306,6 +368,35 @@ watch(depth, value => emit('depthChange', value), { immediate: true });
         />
       </ComboboxGroup>
     </ComboboxContent>
+
+    <!--
+      What the last command did, directly above the footer.
+
+      Below the list rather than under the search box: up there it displaced
+      every row on screen, and the list is the thing being read. Down here the
+      only thing it moves is itself and the footer, both already at the bottom
+      edge -- and it sits beside the footer's own verb, which is where the
+      result of pressing Enter belongs.
+
+      Keyed on the status id so a repeat of the same message -- copying one path
+      twice -- re-announces rather than sitting inert, and role="status" so a
+      screen reader hears it without focus moving.
+    -->
+    <div
+      v-if="status"
+      :key="status.id"
+      role="status"
+      aria-live="polite"
+      class="flex shrink-0 items-center gap-2 border-t border-t-slate-400/60 px-4 py-2 text-xs"
+      :class="status.kind === 'error' ? 'text-danger-500' : 'text-success-500'"
+    >
+      <!--
+        A bare check for success, but the circled alert for an error: the ring
+        is doing work there, marking the one case worth stopping for.
+      -->
+      <component :is="status.kind === 'error' ? CircleAlert : Check" class="size-3.5" />
+      <span class="truncate">{{ status.message }}</span>
+    </div>
 
     <CommandPaletteFooter
       :breadcrumb="breadcrumb"

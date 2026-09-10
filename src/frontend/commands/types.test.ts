@@ -6,6 +6,7 @@ const ctx = (): CommandContext => ({
   navigate: vi.fn(),
   dismiss: vi.fn(),
   pop: vi.fn(),
+  status: vi.fn(),
 });
 
 describe('PaletteItem', () => {

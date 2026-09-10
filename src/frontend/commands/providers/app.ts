@@ -46,9 +46,12 @@ export const appCommands = (deps: AppCommandDeps): Command[] => [
     icon: deps.isDark() ? Sun : MoonStar,
     keywords: ['theme', 'dark', 'light', 'appearance'],
     priority: 1,
-    run: ctx => {
+    // Stays open, and says nothing: the palette itself re-themes under the
+    // cursor, which is a louder confirmation than any message. Staying also
+    // means a theme tried and disliked can be put back with one more Enter,
+    // rather than reopening the palette to undo it.
+    run: () => {
       deps.toggleTheme();
-      ctx.dismiss();
     },
   },
   // Only for people who have not set it up. Reaching this row means the palette

@@ -19,6 +19,10 @@ const deps = (overrides: Partial<ProjectCommandDeps> = {}): ProjectCommandDeps =
   setPreferredTerminal: vi.fn(),
   revealInFinder: vi.fn(),
   copyPath: vi.fn(),
+  toggleFavorite: vi.fn().mockResolvedValue(true),
+  gitProvider: (url?: string | null) =>
+    url?.includes('github') ? { name: 'GitHub', webUrl: 'https://github.com/dev/alchemy' } : null,
+  openExternal: vi.fn(),
   processStatuses: [],
   processState: { configured: {}, loading: {} },
   processDeps: {
@@ -48,11 +52,18 @@ const project = (overrides: Partial<ProjectWithDetails> = {}): ProjectWithDetail
     ...overrides,
   }) as ProjectWithDetails;
 
+const stats = (gitRemoteUrl: string): ProjectWithDetails['stats'] => ({
+  id: 's1',
+  projectId: 'p1',
+  gitRemoteUrl,
+});
+
 const ctx = (): CommandContext => ({
   surface: 'in-app',
   navigate: vi.fn(),
   dismiss: vi.fn(),
   pop: vi.fn(),
+  status: vi.fn(),
 });
 
 const actionsOf = (command: Command) => command.actions?.(ctx()) ?? [];
@@ -139,6 +150,7 @@ describe('projectCommands', () => {
       'Open in IDE',
       'Open Terminal',
       'Reveal in Finder',
+      'Add to Favorites',
       'Copy Path',
     ]);
   });
@@ -184,6 +196,25 @@ describe('opening a project’s tools', () => {
     const [command] = projectCommands([project()], deps({ defaultIdeId: 'vscode' }));
 
     expect(findAction(command, 'open-ide')?.title).toBe('Open in VS Code');
+  });
+
+  it('stays findable by "ide" once its title names an editor instead', () => {
+    // The row reads "Open in VS Code" as soon as a preference resolves, so the
+    // word someone reaches for when they cannot remember which editor a
+    // project uses had nothing left to match.
+    const [command] = projectCommands([project({ preferredIde: 'vscode' })], deps());
+    const openIde = findAction(command, 'open-ide');
+
+    expect(openIde?.title).toBe('Open in VS Code');
+    expect(openIde?.keywords).toEqual(expect.arrayContaining(['ide', 'editor', 'vs code']));
+  });
+
+  it('keeps the terminal row findable by "shell" the same way', () => {
+    const [command] = projectCommands([project({ preferredTerminal: 'ghostty' })], deps());
+
+    expect(findAction(command, 'open-terminal')?.keywords).toEqual(
+      expect.arrayContaining(['terminal', 'shell'])
+    );
   });
 
   it('offers the choice instead of guessing when nothing resolves', () => {
@@ -240,6 +271,8 @@ describe('opening a project’s tools', () => {
     // Back to the list rather than closing: setting a default is a step before
     // doing the thing, not the thing itself.
     expect(context.pop).toHaveBeenCalled();
+    // Named, so the confirmation echoes the choice that was just made.
+    expect(context.status).toHaveBeenCalledWith('VS Code is now the default for Alchemy');
   });
 
   it('separates setting a default from opening, so the level reads as two blocks', () => {
@@ -264,6 +297,214 @@ describe('opening a project’s tools', () => {
 
     expect(findAction(command, 'reveal')).toBeDefined();
     expect(findAction(command, 'copy-path')).toBeDefined();
+  });
+
+  describe('opening the project’s remote', () => {
+    const onGithub = (): Partial<ProjectWithDetails> => ({
+      stats: stats('git@github.com:dev/alchemy.git'),
+    });
+
+    it('names the provider rather than saying "remote"', () => {
+      // The projects page's dropdown already says "View on GitHub"; naming the
+      // same action differently here would read as a different one.
+      const [command] = projectCommands([project(onGithub())], deps());
+
+      expect(findAction(command, 'remote')?.title).toBe('View on GitHub');
+    });
+
+    it('offers nothing for a project with no remote', () => {
+      // A local-only repo, or one whose stats have not been gathered. A row
+      // that cannot do its verb is worse than an absent one.
+      const [command] = projectCommands([project()], deps());
+
+      expect(findAction(command, 'remote')).toBeUndefined();
+    });
+
+    it('opens the web url, not the ssh one it was derived from', async () => {
+      const dependencies = deps();
+      const [command] = projectCommands([project(onGithub())], dependencies);
+      const context = ctx();
+
+      await findAction(command, 'remote')?.run?.(context);
+
+      expect(dependencies.openExternal).toHaveBeenCalledWith('https://github.com/dev/alchemy');
+      // Closes, like the other verbs that hand off to another app.
+      expect(context.dismiss).toHaveBeenCalled();
+    });
+
+    it('is found by the provider’s name as well as by "remote"', () => {
+      const [command] = projectCommands([project(onGithub())], deps());
+
+      expect(findAction(command, 'remote')?.keywords).toEqual(
+        expect.arrayContaining(['github', 'remote', 'repo'])
+      );
+    });
+
+    it('finds the project itself by its provider from the root list', () => {
+      // "alchemy github" should reach the project, the way "alchemy ide" does.
+      const [command] = projectCommands([project(onGithub())], deps());
+
+      expect(command.keywords).toEqual(expect.arrayContaining(['github', 'remote']));
+    });
+
+    it('falls back to generic wording for an unrecognised host', () => {
+      // The shared resolver returns "Other" for a domain it does not know --
+      // a self-hosted GitLab, say. "View on Other" is not a sentence.
+      const [command] = projectCommands(
+        [project({ stats: stats('git@git.internal:dev/alchemy.git') })],
+        deps({
+          gitProvider: () => ({ name: 'Other', webUrl: 'https://git.internal/dev/alchemy' }),
+        })
+      );
+
+      expect(findAction(command, 'remote')?.title).toBe('View Remote');
+    });
+  });
+
+  describe('favouriting from the palette', () => {
+    it('offers to add when the project is not a favourite', () => {
+      const [command] = projectCommands([project({ isFavorite: false })], deps());
+
+      expect(findAction(command, 'favorite')?.title).toBe('Add to Favorites');
+    });
+
+    it('offers to remove when it already is one', () => {
+      // Named for what pressing it does, not for the state -- the row is a
+      // verb like every other in the level.
+      const [command] = projectCommands([project({ isFavorite: true })], deps());
+
+      expect(findAction(command, 'favorite')?.title).toBe('Remove from Favorites');
+    });
+
+    it('stays open and confirms, so the row can be watched flipping', async () => {
+      const dependencies = deps();
+      const [command] = projectCommands([project({ isFavorite: false })], dependencies);
+      const context = ctx();
+
+      await findAction(command, 'favorite')?.run?.(context);
+
+      expect(dependencies.toggleFavorite).toHaveBeenCalledWith('p1');
+      expect(context.status).toHaveBeenCalledWith('Added Alchemy to favorites');
+      expect(context.dismiss).not.toHaveBeenCalled();
+    });
+
+    it('reports what came back, not the state the row was built with', async () => {
+      // The palette stays open, so pressing Enter twice runs the same closure
+      // both times -- the row only rebuilds once a refetch lands. Reporting
+      // from the captured isFavorite announced "Added" for the press that
+      // removed it again.
+      const dependencies = deps();
+      vi.mocked(dependencies.toggleFavorite).mockResolvedValue(false);
+      const [command] = projectCommands([project({ isFavorite: false })], dependencies);
+      const context = ctx();
+
+      await findAction(command, 'favorite')?.run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Removed Alchemy from favorites');
+    });
+
+    it('says so when the change does not stick', async () => {
+      const dependencies = deps();
+      vi.mocked(dependencies.toggleFavorite).mockRejectedValue(new Error('offline'));
+      const [command] = projectCommands([project()], dependencies);
+      const context = ctx();
+
+      await findAction(command, 'favorite')?.run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Could not update favorites', 'error');
+    });
+
+    it('is reachable by typing the project name and "star"', () => {
+      // The row is found through its project, not by a keyword standing on its
+      // own: "star" alone would return every project at once.
+      const [command] = projectCommands([project()], deps());
+
+      expect(command.keywords).toEqual(expect.arrayContaining(['favorite', 'star']));
+    });
+  });
+
+  describe('ranking the project being looked at', () => {
+    it('puts the open project above favourites', () => {
+      // Ranked rather than auto-opened: Cmd+K still lands at the root with an
+      // empty box, and one Right arrow reaches this project's actions like any
+      // other row's.
+      const [current, favourite, plain] = projectCommands(
+        [project({ id: 'p1' }), project({ id: 'p2', isFavorite: true }), project({ id: 'p3' })],
+        deps({ currentProjectId: 'p1' })
+      );
+
+      expect(current.priority).toBeGreaterThan(favourite.priority ?? 0);
+      expect(favourite.priority).toBeGreaterThan(plain.priority ?? 0);
+    });
+
+    it('outranks a favourite even when it is one itself', () => {
+      const [command] = projectCommands(
+        [project({ id: 'p1', isFavorite: true })],
+        deps({ currentProjectId: 'p1' })
+      );
+
+      expect(command.priority).toBe(3);
+    });
+
+    it('ranks nothing specially away from a project page', () => {
+      // The floating window has no router to ask, and neither does the
+      // projects list -- both pass nothing and get the ordinary order.
+      const [favourite, plain] = projectCommands(
+        [project({ id: 'p1', isFavorite: true }), project({ id: 'p2' })],
+        deps({ currentProjectId: null })
+      );
+
+      expect(favourite.priority).toBe(2);
+      expect(plain.priority).toBe(0);
+    });
+
+    it('keeps the path as the subtitle rather than labelling the row', () => {
+      // Two worktrees of one repo share a name; the path is what tells them
+      // apart, and being first is signal enough on its own.
+      const [command] = projectCommands(
+        [project({ id: 'p1', path: '/Users/dev/alchemy' })],
+        deps({ currentProjectId: 'p1' })
+      );
+
+      expect(command.subtitle).toBe('/Users/dev/alchemy');
+    });
+  });
+
+  describe('copying a path', () => {
+    it('stays open and confirms rather than closing', async () => {
+      const [command] = projectCommands([project()], deps());
+      const context = ctx();
+
+      await findAction(command, 'copy-path')?.run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Copied /Users/dev/alchemy');
+      expect(context.dismiss).not.toHaveBeenCalled();
+    });
+
+    it('keeps the end of a long path, which is the part that identifies it', async () => {
+      const path = `/Users/dev/${'nested/'.repeat(12)}alchemy`;
+      const [command] = projectCommands([project({ path })], deps());
+      const context = ctx();
+
+      await findAction(command, 'copy-path')?.run?.(context);
+
+      const [message] = vi.mocked(context.status).mock.calls[0];
+      expect(message).toContain('alchemy');
+      expect(message.startsWith('Copied …')).toBe(true);
+    });
+
+    it('says so when the clipboard refuses', async () => {
+      // The palette stays open for a copy, so a silent failure would look
+      // exactly like a successful one.
+      const dependencies = deps();
+      vi.mocked(dependencies.copyPath).mockRejectedValue(new Error('denied'));
+      const [command] = projectCommands([project()], dependencies);
+      const context = ctx();
+
+      await findAction(command, 'copy-path')?.run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Could not copy the path', 'error');
+    });
   });
 
   it('points at settings when nothing is installed to open with', () => {

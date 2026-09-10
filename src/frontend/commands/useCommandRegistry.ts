@@ -22,8 +22,12 @@ import type { Command } from './types';
  * palette must not keep the 5s ports poll alive in every window, and rebuilding
  * hundreds of command objects on every projects change is wasted work when
  * nothing is showing.
+ *
+ * `currentProjectId` ranks the project whose page is open to the top. Passed in
+ * rather than read from a router here: this registry also runs in the floating
+ * window, which has no router at all.
  */
-export const useCommandRegistry = (isOpen: Ref<boolean>) => {
+export const useCommandRegistry = (isOpen: Ref<boolean>, currentProjectId?: Ref<string | null>) => {
   const {
     useProjectsQuery,
     usePortsQuery,
@@ -44,9 +48,10 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
     useSettingsQuery,
     useUpdatePreferredIDEMutation,
     useUpdatePreferredTerminalMutation,
+    useToggleFavoriteMutation,
   } = useQueries();
 
-  const { openInFinder, copyPath } = useProjectActions();
+  const { openInFinder, getGitProvider } = useProjectActions();
 
   // Fixed for the lifetime of the renderer: utilities are registered when the
   // registry module is evaluated, so this cannot change and has no business
@@ -76,6 +81,7 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
   const createProcess = useCreateProcessMutation();
   const updatePreferredIde = useUpdatePreferredIDEMutation();
   const updatePreferredTerminal = useUpdatePreferredTerminalMutation();
+  const toggleFavorite = useToggleFavoriteMutation();
 
   const installedIdes = computed(() => (ides.value ?? []).filter(ide => ide.installed));
   const installedTerminals = computed(() =>
@@ -243,16 +249,37 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
             reportLaunchFailure(error, 'terminal');
           }
         },
+        // The confirmations these used to toast are raised by the provider
+        // instead: it knows which tool was chosen, so it can say so by name.
         setPreferredIde: async (projectId, ideId) => {
           await updatePreferredIde.mutateAsync({ projectId, ideId });
-          toast.success('Default IDE updated');
         },
         setPreferredTerminal: async (projectId, terminalId) => {
           await updatePreferredTerminal.mutateAsync({ projectId, terminalId });
-          toast.success('Default terminal updated');
         },
         revealInFinder: openInFinder,
-        copyPath,
+        // The mutation directly rather than useProjectActions.toggleFavorite,
+        // which catches its own failure and alert()s -- it resolves either way,
+        // so the palette would report a change that never happened.
+        toggleFavorite: async (projectId: string) => {
+          const result = await toggleFavorite.mutateAsync(projectId);
+          return !!result?.isFavorite;
+        },
+        // The same resolver the projects page's dropdown uses, so both name a
+        // provider identically -- "View on GitHub" in one and something else in
+        // the other would read as two different actions.
+        gitProvider: getGitProvider,
+        openExternal: (url: string) => window.electron.shell.openExternal(url),
+        currentProjectId: currentProjectId?.value ?? null,
+        // Wrapped rather than passed straight through. The shared copyPath
+        // catches its own failure and alert()s, so it resolves either way --
+        // and the palette would go on to report a copy that never happened.
+        // Copy through the same channel the port actions use, so a failure
+        // rejects and the provider can say so. The shared one keeps its
+        // behaviour for the projects page, which is not this plan's to change.
+        copyPath: async (projectPath: string) => {
+          await window.electron.clipboard.writeText(projectPath);
+        },
         processStatuses: statusList,
         processState,
         processDeps,
@@ -268,7 +295,6 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
         },
         copyText: async text => {
           await window.electron.clipboard.writeText(text);
-          toast.success(`Copied ${text}`);
         },
         openExternal: url => window.electron.shell.openExternal(url),
       }),

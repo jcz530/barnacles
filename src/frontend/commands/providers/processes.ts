@@ -58,6 +58,35 @@ export const stateOf = (
 const hasRunning = (status: ProjectProcessStatus | undefined): boolean =>
   Boolean(status?.processes.some(process => process.status === 'running'));
 
+/** The three process verbs, in both tenses a message needs. */
+const VERBS = {
+  start: { done: 'Started', failed: 'start' },
+  stop: { done: 'Stopped', failed: 'stop' },
+  restart: { done: 'Restarted', failed: 'restart' },
+} as const;
+
+/**
+ * Run a process verb, stay open, and say what happened.
+ *
+ * These all stay open: the row itself reports the result -- it flips between
+ * Start and Stop as the status query catches up -- so closing would hide the
+ * very thing that confirms the press. Starting several processes in a row is
+ * also ordinary, and each one costing a reopen is what made this worth changing.
+ */
+const processAction = async (
+  ctx: CommandContext,
+  act: () => void | Promise<void>,
+  verb: keyof typeof VERBS,
+  subject: string
+): Promise<void> => {
+  try {
+    await act();
+    ctx.status(`${VERBS[verb].done} ${subject}`);
+  } catch {
+    ctx.status(`Could not ${VERBS[verb].failed} ${subject}`, 'error');
+  }
+};
+
 /**
  * Start/stop a project's processes, one row per project.
  *
@@ -97,10 +126,8 @@ export const processCommands = (
             keywords: [project.path, 'kill', 'halt', 'dev server', 'processes'],
             // Running processes are what you most often want to act on.
             priority: 3,
-            run: async ctx => {
-              await deps.stopProcesses(project.id);
-              ctx.dismiss();
-            },
+            run: ctx =>
+              processAction(ctx, () => deps.stopProcesses(project.id), 'stop', project.name),
           }
         : {
             id: `process.start:${project.id}`,
@@ -109,10 +136,8 @@ export const processCommands = (
             icon: Play,
             primaryActionLabel: 'Start',
             keywords: [project.path, 'run', 'dev server', 'serve', 'processes'],
-            run: async ctx => {
-              await deps.startProcesses(project.id);
-              ctx.dismiss();
-            },
+            run: ctx =>
+              processAction(ctx, () => deps.startProcesses(project.id), 'start', project.name),
           },
     ];
   });
@@ -164,10 +189,8 @@ export const projectProcessActions = (
           icon: Square,
           primaryActionLabel: 'Stop',
           keywords: ['kill', 'halt', 'stop'],
-          run: async (ctx: CommandContext) => {
-            await deps.stopProcesses(project.id);
-            ctx.dismiss();
-          },
+          run: (ctx: CommandContext) =>
+            processAction(ctx, () => deps.stopProcesses(project.id), 'stop', project.name),
         }
       : {
           id: `project.processes.start-all:${project.id}`,
@@ -176,10 +199,8 @@ export const projectProcessActions = (
           icon: Play,
           primaryActionLabel: 'Start',
           keywords: ['run', 'serve', 'start'],
-          run: async (ctx: CommandContext) => {
-            await deps.startProcesses(project.id);
-            ctx.dismiss();
-          },
+          run: (ctx: CommandContext) =>
+            processAction(ctx, () => deps.startProcesses(project.id), 'start', project.name),
         },
     // Stopping the project deletes its whole map, so the start that follows
     // genuinely spawns -- no per-process eviction needed for the bulk verb.
@@ -192,11 +213,16 @@ export const projectProcessActions = (
             icon: RotateCw,
             primaryActionLabel: 'Restart',
             keywords: ['reload', 'bounce', 'restart'],
-            run: async (ctx: CommandContext) => {
-              await deps.stopProcesses(project.id);
-              await deps.startProcesses(project.id);
-              ctx.dismiss();
-            },
+            run: (ctx: CommandContext) =>
+              processAction(
+                ctx,
+                async () => {
+                  await deps.stopProcesses(project.id);
+                  await deps.startProcesses(project.id);
+                },
+                'restart',
+                project.name
+              ),
           },
         ]
       : []),
@@ -251,25 +277,29 @@ const processRow = (
     ...(state === 'running'
       ? {
           primaryActionLabel: 'Stop',
-          run: async (ctx: CommandContext) => {
-            await deps.stopProcess(project.id, entry.id);
-            ctx.dismiss();
-          },
+          run: (ctx: CommandContext) =>
+            processAction(ctx, () => deps.stopProcess(project.id, entry.id), 'stop', entry.name),
         }
       : state === 'failed'
         ? {
             primaryActionLabel: 'Restart',
-            run: async (ctx: CommandContext) => {
-              await deps.restartProcess(project.id, entry.id);
-              ctx.dismiss();
-            },
+            run: (ctx: CommandContext) =>
+              processAction(
+                ctx,
+                () => deps.restartProcess(project.id, entry.id),
+                'restart',
+                entry.name
+              ),
           }
         : {
             primaryActionLabel: 'Start',
-            run: async (ctx: CommandContext) => {
-              await deps.startProcess(project.id, entry.id);
-              ctx.dismiss();
-            },
+            run: (ctx: CommandContext) =>
+              processAction(
+                ctx,
+                () => deps.startProcess(project.id, entry.id),
+                'start',
+                entry.name
+              ),
           }),
     actions: () => processVerbs(project, entry, state, url, deps),
   };
@@ -300,10 +330,8 @@ const processVerbs = (
       group: 'processes' as const,
       icon: Play,
       primaryActionLabel: 'Start',
-      run: async (ctx: CommandContext) => {
-        await deps.startProcess(project.id, entry.id);
-        ctx.dismiss();
-      },
+      run: (ctx: CommandContext) =>
+        processAction(ctx, () => deps.startProcess(project.id, entry.id), 'start', entry.name),
     },
     {
       id: `${base}.stop`,
@@ -311,10 +339,8 @@ const processVerbs = (
       group: 'processes' as const,
       icon: Square,
       primaryActionLabel: 'Stop',
-      run: async (ctx: CommandContext) => {
-        await deps.stopProcess(project.id, entry.id);
-        ctx.dismiss();
-      },
+      run: (ctx: CommandContext) =>
+        processAction(ctx, () => deps.stopProcess(project.id, entry.id), 'stop', entry.name),
     },
     {
       id: `${base}.restart`,
@@ -323,10 +349,8 @@ const processVerbs = (
       icon: RotateCw,
       primaryActionLabel: 'Restart',
       keywords: ['reload', 'bounce'],
-      run: async (ctx: CommandContext) => {
-        await deps.restartProcess(project.id, entry.id);
-        ctx.dismiss();
-      },
+      run: (ctx: CommandContext) =>
+        processAction(ctx, () => deps.restartProcess(project.id, entry.id), 'restart', entry.name),
     },
     // Only when there is somewhere to go. A row that cannot do its verb is
     // worse than an absent one in a list this short.

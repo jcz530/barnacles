@@ -1,10 +1,12 @@
 import {
-  Clipboard,
+  Copy,
+  ExternalLink,
+  FolderGit2,
   FolderOpen,
   MonitorPlay,
-  SquareArrowOutUpRight,
   SquareTerminal,
   Star,
+  StarOff,
 } from 'lucide-vue-next';
 import type { DetectedIDE, DetectedTerminal, ProjectWithDetails } from '../../../shared/types/api';
 import type { ProjectProcessStatus } from '../../../shared/types/process';
@@ -15,6 +17,7 @@ import {
 } from './processes';
 import { scriptCommands, type ScriptCommandDeps, type ScriptCommandState } from './scripts';
 import { resolvePreferred } from '../preferences';
+import { truncateValue } from '../useCommandStatus';
 import type { Command, CommandContext } from '../types';
 
 export interface ProjectCommandDeps {
@@ -31,6 +34,32 @@ export interface ProjectCommandDeps {
   setPreferredTerminal: (projectId: string, terminalId: string) => void | Promise<void>;
   revealInFinder: (projectPath: string) => void;
   copyPath: (projectPath: string) => void | Promise<void>;
+  /**
+   * Flip a project's favourite state, resolving to what it now is.
+   *
+   * The new state comes back rather than being inferred from the old one: the
+   * endpoint is a blind flip and the palette stays open afterwards, so the row
+   * that was pressed may be a rebuild behind by the time the next press lands.
+   */
+  toggleFavorite: (projectId: string) => Promise<boolean>;
+  /**
+   * Name and web URL for a remote, or null when there is no remote or it
+   * cannot be read as one. Shared with the projects page's dropdown so the two
+   * name a provider the same way.
+   */
+  gitProvider: (remoteUrl: string | null | undefined) => { name: string; webUrl: string } | null;
+  openExternal: (url: string) => void | Promise<void>;
+  /**
+   * The project whose page is open, if one is.
+   *
+   * Ranked to the top so the palette opens with the thing already on screen
+   * within reach. Deliberately only a ranking: Cmd+K still lands at the root
+   * with an empty box, which is the one thing about the palette worth being
+   * able to rely on without looking.
+   *
+   * Null in the floating window, which has no router to ask.
+   */
+  currentProjectId?: string | null;
 
   /** What is running, and what each project has configured to run. */
   processStatuses: ProjectProcessStatus[];
@@ -67,8 +96,10 @@ export const projectCommands = (
   deps: ProjectCommandDeps
 ): Command[] =>
   projects.map(project => {
-    // Favorites surface before other projects when nothing has been typed.
-    const priority = project.isFavorite ? 2 : 0;
+    // The project being looked at outranks favorites, which outrank the rest,
+    // when nothing has been typed.
+    const isCurrent = !!deps.currentProjectId && project.id === deps.currentProjectId;
+    const priority = isCurrent ? 3 : project.isFavorite ? 2 : 0;
 
     const preferredIde = resolvePreferred(deps.ides, project.preferredIde, deps.defaultIdeId);
     const preferredTerminal = resolvePreferred(
@@ -80,6 +111,10 @@ export const projectCommands = (
     return {
       id: `project:${project.id}`,
       title: project.name,
+      // The path stays, rather than being swapped for "Currently viewing":
+      // two worktrees of one repo share a name, and the path is what tells
+      // them apart. Being first in the list is the signal; a label repeating
+      // what the page behind it already says would be noise.
       subtitle: project.path,
       group: 'projects' as const,
       // Enough for the palette to render the project's own icon, the same one
@@ -104,7 +139,13 @@ export const projectCommands = (
         'finder',
         'reveal',
         'copy path',
-      ],
+        'favorite',
+        'star',
+        // So "alchemy github" finds the project whose remote is on GitHub, the
+        // way "alchemy ide" finds it by a verb it carries.
+        deps.gitProvider(project.stats?.gitRemoteUrl)?.name.toLowerCase() ?? '',
+        'remote',
+      ].filter(Boolean),
       priority,
       primaryActionLabel: 'Open Project',
       run: ctx => ctx.navigate(`/projects/${project.id}`),
@@ -131,7 +172,9 @@ const projectActions = (
     title: 'Open Project',
     subtitle: project.path,
     group: 'projects' as const,
-    icon: SquareArrowOutUpRight,
+    // The glyph the sidebar gives Projects, so the row reads as "the project"
+    // rather than as a generic "open something elsewhere" arrow.
+    icon: FolderGit2,
     primaryActionLabel: 'Open Project',
     run: ctx => ctx.navigate(`/projects/${project.id}`),
   },
@@ -147,6 +190,7 @@ const projectActions = (
     projectName: project.name,
     idPrefix: `project.open-ide:${project.id}`,
     toolNoun: 'editors',
+    keywords: ['ide', 'editor', 'code'],
   }),
   toolAction({
     id: `project.open-terminal:${project.id}`,
@@ -160,6 +204,7 @@ const projectActions = (
     projectName: project.name,
     idPrefix: `project.open-terminal:${project.id}`,
     toolNoun: 'terminals',
+    keywords: ['terminal', 'shell', 'console'],
   }),
   {
     id: `project.reveal:${project.id}`,
@@ -172,16 +217,54 @@ const projectActions = (
       ctx.dismiss();
     },
   },
+  // Only when there is a remote to open. A row that cannot do its verb is
+  // worse than an absent one in a list this short.
+  ...remoteAction(project, deps),
+  {
+    id: `project.favorite:${project.id}`,
+    title: project.isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
+    group: 'projects' as const,
+    icon: project.isFavorite ? StarOff : Star,
+    primaryActionLabel: project.isFavorite ? 'Remove' : 'Add',
+    keywords: ['favourite', 'star', 'unstar', 'pin', 'bookmark'],
+    // Stays open, like the other verbs that finish in place. The row itself
+    // reports the result -- it flips to the opposite verb as the projects query
+    // refetches -- so closing would hide the confirmation.
+    run: async (ctx: CommandContext) => {
+      try {
+        // Reported from what came back, not from the isFavorite captured when
+        // this row was built. Pressing Enter twice in quick succession runs the
+        // same closure both times -- the rebuild needs a refetch to land -- so
+        // the captured value would announce "Added" for the press that removed
+        // it again.
+        const isFavorite = await deps.toggleFavorite(project.id);
+        ctx.status(
+          isFavorite
+            ? `Added ${project.name} to favorites`
+            : `Removed ${project.name} from favorites`
+        );
+      } catch {
+        ctx.status('Could not update favorites', 'error');
+      }
+    },
+  },
   {
     id: `project.copy-path:${project.id}`,
     title: 'Copy Path',
     subtitle: project.path,
     group: 'projects' as const,
-    icon: Clipboard,
+    // The same glyph the projects page's dropdown gives this action.
+    icon: Copy,
     primaryActionLabel: 'Copy',
+    // Stays open -- see the port copy actions. Nothing changes on screen, so
+    // the message is the only evidence the copy happened.
     run: async ctx => {
-      await deps.copyPath(project.path);
-      ctx.dismiss();
+      try {
+        await deps.copyPath(project.path);
+        ctx.status(`Copied ${truncateValue(project.path)}`);
+      } catch {
+        ctx.status('Could not copy the path', 'error');
+      }
     },
   },
   // Appended, so the level always opens with the project's own verbs on screen
@@ -189,6 +272,47 @@ const projectActions = (
   ...projectProcessActions(project, deps.processStatuses, deps.processState, deps.processDeps),
   ...scriptCommands(project, deps.scriptState, deps.scriptDeps),
 ];
+
+/**
+ * "View on GitHub", or whatever the remote turns out to be.
+ *
+ * Named for the provider rather than "View Remote": the projects page's
+ * dropdown already says "View on GitHub", and the palette naming the same
+ * thing differently would read as a different action.
+ *
+ * Returns nothing at all for a project with no remote -- a local-only repo, or
+ * one whose stats have not been gathered yet.
+ */
+const remoteAction = (project: ProjectWithDetails, deps: ProjectCommandDeps): Command[] => {
+  const remoteUrl = project.stats?.gitRemoteUrl;
+  const provider = deps.gitProvider(remoteUrl);
+
+  if (!provider) return [];
+
+  // "Other" is what the shared resolver returns for a domain it does not
+  // recognise -- a self-hosted GitLab, say. "View on Other" is not a sentence,
+  // so those get the generic wording and are still found by "remote".
+  const named = provider.name !== 'Other';
+
+  return [
+    {
+      id: `project.remote:${project.id}`,
+      title: named ? `View on ${provider.name}` : 'View Remote',
+      subtitle: provider.webUrl,
+      group: 'projects' as const,
+      // The same glyph the projects page's dropdown gives this action.
+      icon: ExternalLink,
+      primaryActionLabel: named ? `Open ${provider.name}` : 'Open Remote',
+      // The provider's own name is what people reach for -- "alchemy github"
+      // should find this -- alongside the words for the thing in general.
+      keywords: [provider.name.toLowerCase(), 'remote', 'origin', 'repository', 'repo', 'git'],
+      run: async ctx => {
+        await deps.openExternal(provider.webUrl);
+        ctx.dismiss();
+      },
+    },
+  ];
+};
 
 interface ToolActionSpec<T extends { id: string; name: string }> {
   id: string;
@@ -203,6 +327,14 @@ interface ToolActionSpec<T extends { id: string; name: string }> {
   idPrefix: string;
   /** Plural, for the "none detected" subtitle: "editors", "terminals". */
   toolNoun: string;
+  /**
+   * Words for the kind of tool, since the title stops containing them.
+   *
+   * Once a preferred tool resolves, this row reads "Open in VS Code" -- so
+   * "ide", the word someone reaches for when they cannot remember which editor
+   * a project is set to, matches nothing at all.
+   */
+  keywords: string[];
 }
 
 /**
@@ -224,6 +356,7 @@ const toolAction = <T extends { id: string; name: string }>(spec: ToolActionSpec
       subtitle: `No ${spec.toolNoun} detected`,
       group: 'projects' as const,
       icon: spec.icon,
+      keywords: spec.keywords,
       primaryActionLabel: 'Open Settings',
       run: ctx => ctx.navigate('/settings'),
     };
@@ -234,6 +367,9 @@ const toolAction = <T extends { id: string; name: string }>(spec: ToolActionSpec
     title: spec.preferred ? `${spec.verb} ${spec.preferred.name}` : spec.fallbackTitle,
     group: 'projects' as const,
     icon: spec.icon,
+    // The kind of tool, plus the one that resolved: "ide" finds this row even
+    // when it reads "Open in VS Code", and so does "vs code".
+    keywords: [...spec.keywords, spec.preferred?.name.toLowerCase() ?? ''].filter(Boolean),
     primaryActionLabel: spec.preferred ? `${spec.verb} ${spec.preferred.name}` : 'Choose',
     // Passing the resolved id rather than letting the backend fall back: it
     // only consults the project's own preference and throws otherwise, so a
@@ -279,9 +415,13 @@ const toolPickerActions = <T extends { id: string; name: string }>(
     primaryActionLabel: 'Set Default',
     run: async (ctx: CommandContext) => {
       await spec.setDefault(tool.id);
+      // Named rather than "Default updated": the row that was just pressed
+      // said "Always use X", and echoing the choice is what confirms the right
+      // one was pressed.
+      ctx.status(`${tool.name} is now the default for ${spec.projectName}`);
       // Back to the list rather than closing: setting a default is usually a
       // step before doing the thing, not the thing itself.
-      ctx.pop?.();
+      ctx.pop();
     },
   })),
 ];

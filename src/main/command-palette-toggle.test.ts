@@ -9,7 +9,8 @@ vi.mock('electron', () => ({
   screen: { getCursorScreenPoint: vi.fn(), getDisplayNearestPoint: vi.fn() },
 }));
 
-const { decideEscapeAction, decideToggleAction } = await import('./command-palette-manager');
+const { decideCtrlCAction, decideEscapeAction, decideToggleAction } =
+  await import('./command-palette-manager');
 
 /** Comfortably outside the dismiss grace window. */
 const LONG_AGO = 10_000;
@@ -114,5 +115,20 @@ describe('decideEscapeAction', () => {
   it('treats a nonsense depth as the root', () => {
     // Better to close than to make Escape do nothing at all.
     expect(decideEscapeAction(-1)).toBe('hide');
+  });
+});
+
+describe('decideCtrlCAction', () => {
+  it('closes on macOS, where Ctrl+C is not the copy shortcut', () => {
+    // Cmd+C copies there, so the chord is free to mean what it means in a
+    // shell: get me out of this.
+    expect(decideCtrlCAction('darwin')).toBe('hide');
+  });
+
+  it('leaves the decision to the renderer elsewhere', () => {
+    // Windows and Linux copy with Ctrl+C in a text field. Only the renderer
+    // can see whether anything is selected, so it decides there.
+    expect(decideCtrlCAction('win32')).toBe('forward');
+    expect(decideCtrlCAction('linux')).toBe('forward');
   });
 });

@@ -93,9 +93,16 @@ const scriptAction = (
   icon: SquareTerminal,
   keywords: [script.command, script.source, script.relativeDir, script.manifest].filter(Boolean),
   primaryActionLabel: 'Run',
+  // Stays open, so several scripts can be started in a row -- and because a
+  // script that fails to launch would otherwise close the palette as if it had
+  // worked.
   run: async (ctx: CommandContext) => {
     const cwd = script.relativeDir ? `${project.path}/${script.relativeDir}` : project.path;
-    await deps.runScript(project.id, cwd, script.command);
-    ctx.dismiss();
+    try {
+      await deps.runScript(project.id, cwd, script.command);
+      ctx.status(`Started ${script.name}`);
+    } catch {
+      ctx.status(`Could not start ${script.name}`, 'error');
+    }
   },
 });

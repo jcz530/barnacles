@@ -65,6 +65,7 @@ const ctx = (): CommandContext => ({
   navigate: vi.fn(),
   dismiss: vi.fn(),
   pop: vi.fn(),
+  status: vi.fn(),
 });
 
 const actionsOf = (command: Command) => command.actions?.(ctx()) ?? [];
@@ -290,5 +291,67 @@ describe('projectProcessActions', () => {
 
     const ids = [...first, ...second].map(action => action.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe('reporting what a process verb did', () => {
+  it('stays open and confirms, so the row can be watched flipping', async () => {
+    // The row itself is the confirmation -- it goes Start -> Stop as the status
+    // query catches up -- so closing would hide the very thing that proves the
+    // press landed.
+    const dependencies = deps();
+    const context = ctx();
+    const [row] = processCommands([project()], [], loaded([configured()]), dependencies);
+
+    await row.run?.(context);
+
+    expect(dependencies.startProcesses).toHaveBeenCalledWith('p1');
+    expect(context.status).toHaveBeenCalledWith('Started Alchemy');
+    expect(context.dismiss).not.toHaveBeenCalled();
+  });
+
+  it('says so when starting fails rather than looking like nothing happened', async () => {
+    const dependencies = deps();
+    vi.mocked(dependencies.startProcesses).mockRejectedValue(new Error('port in use'));
+    const context = ctx();
+    const [row] = processCommands([project()], [], loaded([configured()]), dependencies);
+
+    await row.run?.(context);
+
+    expect(context.status).toHaveBeenCalledWith('Could not start Alchemy', 'error');
+  });
+
+  /** One configured process's own verbs, which hang off its row in the level. */
+  const verbsFor = (
+    processes: ProcessStatus[],
+    entry: StartProcess,
+    dependencies = deps()
+  ): Command[] => {
+    const rows = projectProcessActions(
+      project(),
+      [status(processes)],
+      loaded([entry]),
+      dependencies
+    );
+    return actionsOf(find(rows, `process:p1:${entry.id}`)!);
+  };
+
+  it('names the process, not the project, for a single process verb', async () => {
+    const context = ctx();
+    const entry = configured({ id: 'api', name: 'api' });
+
+    await find(verbsFor([live({ processId: 'api' })], entry), '.stop')?.run?.(context);
+
+    expect(context.status).toHaveBeenCalledWith('Stopped api');
+  });
+
+  it('still closes for View Output, which needs a window', async () => {
+    // The one verb here that leaves the palette: from the floating window it
+    // raises or creates a main window to show the logs in.
+    const context = ctx();
+
+    await find(verbsFor([live()], configured()), '.output')?.run?.(context);
+
+    expect(context.navigate).toHaveBeenCalledWith('/projects/p1/terminals');
   });
 });

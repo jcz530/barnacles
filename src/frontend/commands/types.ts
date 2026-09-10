@@ -38,9 +38,42 @@ export interface CommandContext {
    * in place -- setting a default, say -- where dismissing would throw away the
    * list the person was working through.
    *
-   * Absent at the root, where there is nothing to go back to.
+   * A no-op at the root rather than absent: a root-level command that means to
+   * stay open -- toggling the theme -- would otherwise have no way to say so,
+   * and `pop?.()` there would silently fall through to nothing while reading
+   * like it had done something.
    */
-  pop?: () => void;
+  pop: () => void;
+  /**
+   * Say what just happened, in the palette itself.
+   *
+   * Deliberately not a toast. The floating palette is hidden a frame after
+   * `dismiss()`, so a toast raised there is painted into a window nobody sees;
+   * in-app one lands in a corner just as the palette it belongs to vanishes.
+   * This renders inside the palette, which is the surface being looked at in
+   * both cases.
+   *
+   * Commands that report something should generally not dismiss -- the message
+   * needs somewhere to live. See the stay-open commands in ports/processes.
+   */
+  status: (message: string, kind?: CommandStatusKind) => void;
+}
+
+/** Whether a status message reports success or failure. */
+export type CommandStatusKind = 'success' | 'error';
+
+/**
+ * A message shown in the palette, with the identity needed to re-announce a
+ * repeat.
+ *
+ * Copying the same path twice produces identical text, and without something
+ * changing, neither the DOM nor a screen reader registers the second one. The
+ * id makes each report distinct.
+ */
+export interface CommandStatus {
+  id: number;
+  message: string;
+  kind: CommandStatusKind;
 }
 
 export interface PaletteItem {

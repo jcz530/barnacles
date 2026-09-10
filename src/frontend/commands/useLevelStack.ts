@@ -36,6 +36,8 @@ const buildRefreshContext = (): CommandContext => ({
   surface: 'in-app',
   navigate: () => {},
   dismiss: () => {},
+  pop: () => {},
+  status: () => {},
 });
 
 export const useLevelStack = (rootItems: Ref<PaletteItem[]>) => {

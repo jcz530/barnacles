@@ -17,6 +17,7 @@ const ctx = (): CommandContext => ({
   navigate: vi.fn(),
   dismiss: vi.fn(),
   pop: vi.fn(),
+  status: vi.fn(),
 });
 
 const find = (commands: ReturnType<typeof appCommands>, id: string) =>
@@ -61,5 +62,41 @@ describe('appCommands', () => {
 
   it('shows it before anything is typed', () => {
     expect(find(appCommands(deps()), 'app.enable-global-shortcut')?.priority).toBe(1);
+  });
+
+  describe('toggling the theme', () => {
+    it('stays open, so a theme can be tried and put back', () => {
+      // The palette re-themes under the cursor, which confirms the press more
+      // loudly than a message would -- and staying means undoing it is one
+      // more Enter rather than a reopen.
+      const dependencies = deps();
+      const context = ctx();
+
+      find(appCommands(dependencies), 'app.toggle-theme')?.run?.(context);
+
+      expect(dependencies.toggleTheme).toHaveBeenCalled();
+      expect(context.dismiss).not.toHaveBeenCalled();
+    });
+
+    it('names the theme it would switch to, not the one in use', () => {
+      // Built from isDark on every rebuild, so the row flips with the theme
+      // while the palette stays open.
+      expect(find(appCommands(deps({ isDark: () => false })), 'app.toggle-theme')?.title).toBe(
+        'Switch to dark mode'
+      );
+      expect(find(appCommands(deps({ isDark: () => true })), 'app.toggle-theme')?.title).toBe(
+        'Switch to light mode'
+      );
+    });
+
+    it('still closes for the commands that take you elsewhere', async () => {
+      // Staying open is for verbs that finish in place. A new window and a
+      // scan both move attention somewhere else.
+      const context = ctx();
+      const commands = appCommands(deps());
+
+      await find(commands, 'app.new-window')?.run?.(context);
+      expect(context.dismiss).toHaveBeenCalled();
+    });
   });
 });
