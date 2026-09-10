@@ -23,6 +23,7 @@ const fakeProject: ProjectWithDetails = {
   createdAt: new Date(),
   updatedAt: new Date(),
   technologies: [],
+  hasStartProcesses: false,
   stats: {
     id: 'stats-1',
     projectId: 'proj-1',

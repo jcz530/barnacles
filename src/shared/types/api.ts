@@ -133,6 +133,20 @@ export interface ProjectWithDetails extends Project {
   stats?: ProjectStats | null;
   /** Main checkout first. Empty for a project that is not a git repository. */
   worktrees?: Worktree[];
+  /**
+   * Whether this project has any start process configured.
+   *
+   * Just the boolean, not the processes themselves: callers that need the
+   * actual configuration fetch it per project, and reading it here is only ever
+   * to decide whether starting is a thing this project can do at all. The
+   * command palette uses it to keep unstartable projects out of its Start rows,
+   * which it cannot do from process-status -- that omits stopped projects
+   * entirely, so "no entry" and "nothing to run" look identical there.
+   *
+   * Required rather than optional: every producer sets it, and an absent value
+   * would read as false at exactly the call sites that mean "cannot start".
+   */
+  hasStartProcesses: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

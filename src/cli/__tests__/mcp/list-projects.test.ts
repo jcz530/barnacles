@@ -24,6 +24,7 @@ const fakeProjects: ProjectWithDetails[] = [
     createdAt: new Date(),
     updatedAt: new Date(),
     technologies: [],
+    hasStartProcesses: false,
   },
 ];
 

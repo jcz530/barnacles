@@ -5,6 +5,8 @@ import { del, get, patch, post } from '@test/helpers/api-client';
 import { setupProjectRoutes } from '@test/helpers/route-test-setup';
 import { createProjectData, createProjectsData } from '@test/factories/project.factory';
 import {
+  projectProcessCommands,
+  projectProcesses,
   projects as projectsSchema,
   projectTechnologies,
   technologies as technologiesSchema,
@@ -233,6 +235,98 @@ describe('Projects API Integration Tests', () => {
       // Verify project was unarchived
       const [unarchived] = await db.select().from(projectsSchema);
       expect(unarchived.archivedAt).toBeNull();
+    });
+  });
+
+  /**
+   * The command palette keeps projects that cannot start out of its Start rows,
+   * and it reads this flag from the list rather than fetching each project's
+   * processes. A project with no configured process has to come back false --
+   * not absent -- or an unstartable project gets a Start row that fails on use.
+   */
+  describe('hasStartProcesses', () => {
+    /** Give a project one configured process, with a command behind it. */
+    const configureProcess = async (db: any, projectId: string) => {
+      const [process] = await db
+        .insert(projectProcesses)
+        .values({ id: `dev-${projectId}`, projectId, name: 'Dev Server', order: 0 })
+        .returning();
+
+      await db
+        .insert(projectProcessCommands)
+        .values({ processId: process.id, command: 'npm run dev', order: 0 });
+    };
+
+    it('should be false for a project with no configured processes', async () => {
+      const { db, app } = context.get();
+
+      await db.insert(projectsSchema).values(createProjectData({ archivedAt: null }));
+
+      const response = await get(app, '/api/projects');
+
+      expect(response.status).toBe(200);
+      expect((response.data as any).data[0].hasStartProcesses).toBe(false);
+    });
+
+    it('should be true for a project with a configured process', async () => {
+      const { db, app } = context.get();
+
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ archivedAt: null }))
+        .returning();
+      await configureProcess(db, project.id);
+
+      const response = await get(app, '/api/projects');
+
+      expect(response.status).toBe(200);
+      expect((response.data as any).data[0].hasStartProcesses).toBe(true);
+    });
+
+    /**
+     * The flag is per project, not per list: one configured project must not
+     * make its neighbours look startable. This is what a grouped query gets
+     * wrong most easily.
+     */
+    it('should only be true for the projects that have processes', async () => {
+      const { db, app } = context.get();
+
+      const [withProcess] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ name: 'has-process', archivedAt: null }))
+        .returning();
+      const [without] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ name: 'no-process', archivedAt: null }))
+        .returning();
+
+      await configureProcess(db, withProcess.id);
+
+      const response = await get(app, '/api/projects');
+      const byId = new Map(
+        (response.data as any).data.map((project: any) => [project.id, project.hasStartProcesses])
+      );
+
+      expect(response.status).toBe(200);
+      expect(byId.get(withProcess.id)).toBe(true);
+      expect(byId.get(without.id)).toBe(false);
+    });
+
+    it('should be present on a single project fetched by ID', async () => {
+      const { db, app } = context.get();
+
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ archivedAt: null }))
+        .returning();
+
+      const before = await get(app, `/api/projects/${project.id}`);
+      expect((before.data as any).data.hasStartProcesses).toBe(false);
+
+      await configureProcess(db, project.id);
+
+      const after = await get(app, `/api/projects/${project.id}`);
+      expect((after.data as any).data.hasStartProcesses).toBe(true);
     });
   });
 
