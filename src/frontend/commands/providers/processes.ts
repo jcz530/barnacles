@@ -5,6 +5,7 @@ import type {
   ProjectProcessStatus,
   StartProcess,
 } from '../../../shared/types/process';
+import { CONFIGURE_PROCESSES } from '@/composables/useConfigureProcessesParam';
 import type { Command, CommandContext } from '../types';
 
 export interface ProcessCommandDeps {
@@ -303,7 +304,7 @@ const configureAction = (project: ProjectWithDetails): Command => ({
  * the project page, and the param is read once on arrival. See ProjectDetail.
  */
 export const configureRoute = (projectId: string): string =>
-  `/projects/${projectId}/overview?configure=processes`;
+  `/projects/${projectId}/overview?configure=${CONFIGURE_PROCESSES}`;
 
 /** One configured process, with its verbs behind it. */
 const processRow = (

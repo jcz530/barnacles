@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, provide, watch } from 'vue';
+import { computed, onMounted, provide, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ProcessIndicator from '../components/atoms/ProcessIndicator.vue';
 import ProjectIcon from '../components/projects/atoms/ProjectIcon.vue';
@@ -13,6 +13,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { useBreadcrumbs } from '../composables/useBreadcrumbs';
 import { useQueries } from '../composables/useQueries';
 import { provideProcessStatusContext } from '../composables/useProcessStatusContext';
+import { useConfigureProcessesParam } from '../composables/useConfigureProcessesParam';
 import { RouteNames } from '@/router';
 
 const route = useRoute();
@@ -26,6 +27,7 @@ const {
   useProjectComposerScriptsQuery,
   useProcessStatusQuery,
   useRelatedFoldersQuery,
+  useStartProcessesQuery,
 } = useQueries();
 
 const projectId = computed(() => route.params.id as string);
@@ -88,6 +90,31 @@ const navigateToProcess = async () => {
   await router.push({ name: RouteNames.ProjectTerminals, params: { id: projectId.value } });
 };
 
+/**
+ * Whether the start-process editor is showing.
+ *
+ * Held here rather than inside StartProcessButton, which owns the editor, so
+ * that arriving with ?configure=processes can open it -- the command palette
+ * sends a project with no start command here, since configuring one needs the
+ * editor and only this page has it.
+ */
+const isConfigEditorOpen = ref(false);
+
+/**
+ * Whether this project's start processes have loaded, which is what the editor
+ * needs before it can open in the right mode. isFetched rather than the data
+ * itself, since an empty list is a real answer here.
+ */
+const { isFetched: startProcessesLoaded } = useStartProcessesQuery(projectId);
+
+useConfigureProcessesParam(
+  computed(() => route.query.configure),
+  startProcessesLoaded,
+  () => {
+    isConfigEditorOpen.value = true;
+  }
+);
+
 // Tab configuration
 const tabs: Tab[] = [
   { name: 'ProjectOverview', label: 'Overview', value: 'overview' },
@@ -127,7 +154,12 @@ const handleFilesMovedSuccessfully = () => {
           <!--          </Button>-->
           <!--        </div>-->
           <div class="flex gap-2">
-            <StartProcessButton v-if="project" :project-id="project.id" :is-loading="isLoading" />
+            <StartProcessButton
+              v-if="project"
+              v-model:config-editor-open="isConfigEditorOpen"
+              :project-id="project.id"
+              :is-loading="isLoading"
+            />
 
             <OpenInIDEButton
               v-if="project"
