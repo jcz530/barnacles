@@ -3,7 +3,7 @@ import type { SortingState } from '@tanstack/vue-table';
 import { Scan, Star } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useMagicKeys, whenever } from '@vueuse/core';
+import { onKeyStroke } from '@vueuse/core';
 import dayjs from 'dayjs';
 import type { ProjectWithDetails } from '../../shared/types/api';
 import SortControl from '../components/atoms/SortControl.vue';
@@ -315,14 +315,24 @@ defineExpose({
   focusSearch,
 });
 
-// Setup keyboard shortcuts for this page
-const keys = useMagicKeys();
-
-// Cmd+K or Ctrl+K - Focus search input
-whenever(keys['Meta+K'], () => {
-  focusSearch();
-});
-whenever(keys['Ctrl+K'], () => {
+// "/" focuses the search input. Cmd+K used to do this, but it now belongs to the
+// command palette -- useMagicKeys listens on the document, so both would have
+// fired here, opening the palette while the box behind it stole focus. The
+// palette searches projects anyway, so this is the narrower of the two jobs.
+onKeyStroke('/', event => {
+  // A bare key must not hijack typing.
+  const active = document.activeElement as HTMLElement | null;
+  if (
+    active &&
+    (active.tagName === 'INPUT' ||
+      active.tagName === 'TEXTAREA' ||
+      active.isContentEditable ||
+      active.closest('.cm-editor'))
+  ) {
+    return;
+  }
+  // Without this the "/" lands in the input we are about to focus.
+  event.preventDefault();
   focusSearch();
 });
 </script>

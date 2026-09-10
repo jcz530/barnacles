@@ -9,6 +9,7 @@ import { setupStorageBridge } from './storage-bridge';
 import { setupFindBridge } from './find-bridge';
 import { setupScreenshotBridge } from './screenshot-bridge';
 import { setupShareCardBridge } from './share-card-bridge';
+import { setupCommandPaletteBridge } from './command-palette-bridge';
 
 export const setupIPC = (): void => {
   setupAPIBridge();
@@ -22,6 +23,7 @@ export const setupIPC = (): void => {
   setupFindBridge();
   setupScreenshotBridge();
   setupShareCardBridge();
+  setupCommandPaletteBridge();
 
   // Add more IPC handlers here as needed
   console.log('🔌 IPC handlers registered');

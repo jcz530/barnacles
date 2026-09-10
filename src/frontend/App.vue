@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted, onUnmounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { onKeyStroke } from '@vueuse/core';
 import { useColorInversion } from '@/composables/useColorInversion';
 import { useTheme } from '@/composables/useTheme';
@@ -9,12 +9,38 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
 import { useUpdater } from '@/composables/useUpdater';
 import UpdateNotification from '@/components/organisms/UpdateNotification.vue';
+import CommandPaletteDialog from '@/components/command-palette/organisms/CommandPaletteDialog.vue';
+import { useCommandPaletteState } from '@/composables/useCommandPaletteState';
+import { RouteNames } from '@/router';
 import 'vue-sonner/style.css'; // vue-sonner v2 requires this import
 
 // App now uses router-view for rendering pages
 
 // Router for navigation
 const router = useRouter();
+const route = useRoute();
+
+// The palette is app-global chrome, but these routes are the utility windows --
+// a palette inside the palette (or the tray popup) makes no sense.
+const CHROMELESS_ROUTES: string[] = [
+  RouteNames.TrayPopup,
+  RouteNames.FindOverlay,
+  RouteNames.CommandPalette,
+];
+const isChromelessRoute = computed(() => CHROMELESS_ROUTES.includes(route.name as string));
+
+const { isOpen: isPaletteOpen, toggle: togglePalette } = useCommandPaletteState();
+
+// The global hotkey fires even when this window is focused. Main asks us to
+// open the in-app palette in that case rather than floating a separate window
+// over the one already in front.
+let unsubscribePalette: (() => void) | undefined;
+
+if (window.electron?.commandPalette) {
+  unsubscribePalette = window.electron.commandPalette.onToggle(() => {
+    togglePalette();
+  });
+}
 
 // Set up dark mode with automatic color inversion
 const { reinitializeColors } = useColorInversion();
@@ -71,6 +97,7 @@ onMounted(() => {
 // Clean up listener on unmount
 onUnmounted(() => {
   unsubscribeNav?.();
+  unsubscribePalette?.();
 });
 </script>
 
@@ -90,6 +117,7 @@ onUnmounted(() => {
         @install="installUpdate"
         @dismiss="dismissUpdate"
       />
+      <CommandPaletteDialog v-if="!isChromelessRoute" v-model:open="isPaletteOpen" />
       <router-view />
     </div>
   </TooltipProvider>

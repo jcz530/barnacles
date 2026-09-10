@@ -72,6 +72,17 @@ declare global {
       createNewWindow: () => Promise<{ success: boolean; windowId?: number; error?: string }>;
       navigateToProject: (path: string) => Promise<{ success: boolean; error?: string }>;
       onNavigateToProject: (callback: (path: string) => void) => () => void;
+      commandPalette: {
+        close: () => void;
+        setDepth: (depth: number) => void;
+        getShortcutStatus: () => Promise<{
+          accelerator: string | null;
+          registered: boolean;
+          error: string | null;
+        }>;
+        onToggle: (callback: () => void) => () => void;
+        onOpened: (callback: () => void) => () => void;
+      };
       onToggleFind: (callback: () => void) => () => void;
       quitApp: () => Promise<{ success: boolean; error?: string }>;
       cli: {

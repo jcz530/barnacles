@@ -39,6 +39,11 @@ const DEFAULT_SETTINGS = {
     type: 'json' as const,
   },
   showTrayIcon: { value: 'false', type: 'boolean' as const },
+  // Off by default: a system-wide hotkey should be opted into, not sprung on
+  // someone. Deliberately not Cmd+K, which the in-app palette uses -- a global
+  // grab would swallow it before the renderer ever saw it.
+  commandPaletteShortcut: { value: 'Alt+B', type: 'string' as const },
+  commandPaletteShortcutEnabled: { value: 'false', type: 'boolean' as const },
   showDashboardStats: { value: 'true', type: 'boolean' as const },
   installCliCommand: { value: 'true', type: 'boolean' as const },
   gitEmails: { value: JSON.stringify([]), type: 'json' as const },

@@ -49,12 +49,17 @@ export const API_ROUTES = {
   PROJECTS_PACKAGE_SCRIPTS: (id: string) => `/api/projects/${id}/package-scripts`,
   PROJECTS_COMPOSER_SCRIPTS: (id: string) => `/api/projects/${id}/composer-scripts`,
   PROJECTS_PACKAGE_MANAGER: (id: string) => `/api/projects/${id}/package-manager`,
+  PROJECTS_SCRIPTS: (id: string) => `/api/projects/${id}/scripts`,
   PROJECTS_START_PROCESSES: (id: string) => `/api/projects/${id}/start-processes`,
   PROJECTS_START: (id: string) => `/api/projects/${id}/start`,
   PROJECTS_STOP: (id: string) => `/api/projects/${id}/stop`,
   PROJECTS_PROCESS_STATUS: '/api/projects/process-status',
   PROJECTS_STOP_PROCESS: (id: string, processId: string) =>
     `/api/projects/${id}/processes/${processId}/stop`,
+  PROJECTS_START_PROCESS: (id: string, processId: string) =>
+    `/api/projects/${id}/processes/${processId}/start`,
+  PROJECTS_RESTART_PROCESS: (id: string, processId: string) =>
+    `/api/projects/${id}/processes/${processId}/restart`,
   PROJECTS_PROCESS_OUTPUT: (id: string, processId: string) =>
     `/api/projects/${id}/processes/${processId}/output`,
   SETTINGS: '/api/settings',

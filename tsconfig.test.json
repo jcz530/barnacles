@@ -4,7 +4,9 @@
     "noImplicitAny": false,
     // vitest.config.ts runs these in the `node` environment, so no DOM lib.
     "lib": ["ESNext"],
-    "types": ["node", "vitest/globals"],
+    // vite/client for the frontend modules these tests import: they use
+    // import.meta.glob, which is a Vite transform and not part of ImportMeta.
+    "types": ["node", "vitest/globals", "vite/client"],
     "tsBuildInfoFile": "node_modules/.cache/tsc/test.tsbuildinfo"
   },
   "include": [

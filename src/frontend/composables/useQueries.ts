@@ -33,6 +33,8 @@ import type {
   DetectedScriptGroup,
   ProcessStatus,
   ProjectProcessStatus,
+  RunnableScript,
+  StartProcess,
 } from '../../shared/types/process';
 import type { IpInfo } from '../../shared/utilities/ip-info';
 import type { RelatedFolder } from '../../backend/services/project/project-related-folders-service';
@@ -845,6 +847,56 @@ export const useQueries = () => {
     });
   };
 
+  /**
+   * Fetch a project's configured processes outside a component's setup.
+   *
+   * Same key and staleTime as useStartProcessesQuery, so the two share one
+   * cache entry -- the command palette drilling into a project whose detail
+   * page is already open costs nothing.
+   */
+  const fetchStartProcesses = (projectId: string): Promise<StartProcess[]> =>
+    queryClient.fetchQuery({
+      queryKey: ['project', projectId, 'start-processes'] as const,
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<StartProcess[]>>(
+          'GET',
+          API_ROUTES.PROJECTS_START_PROCESSES(projectId)
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch start processes');
+        }
+
+        return response.data ?? [];
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+
+  /**
+   * Fetch every script a project can run, outside a component's setup.
+   *
+   * Each command arrives ready to run, resolved against the package manager for
+   * its own directory -- see the /scripts route. Cached like the process config,
+   * on the ['project', id, ...] prefix the palette already invalidates on open.
+   */
+  const fetchRunnableScripts = (projectId: string): Promise<RunnableScript[]> =>
+    queryClient.fetchQuery({
+      queryKey: ['project', projectId, 'scripts'] as const,
+      queryFn: async () => {
+        const response = await apiCall<ApiResponse<RunnableScript[]>>(
+          'GET',
+          API_ROUTES.PROJECTS_SCRIPTS(projectId)
+        );
+
+        if (!response) {
+          throw new Error('Failed to fetch scripts');
+        }
+
+        return response.data ?? [];
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+
   // Update start processes configuration mutation
   const useUpdateStartProcessesMutation = () => {
     return useMutation({
@@ -874,6 +926,18 @@ export const useQueries = () => {
     });
   };
 
+  /**
+   * Refresh both views of process status after acting on a single process.
+   *
+   * The per-project key backs the project page; 'process-status-all' is the
+   * unfiltered list the command palette registry reads. Invalidating only the
+   * first leaves the palette showing the state from before the action.
+   */
+  const invalidateProcessStatus = (projectId: string) => {
+    queryClient.invalidateQueries({ queryKey: ['project', projectId, 'process-status'] });
+    queryClient.invalidateQueries({ queryKey: ['process-status-all'] });
+  };
+
   // Start project processes mutation
   const useStartProjectProcessesMutation = () => {
     return useMutation({
@@ -889,9 +953,7 @@ export const useQueries = () => {
 
         return response.data;
       },
-      onSuccess: (data, projectId) => {
-        queryClient.invalidateQueries({ queryKey: ['project', projectId, 'process-status'] });
-      },
+      onSuccess: (data, projectId) => invalidateProcessStatus(projectId),
     });
   };
 
@@ -910,9 +972,7 @@ export const useQueries = () => {
 
         return response.data;
       },
-      onSuccess: (data, projectId) => {
-        queryClient.invalidateQueries({ queryKey: ['project', projectId, 'process-status'] });
-      },
+      onSuccess: (data, projectId) => invalidateProcessStatus(projectId),
     });
   };
 
@@ -953,26 +1013,35 @@ export const useQueries = () => {
     });
   };
 
-  // Stop specific process mutation
-  const useStopProcessMutation = () => {
-    return useMutation({
+  /** One process-scoped POST -- stop, start, or restart -- as a mutation. */
+  const useProcessActionMutation = (
+    route: (projectId: string, processId: string) => string,
+    failure: string
+  ) =>
+    useMutation({
       mutationFn: async ({ projectId, processId }: { projectId: string; processId: string }) => {
-        const response = await apiCall<ApiResponse<void>>(
-          'POST',
-          API_ROUTES.PROJECTS_STOP_PROCESS(projectId, processId)
-        );
+        const response = await apiCall<ApiResponse<unknown>>('POST', route(projectId, processId));
 
         if (!response) {
-          throw new Error('Failed to stop process');
+          throw new Error(failure);
         }
 
         return response.data;
       },
-      onSuccess: (data, { projectId }) => {
-        queryClient.invalidateQueries({ queryKey: ['project', projectId, 'process-status'] });
-      },
+      onSuccess: (data, { projectId }) => invalidateProcessStatus(projectId),
     });
-  };
+
+  // Stop specific process mutation
+  const useStopProcessMutation = () =>
+    useProcessActionMutation(API_ROUTES.PROJECTS_STOP_PROCESS, 'Failed to stop process');
+
+  // Start a single configured process, leaving the project's others alone
+  const useStartProcessMutation = () =>
+    useProcessActionMutation(API_ROUTES.PROJECTS_START_PROCESS, 'Failed to start process');
+
+  // Restart a single configured process
+  const useRestartProcessMutation = () =>
+    useProcessActionMutation(API_ROUTES.PROJECTS_RESTART_PROCESS, 'Failed to restart process');
 
   // Get process output query
   const useProcessOutputQuery = (
@@ -1981,11 +2050,15 @@ export const useQueries = () => {
     useUpdateSettingMutation,
     useDeleteThirdPartyPackagesMutation,
     useStartProcessesQuery,
+    fetchStartProcesses,
+    fetchRunnableScripts,
     useUpdateStartProcessesMutation,
     useStartProjectProcessesMutation,
     useStopProjectProcessesMutation,
     useProcessStatusQuery,
     useStopProcessMutation,
+    useStartProcessMutation,
+    useRestartProcessMutation,
     useProcessOutputQuery,
     useProcessesQuery,
     useProcessQuery,

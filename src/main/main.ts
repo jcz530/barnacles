@@ -11,6 +11,18 @@ import { settingsService } from '../backend/services/settings-service';
 import { processManagerService } from '../backend/services/process-manager-service';
 import { processWebSocketService } from '../backend/services/process-websocket-service';
 import { installCli, uninstallCli, isCliInstalled } from './cli-manager';
+import {
+  getMainWindows,
+  getShowingUtilityWindow,
+  trackApplicationActivation,
+} from './window-utils';
+import {
+  destroyCommandPalette,
+  prewarmCommandPalette,
+  registerPaletteShortcut,
+  type ShortcutRegistration,
+  unregisterPaletteShortcut,
+} from './command-palette-manager';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling
 if (started) {
@@ -33,28 +45,10 @@ let isQuitting = false;
 /** How long shutdown waits for processes to stop before giving up and exiting. */
 const SHUTDOWN_CLEANUP_TIMEOUT_MS = 5000;
 
-// Track if we're currently showing the tray popup to prevent activate event interference
-let isShowingTrayPopup = false;
-
-/**
- * Set flag to indicate tray popup is being shown
- * This prevents the activate event from showing hidden main windows
- */
-export const setShowingTrayPopup = (showing: boolean): void => {
-  isShowingTrayPopup = showing;
-};
-
 // Enable right-click context menu with Inspect Element in development mode
 contextMenu({
   showInspectElement: !app.isPackaged,
 });
-
-// Main windows are resizable and not always-on-top; this excludes the tray
-// popup and other utility windows from window-focus/activation logic.
-const getMainWindows = (): BrowserWindow[] =>
-  BrowserWindow.getAllWindows().filter(
-    win => !win.isDestroyed() && win.isResizable() && !win.isAlwaysOnTop()
-  );
 
 // Function to create and track a new window
 export const createAppWindow = async (): Promise<BrowserWindow> => {
@@ -104,6 +98,23 @@ export const toggleTrayIcon = async (enabled: boolean): Promise<void> => {
   } else {
     destroyTray();
   }
+};
+
+/**
+ * Bind or release the global command palette hotkey to match settings.
+ *
+ * Called at startup and whenever either palette setting changes.
+ */
+export const syncCommandPaletteShortcut = async (): Promise<ShortcutRegistration> => {
+  const enabled = await settingsService.getValue<boolean>('commandPaletteShortcutEnabled');
+
+  if (!enabled) {
+    unregisterPaletteShortcut();
+    return { success: true };
+  }
+
+  const accelerator = await settingsService.getValue<string>('commandPaletteShortcut');
+  return registerPaletteShortcut(accelerator ?? '');
 };
 
 /**
@@ -177,6 +188,10 @@ const initialize = async (): Promise<void> => {
     // Setup IPC communication
     setupIPC();
 
+    // Track whether the app is frontmost, so the global palette shortcut can
+    // tell "Barnacles is in front" from "some other app is".
+    trackApplicationActivation();
+
     // Initialize auto-updater
     initializeUpdater();
 
@@ -187,6 +202,19 @@ const initialize = async (): Promise<void> => {
     const showTrayIcon = await settingsService.getValue<boolean>('showTrayIcon');
     if (showTrayIcon || launchInBackground) {
       createTray();
+    }
+
+    // Bind the global command palette hotkey. Non-fatal: a combo another app
+    // already owns must never stop the app from starting.
+    const paletteResult = await syncCommandPaletteShortcut();
+    if (!paletteResult.success) {
+      console.warn('[CommandPalette] Shortcut not registered:', paletteResult.error);
+    }
+
+    // Deliberately not awaited: the first hotkey press should not be the thing
+    // that pays to build the window, but startup should not wait on it either.
+    if (paletteResult.success) {
+      void prewarmCommandPalette();
     }
 
     // Install CLI command if enabled in settings
@@ -259,6 +287,11 @@ let processCleanupDone = false;
  * is too early -- it can still be cancelled.
  */
 app.on('will-quit', event => {
+  // Ahead of the early-return below so the combo is released on the first pass
+  // regardless of which path the quit takes.
+  unregisterPaletteShortcut();
+  destroyCommandPalette();
+
   if (processCleanupDone) {
     return;
   }
@@ -299,13 +332,15 @@ app.on('window-all-closed', async () => {
 
 app.on('activate', async () => {
   if (process.env.NODE_ENV === 'development') {
-    console.log('[App] Activate event triggered', { isShowingTrayPopup });
+    console.log('[App] Activate event triggered', {
+      isShowingUtilityWindow: getShowingUtilityWindow(),
+    });
   }
 
   // Don't show main window if we're currently showing the tray popup
-  if (isShowingTrayPopup) {
+  if (getShowingUtilityWindow()) {
     if (process.env.NODE_ENV === 'development') {
-      console.log('[App] Ignoring activate event - tray popup is being shown');
+      console.log('[App] Ignoring activate event - a utility window is being shown');
     }
     return;
   }

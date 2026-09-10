@@ -1,0 +1,193 @@
+import { describe, expect, it } from 'vitest';
+import {
+  eventToAccelerator,
+  acceleratorParts,
+  formatAccelerator,
+  isRiskyAccelerator,
+  normalizeKey,
+  type ShortcutKeyEvent,
+} from './accelerator';
+
+const keyEvent = (
+  code: string,
+  modifiers: Partial<Omit<ShortcutKeyEvent, 'code'>> = {}
+): ShortcutKeyEvent => ({
+  code,
+  metaKey: false,
+  ctrlKey: false,
+  altKey: false,
+  shiftKey: false,
+  ...modifiers,
+});
+
+describe('normalizeKey', () => {
+  it('maps letter and digit codes to their bare character', () => {
+    expect(normalizeKey('KeyP')).toBe('P');
+    expect(normalizeKey('Digit7')).toBe('7');
+  });
+
+  it('maps function keys through unchanged', () => {
+    expect(normalizeKey('F5')).toBe('F5');
+    expect(normalizeKey('F24')).toBe('F24');
+  });
+
+  it('renames keys Electron spells differently', () => {
+    expect(normalizeKey('ArrowUp')).toBe('Up');
+    expect(normalizeKey('Enter')).toBe('Return');
+    expect(normalizeKey('Comma')).toBe(',');
+    expect(normalizeKey('Backslash')).toBe('\\');
+  });
+
+  it('rejects modifiers pressed on their own', () => {
+    expect(normalizeKey('ShiftLeft')).toBeNull();
+    expect(normalizeKey('MetaRight')).toBeNull();
+    expect(normalizeKey('CapsLock')).toBeNull();
+  });
+
+  it('rejects codes with no accelerator equivalent', () => {
+    expect(normalizeKey('F25')).toBeNull();
+    expect(normalizeKey('MediaPlayPause')).toBeNull();
+  });
+});
+
+describe('eventToAccelerator', () => {
+  it('builds a combo from modifiers and a key', () => {
+    expect(eventToAccelerator(keyEvent('KeyP', { metaKey: true, shiftKey: true }))).toBe(
+      'CommandOrControl+Shift+P'
+    );
+  });
+
+  it('collapses Meta and Control to one portable token', () => {
+    expect(eventToAccelerator(keyEvent('KeyK', { metaKey: true }))).toBe('CommandOrControl+K');
+    expect(eventToAccelerator(keyEvent('KeyK', { ctrlKey: true }))).toBe('CommandOrControl+K');
+  });
+
+  it('reads the physical key, not the composed character', () => {
+    // Alt+P on macOS reports key "π", which Electron cannot parse. Reading
+    // event.code instead keeps the physical key resolving to P.
+    const event = keyEvent('KeyP', { altKey: true, metaKey: true });
+    expect(eventToAccelerator(event)).toBe('CommandOrControl+Alt+P');
+  });
+
+  it('orders modifiers consistently regardless of press order', () => {
+    const event = keyEvent('Space', { shiftKey: true, altKey: true, ctrlKey: true });
+    expect(eventToAccelerator(event)).toBe('CommandOrControl+Alt+Shift+Space');
+  });
+
+  it('rejects a key with no modifier', () => {
+    // A bare letter registered globally would swallow that key everywhere else.
+    expect(eventToAccelerator(keyEvent('KeyP'))).toBeNull();
+  });
+
+  it('rejects a modifier pressed alone', () => {
+    expect(eventToAccelerator(keyEvent('ShiftLeft', { shiftKey: true }))).toBeNull();
+  });
+
+  it('rejects an unmappable key even with modifiers', () => {
+    expect(eventToAccelerator(keyEvent('MediaPlayPause', { metaKey: true }))).toBeNull();
+  });
+});
+
+describe('formatAccelerator', () => {
+  it('renders macOS glyphs with no separators', () => {
+    expect(formatAccelerator('CommandOrControl+Shift+P', true)).toBe('⌘⇧P');
+  });
+
+  it('renders words joined by plus elsewhere', () => {
+    expect(formatAccelerator('CommandOrControl+Shift+P', false)).toBe('Ctrl+Shift+P');
+  });
+
+  it('renders an empty accelerator as empty', () => {
+    expect(formatAccelerator('', true)).toBe('');
+  });
+});
+
+describe('isRiskyAccelerator', () => {
+  it('flags combos the OS or common apps already own', () => {
+    expect(isRiskyAccelerator('CommandOrControl+Space')).toBe(true);
+    expect(isRiskyAccelerator('CommandOrControl+Q')).toBe(true);
+  });
+
+  it('leaves an unclaimed combo alone', () => {
+    expect(isRiskyAccelerator('CommandOrControl+Shift+P')).toBe(false);
+  });
+});
+
+describe('acceleratorParts', () => {
+  it('splits a mac combo into its keys, for spacing them apart', () => {
+    // Run together the glyphs read as one dense mark at chip size.
+    expect(acceleratorParts('CommandOrControl+Shift+P', true)).toEqual([
+      { text: '⌘', symbol: true },
+      { text: '⇧', symbol: true },
+      { text: 'P', symbol: false },
+    ]);
+  });
+
+  it('marks glyphs apart from letters, so the two can be sized apart', () => {
+    // A glyph fills its em box where a letter leaves ascender space, so at one
+    // size the letter looks oversized beside it.
+    const parts = acceleratorParts('CommandOrControl+N', true);
+
+    expect(parts.map(part => part.symbol)).toEqual([true, false]);
+  });
+
+  it('keeps the separators as parts of their own elsewhere', () => {
+    expect(acceleratorParts('CommandOrControl+Shift+P', false)).toEqual([
+      { text: 'Ctrl', symbol: false },
+      { text: '+', symbol: false },
+      { text: 'Shift', symbol: false },
+      { text: '+', symbol: false },
+      { text: 'P', symbol: false },
+    ]);
+  });
+
+  it('treats a key glyph as a symbol on either platform', () => {
+    expect(acceleratorParts('Right', true)).toEqual([{ text: '→', symbol: true }]);
+    expect(acceleratorParts('Return', false)).toEqual([{ text: '↩', symbol: true }]);
+  });
+
+  it('has nothing to render for an empty accelerator', () => {
+    expect(acceleratorParts('', true)).toEqual([]);
+  });
+
+  it('joins back to what formatAccelerator produces on mac', () => {
+    // The two must not drift: the chip renders the parts, and everything else
+    // still reads the joined string.
+    expect(
+      acceleratorParts('CommandOrControl+Shift+P', true)
+        .map(part => part.text)
+        .join('')
+    ).toBe(formatAccelerator('CommandOrControl+Shift+P', true));
+    expect(
+      acceleratorParts('CommandOrControl+N', false)
+        .map(part => part.text)
+        .join('')
+    ).toBe(formatAccelerator('CommandOrControl+N', false));
+  });
+});
+
+describe('formatAccelerator key glyphs', () => {
+  it('writes keys that have a conventional glyph as one', () => {
+    // "Return" spelled out reads as a word in a row of symbols; the palette
+    // footer wants ↩ next to ⌘K.
+    expect(formatAccelerator('Return', true)).toBe('↩');
+    expect(formatAccelerator('Tab', true)).toBe('⇥');
+    expect(formatAccelerator('Right', true)).toBe('→');
+  });
+
+  it('uses the same key glyphs off macOS', () => {
+    // Only the modifiers differ per platform; an arrow is an arrow.
+    expect(formatAccelerator('Return', false)).toBe('↩');
+    expect(formatAccelerator('CommandOrControl+Return', false)).toBe('Ctrl+↩');
+  });
+
+  it('combines modifier symbols with key glyphs', () => {
+    expect(formatAccelerator('CommandOrControl+Return', true)).toBe('⌘↩');
+    expect(formatAccelerator('Shift+CommandOrControl+Return', true)).toBe('⇧⌘↩');
+  });
+
+  it('leaves keys without a glyph as their name', () => {
+    expect(formatAccelerator('CommandOrControl+K', true)).toBe('⌘K');
+    expect(formatAccelerator('F5', true)).toBe('F5');
+  });
+});

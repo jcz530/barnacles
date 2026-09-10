@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import type { DetectedScriptGroup } from '../../../shared/types/process';
+import type { DetectedScriptGroup, RunnableScript } from '../../../shared/types/process';
 
 // Subdirectories that are never workspace roots and should be skipped when
 // scanning one level deep for monorepo package.json/composer.json files.
@@ -97,6 +97,116 @@ class ProjectPackageService {
     }
 
     return groups;
+  }
+
+  /**
+   * Every script a project can run, with its command already assembled.
+   *
+   * Built here rather than in the client because picking between npm, yarn and
+   * pnpm is a per-directory question: a monorepo root and one of its workspaces
+   * can use different managers. Resolving that in the client costs one request
+   * per subdirectory and shows the wrong command until each reply lands -- which
+   * matters when the command is one keystroke from being run.
+   *
+   * Ordered root-first, then by subdirectory, npm before composer within each,
+   * so the list reads the way the project is laid out.
+   */
+  async getRunnableScripts(projectPath: string): Promise<RunnableScript[]> {
+    const [npmGroups, composerGroups] = await Promise.all([
+      this.getPackageScriptGroups(projectPath),
+      this.getComposerScriptGroups(projectPath),
+    ]);
+
+    // One detection per group rather than per script.
+    //
+    // A workspace with no lockfile of its own inherits the root's manager. In a
+    // real pnpm or yarn monorepo the lockfile lives only at the root, so
+    // detecting per directory in isolation reported npm for every workspace --
+    // and `npm run` inside a pnpm workspace writes a stray package-lock.json
+    // and a divergent node_modules.
+    const rootManager = await this.detectPackageManager(projectPath);
+    const managers = new Map<string, 'npm' | 'yarn' | 'pnpm'>();
+    await Promise.all(
+      npmGroups.map(async group => {
+        if (!group.relativeDir) {
+          managers.set('', rootManager);
+          return;
+        }
+
+        const own = await this.detectPackageManagerIfLocked(projectPath, group.relativeDir);
+        managers.set(group.relativeDir, own ?? rootManager);
+      })
+    );
+
+    const dirs = [...new Set([...npmGroups, ...composerGroups].map(group => group.relativeDir))];
+    // '' is the project root, which sorts first; the rest alphabetically.
+    dirs.sort((a, b) => (a === '' ? -1 : b === '' ? 1 : a.localeCompare(b)));
+
+    const scripts: RunnableScript[] = [];
+
+    for (const relativeDir of dirs) {
+      const npm = npmGroups.find(group => group.relativeDir === relativeDir);
+      if (npm) {
+        const manager = managers.get(relativeDir) ?? 'npm';
+        for (const [name, script] of Object.entries(npm.scripts)) {
+          scripts.push({
+            source: 'npm',
+            relativeDir,
+            name,
+            script,
+            // Only npm needs the `run` verb; yarn and pnpm take the script directly.
+            command: manager === 'npm' ? `npm run ${name}` : `${manager} ${name}`,
+            // At the root the manager is the useful name; in a workspace the
+            // path is, since several can share one manager.
+            manifest: relativeDir ? `${relativeDir}/package.json` : manager.toUpperCase(),
+          });
+        }
+      }
+
+      const composer = composerGroups.find(group => group.relativeDir === relativeDir);
+      if (composer) {
+        for (const [name, script] of Object.entries(composer.scripts)) {
+          scripts.push({
+            source: 'composer',
+            relativeDir,
+            name,
+            // A composer script can be an array of commands; show it readably.
+            script: Array.isArray(script) ? script.join(' && ') : String(script),
+            command: `composer run-script ${name}`,
+            manifest: relativeDir ? `${relativeDir}/composer.json` : 'Composer',
+          });
+        }
+      }
+    }
+
+    return scripts;
+  }
+
+  /**
+   * The package manager a directory declares for itself, or null if it declares
+   * none.
+   *
+   * detectPackageManager cannot answer this: it defaults to npm, so "npm is
+   * what the lockfile says" and "there is no lockfile" come back identical --
+   * and a workspace in a pnpm monorepo is the second case, not the first.
+   */
+  private async detectPackageManagerIfLocked(
+    projectPath: string,
+    subPath: string
+  ): Promise<'npm' | 'yarn' | 'pnpm' | null> {
+    const basePath = path.join(projectPath, subPath);
+
+    const exists = async (file: string): Promise<boolean> =>
+      fs
+        .access(path.join(basePath, file))
+        .then(() => true)
+        .catch(() => false);
+
+    if (await exists('pnpm-lock.yaml')) return 'pnpm';
+    if (await exists('yarn.lock')) return 'yarn';
+    if (await exists('package-lock.json')) return 'npm';
+
+    return null;
   }
 
   private async readScriptsFromFile(filePath: string): Promise<Record<string, string>> {

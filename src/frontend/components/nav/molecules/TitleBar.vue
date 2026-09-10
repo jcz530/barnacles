@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Button } from '@/components/ui/button';
+import PaletteSearchButton from './PaletteSearchButton.vue';
 
 const router = useRouter();
 
@@ -95,6 +96,27 @@ updateNavigationButtons();
 
     <!-- Draggable area for window movement -->
     <div class="drag-region flex-1" />
+
+    <!--
+      The only on-screen way in to the palette. Without it both the shortcut and
+      the palette itself are invisible unless somebody already knows.
+
+      Centred on the window rather than set against the right edge, where it sat
+      in the fixed bar's right:0 -- that edge is the viewport's, and the
+      viewport widens by the scrollbar's width whenever a dialog locks
+      scrolling, so the button drifted every time the palette opened.
+
+      Positioned out of flow rather than balanced between two drag regions: the
+      nav group on the left is far wider than anything on the right, so sharing
+      the leftover space would centre it in that remainder rather than in the
+      window.
+
+      Centred on 100vw rather than the bar's own width. vw is the viewport
+      including its scrollbar, so it does not change when one is taken away --
+      the bar itself does, and centring within it would drift by half the
+      scrollbar's width instead of all of it.
+    -->
+    <PaletteSearchButton class="palette-search absolute" />
   </div>
 </template>
 
@@ -102,6 +124,17 @@ updateNavigationButtons();
 .title-bar {
   -webkit-app-region: drag;
   user-select: none;
+}
+
+/*
+ * Centred on the viewport's full width, scrollbar included, so that locking
+ * scroll for a dialog -- which removes the scrollbar and widens the layout
+ * viewport -- moves nothing.
+ */
+.palette-search {
+  top: 50%;
+  left: 50vw;
+  transform: translate(-50%, -50%);
 }
 
 /* Make buttons clickable in drag region */

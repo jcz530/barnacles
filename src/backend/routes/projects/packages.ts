@@ -54,6 +54,31 @@ packages.get('/:id/composer-scripts', loadProject, async (c: ProjectContext) => 
 });
 
 /**
+ * GET /:id/scripts
+ * Every script the project can run -- package.json and composer.json, root and
+ * one level of subdirectories -- with each command already resolved against the
+ * package manager for its own directory.
+ */
+packages.get('/:id/scripts', loadProject, async (c: ProjectContext) => {
+  try {
+    const project = c.get('project');
+    const scripts = await projectService.getRunnableScripts(project.path);
+
+    return c.json({
+      data: scripts,
+    });
+  } catch (error) {
+    console.error('Error fetching runnable scripts:', error);
+    return c.json(
+      {
+        error: 'Failed to fetch runnable scripts',
+      },
+      500
+    );
+  }
+});
+
+/**
  * GET /:id/package-manager
  * Detect the package manager used by a project (npm, yarn, or pnpm).
  * Pass ?subPath=backend to detect the package manager for a workspace subdirectory.

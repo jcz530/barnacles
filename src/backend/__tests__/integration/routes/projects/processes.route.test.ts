@@ -8,6 +8,7 @@ import {
   projectProcesses,
   projects as projectsSchema,
 } from '@shared/database/schema';
+import { processManagerService } from '@backend/services/process-manager-service';
 
 // Mock the database connection module
 mockDatabaseForIntegration();
@@ -32,6 +33,8 @@ vi.mock('@backend/services/process-manager-service', () => ({
     }),
     getAllProcessStatuses: vi.fn().mockReturnValue([]),
     stopProcess: vi.fn().mockResolvedValue(undefined),
+    // Resolves true: the stop succeeded and the entry left the map.
+    stopProcessAndWait: vi.fn().mockResolvedValue(true),
     getProcessOutput: vi.fn().mockReturnValue(['line1\n', 'line2\n', 'line3\n']),
   },
 }));
@@ -63,6 +66,9 @@ describe('Projects Processes API Integration Tests', () => {
   }
 
   beforeEach(async () => {
+    // Call counts and invocation order are asserted below, so each test needs
+    // to start from a clean slate rather than inheriting the previous one's.
+    vi.clearAllMocks();
     await setupProjectRoutes(context);
   });
 
@@ -248,6 +254,127 @@ describe('Projects Processes API Integration Tests', () => {
       const { app } = context.get();
 
       const response = await post(app, '/api/projects/non-existent-id/processes/dev/stop');
+
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('POST /api/projects/:id/processes/:processId/start', () => {
+    it('should start a single configured process', async () => {
+      const { db, app } = context.get();
+
+      const { project } = await createProjectWithProcess(db);
+
+      const response = await post(app, `/api/projects/${project.id}/processes/dev/start`);
+
+      expect(response.status).toBe(200);
+      expect((response.data as any).message).toBe('Process started successfully');
+      expect(processManagerService.startProjectProcesses).toHaveBeenCalledWith(
+        project.id,
+        project.path,
+        [expect.objectContaining({ id: 'dev', name: 'Dev Server' })]
+      );
+    });
+
+    it('should evict the existing entry before starting', async () => {
+      // A crashed process stays in the manager's map as 'failed', and
+      // startProjectProcesses skips ids already present -- so without the stop
+      // first, starting a crashed process silently does nothing.
+      const { db, app } = context.get();
+
+      const { project } = await createProjectWithProcess(db);
+
+      await post(app, `/api/projects/${project.id}/processes/dev/start`);
+
+      const stopOrder = vi.mocked(processManagerService.stopProcessAndWait).mock
+        .invocationCallOrder[0];
+      const startOrder = vi.mocked(processManagerService.startProjectProcesses).mock
+        .invocationCallOrder[0];
+      expect(stopOrder).toBeLessThan(startOrder);
+    });
+
+    it("should return the project's whole status rather than only what was started", async () => {
+      // startProjectProcesses reports only the processes handed to it, which a
+      // client would read as the project's other processes having vanished.
+      const { db, app } = context.get();
+
+      const { project } = await createProjectWithProcess(db);
+
+      const response = await post(app, `/api/projects/${project.id}/processes/dev/start`);
+
+      expect(processManagerService.getProcessStatus).toHaveBeenCalledWith(project.id);
+      expect((response.data as any).data).toEqual({ projectId: 'test-id', processes: [] });
+    });
+
+    it('should report failure when the running process could not be stopped', async () => {
+      // startProjectProcesses skips ids already in the manager's map, so
+      // starting after a failed stop spawns nothing. Reporting success there
+      // left the palette showing a process it had not actually started.
+      const { db, app } = context.get();
+
+      const { project } = await createProjectWithProcess(db);
+      vi.mocked(processManagerService.stopProcessAndWait).mockResolvedValueOnce(false);
+
+      const response = await post(app, `/api/projects/${project.id}/processes/dev/start`);
+
+      expect(response.status).toBe(500);
+      expect(processManagerService.startProjectProcesses).not.toHaveBeenCalled();
+    });
+
+    it('should return 404 for a process that is not configured', async () => {
+      const { db, app } = context.get();
+
+      const { project } = await createProjectWithProcess(db);
+
+      const response = await post(app, `/api/projects/${project.id}/processes/nope/start`);
+
+      expect(response.status).toBe(404);
+      expect(processManagerService.startProjectProcesses).not.toHaveBeenCalled();
+    });
+
+    it('should return 404 for non-existent project', async () => {
+      const { app } = context.get();
+
+      const response = await post(app, '/api/projects/non-existent-id/processes/dev/start');
+
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('POST /api/projects/:id/processes/:processId/restart', () => {
+    it('should stop and start the process again', async () => {
+      const { db, app } = context.get();
+
+      const { project } = await createProjectWithProcess(db);
+
+      const response = await post(app, `/api/projects/${project.id}/processes/dev/restart`);
+
+      expect(response.status).toBe(200);
+      expect((response.data as any).message).toBe('Process restarted successfully');
+      expect(processManagerService.stopProcessAndWait).toHaveBeenCalledWith(project.id, 'dev');
+
+      const stopOrder = vi.mocked(processManagerService.stopProcessAndWait).mock
+        .invocationCallOrder[0];
+      const startOrder = vi.mocked(processManagerService.startProjectProcesses).mock
+        .invocationCallOrder[0];
+      expect(stopOrder).toBeLessThan(startOrder);
+    });
+
+    it('should return 404 for a process that is not configured', async () => {
+      const { db, app } = context.get();
+
+      const { project } = await createProjectWithProcess(db);
+
+      const response = await post(app, `/api/projects/${project.id}/processes/nope/restart`);
+
+      expect(response.status).toBe(404);
+      expect(processManagerService.startProjectProcesses).not.toHaveBeenCalled();
+    });
+
+    it('should return 404 for non-existent project', async () => {
+      const { app } = context.get();
+
+      const response = await post(app, '/api/projects/non-existent-id/processes/dev/restart');
 
       expect(response.status).toBe(404);
     });

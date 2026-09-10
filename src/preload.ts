@@ -86,6 +86,23 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('navigate-to-project', handler);
     return () => ipcRenderer.removeListener('navigate-to-project', handler);
   },
+  commandPalette: {
+    close: () => ipcRenderer.send('command-palette:close'),
+    // Escape is intercepted in the main process, which needs the depth to tell
+    // "back out of an item's actions" from "close the palette".
+    setDepth: (depth: number) => ipcRenderer.send('command-palette:depth', depth),
+    getShortcutStatus: () => ipcRenderer.invoke('command-palette:shortcut-status'),
+    onToggle: (callback: () => void) => {
+      const handler = () => callback();
+      ipcRenderer.on('command-palette:toggle', handler);
+      return () => ipcRenderer.removeListener('command-palette:toggle', handler);
+    },
+    onOpened: (callback: () => void) => {
+      const handler = () => callback();
+      ipcRenderer.on('command-palette:opened', handler);
+      return () => ipcRenderer.removeListener('command-palette:opened', handler);
+    },
+  },
   onToggleFind: (callback: () => void) => {
     const handler = () => callback();
     ipcRenderer.on('toggle-find', handler);

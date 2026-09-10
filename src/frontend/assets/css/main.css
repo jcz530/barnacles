@@ -193,14 +193,29 @@ samp {
   * {
     @apply border-border outline-ring/50;
   }
+  /*
+   * The body carries the scrollbar's own colour, not the page's.
+   *
+   * The page's background belongs to the layout inside it, which fills the
+   * width. The only part of the body ever visible is the column the scrollbar
+   * sits in -- and the strip Reka pads on the right while a dialog holds scroll
+   * locked, which is that same column with the scrollbar taken away. Painting
+   * the body to match the track means that column looks the same either way.
+   */
   body {
-    @apply bg-background text-foreground;
+    @apply bg-sidebar text-foreground;
   }
 
-  /* Custom scrollbar styles */
+  /*
+   * Custom scrollbar styles.
+   *
+   * The track takes the sidebar's colour so the scrollbar reads as chrome
+   * rather than as part of the page. The thumb's border is inset padding, so it
+   * matches the track.
+   */
   * {
     scrollbar-width: thin;
-    scrollbar-color: var(--color-slate-400) var(--color-slate-200);
+    scrollbar-color: var(--color-slate-400) var(--sidebar);
   }
 
   /* Webkit browsers (Chrome, Safari, Edge) */
@@ -210,14 +225,14 @@ samp {
   }
 
   *::-webkit-scrollbar-track {
-    background: var(--color-slate-200);
+    background: var(--sidebar);
     border-radius: 4px;
   }
 
   *::-webkit-scrollbar-thumb {
     background: var(--color-slate-400);
     border-radius: 4px;
-    border: 2px solid var(--color-slate-200);
+    border: 2px solid var(--sidebar);
   }
 
   *::-webkit-scrollbar-thumb:hover {

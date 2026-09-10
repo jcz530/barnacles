@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { settingsService } from '../services/settings-service';
-import { toggleTrayIcon, toggleCliInstallation } from '../../main/main';
+import { toggleTrayIcon, toggleCliInstallation, syncCommandPaletteShortcut } from '../../main/main';
 import {
   scanDirectoryService,
   ScanDirectoryRejectedError,
@@ -92,6 +92,20 @@ settings.put('/:key', async c => {
     if (key === 'installCliCommand') {
       const boolValue = value === true || value === 'true' || value === 1;
       await toggleCliInstallation(boolValue);
+    }
+
+    if (key === 'commandPaletteShortcut' || key === 'commandPaletteShortcutEnabled') {
+      const result = await syncCommandPaletteShortcut();
+      if (!result.success) {
+        // Deliberately 200: the preference saved fine, only the OS-level grab
+        // failed. A 4xx here would look to the auto-save watcher like the value
+        // was lost.
+        return c.json({
+          data: setting,
+          message: 'Setting updated successfully',
+          warning: result.error,
+        });
+      }
     }
 
     return c.json({

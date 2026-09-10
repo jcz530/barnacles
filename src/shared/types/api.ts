@@ -153,6 +153,8 @@ export interface Setting {
 }
 
 export const SETTING_KEYS = {
+  COMMAND_PALETTE_SHORTCUT: 'commandPaletteShortcut',
+  COMMAND_PALETTE_SHORTCUT_ENABLED: 'commandPaletteShortcutEnabled',
   DEFAULT_IDE: 'defaultIde',
   DEFAULT_TERMINAL: 'defaultTerminal',
   GIT_EMAILS: 'gitEmails',

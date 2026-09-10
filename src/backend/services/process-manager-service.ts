@@ -486,6 +486,56 @@ export class ProcessManagerService {
   }
 
   /**
+   * Stop a process and wait for it to actually be gone.
+   *
+   * stopProcess signals and returns: killProcessTree sends SIGTERM and hands
+   * back immediately, escalating to SIGKILL on a timer. That is fine when
+   * nothing follows, but restarting on top of it spawns the replacement while
+   * the old process still holds its port -- a dev server then fails to bind, or
+   * quietly moves to the next port.
+   *
+   * Resolves as soon as the pty reports exit, or after `timeoutMs` if it never
+   * does. Returns whether the entry actually left the map, so a caller that is
+   * about to start something can tell a real stop from one that failed and
+   * would silently be skipped by the already-running guard.
+   */
+  async stopProcessAndWait(
+    projectId: string,
+    processId: string,
+    timeoutMs = KILL_ESCALATION_MS + 1000
+  ): Promise<boolean> {
+    const runningProcess = this.runningProcesses.get(projectId)?.get(processId);
+
+    if (!runningProcess) {
+      // Nothing tracked under that id: already stopped, or never started.
+      return true;
+    }
+
+    // Registered before signalling, so an immediate exit cannot be missed.
+    const exited = new Promise<void>(resolve => {
+      runningProcess.process.onExit(() => resolve());
+    });
+
+    await this.stopProcess(projectId, processId);
+
+    // A process we could not signal stays in the map; nothing will resolve the
+    // promise, so report the failure rather than waiting out the timeout.
+    if (this.runningProcesses.get(projectId)?.has(processId)) {
+      return false;
+    }
+
+    await Promise.race([
+      exited,
+      new Promise<void>(resolve => {
+        const timer = setTimeout(resolve, timeoutMs);
+        timer.unref?.();
+      }),
+    ]);
+
+    return true;
+  }
+
+  /**
    * Get the status of all processes across all projects
    */
   getAllProcessStatuses(): ProjectProcessStatus[] {
