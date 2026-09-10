@@ -20,6 +20,7 @@ import {
 } from '@/commands/ranking';
 import { useLevelStack } from '@/commands/useLevelStack';
 import { useCommandStatus } from '@/commands/useCommandStatus';
+import { useIsMac } from '@/composables/useIsMac';
 import CommandPaletteItem from '../molecules/CommandPaletteItem.vue';
 import CommandPaletteFooter from '../molecules/CommandPaletteFooter.vue';
 
@@ -42,6 +43,7 @@ const emit = defineEmits<{
 }>();
 
 const stack = useLevelStack(toRef(props, 'commands'));
+const isMac = useIsMac();
 const { status, report, clear: clearStatus } = useCommandStatus();
 const { activeItems, activeQuery, breadcrumb, depth } = stack;
 
@@ -202,6 +204,26 @@ const handleEscapeKey = (event: KeyboardEvent) => {
   if (!goBack()) emit('dismiss');
 };
 
+/**
+ * Ctrl+C closes outright, from any depth.
+ *
+ * Escape backs out one level at a time, which is right when you are stepping
+ * through actions but tedious when you are three levels down and simply done.
+ * Ctrl+C is what a developer's hands already reach for to mean "get me out of
+ * this" -- it is SIGINT in every shell on every platform.
+ *
+ * The exception is copying. In a GUI text field Windows and Linux use Ctrl+C
+ * for copy, so with a selection in the search box the key is left alone and
+ * the browser copies as usual. macOS copies with Cmd+C, so Ctrl+C is
+ * unambiguous there and closes whatever is selected.
+ */
+const handleCtrlC = (event: KeyboardEvent) => {
+  if (!isMac.value && hasSelection(event)) return;
+
+  event.preventDefault();
+  emit('dismiss');
+};
+
 // goBack is exposed because the in-app dialog owns Escape: reka's dismissable
 // layer listens on the document, so the palette cannot intercept it locally.
 //
@@ -218,6 +240,15 @@ defineExpose({ reset, focusInput, goBack, report, popLevel });
  * caret" -- at the far end of what has been typed, and never across a
  * selection. An empty box satisfies both edges, which is the common case.
  */
+/** Is any of the search box's text selected? */
+const hasSelection = (event: KeyboardEvent): boolean => {
+  const input = event.target as HTMLInputElement | null;
+  if (!input) return false;
+
+  const { selectionStart, selectionEnd } = input;
+  return selectionStart !== null && selectionEnd !== null && selectionStart !== selectionEnd;
+};
+
 const caretAt = (event: KeyboardEvent, edge: 'start' | 'end'): boolean => {
   const input = event.target as HTMLInputElement | null;
   if (!input) return false;
@@ -295,6 +326,7 @@ watch(activeQuery, () => clearStatus());
         class="placeholder:text-muted-foreground h-12 w-full bg-transparent text-sm outline-hidden"
         auto-focus
         @keydown.escape="handleEscapeKey"
+        @keydown.ctrl.c="handleCtrlC"
         @keydown.left="backFromCaretStart"
         @keydown.right="openFromCaretEnd"
         @keydown.tab.exact.prevent="openActions(highlighted)"

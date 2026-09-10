@@ -61,6 +61,19 @@ export const decideToggleAction = (state: {
 export const decideEscapeAction = (depth: number): 'hide' | 'forward' =>
   depth > 0 ? 'forward' : 'hide';
 
+/**
+ * What Ctrl+C means in the floating palette.
+ *
+ * It closes from any depth, unlike Escape which backs out a level at a time --
+ * the gesture a developer's hands already make to mean "get me out of this".
+ *
+ * On Windows and Linux the same chord copies in a text field, so the decision
+ * belongs to the renderer there: only it can see whether anything is selected.
+ * macOS copies with Cmd+C, leaving Ctrl+C free to be acted on here.
+ */
+export const decideCtrlCAction = (platform: NodeJS.Platform): 'hide' | 'forward' =>
+  platform === 'darwin' ? 'hide' : 'forward';
+
 let paletteWindow: BrowserWindow | null = null;
 /**
  * In-flight window creation.
@@ -200,6 +213,17 @@ const createPaletteWindow = async (): Promise<BrowserWindow> => {
       // Inside an item's actions Escape means "go back", which only the
       // renderer can do -- so let it through rather than closing the window.
       if (decideEscapeAction(paletteDepth) === 'forward') return;
+
+      event.preventDefault();
+      hideCommandPalette();
+      return;
+    }
+
+    // Ctrl+C closes from any depth, unlike Escape which backs out one level at
+    // a time. Handled here as well as in the renderer because this window's
+    // keys are seen here first.
+    if (input.control && input.key.toLowerCase() === 'c') {
+      if (decideCtrlCAction(process.platform) === 'forward') return;
 
       event.preventDefault();
       hideCommandPalette();
