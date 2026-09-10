@@ -32,6 +32,17 @@ export interface ProjectCommandDeps {
   setPreferredTerminal: (projectId: string, terminalId: string) => void | Promise<void>;
   revealInFinder: (projectPath: string) => void;
   copyPath: (projectPath: string) => void | Promise<void>;
+  /**
+   * The project whose page is open, if one is.
+   *
+   * Ranked to the top so the palette opens with the thing already on screen
+   * within reach. Deliberately only a ranking: Cmd+K still lands at the root
+   * with an empty box, which is the one thing about the palette worth being
+   * able to rely on without looking.
+   *
+   * Null in the floating window, which has no router to ask.
+   */
+  currentProjectId?: string | null;
 
   /** What is running, and what each project has configured to run. */
   processStatuses: ProjectProcessStatus[];
@@ -68,8 +79,10 @@ export const projectCommands = (
   deps: ProjectCommandDeps
 ): Command[] =>
   projects.map(project => {
-    // Favorites surface before other projects when nothing has been typed.
-    const priority = project.isFavorite ? 2 : 0;
+    // The project being looked at outranks favorites, which outrank the rest,
+    // when nothing has been typed.
+    const isCurrent = !!deps.currentProjectId && project.id === deps.currentProjectId;
+    const priority = isCurrent ? 3 : project.isFavorite ? 2 : 0;
 
     const preferredIde = resolvePreferred(deps.ides, project.preferredIde, deps.defaultIdeId);
     const preferredTerminal = resolvePreferred(
@@ -81,6 +94,10 @@ export const projectCommands = (
     return {
       id: `project:${project.id}`,
       title: project.name,
+      // The path stays, rather than being swapped for "Currently viewing":
+      // two worktrees of one repo share a name, and the path is what tells
+      // them apart. Being first in the list is the signal; a label repeating
+      // what the page behind it already says would be noise.
       subtitle: project.path,
       group: 'projects' as const,
       // Enough for the palette to render the project's own icon, the same one

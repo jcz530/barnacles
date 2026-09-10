@@ -22,8 +22,12 @@ import type { Command } from './types';
  * palette must not keep the 5s ports poll alive in every window, and rebuilding
  * hundreds of command objects on every projects change is wasted work when
  * nothing is showing.
+ *
+ * `currentProjectId` ranks the project whose page is open to the top. Passed in
+ * rather than read from a router here: this registry also runs in the floating
+ * window, which has no router at all.
  */
-export const useCommandRegistry = (isOpen: Ref<boolean>) => {
+export const useCommandRegistry = (isOpen: Ref<boolean>, currentProjectId?: Ref<string | null>) => {
   const {
     useProjectsQuery,
     usePortsQuery,
@@ -252,6 +256,7 @@ export const useCommandRegistry = (isOpen: Ref<boolean>) => {
           await updatePreferredTerminal.mutateAsync({ projectId, terminalId });
         },
         revealInFinder: openInFinder,
+        currentProjectId: currentProjectId?.value ?? null,
         // Wrapped rather than passed straight through. The shared copyPath
         // catches its own failure and alert()s, so it resolves either way --
         // and the palette would go on to report a copy that never happened.

@@ -269,6 +269,53 @@ describe('opening a project’s tools', () => {
     expect(findAction(command, 'copy-path')).toBeDefined();
   });
 
+  describe('ranking the project being looked at', () => {
+    it('puts the open project above favourites', () => {
+      // Ranked rather than auto-opened: Cmd+K still lands at the root with an
+      // empty box, and one Right arrow reaches this project's actions like any
+      // other row's.
+      const [current, favourite, plain] = projectCommands(
+        [project({ id: 'p1' }), project({ id: 'p2', isFavorite: true }), project({ id: 'p3' })],
+        deps({ currentProjectId: 'p1' })
+      );
+
+      expect(current.priority).toBeGreaterThan(favourite.priority ?? 0);
+      expect(favourite.priority).toBeGreaterThan(plain.priority ?? 0);
+    });
+
+    it('outranks a favourite even when it is one itself', () => {
+      const [command] = projectCommands(
+        [project({ id: 'p1', isFavorite: true })],
+        deps({ currentProjectId: 'p1' })
+      );
+
+      expect(command.priority).toBe(3);
+    });
+
+    it('ranks nothing specially away from a project page', () => {
+      // The floating window has no router to ask, and neither does the
+      // projects list -- both pass nothing and get the ordinary order.
+      const [favourite, plain] = projectCommands(
+        [project({ id: 'p1', isFavorite: true }), project({ id: 'p2' })],
+        deps({ currentProjectId: null })
+      );
+
+      expect(favourite.priority).toBe(2);
+      expect(plain.priority).toBe(0);
+    });
+
+    it('keeps the path as the subtitle rather than labelling the row', () => {
+      // Two worktrees of one repo share a name; the path is what tells them
+      // apart, and being first is signal enough on its own.
+      const [command] = projectCommands(
+        [project({ id: 'p1', path: '/Users/dev/alchemy' })],
+        deps({ currentProjectId: 'p1' })
+      );
+
+      expect(command.subtitle).toBe('/Users/dev/alchemy');
+    });
+  });
+
   describe('copying a path', () => {
     it('stays open and confirms rather than closing', async () => {
       const [command] = projectCommands([project()], deps());

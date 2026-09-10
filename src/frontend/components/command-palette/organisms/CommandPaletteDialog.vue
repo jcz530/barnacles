@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import {
   DialogContent,
   DialogDescription,
@@ -9,7 +9,7 @@ import {
   DialogTitle,
   VisuallyHidden,
 } from 'reka-ui';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useCommandRegistry } from '@/commands/useCommandRegistry';
 import type { Command } from '@/commands/types';
 import { runCommand } from '@/commands/run-command';
@@ -18,7 +18,25 @@ import CommandPalette from './CommandPalette.vue';
 const open = defineModel<boolean>('open', { required: true });
 
 const router = useRouter();
-const { commands, resetLazyState } = useCommandRegistry(open);
+const route = useRoute();
+
+/**
+ * The project whose page is open, so the palette ranks it first.
+ *
+ * Every project sub-page -- overview, files, terminals -- is a child of
+ * /projects/:id, so the param is present throughout and this need not name
+ * each one. Matched on the path as well as the param because `id` is not
+ * unique to this route: /themes/:id/edit has one too, and a theme's id would
+ * otherwise be handed over as a project's.
+ */
+const currentProjectId = computed(() => {
+  if (!route.path.startsWith('/projects/')) return null;
+
+  const id = route.params.id;
+  return typeof id === 'string' ? id : null;
+});
+
+const { commands, resetLazyState } = useCommandRegistry(open, currentProjectId);
 const paletteRef = ref<InstanceType<typeof CommandPalette> | null>(null);
 
 // A fresh search each time it opens. Awaits the render: the palette lives
