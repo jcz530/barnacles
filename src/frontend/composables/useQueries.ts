@@ -1087,7 +1087,12 @@ export const useQueries = () => {
     options?: { enabled?: MaybeRef<boolean> }
   ) => {
     return useQuery({
-      queryKey: projectId ? ['processes', unref(projectId)] : ['processes'],
+      // Computed so switching projects re-keys the query. A key built once
+      // from unref() keeps serving the previous project's processes, since the
+      // tab component is reused rather than remounted across that navigation.
+      queryKey: computed(() =>
+        projectId ? (['processes', unref(projectId)] as const) : (['processes'] as const)
+      ),
       queryFn: async () => {
         const params = new URLSearchParams();
         const pid = unref(projectId);

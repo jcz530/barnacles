@@ -406,16 +406,40 @@ describe('projectProcessActions', () => {
     expect(openUrl?.subtitle).toBe('http://localhost:5174');
   });
 
-  it('sends View Output to the project’s processes tab', () => {
+  it('sends View Output to the process it was asked about', () => {
+    // The tab opens on the process someone actually picked. Without the id it
+    // opened on the empty state and made them find it again in the sidebar.
     const context = ctx();
-    const actions = projectProcessActions(project(), [], loaded([configured()]), deps());
+    const actions = projectProcessActions(
+      project(),
+      [],
+      loaded([configured({ id: 'api', name: 'api' })]),
+      deps()
+    );
 
-    const output = actionsOf(find(actions, 'process:p1:web')!).find(
+    const output = actionsOf(find(actions, 'process:p1:api')!).find(
       verb => verb.title === 'View Output'
     );
     output?.run?.(context);
 
-    expect(context.navigate).toHaveBeenCalledWith('/projects/p1/terminals');
+    expect(context.navigate).toHaveBeenCalledWith('/projects/p1/terminals?process=api');
+  });
+
+  it('encodes a process id that would not survive a url', () => {
+    const context = ctx();
+    const actions = projectProcessActions(
+      project(),
+      [],
+      loaded([configured({ id: 'web & api', name: 'web & api' })]),
+      deps()
+    );
+
+    const output = actionsOf(find(actions, 'process:p1:web & api')!).find(
+      verb => verb.title === 'View Output'
+    );
+    output?.run?.(context);
+
+    expect(context.navigate).toHaveBeenCalledWith('/projects/p1/terminals?process=web%20%26%20api');
   });
 
   it('keeps ids unique across projects that name processes the same', () => {
@@ -514,7 +538,7 @@ describe('reporting what a process verb did', () => {
 
     await find(verbsFor([live()], configured()), '.output')?.run?.(context);
 
-    expect(context.navigate).toHaveBeenCalledWith('/projects/p1/terminals');
+    expect(context.navigate).toHaveBeenCalledWith('/projects/p1/terminals?process=web');
   });
 });
 

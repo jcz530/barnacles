@@ -2,12 +2,17 @@
 import { ChevronDown, ChevronRight, Play, Terminal as TerminalIcon } from 'lucide-vue-next';
 import type { ComputedRef, Ref } from 'vue';
 import { computed, inject, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import type { DetectedScriptGroup } from '../../../../shared/types/process';
 import type { ApiResponse } from '../../../../shared/types/api';
 import { API_ROUTES } from '../../../../shared/constants';
 import { useApi } from '../../../composables/useApi';
 import { useQueries } from '../../../composables/useQueries';
 import { useProcessManagement } from '../../../composables/useProcessManagement';
+import {
+  SELECTED_PROCESS_PARAM,
+  useSelectedProcessParam,
+} from '../../../composables/useSelectedProcessParam';
 import { Skeleton } from '../../ui/skeleton';
 import ProcessOutput from '../../process/organisms/ProcessOutput.vue';
 import ProcessCard from '../../process/molecules/ProcessCard.vue';
@@ -26,7 +31,7 @@ const {
   useProjectPackageManagerQuery,
 } = useQueries();
 
-const { data: processes, isLoading } = useProcessesQuery(projectId!);
+const { data: processes, isLoading, isFetched } = useProcessesQuery(projectId!);
 const { data: detectedPackageManager } = useProjectPackageManagerQuery(projectId!, {
   enabled: true,
 });
@@ -69,13 +74,6 @@ const {
 const processItems = computed(() => {
   return processes.value || [];
 });
-
-// Auto-select first item when available
-const autoSelectProcess = () => {
-  if (processItems.value.length > 0 && !selectedProcess.value) {
-    selectedProcess.value = processItems.value[0].processId;
-  }
-};
 
 const handleCreateProcess = async (command?: string, title?: string, relativeDir?: string) => {
   try {
@@ -155,8 +153,24 @@ const runScript = (relativeDir: string, scriptName: string, type: 'npm' | 'compo
   handleCreateProcess(command, command, relativeDir);
 };
 
-// Auto-select on load
-autoSelectProcess();
+// Which process to open on: the one the command palette's View Output verb
+// named, else the first available. Deferred to a watcher because the list
+// arrives from a query -- reading it here would read an empty list.
+const route = useRoute();
+const router = useRouter();
+
+useSelectedProcessParam(
+  computed(() => route.query[SELECTED_PROCESS_PARAM]),
+  isFetched,
+  computed(() => processItems.value.map(process => process.processId)),
+  selectedProcess,
+  () => {
+    // replace, not push: the param is an instruction that has been carried
+    // out, and it should not sit in the back stack waiting to re-fire.
+    const { [SELECTED_PROCESS_PARAM]: _consumed, ...rest } = route.query;
+    router.replace({ query: rest });
+  }
+);
 </script>
 
 <template>

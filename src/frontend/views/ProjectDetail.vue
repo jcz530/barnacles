@@ -228,7 +228,10 @@ const handleFilesMovedSuccessfully = () => {
           <TabNavigation :tabs="tabs" :active-tab="activeTab" :route-params="{ id: projectId }" />
 
           <!-- Tab Content via Router View -->
-          <router-view />
+          <!-- Keyed by project so switching projects remounts the tab. The
+               route record is the same for both, so Vue would otherwise reuse
+               the component and leave it showing the project it came from. -->
+          <router-view :key="projectId" />
         </div>
 
         <div v-else class="py-12 text-center">
