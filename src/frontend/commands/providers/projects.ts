@@ -1,9 +1,9 @@
 import {
-  Clipboard,
+  Copy,
+  ExternalLink,
+  FolderGit2,
   FolderOpen,
-  Globe,
   MonitorPlay,
-  SquareArrowOutUpRight,
   SquareTerminal,
   Star,
   StarOff,
@@ -172,7 +172,9 @@ const projectActions = (
     title: 'Open Project',
     subtitle: project.path,
     group: 'projects' as const,
-    icon: SquareArrowOutUpRight,
+    // The glyph the sidebar gives Projects, so the row reads as "the project"
+    // rather than as a generic "open something elsewhere" arrow.
+    icon: FolderGit2,
     primaryActionLabel: 'Open Project',
     run: ctx => ctx.navigate(`/projects/${project.id}`),
   },
@@ -249,7 +251,8 @@ const projectActions = (
     title: 'Copy Path',
     subtitle: project.path,
     group: 'projects' as const,
-    icon: Clipboard,
+    // The same glyph the projects page's dropdown gives this action.
+    icon: Copy,
     primaryActionLabel: 'Copy',
     // Stays open -- see the port copy actions. Nothing changes on screen, so
     // the message is the only evidence the copy happened.
@@ -295,7 +298,8 @@ const remoteAction = (project: ProjectWithDetails, deps: ProjectCommandDeps): Co
       title: named ? `View on ${provider.name}` : 'View Remote',
       subtitle: provider.webUrl,
       group: 'projects' as const,
-      icon: Globe,
+      // The same glyph the projects page's dropdown gives this action.
+      icon: ExternalLink,
       primaryActionLabel: named ? `Open ${provider.name}` : 'Open Remote',
       // The provider's own name is what people reach for -- "alchemy github"
       // should find this -- alongside the words for the thing in general.
