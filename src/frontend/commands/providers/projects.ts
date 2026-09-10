@@ -190,6 +190,7 @@ const projectActions = (
     projectName: project.name,
     idPrefix: `project.open-ide:${project.id}`,
     toolNoun: 'editors',
+    keywords: ['ide', 'editor', 'code'],
   }),
   toolAction({
     id: `project.open-terminal:${project.id}`,
@@ -203,6 +204,7 @@ const projectActions = (
     projectName: project.name,
     idPrefix: `project.open-terminal:${project.id}`,
     toolNoun: 'terminals',
+    keywords: ['terminal', 'shell', 'console'],
   }),
   {
     id: `project.reveal:${project.id}`,
@@ -325,6 +327,14 @@ interface ToolActionSpec<T extends { id: string; name: string }> {
   idPrefix: string;
   /** Plural, for the "none detected" subtitle: "editors", "terminals". */
   toolNoun: string;
+  /**
+   * Words for the kind of tool, since the title stops containing them.
+   *
+   * Once a preferred tool resolves, this row reads "Open in VS Code" -- so
+   * "ide", the word someone reaches for when they cannot remember which editor
+   * a project is set to, matches nothing at all.
+   */
+  keywords: string[];
 }
 
 /**
@@ -346,6 +356,7 @@ const toolAction = <T extends { id: string; name: string }>(spec: ToolActionSpec
       subtitle: `No ${spec.toolNoun} detected`,
       group: 'projects' as const,
       icon: spec.icon,
+      keywords: spec.keywords,
       primaryActionLabel: 'Open Settings',
       run: ctx => ctx.navigate('/settings'),
     };
@@ -356,6 +367,9 @@ const toolAction = <T extends { id: string; name: string }>(spec: ToolActionSpec
     title: spec.preferred ? `${spec.verb} ${spec.preferred.name}` : spec.fallbackTitle,
     group: 'projects' as const,
     icon: spec.icon,
+    // The kind of tool, plus the one that resolved: "ide" finds this row even
+    // when it reads "Open in VS Code", and so does "vs code".
+    keywords: [...spec.keywords, spec.preferred?.name.toLowerCase() ?? ''].filter(Boolean),
     primaryActionLabel: spec.preferred ? `${spec.verb} ${spec.preferred.name}` : 'Choose',
     // Passing the resolved id rather than letting the backend fall back: it
     // only consults the project's own preference and throws otherwise, so a

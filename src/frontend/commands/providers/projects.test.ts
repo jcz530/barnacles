@@ -198,6 +198,25 @@ describe('opening a project’s tools', () => {
     expect(findAction(command, 'open-ide')?.title).toBe('Open in VS Code');
   });
 
+  it('stays findable by "ide" once its title names an editor instead', () => {
+    // The row reads "Open in VS Code" as soon as a preference resolves, so the
+    // word someone reaches for when they cannot remember which editor a
+    // project uses had nothing left to match.
+    const [command] = projectCommands([project({ preferredIde: 'vscode' })], deps());
+    const openIde = findAction(command, 'open-ide');
+
+    expect(openIde?.title).toBe('Open in VS Code');
+    expect(openIde?.keywords).toEqual(expect.arrayContaining(['ide', 'editor', 'vs code']));
+  });
+
+  it('keeps the terminal row findable by "shell" the same way', () => {
+    const [command] = projectCommands([project({ preferredTerminal: 'ghostty' })], deps());
+
+    expect(findAction(command, 'open-terminal')?.keywords).toEqual(
+      expect.arrayContaining(['terminal', 'shell'])
+    );
+  });
+
   it('offers the choice instead of guessing when nothing resolves', () => {
     // No run means Enter opens the picker -- there is nothing to default to.
     const [command] = projectCommands([project()], deps());
