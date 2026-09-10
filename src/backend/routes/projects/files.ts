@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import path from 'path';
+import { IMAGE_CONTENT_TYPES } from '../../utils/icon-finder/definitions';
 import { projectService } from '../../services/project';
 import { loadProject } from '../../middleware/project-loader';
 import type { ProjectContext } from '../../types/hono';
@@ -199,23 +200,66 @@ files.get('/:id/icon', loadProject, async (c: ProjectContext) => {
     const fs = await import('fs/promises');
     const iconPath = path.join(project.path, project.icon);
 
-    try {
-      const iconData = await fs.readFile(iconPath);
-      const ext = path.extname(project.icon).toLowerCase();
+    // The stored icon is written by the detector rather than by a request, but
+    // it is a plain text column: confirm it still resolves inside the project
+    // before reading it. `path.relative` is used instead of a prefix check so
+    // that a sibling directory such as `<project>-evil` cannot pass.
+    const normalizedProjectPath = path.resolve(project.path);
+    const relativeToProject = path.relative(normalizedProjectPath, path.resolve(iconPath));
 
-      // Set appropriate content type based on file extension
-      const contentType =
+    // Compare the first path *segment*: a bare startsWith('..') would also
+    // reject a legitimate directory whose name begins with dots.
+    const escapesProject =
+      relativeToProject === '..' ||
+      relativeToProject.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relativeToProject);
+
+    if (escapesProject) {
+      return c.json(
         {
-          '.png': 'image/png',
-          '.jpg': 'image/jpeg',
-          '.jpeg': 'image/jpeg',
-          '.svg': 'image/svg+xml',
-          '.ico': 'image/x-icon',
-        }[ext] || 'application/octet-stream';
+          error: 'Access denied',
+        },
+        403
+      );
+    }
+
+    const ext = path.extname(project.icon).toLowerCase();
+    const contentType = IMAGE_CONTENT_TYPES[ext];
+
+    // Anything we cannot name a type for would only fail in the <img> tag; a
+    // 404 lets the frontend fall back to its folder glyph immediately.
+    if (!contentType) {
+      return c.json(
+        {
+          error: 'Unsupported icon format',
+        },
+        404
+      );
+    }
+
+    try {
+      const stats = await fs.stat(iconPath);
+      // A weak validator over path, size and mtime. The URL does not change
+      // when a rescan picks a different icon, so without this the day-long
+      // cache below would keep serving the old image.
+      const etag = `W/"${Buffer.from(`${project.icon}:${stats.size}:${stats.mtimeMs}`).toString(
+        'base64url'
+      )}"`;
+
+      if (c.req.header('if-none-match') === etag) {
+        return new Response(null, {
+          status: 304,
+          headers: { ETag: etag, 'Cache-Control': 'public, max-age=86400' },
+        });
+      }
+
+      const iconData = await fs.readFile(iconPath);
 
       return new Response(new Uint8Array(iconData), {
         headers: {
           'Content-Type': contentType,
+          'Content-Length': String(iconData.byteLength),
+          ETag: etag,
           'Cache-Control': 'public, max-age=86400',
         },
       });
