@@ -5,7 +5,7 @@ import { setupProjectRoutes } from '@test/helpers/route-test-setup';
 import { createProjectData } from '@test/factories/project.factory';
 import { projects as projectsSchema } from '@shared/database/schema';
 import { mkdir, writeFile } from 'fs/promises';
-import { join } from 'path';
+import { basename, join } from 'path';
 import { tmpdir } from 'os';
 
 // Mock the database connection module
@@ -209,6 +209,120 @@ describe('Projects Files API Integration Tests', () => {
       const response = await get(app, '/api/projects/non-existent-id/icon');
 
       expect(response.status).toBe(404);
+    });
+
+    it.each([
+      ['.svg', 'image/svg+xml'],
+      ['.webp', 'image/webp'],
+      ['.gif', 'image/gif'],
+      ['.ico', 'image/x-icon'],
+    ])('should serve a %s icon with the right content type', async (ext, contentType) => {
+      const { db, app } = context.get();
+
+      const tempDir = join(tmpdir(), `test-project-icon-type-${ext}-${Date.now()}`);
+      await mkdir(tempDir, { recursive: true });
+      await writeFile(join(tempDir, `icon${ext}`), Buffer.from('fake-image-data'));
+
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ path: tempDir, icon: `icon${ext}` }))
+        .returning();
+
+      const response = await get(app, `/api/projects/${project.id}/icon`);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toBe(contentType);
+    });
+
+    it('should return 404 for a format no browser can render', async () => {
+      // An .icns would only fail inside the <img>; a 404 lets the frontend fall
+      // back to its folder glyph straight away.
+      const { db, app } = context.get();
+
+      const tempDir = join(tmpdir(), `test-project-icns-${Date.now()}`);
+      await mkdir(tempDir, { recursive: true });
+      await writeFile(join(tempDir, 'app.icns'), Buffer.from('fake-icns-data'));
+
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ path: tempDir, icon: 'app.icns' }))
+        .returning();
+
+      const response = await get(app, `/api/projects/${project.id}/icon`);
+
+      expect(response.status).toBe(404);
+      expect((response.data as any).error).toBe('Unsupported icon format');
+    });
+
+    it('should deny an icon path escaping the project directory', async () => {
+      const { db, app } = context.get();
+
+      const tempDir = join(tmpdir(), `test-project-traversal-${Date.now()}`);
+      await mkdir(tempDir, { recursive: true });
+
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ path: tempDir, icon: '../../../etc/hosts' }))
+        .returning();
+
+      const response = await get(app, `/api/projects/${project.id}/icon`);
+
+      expect(response.status).toBe(403);
+      expect((response.data as any).error).toBe('Access denied');
+    });
+
+    it('should deny an icon path in a sibling directory sharing the prefix', async () => {
+      // A plain startsWith check would let `<project>-evil` through.
+      const { db, app } = context.get();
+
+      const base = join(tmpdir(), `test-project-sibling-${Date.now()}`);
+      const projectDir = `${base}-app`;
+      const siblingDir = `${base}-app-evil`;
+      await mkdir(projectDir, { recursive: true });
+      await mkdir(siblingDir, { recursive: true });
+      await writeFile(join(siblingDir, 'secret.png'), Buffer.from('secret'));
+
+      // Must escape into the sibling by name: a path that merely leaves the
+      // project would be caught by a naive startsWith check too, and would not
+      // exercise the prefix collision this test exists for.
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(
+          createProjectData({
+            path: projectDir,
+            icon: `../${basename(siblingDir)}/secret.png`,
+          })
+        )
+        .returning();
+
+      const response = await get(app, `/api/projects/${project.id}/icon`);
+
+      expect(response.status).toBe(403);
+    });
+
+    it('should revalidate with an ETag instead of serving a stale icon', async () => {
+      const { db, app } = context.get();
+
+      const tempDir = join(tmpdir(), `test-project-etag-${Date.now()}`);
+      await mkdir(tempDir, { recursive: true });
+      await writeFile(join(tempDir, 'icon.png'), Buffer.from('fake-png-data'));
+
+      const [project] = await db
+        .insert(projectsSchema)
+        .values(createProjectData({ path: tempDir, icon: 'icon.png' }))
+        .returning();
+
+      const first = await get(app, `/api/projects/${project.id}/icon`);
+      const etag = first.headers.get('etag');
+
+      expect(first.status).toBe(200);
+      expect(etag).toBeTruthy();
+
+      const second = await get(app, `/api/projects/${project.id}/icon`, {
+        'If-None-Match': etag as string,
+      });
+
+      expect(second.status).toBe(304);
     });
   });
 });
