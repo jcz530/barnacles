@@ -922,6 +922,12 @@ export const useQueries = () => {
       onSuccess: (data, { projectId }) => {
         queryClient.invalidateQueries({ queryKey: ['project', projectId, 'start-processes'] });
         queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+        // The projects list carries hasStartProcesses, and it lives under a
+        // different key with a 5 minute staleTime. Without this, configuring a
+        // project's first process leaves the list saying it has none -- so the
+        // palette would go on hiding the Start row for a project that had just
+        // been given one, for as long as the cache held.
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
       },
     });
   };

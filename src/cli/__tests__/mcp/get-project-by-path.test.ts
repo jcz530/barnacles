@@ -23,6 +23,7 @@ const fakeProject: ProjectWithDetails = {
   createdAt: new Date(),
   updatedAt: new Date(),
   technologies: [],
+  hasStartProcesses: false,
 };
 
 describe('get_project_by_path tool', () => {

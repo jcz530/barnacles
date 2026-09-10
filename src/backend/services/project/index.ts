@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../../shared/database';
-import { projects, projectWorktrees } from '../../../shared/database/schema';
+import { projectProcesses, projects, projectWorktrees } from '../../../shared/database/schema';
 import type { ProjectInfo } from '../project-scanner-service';
 import { projectScannerService } from '../project-scanner-service';
 import { ideDetectorService } from '../ide-detector-service';
@@ -41,11 +41,20 @@ export interface Project {
   updatedAt: Date;
 }
 
+/**
+ * NOTE: this is a second declaration of the shape in shared/types/api.ts, not a
+ * re-export of it -- the frontend imports that one. A field added to only one
+ * of them type-checks cleanly and goes missing at the other end, so they have
+ * to be edited together. (ProjectStats and Worktree had the same split and were
+ * fixed by re-exporting from shared; this one has not been.)
+ */
 export interface ProjectWithDetails extends Project {
   technologies: import('./project-technology-service').Technology[];
   stats?: import('./project-stats-service').ProjectStats | null;
   /** Main checkout first. Empty for a project that is not a git repository. */
   worktrees?: import('./project-worktrees-service').Worktree[];
+  /** Whether any start process is configured. See the shared declaration. */
+  hasStartProcesses: boolean;
 }
 
 export interface ProjectFilters {
@@ -100,6 +109,13 @@ class ProjectService {
 
     const projectResults = await query;
 
+    // Which projects have a start process, in one grouped query for the whole
+    // list rather than a fourth per-project call inside the fan-out below.
+    // getStartProcesses is itself N+1 (a query per process for its commands),
+    // so calling it per project here would be far more work than a boolean is
+    // worth.
+    const projectIdsWithProcesses = await this.getProjectIdsWithStartProcesses();
+
     // Get technologies for each project
     const projectsWithDetails = await Promise.all(
       projectResults.map(async project => {
@@ -114,6 +130,7 @@ class ProjectService {
           technologies: techs,
           stats,
           worktrees,
+          hasStartProcesses: projectIdsWithProcesses.has(project.id),
         };
       })
     );
@@ -131,6 +148,20 @@ class ProjectService {
   }
 
   /**
+   * The ids of every project with at least one configured start process.
+   *
+   * A set rather than counts: nothing needs to know how many, and a membership
+   * test is what every caller actually asks.
+   */
+  private async getProjectIdsWithStartProcesses(): Promise<Set<string>> {
+    const rows = await db
+      .selectDistinct({ projectId: projectProcesses.projectId })
+      .from(projectProcesses);
+
+    return new Set(rows.map(row => row.projectId));
+  }
+
+  /**
    * Get a single project by ID
    */
   async getProjectById(id: string): Promise<ProjectWithDetails | null> {
@@ -141,10 +172,17 @@ class ProjectService {
     }
 
     const project = result[0];
-    const [techs, stats, worktrees] = await Promise.all([
+    const [techs, stats, worktrees, startProcessRows] = await Promise.all([
       projectTechnologyService.getProjectTechnologies(project.id),
       projectStatsService.getProjectStats(project.id),
       projectWorktreesService.getWorktrees(project.id),
+      // Existence only, so a single row is enough -- this deliberately avoids
+      // getStartProcesses, which would also fetch every process's commands.
+      db
+        .select({ id: projectProcesses.id })
+        .from(projectProcesses)
+        .where(eq(projectProcesses.projectId, project.id))
+        .limit(1),
     ]);
 
     return {
@@ -152,6 +190,7 @@ class ProjectService {
       technologies: techs,
       stats,
       worktrees,
+      hasStartProcesses: startProcessRows.length > 0,
     };
   }
 

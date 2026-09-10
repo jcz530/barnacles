@@ -35,7 +35,16 @@ const stopProcessesMutation = useStopProjectProcessesMutation();
 const settingsQuery = useSettingsQuery({ enabled: true });
 
 const dropdownOpen = ref(false);
-const isConfigEditorOpen = ref(false);
+
+/**
+ * Whether the process editor is showing.
+ *
+ * A model rather than local state so the page above can open it too -- the
+ * command palette deep-links here to configure a project's first start command,
+ * and the editor is mounted inside this component. Left uncontrolled it still
+ * works on its own for the button's own clicks.
+ */
+const isConfigEditorOpen = defineModel<boolean>('configEditorOpen', { default: false });
 
 // Get process status from context
 const processStatus = computed(() => getProjectStatus(props.projectId));
