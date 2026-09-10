@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { SETTING_KEYS } from '../../../shared/types/api';
 import type { CommandContext } from '../types';
 import { appCommands, type AppCommandDeps } from './app';
 
@@ -41,7 +42,21 @@ describe('appCommands', () => {
 
     find(appCommands(deps()), 'app.enable-global-shortcut')?.run?.(context);
 
-    expect(context.navigate).toHaveBeenCalledWith('/settings');
+    expect(context.navigate).toHaveBeenCalledWith('/settings?setting=commandPaletteShortcut');
+  });
+
+  it('deep-links to the setting so the page scrolls to it', () => {
+    // Settings runs long; landing at the top and hunting for the row is most of
+    // the friction the row exists to remove. The page reads ?setting= and
+    // scrolls to the matching data-setting, so the key has to be a real one.
+    const context = ctx();
+
+    find(appCommands(deps()), 'app.enable-global-shortcut')?.run?.(context);
+
+    const path = vi.mocked(context.navigate).mock.calls[0][0] as string;
+    const key = new URLSearchParams(path.split('?')[1]).get('setting');
+
+    expect(Object.values(SETTING_KEYS)).toContain(key);
   });
 
   it('shows it before anything is typed', () => {

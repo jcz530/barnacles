@@ -1,4 +1,5 @@
 import { Keyboard, MoonStar, RefreshCw, SquarePlus, Sun } from 'lucide-vue-next';
+import { SETTING_KEYS } from '../../../shared/types/api';
 import type { Command, CommandContext } from '../types';
 
 export interface AppCommandDeps {
@@ -70,7 +71,12 @@ export const appCommands = (deps: AppCommandDeps): Command[] => [
           // the registration can fail against whatever already owns it, and
           // neither a picker nor that error has anywhere to live in a palette
           // row that dismisses itself.
-          run: (ctx: CommandContext) => ctx.navigate('/settings'),
+          //
+          // Deep-linked to the setting itself, which the page scrolls to and
+          // highlights -- landing at the top of a long page and hunting for the
+          // row is most of the friction this shortcut exists to remove.
+          run: (ctx: CommandContext) =>
+            ctx.navigate(`/settings?setting=${SETTING_KEYS.COMMAND_PALETTE_SHORTCUT}`),
         },
       ]),
   {
