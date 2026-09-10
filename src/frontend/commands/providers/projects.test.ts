@@ -20,6 +20,9 @@ const deps = (overrides: Partial<ProjectCommandDeps> = {}): ProjectCommandDeps =
   revealInFinder: vi.fn(),
   copyPath: vi.fn(),
   toggleFavorite: vi.fn().mockResolvedValue(true),
+  gitProvider: (url?: string | null) =>
+    url?.includes('github') ? { name: 'GitHub', webUrl: 'https://github.com/dev/alchemy' } : null,
+  openExternal: vi.fn(),
   processStatuses: [],
   processState: { configured: {}, loading: {} },
   processDeps: {
@@ -48,6 +51,12 @@ const project = (overrides: Partial<ProjectWithDetails> = {}): ProjectWithDetail
     updatedAt: new Date(),
     ...overrides,
   }) as ProjectWithDetails;
+
+const stats = (gitRemoteUrl: string): ProjectWithDetails['stats'] => ({
+  id: 's1',
+  projectId: 'p1',
+  gitRemoteUrl,
+});
 
 const ctx = (): CommandContext => ({
   surface: 'in-app',
@@ -269,6 +278,68 @@ describe('opening a project’s tools', () => {
 
     expect(findAction(command, 'reveal')).toBeDefined();
     expect(findAction(command, 'copy-path')).toBeDefined();
+  });
+
+  describe('opening the project’s remote', () => {
+    const onGithub = (): Partial<ProjectWithDetails> => ({
+      stats: stats('git@github.com:dev/alchemy.git'),
+    });
+
+    it('names the provider rather than saying "remote"', () => {
+      // The projects page's dropdown already says "View on GitHub"; naming the
+      // same action differently here would read as a different one.
+      const [command] = projectCommands([project(onGithub())], deps());
+
+      expect(findAction(command, 'remote')?.title).toBe('View on GitHub');
+    });
+
+    it('offers nothing for a project with no remote', () => {
+      // A local-only repo, or one whose stats have not been gathered. A row
+      // that cannot do its verb is worse than an absent one.
+      const [command] = projectCommands([project()], deps());
+
+      expect(findAction(command, 'remote')).toBeUndefined();
+    });
+
+    it('opens the web url, not the ssh one it was derived from', async () => {
+      const dependencies = deps();
+      const [command] = projectCommands([project(onGithub())], dependencies);
+      const context = ctx();
+
+      await findAction(command, 'remote')?.run?.(context);
+
+      expect(dependencies.openExternal).toHaveBeenCalledWith('https://github.com/dev/alchemy');
+      // Closes, like the other verbs that hand off to another app.
+      expect(context.dismiss).toHaveBeenCalled();
+    });
+
+    it('is found by the provider’s name as well as by "remote"', () => {
+      const [command] = projectCommands([project(onGithub())], deps());
+
+      expect(findAction(command, 'remote')?.keywords).toEqual(
+        expect.arrayContaining(['github', 'remote', 'repo'])
+      );
+    });
+
+    it('finds the project itself by its provider from the root list', () => {
+      // "alchemy github" should reach the project, the way "alchemy ide" does.
+      const [command] = projectCommands([project(onGithub())], deps());
+
+      expect(command.keywords).toEqual(expect.arrayContaining(['github', 'remote']));
+    });
+
+    it('falls back to generic wording for an unrecognised host', () => {
+      // The shared resolver returns "Other" for a domain it does not know --
+      // a self-hosted GitLab, say. "View on Other" is not a sentence.
+      const [command] = projectCommands(
+        [project({ stats: stats('git@git.internal:dev/alchemy.git') })],
+        deps({
+          gitProvider: () => ({ name: 'Other', webUrl: 'https://git.internal/dev/alchemy' }),
+        })
+      );
+
+      expect(findAction(command, 'remote')?.title).toBe('View Remote');
+    });
   });
 
   describe('favouriting from the palette', () => {

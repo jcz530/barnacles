@@ -51,7 +51,7 @@ export const useCommandRegistry = (isOpen: Ref<boolean>, currentProjectId?: Ref<
     useToggleFavoriteMutation,
   } = useQueries();
 
-  const { openInFinder } = useProjectActions();
+  const { openInFinder, getGitProvider } = useProjectActions();
 
   // Fixed for the lifetime of the renderer: utilities are registered when the
   // registry module is evaluated, so this cannot change and has no business
@@ -265,6 +265,11 @@ export const useCommandRegistry = (isOpen: Ref<boolean>, currentProjectId?: Ref<
           const result = await toggleFavorite.mutateAsync(projectId);
           return !!result?.isFavorite;
         },
+        // The same resolver the projects page's dropdown uses, so both name a
+        // provider identically -- "View on GitHub" in one and something else in
+        // the other would read as two different actions.
+        gitProvider: getGitProvider,
+        openExternal: (url: string) => window.electron.shell.openExternal(url),
         currentProjectId: currentProjectId?.value ?? null,
         // Wrapped rather than passed straight through. The shared copyPath
         // catches its own failure and alert()s, so it resolves either way --

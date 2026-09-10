@@ -1,6 +1,7 @@
 import {
   Clipboard,
   FolderOpen,
+  Globe,
   MonitorPlay,
   SquareArrowOutUpRight,
   SquareTerminal,
@@ -41,6 +42,13 @@ export interface ProjectCommandDeps {
    * that was pressed may be a rebuild behind by the time the next press lands.
    */
   toggleFavorite: (projectId: string) => Promise<boolean>;
+  /**
+   * Name and web URL for a remote, or null when there is no remote or it
+   * cannot be read as one. Shared with the projects page's dropdown so the two
+   * name a provider the same way.
+   */
+  gitProvider: (remoteUrl: string | null | undefined) => { name: string; webUrl: string } | null;
+  openExternal: (url: string) => void | Promise<void>;
   /**
    * The project whose page is open, if one is.
    *
@@ -133,7 +141,11 @@ export const projectCommands = (
         'copy path',
         'favorite',
         'star',
-      ],
+        // So "alchemy github" finds the project whose remote is on GitHub, the
+        // way "alchemy ide" finds it by a verb it carries.
+        deps.gitProvider(project.stats?.gitRemoteUrl)?.name.toLowerCase() ?? '',
+        'remote',
+      ].filter(Boolean),
       priority,
       primaryActionLabel: 'Open Project',
       run: ctx => ctx.navigate(`/projects/${project.id}`),
@@ -201,6 +213,9 @@ const projectActions = (
       ctx.dismiss();
     },
   },
+  // Only when there is a remote to open. A row that cannot do its verb is
+  // worse than an absent one in a list this short.
+  ...remoteAction(project, deps),
   {
     id: `project.favorite:${project.id}`,
     title: project.isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
@@ -252,6 +267,46 @@ const projectActions = (
   ...projectProcessActions(project, deps.processStatuses, deps.processState, deps.processDeps),
   ...scriptCommands(project, deps.scriptState, deps.scriptDeps),
 ];
+
+/**
+ * "View on GitHub", or whatever the remote turns out to be.
+ *
+ * Named for the provider rather than "View Remote": the projects page's
+ * dropdown already says "View on GitHub", and the palette naming the same
+ * thing differently would read as a different action.
+ *
+ * Returns nothing at all for a project with no remote -- a local-only repo, or
+ * one whose stats have not been gathered yet.
+ */
+const remoteAction = (project: ProjectWithDetails, deps: ProjectCommandDeps): Command[] => {
+  const remoteUrl = project.stats?.gitRemoteUrl;
+  const provider = deps.gitProvider(remoteUrl);
+
+  if (!provider) return [];
+
+  // "Other" is what the shared resolver returns for a domain it does not
+  // recognise -- a self-hosted GitLab, say. "View on Other" is not a sentence,
+  // so those get the generic wording and are still found by "remote".
+  const named = provider.name !== 'Other';
+
+  return [
+    {
+      id: `project.remote:${project.id}`,
+      title: named ? `View on ${provider.name}` : 'View Remote',
+      subtitle: provider.webUrl,
+      group: 'projects' as const,
+      icon: Globe,
+      primaryActionLabel: named ? `Open ${provider.name}` : 'Open Remote',
+      // The provider's own name is what people reach for -- "alchemy github"
+      // should find this -- alongside the words for the thing in general.
+      keywords: [provider.name.toLowerCase(), 'remote', 'origin', 'repository', 'repo', 'git'],
+      run: async ctx => {
+        await deps.openExternal(provider.webUrl);
+        ctx.dismiss();
+      },
+    },
+  ];
+};
 
 interface ToolActionSpec<T extends { id: string; name: string }> {
   id: string;
