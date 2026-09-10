@@ -1,4 +1,5 @@
 import {
+  ChartLine,
   Copy,
   ExternalLink,
   FolderGit2,
@@ -141,6 +142,8 @@ export const projectCommands = (
         'copy path',
         'favorite',
         'star',
+        'stats',
+        'commits',
         // So "alchemy github" finds the project whose remote is on GitHub, the
         // way "alchemy ide" finds it by a verb it carries.
         deps.gitProvider(project.stats?.gitRemoteUrl)?.name.toLowerCase() ?? '',
@@ -159,6 +162,14 @@ export const projectCommands = (
       actions: () => projectActions(project, deps, preferredIde, preferredTerminal),
     };
   });
+
+/**
+ * The stats page, already filtered to one project.
+ *
+ * The same link the project page's git card builds, so both land on an
+ * identically scoped view.
+ */
+export const statsRoute = (projectId: string): string => `/stats?projectId=${projectId}`;
 
 /** The actions offered for one project, in the order they are most wanted. */
 const projectActions = (
@@ -220,6 +231,20 @@ const projectActions = (
   // Only when there is a remote to open. A row that cannot do its verb is
   // worse than an absent one in a list this short.
   ...remoteAction(project, deps),
+  {
+    id: `project.stats:${project.id}`,
+    title: 'View Stats',
+    group: 'projects' as const,
+    // The glyph the project page's git card gives this same destination, so
+    // the two read as the one action rather than two similar ones.
+    icon: ChartLine,
+    primaryActionLabel: 'View Stats',
+    keywords: ['stats', 'commits', 'git', 'metrics', 'activity', 'graph', 'chart'],
+    // Offered for every project, including one with no git history: the stats
+    // page handles that itself, and a row that appears only for some projects
+    // is one you cannot build muscle memory for.
+    run: ctx => ctx.navigate(statsRoute(project.id)),
+  },
   {
     id: `project.favorite:${project.id}`,
     title: project.isFavorite ? 'Remove from Favorites' : 'Add to Favorites',

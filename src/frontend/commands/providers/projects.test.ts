@@ -151,9 +151,42 @@ describe('projectCommands', () => {
       'Open in IDE',
       'Open Terminal',
       'Reveal in Finder',
+      'View Stats',
       'Add to Favorites',
       'Copy Path',
     ]);
+  });
+
+  it('opens the stats page already filtered to the project', () => {
+    // The same destination the project page's git card links to, so both land
+    // on an identically scoped view.
+    const context = ctx();
+    const actions = actionsOf(projectCommands([project()], deps())[0]);
+    const stats = actions.find(action => action.title === 'View Stats');
+
+    stats?.run?.(context);
+
+    expect(context.navigate).toHaveBeenCalledWith('/stats?projectId=p1');
+
+    // Re-parsed rather than only string-matched, so a typo in the param name
+    // cannot pass by looking approximately right.
+    const path = vi.mocked(context.navigate).mock.calls[0][0];
+    expect(new URLSearchParams(path.split('?')[1]).get('projectId')).toBe('p1');
+  });
+
+  it('offers stats for a project with no git remote', () => {
+    // The stats page handles an empty history itself, and a row that appears
+    // for only some projects is one you cannot build muscle memory for.
+    const actions = actionsOf(projectCommands([project({ stats: null })], deps())[0]);
+
+    expect(actions.some(action => action.title === 'View Stats')).toBe(true);
+  });
+
+  it('finds a project by the words for its stats', () => {
+    // "alchemy stats" should reach the project, the way "alchemy ide" does.
+    const [row] = projectCommands([project()], deps());
+
+    expect(row.keywords).toEqual(expect.arrayContaining(['stats', 'commits']));
   });
 
   it('appends the processes beneath the project’s own verbs once loaded', () => {
