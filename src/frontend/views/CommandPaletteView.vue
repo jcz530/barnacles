@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { useCommandRegistry } from '@/commands/useCommandRegistry';
 import type { Command } from '@/commands/types';
+import { runCommand } from '@/commands/run-command';
 import CommandPalette from '@/components/command-palette/organisms/CommandPalette.vue';
 
 // This window has no router of its own, and it stays alive (hidden) between
@@ -27,12 +28,8 @@ const navigate = async (path: string) => {
   dismiss();
 };
 
-const runCommand = async (command: Command) => {
-  // An item can carry actions instead of a default verb, in which case the
-  // palette opens its level rather than emitting it here.
-  if (!command.run) return;
-
-  await command.run({
+const onSelect = (command: Command) =>
+  runCommand(command, () => ({
     surface: 'floating',
     navigate,
     dismiss,
@@ -42,8 +39,7 @@ const runCommand = async (command: Command) => {
     // toast raised here would be painted into a window nobody sees.
     pop: () => paletteRef.value?.popLevel(),
     status: (message, kind) => paletteRef.value?.report(message, kind),
-  });
-};
+  }));
 
 /**
  * Tell the main process how deep the action stack is.
@@ -100,7 +96,7 @@ onUnmounted(() => {
       ref="paletteRef"
       :commands="commands"
       height-class="h-full"
-      @select="runCommand"
+      @select="onSelect"
       @dismiss="dismiss"
       @depth-change="reportDepth"
     />

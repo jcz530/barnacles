@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'vue-router';
 import { useCommandRegistry } from '@/commands/useCommandRegistry';
 import type { Command } from '@/commands/types';
+import { runCommand } from '@/commands/run-command';
 import CommandPalette from './CommandPalette.vue';
 
 const open = defineModel<boolean>('open', { required: true });
@@ -33,12 +34,8 @@ watch(open, async isOpen => {
   paletteRef.value?.reset();
 });
 
-const runCommand = async (command: Command) => {
-  // An item can carry actions instead of a default verb, in which case the
-  // palette opens its level rather than emitting it here.
-  if (!command.run) return;
-
-  await command.run({
+const onSelect = (command: Command) =>
+  runCommand(command, () => ({
     surface: 'in-app',
     navigate: async path => {
       open.value = false;
@@ -51,8 +48,7 @@ const runCommand = async (command: Command) => {
     // line -- so a command that stays open reports back into it.
     pop: () => paletteRef.value?.popLevel(),
     status: (message, kind) => paletteRef.value?.report(message, kind),
-  });
-};
+  }));
 </script>
 
 <template>
@@ -89,7 +85,7 @@ const runCommand = async (command: Command) => {
         <CommandPalette
           ref="paletteRef"
           :commands="commands"
-          @select="runCommand"
+          @select="onSelect"
           @dismiss="open = false"
         />
       </DialogContent>
