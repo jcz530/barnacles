@@ -123,7 +123,10 @@ export const formatUrl = (url: string): string => {
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return url;
 
     const path = parsed.pathname === '/' ? '' : parsed.pathname;
-    return `${parsed.host}${path}`;
+    // Search and hash carried through: a process configured with
+    // '/?token=abc' opens somewhere visibly different from the bare host, and
+    // a title that dropped them would name a destination the row does not go to.
+    return `${parsed.host}${path}${parsed.search}${parsed.hash}`;
   } catch {
     return url;
   }

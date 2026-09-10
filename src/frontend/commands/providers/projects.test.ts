@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { DetectedIDE, DetectedTerminal, ProjectWithDetails } from '../../../shared/types/api';
 import type { ProcessStatus, ProjectProcessStatus } from '../../../shared/types/process';
 import type { Command, CommandContext } from '../types';
+import { levelDefaultItems } from '../ranking';
 import { projectCommands, type ProjectCommandDeps } from './projects';
 
 const ide = (id: string, name: string): DetectedIDE =>
@@ -591,6 +592,23 @@ describe('a project that is running', () => {
     expect(command.subtitle).toBe('/Users/dev/alchemy');
   });
 
+  it('counts the processes when only one of several announced an address', () => {
+    // The shape that is ordinary rather than exceptional -- an api with a url
+    // beside a database or a worker without one. Naming the api's address here
+    // would invent exactly the primary process this is meant not to invent.
+    const status: ProjectProcessStatus = {
+      projectId: 'p1',
+      processes: [
+        { processId: 'api', name: 'api', status: 'running', detectedUrl: 'http://localhost:4000' },
+        { processId: 'db', name: 'db', status: 'running' },
+      ],
+    };
+
+    const [command] = projectCommands([project()], deps({ processStatuses: [status] }));
+
+    expect(command.subtitle).toBe('Running · 2 processes');
+  });
+
   it('counts the processes rather than picking one address', () => {
     // Three servers, and the first is not meaningfully the project's -- naming
     // it would invent a primary process the project never declared.
@@ -655,16 +673,19 @@ describe('opening a running url from the project level', () => {
       deps({ processStatuses: [running({ detectedUrl: 'http://localhost:5173' })] })
     );
 
-    const ids = actionsOf(command).map(action => action.id);
     const url = findAction(command, 'project.open-url');
 
     expect(url?.title).toBe('Open localhost:5173');
     expect(url?.subtitle).toBe('http://localhost:5173');
-    // Under Open Project and above Open in IDE: a dev server is the most
-    // perishable thing here.
-    expect(ids.indexOf('project.open-url:p1:proc1')).toBeLessThan(
-      ids.indexOf('project.open-ide:p1')
-    );
+
+    // Asserted through the ranking rather than on the raw array, because the
+    // array is not what anybody sees: levelDefaultItems re-sorts before render,
+    // so an assertion on index order can hold while the rendered list disagrees.
+    const rendered = levelDefaultItems(actionsOf(command));
+    const projectRows = rendered.find(group => group.label === 'Projects')?.commands ?? [];
+    const titles = projectRows.map(row => row.title);
+
+    expect(titles.indexOf('Open localhost:5173')).toBeLessThan(titles.indexOf('Open in IDE'));
   });
 
   it('opens it in a browser and closes', async () => {

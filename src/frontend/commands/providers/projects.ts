@@ -205,7 +205,13 @@ export const projectCommands = (
 const runningSubtitle = (status: ProjectProcessStatus | undefined, urls: RunningUrl[]): string => {
   const count = runningCount(status);
 
-  if (urls.length === 1) return `Running · ${formatUrl(urls[0].url)}`;
+  // Both halves have to be one: a single process, and a single address for it.
+  // Gating on the urls alone named the only process that had announced one
+  // while others were up beside it -- an api on :4000 next to a database
+  // becomes "Running · localhost:4000", which is precisely the primary process
+  // this is meant not to invent. A worker or a database with no url of its own
+  // is the ordinary shape here, not the exception.
+  if (count === 1 && urls.length === 1) return `Running · ${formatUrl(urls[0].url)}`;
   if (count > 1) return `Running · ${count} processes`;
   return 'Running';
 };
@@ -237,9 +243,14 @@ const projectActions = (
     primaryActionLabel: 'Open Project',
     run: ctx => ctx.navigate(`/projects/${project.id}`),
   },
-  // Directly under Open Project, above the editor and terminal: a running dev
+  // First among the project's own verbs, after Open Project: a running dev
   // server is the most perishable thing a project offers, and it used to sit
   // two levels down under the individual process that happened to own it.
+  //
+  // Where it lands on screen is the ranking's business, not this array's --
+  // levelDefaultItems re-sorts by effectiveScore, and the running process row
+  // carries priority 1, so the Processes group renders above Projects. The
+  // order here decides position within the Projects group.
   ...openUrlActions(project, urls, deps),
   toolAction({
     id: `project.open-ide:${project.id}`,

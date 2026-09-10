@@ -602,6 +602,13 @@ describe('formatUrl', () => {
     expect(formatUrl('http://localhost:5173/admin')).toBe('localhost:5173/admin');
   });
 
+  it('keeps a query string, which changes where the row goes', () => {
+    // The bare root path still goes; the query that follows it does not.
+    expect(formatUrl('http://localhost:8080/?token=abc')).toBe('localhost:8080?token=abc');
+    expect(formatUrl('http://localhost:5173/#/admin')).toBe('localhost:5173#/admin');
+    expect(formatUrl('http://localhost:8080/api?v=2')).toBe('localhost:8080/api?v=2');
+  });
+
   it('leaves anything unparseable alone', () => {
     // Better than dropping a row whose url would have opened fine.
     expect(formatUrl('localhost:5173')).toBe('localhost:5173');
