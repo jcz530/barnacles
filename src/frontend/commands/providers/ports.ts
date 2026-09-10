@@ -1,4 +1,4 @@
-import { Clipboard, Link, Radio, Skull } from 'lucide-vue-next';
+import { Copy, Radio, Skull } from 'lucide-vue-next';
 import type { PortEntry } from '../../../shared/types/api';
 import { truncateValue } from '../useCommandStatus';
 import type { Command, CommandContext } from '../types';
@@ -88,7 +88,7 @@ export const portCommands = (ports: PortEntry[], deps: PortCommandDeps): Command
           title: 'Copy Port Number',
           subtitle: String(entry.port),
           group: 'ports' as const,
-          icon: Clipboard,
+          icon: Copy,
           primaryActionLabel: 'Copy',
           // Stays open. Nothing on screen changes when you copy, so closing
           // leaves no evidence it happened at all; the message is the whole
@@ -100,7 +100,10 @@ export const portCommands = (ports: PortEntry[], deps: PortCommandDeps): Command
           title: 'Copy URL',
           subtitle: url,
           group: 'ports' as const,
-          icon: Link,
+          // Copy rather than a link glyph: every row that puts something on the
+          // clipboard draws the same thing, whatever the something is. The link
+          // glyph belongs to rows that go somewhere -- see Open URL in processes.
+          icon: Copy,
           primaryActionLabel: 'Copy',
           run: ctx => copyAction(ctx, () => deps.copyText(url), truncateValue(url)),
         },
