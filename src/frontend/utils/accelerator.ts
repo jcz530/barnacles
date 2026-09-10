@@ -157,6 +157,19 @@ export const formatAccelerator = (accelerator: string, isMac: boolean): string =
   return parts.map(part => NON_MAC_LABELS[part] ?? KEY_SYMBOLS[part] ?? part).join('+');
 };
 
+/** One rendered key, and whether it came out as a glyph or as plain text. */
+export interface AcceleratorPart {
+  text: string;
+  /**
+   * True for the likes of the command, shift and arrow glyphs.
+   *
+   * They are drawn nearly the full height of their em box, where a letter
+   * leaves ascender space -- so at one size the glyph reads correctly and the
+   * letter looks oversized beside it. Callers size the two apart.
+   */
+  symbol: boolean;
+}
+
 /**
  * The same rendering, split into its keys.
  *
@@ -165,18 +178,25 @@ export const formatAccelerator = (accelerator: string, isMac: boolean): string =
  * joined string. Elsewhere the "+" separators are kept as their own parts, so
  * they can be dimmed against the keys they join.
  */
-export const acceleratorParts = (accelerator: string, isMac: boolean): string[] => {
+export const acceleratorParts = (accelerator: string, isMac: boolean): AcceleratorPart[] => {
   if (!accelerator) return [];
 
   const parts = accelerator.split('+');
 
   if (isMac) {
-    return parts.map(part => MAC_SYMBOLS[part] ?? KEY_SYMBOLS[part] ?? part);
+    return parts.map(part => {
+      const glyph = MAC_SYMBOLS[part] ?? KEY_SYMBOLS[part];
+      return glyph ? { text: glyph, symbol: true } : { text: part, symbol: false };
+    });
   }
 
   return parts
-    .map(part => NON_MAC_LABELS[part] ?? KEY_SYMBOLS[part] ?? part)
-    .flatMap((part, index) => (index === 0 ? [part] : ['+', part]));
+    .map(part => {
+      const glyph = KEY_SYMBOLS[part];
+      if (glyph) return { text: glyph, symbol: true };
+      return { text: NON_MAC_LABELS[part] ?? part, symbol: false };
+    })
+    .flatMap((part, index) => (index === 0 ? [part] : [{ text: '+', symbol: false }, part]));
 };
 
 /** Combos the OS or common apps already own; worth warning about, not blocking. */

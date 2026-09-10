@@ -36,9 +36,22 @@ const parts = computed(() => acceleratorParts(props.accelerator, isMac.value));
 // fixed height.
 const sizeClasses = computed(() =>
   props.size === 'sm'
-    ? 'h-5 min-w-5 gap-0.5 px-1.5 text-xs leading-none'
-    : 'h-7 min-w-7 gap-1 px-2 text-base leading-none'
+    ? 'h-5 min-w-5 gap-0.5 px-1.5 leading-none'
+    : 'h-7 min-w-7 gap-1 px-2 leading-none'
 );
+
+/*
+ * Glyphs and letters are sized apart.
+ *
+ * The command and arrow glyphs are drawn nearly the full height of their em
+ * box, where a letter leaves ascender space above it. At one size the glyph
+ * reads correctly and the letter next to it looks oversized -- so the letter
+ * drops a step and the glyph keeps the size that made it legible.
+ */
+const glyphClass = computed(() => (props.size === 'sm' ? 'text-xs' : 'text-base'));
+// One step down from the glyph on the large chip. The small one is already at
+// the bottom of the scale, so both parts stay there.
+const letterClass = 'text-xs';
 </script>
 
 <template>
@@ -54,6 +67,11 @@ const sizeClasses = computed(() =>
       )
     "
   >
-    <span v-for="(part, index) in parts" :key="`${index}-${part}`">{{ part }}</span>
+    <span
+      v-for="(part, index) in parts"
+      :key="`${index}-${part.text}`"
+      :class="part.symbol ? glyphClass : letterClass"
+      >{{ part.text }}</span
+    >
   </kbd>
 </template>

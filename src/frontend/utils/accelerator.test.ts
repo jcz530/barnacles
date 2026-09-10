@@ -116,22 +116,34 @@ describe('isRiskyAccelerator', () => {
 describe('acceleratorParts', () => {
   it('splits a mac combo into its keys, for spacing them apart', () => {
     // Run together the glyphs read as one dense mark at chip size.
-    expect(acceleratorParts('CommandOrControl+Shift+P', true)).toEqual(['⌘', '⇧', 'P']);
+    expect(acceleratorParts('CommandOrControl+Shift+P', true)).toEqual([
+      { text: '⌘', symbol: true },
+      { text: '⇧', symbol: true },
+      { text: 'P', symbol: false },
+    ]);
+  });
+
+  it('marks glyphs apart from letters, so the two can be sized apart', () => {
+    // A glyph fills its em box where a letter leaves ascender space, so at one
+    // size the letter looks oversized beside it.
+    const parts = acceleratorParts('CommandOrControl+N', true);
+
+    expect(parts.map(part => part.symbol)).toEqual([true, false]);
   });
 
   it('keeps the separators as parts of their own elsewhere', () => {
     expect(acceleratorParts('CommandOrControl+Shift+P', false)).toEqual([
-      'Ctrl',
-      '+',
-      'Shift',
-      '+',
-      'P',
+      { text: 'Ctrl', symbol: false },
+      { text: '+', symbol: false },
+      { text: 'Shift', symbol: false },
+      { text: '+', symbol: false },
+      { text: 'P', symbol: false },
     ]);
   });
 
-  it('renders a single key as one part', () => {
-    expect(acceleratorParts('Right', true)).toEqual(['→']);
-    expect(acceleratorParts('Return', false)).toEqual(['↩']);
+  it('treats a key glyph as a symbol on either platform', () => {
+    expect(acceleratorParts('Right', true)).toEqual([{ text: '→', symbol: true }]);
+    expect(acceleratorParts('Return', false)).toEqual([{ text: '↩', symbol: true }]);
   });
 
   it('has nothing to render for an empty accelerator', () => {
@@ -141,12 +153,16 @@ describe('acceleratorParts', () => {
   it('joins back to what formatAccelerator produces on mac', () => {
     // The two must not drift: the chip renders the parts, and everything else
     // still reads the joined string.
-    expect(acceleratorParts('CommandOrControl+Shift+P', true).join('')).toBe(
-      formatAccelerator('CommandOrControl+Shift+P', true)
-    );
-    expect(acceleratorParts('CommandOrControl+N', false).join('')).toBe(
-      formatAccelerator('CommandOrControl+N', false)
-    );
+    expect(
+      acceleratorParts('CommandOrControl+Shift+P', true)
+        .map(part => part.text)
+        .join('')
+    ).toBe(formatAccelerator('CommandOrControl+Shift+P', true));
+    expect(
+      acceleratorParts('CommandOrControl+N', false)
+        .map(part => part.text)
+        .join('')
+    ).toBe(formatAccelerator('CommandOrControl+N', false));
   });
 });
 
