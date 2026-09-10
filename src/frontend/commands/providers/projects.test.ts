@@ -47,6 +47,7 @@ const project = (overrides: Partial<ProjectWithDetails> = {}): ProjectWithDetail
     path: '/Users/dev/alchemy',
     isFavorite: false,
     technologies: [],
+    hasStartProcesses: true,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,

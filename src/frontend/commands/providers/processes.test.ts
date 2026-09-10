@@ -24,14 +24,20 @@ const deps = (overrides: Partial<ProcessCommandDeps> = {}): ProcessCommandDeps =
   ...overrides,
 });
 
+/** Configured by default; the unconfigured case is the exception under test. */
 const project = (overrides: Partial<ProjectWithDetails> = {}): ProjectWithDetails =>
   ({
     id: 'p1',
     name: 'Alchemy',
     path: '/Users/dev/alchemy',
     technologies: [],
+    hasStartProcesses: true,
     ...overrides,
   }) as ProjectWithDetails;
+
+/** A project with no start command configured. */
+const unconfigured = (overrides: Partial<ProjectWithDetails> = {}): ProjectWithDetails =>
+  project({ hasStartProcesses: false, ...overrides });
 
 const configured = (overrides: Partial<StartProcess> = {}): StartProcess => ({
   id: 'web',
@@ -85,10 +91,32 @@ describe('processCommands', () => {
     expect(commands[0].title).toBe('Start Alchemy');
   });
 
-  it('offers nothing for a project known to have no processes configured', () => {
-    const commands = processCommands([project()], [], loaded([]), deps());
+  it('offers nothing at root for a project with no start command configured', () => {
+    // The bug: an unconfigured project used to get an optimistic Start row that
+    // failed on Enter with a generic message. Typing "start" should only ever
+    // offer projects that can actually start.
+    const commands = processCommands([unconfigured()], [], unknown(), deps());
 
     expect(commands).toEqual([]);
+  });
+
+  it('keeps an unconfigured project out of root without having fetched anything', () => {
+    // The flag answers this, so no round trip is needed first -- the row is
+    // absent from the first frame rather than appearing and then vanishing.
+    expect(processCommands([unconfigured()], [], unknown(), deps())).toEqual([]);
+    expect(processCommands([unconfigured()], [], loaded([]), deps())).toEqual([]);
+  });
+
+  it('still offers configured projects alongside unconfigured ones', () => {
+    const commands = processCommands(
+      [unconfigured({ id: 'p1', name: 'Alchemy' }), project({ id: 'p2', name: 'Barnacles' })],
+      [],
+      unknown(),
+      deps()
+    );
+
+    expect(commands).toHaveLength(1);
+    expect(commands[0].title).toBe('Start Barnacles');
   });
 
   it('offers Stop, ranked up, while a project is running', () => {
@@ -136,6 +164,56 @@ describe('projectProcessActions', () => {
 
   it('shows nothing before anything has been asked for', () => {
     expect(projectProcessActions(project(), [], unknown(), deps())).toEqual([]);
+  });
+
+  it('offers to configure a start command when the project has none', () => {
+    // Previously an empty group: the level simply had no Processes section, so
+    // there was nothing to explain the absence and no way to fix it.
+    const actions = projectProcessActions(unconfigured(), [], unknown(), deps());
+
+    expect(actions).toHaveLength(1);
+    expect(actions[0].title).toBe('Configure Start Command');
+    expect(actions[0].subtitle).toBe('Not configured');
+  });
+
+  it('offers the configure row without waiting for a fetch', () => {
+    // The flag is on the project, so this does not sit behind a placeholder for
+    // a list that is going to come back empty.
+    const inFlight: ProcessCommandState = { configured: {}, loading: { p1: true } };
+
+    const actions = projectProcessActions(unconfigured(), [], inFlight, deps());
+
+    expect(actions).toHaveLength(1);
+    expect(actions[0].loading).toBeUndefined();
+  });
+
+  it('deep-links the configure row to the project page editor', async () => {
+    const context = ctx();
+
+    await projectProcessActions(unconfigured(), [], unknown(), deps())[0].run?.(context);
+
+    expect(context.navigate).toHaveBeenCalledWith('/projects/p1/overview?configure=processes');
+
+    // Re-parsed rather than only string-matched, so a typo in the param name
+    // cannot pass by looking approximately right.
+    const path = vi.mocked(context.navigate).mock.calls[0][0];
+    expect(new URLSearchParams(path.split('?')[1]).get('configure')).toBe('processes');
+  });
+
+  it('falls back to the configure row when the fetched list is empty', () => {
+    // The flag said yes but the list came back empty -- a process deleted
+    // elsewhere while the projects list was still cached. Better than the empty
+    // group this used to render.
+    const actions = projectProcessActions(project(), [], loaded([]), deps());
+
+    expect(actions).toHaveLength(1);
+    expect(actions[0].title).toBe('Configure Start Command');
+  });
+
+  it('is still findable by the words for the thing it is missing', () => {
+    const actions = projectProcessActions(unconfigured(), [], unknown(), deps());
+
+    expect(actions[0].keywords).toEqual(expect.arrayContaining(['start', 'run']));
   });
 
   it('leads with the bulk Start when nothing is running', () => {
@@ -319,6 +397,28 @@ describe('reporting what a process verb did', () => {
     await row.run?.(context);
 
     expect(context.status).toHaveBeenCalledWith('Could not start Alchemy', 'error');
+  });
+
+  it('names the missing configuration rather than blaming the start', async () => {
+    // Reachable despite unconfigured projects having no Start row: the projects
+    // list is cached, so a process deleted elsewhere can leave a row briefly
+    // outliving what it starts. "Could not start" would describe a broken
+    // command rather than a missing one.
+    //
+    // The message arrives wrapped by Electron's IPC boundary, which is why the
+    // check is a substring test -- this reproduces that wrapping.
+    const dependencies = deps();
+    vi.mocked(dependencies.startProcesses).mockRejectedValue(
+      new Error(
+        "Error invoking remote method 'api-call': Error: No start processes configured for this project"
+      )
+    );
+    const context = ctx();
+    const [row] = processCommands([project()], [], loaded([configured()]), dependencies);
+
+    await row.run?.(context);
+
+    expect(context.status).toHaveBeenCalledWith('No start command configured for Alchemy', 'error');
   });
 
   /** One configured process's own verbs, which hang off its row in the level. */

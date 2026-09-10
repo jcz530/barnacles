@@ -1,4 +1,4 @@
-import { AlertTriangle, Link, Play, RotateCw, ScrollText, Square } from 'lucide-vue-next';
+import { AlertTriangle, Link, Play, RotateCw, ScrollText, Settings, Square } from 'lucide-vue-next';
 import type { ProjectWithDetails } from '../../../shared/types/api';
 import type {
   ProcessStatus,
@@ -82,10 +82,36 @@ const processAction = async (
   try {
     await act();
     ctx.status(`${VERBS[verb].done} ${subject}`);
-  } catch {
+  } catch (error) {
+    if (isNotConfigured(error)) {
+      ctx.status(`No start command configured for ${subject}`, 'error');
+      return;
+    }
     ctx.status(`Could not ${VERBS[verb].failed} ${subject}`, 'error');
   }
 };
+
+/**
+ * The backend's phrasing when a project has nothing to start.
+ * See POST /:id/start in routes/projects/processes.ts.
+ */
+const NOT_CONFIGURED = 'No start processes configured';
+
+/**
+ * Whether a failure was "nothing is configured" rather than a real fault.
+ *
+ * Reachable even though unconfigured projects no longer offer a Start row: the
+ * projects list is cached, so a process deleted elsewhere can leave a row
+ * briefly outliving the thing it starts. Saying so beats "Could not start",
+ * which describes a broken command rather than a missing one.
+ *
+ * Matched on the message because that is all that survives: api-bridge attaches
+ * the response body to the Error, but only `message` crosses Electron's IPC
+ * boundary -- and it arrives wrapped in the "Error invoking remote method"
+ * prefix, so this has to be a substring test rather than an equality one.
+ */
+const isNotConfigured = (error: unknown): boolean =>
+  error instanceof Error && error.message.includes(NOT_CONFIGURED);
 
 /**
  * Start/stop a project's processes, one row per project.
@@ -103,14 +129,21 @@ export const processCommands = (
 ): Command[] =>
   projects.flatMap(project => {
     const status = statuses.find(entry => entry.projectId === project.id);
-    const configured = state.configured[project.id];
 
-    // A project known to have nothing configured has nothing to offer. One we
-    // have not looked at still gets a Start row: process-status omits stopped
-    // projects entirely, so requiring an entry there meant a project that had
-    // not been started this session offered nothing at all -- which is exactly
-    // the case the row exists for.
-    if (configured && configured.length === 0) return [];
+    // A project with no start command configured has nothing to start, so it
+    // stays out of the root list entirely -- typing "start" should offer only
+    // projects that can actually start.
+    //
+    // This reads the flag on the project rather than the lazily fetched
+    // `configured` list, which is only populated for projects someone has
+    // drilled into. Going by that list meant a project nobody had opened got an
+    // optimistic Start row that failed on Enter, and process-status cannot
+    // answer it either: it omits stopped projects entirely, so "not running"
+    // and "nothing to run" look identical there.
+    //
+    // Configuring one is offered inside the project's own level, where you have
+    // arrived meaning to act on that project. See projectProcessActions.
+    if (!project.hasStartProcesses) return [];
 
     const running = hasRunning(status);
 
@@ -163,6 +196,11 @@ export const projectProcessActions = (
   const status = statuses.find(entry => entry.projectId === project.id);
   const configured = state.configured[project.id];
 
+  // Nothing configured, which the project itself knows without waiting for the
+  // fetch -- so this row is on screen from the first frame rather than after a
+  // round trip, and no placeholder is needed for a list that will be empty.
+  if (!project.hasStartProcesses) return [configureAction(project)];
+
   if (!configured) {
     // Still arriving. Placeholders hold the group's shape so the level does not
     // visibly reflow when the real rows land.
@@ -176,7 +214,10 @@ export const projectProcessActions = (
       : [];
   }
 
-  if (configured.length === 0) return [];
+  // The flag said there were processes but the fetched list is empty -- the
+  // list was stale, and one was deleted in between. Offer the same row rather
+  // than an empty group.
+  if (configured.length === 0) return [configureAction(project)];
 
   const anyRunning = configured.some(entry => stateOf(status, entry.id) === 'running');
 
@@ -229,6 +270,40 @@ export const projectProcessActions = (
     ...configured.map(entry => processRow(project, entry, status, deps)),
   ];
 };
+
+/**
+ * The row a project with no start command gets, in place of its processes.
+ *
+ * Named and iconed to match StartProcessButton's own "Configure Start" state,
+ * so the palette and the project page agree about what an unconfigured project
+ * offers rather than describing it two different ways.
+ *
+ * Navigating is the point: configuring means the process editor, which only the
+ * project page has. From the floating palette that raises a main window, which
+ * is the one thing here that needs one -- but a person asking to configure a
+ * process is heading for the app anyway.
+ */
+const configureAction = (project: ProjectWithDetails): Command => ({
+  id: `project.processes.configure:${project.id}`,
+  title: 'Configure Start Command',
+  subtitle: 'Not configured',
+  group: 'processes' as const,
+  icon: Settings,
+  primaryActionLabel: 'Configure',
+  // The words for the thing that is missing, so someone who came here by typing
+  // "start" still lands on the row that gets them one.
+  keywords: ['start', 'run', 'dev server', 'serve', 'setup', 'configure', 'processes'],
+  run: (ctx: CommandContext) => ctx.navigate(configureRoute(project.id)),
+});
+
+/**
+ * Where the process editor lives.
+ *
+ * A query param rather than a route of its own: the editor is a sheet owned by
+ * the project page, and the param is read once on arrival. See ProjectDetail.
+ */
+export const configureRoute = (projectId: string): string =>
+  `/projects/${projectId}/overview?configure=processes`;
 
 /** One configured process, with its verbs behind it. */
 const processRow = (

@@ -35,7 +35,7 @@ const port = (pid: number, portNumber: number): PortEntry => ({
 });
 
 const project = (id: string, name: string): ProjectWithDetails =>
-  ({ id, name, path: `/code/${name}` }) as ProjectWithDetails;
+  ({ id, name, path: `/code/${name}`, hasStartProcesses: true }) as ProjectWithDetails;
 
 const configuredProcess = (id: string): StartProcess => ({ id, name: id }) as StartProcess;
 
