@@ -48,6 +48,7 @@ export const useCommandRegistry = (isOpen: Ref<boolean>, currentProjectId?: Ref<
     useSettingsQuery,
     useUpdatePreferredIDEMutation,
     useUpdatePreferredTerminalMutation,
+    useToggleFavoriteMutation,
   } = useQueries();
 
   const { openInFinder } = useProjectActions();
@@ -80,6 +81,7 @@ export const useCommandRegistry = (isOpen: Ref<boolean>, currentProjectId?: Ref<
   const createProcess = useCreateProcessMutation();
   const updatePreferredIde = useUpdatePreferredIDEMutation();
   const updatePreferredTerminal = useUpdatePreferredTerminalMutation();
+  const toggleFavorite = useToggleFavoriteMutation();
 
   const installedIdes = computed(() => (ides.value ?? []).filter(ide => ide.installed));
   const installedTerminals = computed(() =>
@@ -256,6 +258,12 @@ export const useCommandRegistry = (isOpen: Ref<boolean>, currentProjectId?: Ref<
           await updatePreferredTerminal.mutateAsync({ projectId, terminalId });
         },
         revealInFinder: openInFinder,
+        // The mutation directly rather than useProjectActions.toggleFavorite,
+        // which catches its own failure and alert()s -- it resolves either way,
+        // so the palette would report a change that never happened.
+        toggleFavorite: async (projectId: string) => {
+          await toggleFavorite.mutateAsync(projectId);
+        },
         currentProjectId: currentProjectId?.value ?? null,
         // Wrapped rather than passed straight through. The shared copyPath
         // catches its own failure and alert()s, so it resolves either way --

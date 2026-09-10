@@ -5,6 +5,7 @@ import {
   SquareArrowOutUpRight,
   SquareTerminal,
   Star,
+  StarOff,
 } from 'lucide-vue-next';
 import type { DetectedIDE, DetectedTerminal, ProjectWithDetails } from '../../../shared/types/api';
 import type { ProjectProcessStatus } from '../../../shared/types/process';
@@ -32,6 +33,7 @@ export interface ProjectCommandDeps {
   setPreferredTerminal: (projectId: string, terminalId: string) => void | Promise<void>;
   revealInFinder: (projectPath: string) => void;
   copyPath: (projectPath: string) => void | Promise<void>;
+  toggleFavorite: (projectId: string) => void | Promise<void>;
   /**
    * The project whose page is open, if one is.
    *
@@ -122,6 +124,8 @@ export const projectCommands = (
         'finder',
         'reveal',
         'copy path',
+        'favorite',
+        'star',
       ],
       priority,
       primaryActionLabel: 'Open Project',
@@ -188,6 +192,29 @@ const projectActions = (
     run: ctx => {
       deps.revealInFinder(project.path);
       ctx.dismiss();
+    },
+  },
+  {
+    id: `project.favorite:${project.id}`,
+    title: project.isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
+    group: 'projects' as const,
+    icon: project.isFavorite ? StarOff : Star,
+    primaryActionLabel: project.isFavorite ? 'Remove' : 'Add',
+    keywords: ['favourite', 'star', 'unstar', 'pin', 'bookmark'],
+    // Stays open, like the other verbs that finish in place. The row itself
+    // reports the result -- it flips to the opposite verb as the projects query
+    // refetches -- so closing would hide the confirmation.
+    run: async (ctx: CommandContext) => {
+      try {
+        await deps.toggleFavorite(project.id);
+        ctx.status(
+          project.isFavorite
+            ? `Removed ${project.name} from favorites`
+            : `Added ${project.name} to favorites`
+        );
+      } catch {
+        ctx.status('Could not update favorites', 'error');
+      }
     },
   },
   {

@@ -19,6 +19,7 @@ const deps = (overrides: Partial<ProjectCommandDeps> = {}): ProjectCommandDeps =
   setPreferredTerminal: vi.fn(),
   revealInFinder: vi.fn(),
   copyPath: vi.fn(),
+  toggleFavorite: vi.fn(),
   processStatuses: [],
   processState: { configured: {}, loading: {} },
   processDeps: {
@@ -140,6 +141,7 @@ describe('projectCommands', () => {
       'Open in IDE',
       'Open Terminal',
       'Reveal in Finder',
+      'Add to Favorites',
       'Copy Path',
     ]);
   });
@@ -267,6 +269,53 @@ describe('opening a project’s tools', () => {
 
     expect(findAction(command, 'reveal')).toBeDefined();
     expect(findAction(command, 'copy-path')).toBeDefined();
+  });
+
+  describe('favouriting from the palette', () => {
+    it('offers to add when the project is not a favourite', () => {
+      const [command] = projectCommands([project({ isFavorite: false })], deps());
+
+      expect(findAction(command, 'favorite')?.title).toBe('Add to Favorites');
+    });
+
+    it('offers to remove when it already is one', () => {
+      // Named for what pressing it does, not for the state -- the row is a
+      // verb like every other in the level.
+      const [command] = projectCommands([project({ isFavorite: true })], deps());
+
+      expect(findAction(command, 'favorite')?.title).toBe('Remove from Favorites');
+    });
+
+    it('stays open and confirms, so the row can be watched flipping', async () => {
+      const dependencies = deps();
+      const [command] = projectCommands([project({ isFavorite: false })], dependencies);
+      const context = ctx();
+
+      await findAction(command, 'favorite')?.run?.(context);
+
+      expect(dependencies.toggleFavorite).toHaveBeenCalledWith('p1');
+      expect(context.status).toHaveBeenCalledWith('Added Alchemy to favorites');
+      expect(context.dismiss).not.toHaveBeenCalled();
+    });
+
+    it('says so when the change does not stick', async () => {
+      const dependencies = deps();
+      vi.mocked(dependencies.toggleFavorite).mockRejectedValue(new Error('offline'));
+      const [command] = projectCommands([project()], dependencies);
+      const context = ctx();
+
+      await findAction(command, 'favorite')?.run?.(context);
+
+      expect(context.status).toHaveBeenCalledWith('Could not update favorites', 'error');
+    });
+
+    it('is reachable by typing the project name and "star"', () => {
+      // The row is found through its project, not by a keyword standing on its
+      // own: "star" alone would return every project at once.
+      const [command] = projectCommands([project()], deps());
+
+      expect(command.keywords).toEqual(expect.arrayContaining(['favorite', 'star']));
+    });
   });
 
   describe('ranking the project being looked at', () => {
