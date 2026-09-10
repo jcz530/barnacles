@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { DetectedIDE, DetectedTerminal, ProjectWithDetails } from '../../../shared/types/api';
+import type { ProcessStatus, ProjectProcessStatus } from '../../../shared/types/process';
 import type { Command, CommandContext } from '../types';
 import { projectCommands, type ProjectCommandDeps } from './projects';
 
@@ -57,6 +58,22 @@ const stats = (gitRemoteUrl: string): ProjectWithDetails['stats'] => ({
   id: 's1',
   projectId: 'p1',
   gitRemoteUrl,
+});
+
+/** A project's live status, with one running process by default. */
+const running = (
+  overrides: Partial<ProcessStatus> = {},
+  projectId = 'p1'
+): ProjectProcessStatus => ({
+  projectId,
+  processes: [
+    {
+      processId: 'proc1',
+      name: 'dev',
+      status: 'running',
+      ...overrides,
+    },
+  ],
 });
 
 const ctx = (): CommandContext => ({
@@ -477,7 +494,7 @@ describe('opening a project’s tools', () => {
         deps({ currentProjectId: 'p1' })
       );
 
-      expect(command.priority).toBe(3);
+      expect(command.priority).toBe(4);
     });
 
     it('ranks nothing specially away from a project page', () => {
@@ -553,5 +570,182 @@ describe('opening a project’s tools', () => {
 
     openIde?.run?.(context);
     expect(context.navigate).toHaveBeenCalledWith('/settings');
+  });
+});
+
+describe('a project that is running', () => {
+  it('marks the row and says so in place of the path', () => {
+    const [command] = projectCommands(
+      [project()],
+      deps({ processStatuses: [running({ detectedUrl: 'http://localhost:5173' })] })
+    );
+
+    expect(command.isRunning).toBe(true);
+    expect(command.subtitle).toBe('Running · localhost:5173');
+  });
+
+  it('keeps the path when nothing is up', () => {
+    const [command] = projectCommands([project()], deps());
+
+    expect(command.isRunning).toBeFalsy();
+    expect(command.subtitle).toBe('/Users/dev/alchemy');
+  });
+
+  it('counts the processes rather than picking one address', () => {
+    // Three servers, and the first is not meaningfully the project's -- naming
+    // it would invent a primary process the project never declared.
+    const status: ProjectProcessStatus = {
+      projectId: 'p1',
+      processes: [
+        { processId: 'api', name: 'api', status: 'running', detectedUrl: 'http://localhost:8080' },
+        { processId: 'web', name: 'web', status: 'running', detectedUrl: 'http://localhost:5173' },
+        { processId: 'jobs', name: 'jobs', status: 'running' },
+      ],
+    };
+
+    const [command] = projectCommands([project()], deps({ processStatuses: [status] }));
+
+    expect(command.subtitle).toBe('Running · 3 processes');
+  });
+
+  it('says only Running until a url is announced', () => {
+    // A dev server takes a moment to print one, and a lone process with no
+    // address has no count worth showing either.
+    const [command] = projectCommands([project()], deps({ processStatuses: [running()] }));
+
+    expect(command.subtitle).toBe('Running');
+  });
+
+  it('outranks a favourite but not the project being looked at', () => {
+    const [live, favourite] = projectCommands(
+      [project({ id: 'p1' }), project({ id: 'p2', isFavorite: true })],
+      deps({ processStatuses: [running()] })
+    );
+
+    expect(live.priority).toBeGreaterThan(favourite.priority ?? 0);
+
+    const [current] = projectCommands(
+      [project({ id: 'p1' })],
+      deps({ processStatuses: [running()], currentProjectId: 'p1' })
+    );
+
+    expect(current.priority).toBeGreaterThan(live.priority ?? 0);
+  });
+
+  it('answers a search for the verb its root row no longer carries', () => {
+    // Stop left the root list, so the word has to find the project whose level
+    // does the stopping.
+    const [command] = projectCommands([project()], deps({ processStatuses: [running()] }));
+
+    expect(command.keywords).toContain('stop');
+    expect(command.keywords).toContain('running');
+  });
+
+  it('does not answer that search while stopped', () => {
+    const [command] = projectCommands([project()], deps());
+
+    expect(command.keywords).not.toContain('stop');
+  });
+});
+
+describe('opening a running url from the project level', () => {
+  it('offers the address, ahead of the editor', () => {
+    const [command] = projectCommands(
+      [project()],
+      deps({ processStatuses: [running({ detectedUrl: 'http://localhost:5173' })] })
+    );
+
+    const ids = actionsOf(command).map(action => action.id);
+    const url = findAction(command, 'project.open-url');
+
+    expect(url?.title).toBe('Open localhost:5173');
+    expect(url?.subtitle).toBe('http://localhost:5173');
+    // Under Open Project and above Open in IDE: a dev server is the most
+    // perishable thing here.
+    expect(ids.indexOf('project.open-url:p1:proc1')).toBeLessThan(
+      ids.indexOf('project.open-ide:p1')
+    );
+  });
+
+  it('opens it in a browser and closes', async () => {
+    const dependencies = deps({
+      processStatuses: [running({ detectedUrl: 'http://localhost:5173' })],
+    });
+    const [command] = projectCommands([project()], dependencies);
+    const context = ctx();
+
+    await findAction(command, 'project.open-url')?.run?.(context);
+
+    expect(dependencies.openExternal).toHaveBeenCalledWith('http://localhost:5173');
+    expect(context.dismiss).toHaveBeenCalled();
+  });
+
+  it('names each process when several are up', () => {
+    const status: ProjectProcessStatus = {
+      projectId: 'p1',
+      processes: [
+        { processId: 'api', name: 'api', status: 'running', detectedUrl: 'http://localhost:8080' },
+        { processId: 'web', name: 'web', status: 'running', detectedUrl: 'http://localhost:5173' },
+      ],
+    };
+
+    const [command] = projectCommands([project()], deps({ processStatuses: [status] }));
+    const rows = actionsOf(command).filter(action => action.id.includes('project.open-url'));
+
+    expect(rows.map(row => row.title)).toEqual(['Open localhost:8080', 'Open localhost:5173']);
+    // The address is already the title, so the name is what tells them apart.
+    expect(rows.map(row => row.subtitle)).toEqual(['api', 'web']);
+  });
+
+  it('offers nothing for a process that has not announced an address', () => {
+    const [command] = projectCommands([project()], deps({ processStatuses: [running()] }));
+
+    expect(findAction(command, 'project.open-url')).toBeUndefined();
+  });
+
+  it('offers nothing at all while stopped', () => {
+    // Built from live status, so a stopped project has no row pointing at a
+    // port that is no longer answering.
+    const stopped: ProjectProcessStatus = {
+      projectId: 'p1',
+      processes: [
+        { processId: 'proc1', name: 'dev', status: 'stopped', url: 'http://localhost:5173' },
+      ],
+    };
+
+    const [command] = projectCommands([project()], deps({ processStatuses: [stopped] }));
+
+    expect(findAction(command, 'project.open-url')).toBeUndefined();
+  });
+
+  it('prefers the address the server actually picked', () => {
+    // A configured url is a guess; the detected one is where it ended up.
+    const [command] = projectCommands(
+      [project()],
+      deps({
+        processStatuses: [
+          running({ url: 'http://localhost:3000', detectedUrl: 'http://localhost:5174' }),
+        ],
+      })
+    );
+
+    expect(findAction(command, 'project.open-url')?.title).toBe('Open localhost:5174');
+  });
+
+  it('falls back to the configured url when nothing was detected', () => {
+    const [command] = projectCommands(
+      [project()],
+      deps({
+        processStatuses: [running({ url: 'http://localhost:3000' })],
+        processState: {
+          configured: {
+            p1: [{ id: 'proc1', name: 'dev', commands: ['npm run dev'] }],
+          },
+          loading: {},
+        },
+      })
+    );
+
+    expect(findAction(command, 'project.open-url')?.title).toBe('Open localhost:3000');
   });
 });

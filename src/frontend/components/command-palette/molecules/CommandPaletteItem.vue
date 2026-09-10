@@ -65,6 +65,17 @@ const emit = defineEmits<{ select: [] }>();
     <span v-else class="truncate">{{ command.title }}</span>
 
     <!--
+      Sits with the title rather than out at the end, so it reads as a property
+      of the thing named rather than as another column. shrink-0 because a dot
+      that truncates is just missing.
+    -->
+    <span
+      v-if="command.isRunning"
+      class="bg-success-500 size-1.5 shrink-0 rounded-full"
+      aria-hidden="true"
+    />
+
+    <!--
       min-w-0 so this can shrink: as shrink-0 a long subtitle grew unbounded and
       squeezed the title out of the row entirely, which truncate on the title
       cannot fix -- a flex sibling that refuses to yield leaves it no width.

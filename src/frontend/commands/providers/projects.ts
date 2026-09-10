@@ -4,6 +4,7 @@ import {
   ExternalLink,
   FolderGit2,
   FolderOpen,
+  Link,
   MonitorPlay,
   SquareTerminal,
   Star,
@@ -12,9 +13,14 @@ import {
 import type { DetectedIDE, DetectedTerminal, ProjectWithDetails } from '../../../shared/types/api';
 import type { ProjectProcessStatus } from '../../../shared/types/process';
 import {
+  formatUrl,
+  hasRunning,
   projectProcessActions,
+  runningCount,
+  runningUrls,
   type ProcessCommandDeps,
   type ProcessCommandState,
+  type RunningUrl,
 } from './processes';
 import { scriptCommands, type ScriptCommandDeps, type ScriptCommandState } from './scripts';
 import { resolvePreferred } from '../preferences';
@@ -97,10 +103,20 @@ export const projectCommands = (
   deps: ProjectCommandDeps
 ): Command[] =>
   projects.map(project => {
-    // The project being looked at outranks favorites, which outrank the rest,
-    // when nothing has been typed.
+    const status = deps.processStatuses.find(entry => entry.projectId === project.id);
+    const running = hasRunning(status);
+    const urls = runningUrls(status, deps.processState.configured[project.id]);
+
+    // The project being looked at outranks a running one, which outranks
+    // favorites, which outrank the rest, when nothing has been typed.
+    //
+    // Running sits above favorites because it is the transient half of the
+    // pair: a favorite is still a favorite tomorrow, where "this is up right
+    // now" is exactly the thing you opened the palette to act on. Both stay
+    // above 0, which is what puts them in the empty-query list at all -- see
+    // defaultCommands.
     const isCurrent = !!deps.currentProjectId && project.id === deps.currentProjectId;
-    const priority = isCurrent ? 3 : project.isFavorite ? 2 : 0;
+    const priority = isCurrent ? 4 : running ? 3 : project.isFavorite ? 2 : 0;
 
     const preferredIde = resolvePreferred(deps.ides, project.preferredIde, deps.defaultIdeId);
     const preferredTerminal = resolvePreferred(
@@ -116,7 +132,12 @@ export const projectCommands = (
       // two worktrees of one repo share a name, and the path is what tells
       // them apart. Being first in the list is the signal; a label repeating
       // what the page behind it already says would be noise.
-      subtitle: project.path,
+      //
+      // Running is the exception: it displaces the path because it is the one
+      // thing about a project that is true only right now, and the address it
+      // is answering on is what you most often came to the palette for.
+      subtitle: running ? runningSubtitle(status, urls) : project.path,
+      isRunning: running,
       group: 'projects' as const,
       // Enough for the palette to render the project's own icon, the same one
       // the projects page shows. The component itself is resolved at render
@@ -148,6 +169,11 @@ export const projectCommands = (
         // way "alchemy ide" finds it by a verb it carries.
         deps.gitProvider(project.stats?.gitRemoteUrl)?.name.toLowerCase() ?? '',
         'remote',
+        // The root no longer carries a "Stop <project>" row, so these are how
+        // someone typing the verb still lands on the row whose level stops it.
+        // Only while it is running -- offering a stopped project to a search
+        // for "stop" is how the old root rows went wrong in the first place.
+        ...(running ? ['running', 'stop', 'restart', 'url', 'browser', 'localhost'] : []),
       ].filter(Boolean),
       priority,
       primaryActionLabel: 'Open Project',
@@ -159,9 +185,30 @@ export const projectCommands = (
         deps.loadProcesses(project.id);
         deps.loadScripts(project.id);
       },
-      actions: () => projectActions(project, deps, preferredIde, preferredTerminal),
+      actions: () => projectActions(project, deps, preferredIde, preferredTerminal, urls),
     };
   });
+
+/**
+ * What a running project's row says in place of its path.
+ *
+ * The address when there is exactly one, since that is the thing worth reading
+ * at a glance and the common case -- most projects configure one process. A
+ * monorepo running three gets the count instead: the first url is not
+ * meaningfully the project's, and picking it would be inventing a primary
+ * process the project never declared.
+ *
+ * A count is also right when several are up and none has announced a url yet --
+ * a dev server takes a moment to print one, and "Running" alone would look
+ * stuck.
+ */
+const runningSubtitle = (status: ProjectProcessStatus | undefined, urls: RunningUrl[]): string => {
+  const count = runningCount(status);
+
+  if (urls.length === 1) return `Running · ${formatUrl(urls[0].url)}`;
+  if (count > 1) return `Running · ${count} processes`;
+  return 'Running';
+};
 
 /**
  * The stats page, already filtered to one project.
@@ -176,7 +223,8 @@ const projectActions = (
   project: ProjectWithDetails,
   deps: ProjectCommandDeps,
   preferredIde: DetectedIDE | null,
-  preferredTerminal: DetectedTerminal | null
+  preferredTerminal: DetectedTerminal | null,
+  urls: RunningUrl[]
 ): Command[] => [
   {
     id: `project.open:${project.id}`,
@@ -189,6 +237,10 @@ const projectActions = (
     primaryActionLabel: 'Open Project',
     run: ctx => ctx.navigate(`/projects/${project.id}`),
   },
+  // Directly under Open Project, above the editor and terminal: a running dev
+  // server is the most perishable thing a project offers, and it used to sit
+  // two levels down under the individual process that happened to own it.
+  ...openUrlActions(project, urls, deps),
   toolAction({
     id: `project.open-ide:${project.id}`,
     verb: 'Open in',
@@ -297,6 +349,43 @@ const projectActions = (
   ...projectProcessActions(project, deps.processStatuses, deps.processState, deps.processDeps),
   ...scriptCommands(project, deps.scriptState, deps.scriptDeps),
 ];
+
+/**
+ * "Open localhost:5173", for each running process that announced an address.
+ *
+ * A shortcut rather than a move -- the same verb stays on each process's own
+ * level, where it sits beside that process's Start and Stop. What this saves is
+ * the two levels of drilling, which is a lot to ask for the thing people reach
+ * for most.
+ *
+ * Titled by address rather than by process, matching how the ports provider
+ * words the identical action. With several running the process name goes in the
+ * subtitle, since that is what tells api from web when both are on localhost.
+ *
+ * Nothing at all when nothing is running: these are built from live status, so
+ * a stopped project has no rows here to point at a dead port.
+ */
+const openUrlActions = (
+  project: ProjectWithDetails,
+  urls: RunningUrl[],
+  deps: ProjectCommandDeps
+): Command[] =>
+  urls.map(entry => ({
+    id: `project.open-url:${project.id}:${entry.processId}`,
+    title: `Open ${formatUrl(entry.url)}`,
+    // The full url when it is the only one, so the protocol and path are still
+    // readable somewhere; the process name when there are several, which is the
+    // more useful of the two by then.
+    subtitle: urls.length > 1 ? entry.name : entry.url,
+    group: 'projects' as const,
+    icon: Link,
+    primaryActionLabel: 'Open in Browser',
+    keywords: ['url', 'browser', 'localhost', 'open', 'preview', entry.name],
+    run: async (ctx: CommandContext) => {
+      await deps.openExternal(entry.url);
+      ctx.dismiss();
+    },
+  }));
 
 /**
  * "View on GitHub", or whatever the remote turns out to be.

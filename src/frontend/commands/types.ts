@@ -104,6 +104,14 @@ export interface PaletteItem {
     projectName: string;
     hasIcon: boolean;
   };
+  /**
+   * Mark the row as live -- a project with a process up, most often.
+   *
+   * A dot rather than words in the title: the subtitle already says "Running",
+   * and what this buys is being able to see which projects are alive without
+   * reading any of the rows.
+   */
+  isRunning?: boolean;
   /** Extra fuzzy-match terms that aren't in the title or subtitle. */
   keywords?: string[];
   /**

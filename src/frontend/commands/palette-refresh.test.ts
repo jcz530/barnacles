@@ -5,6 +5,7 @@ import type { PortEntry, ProjectWithDetails } from '../../shared/types/api';
 import type { ProjectProcessStatus, StartProcess } from '../../shared/types/process';
 import { portCommands } from './providers/ports';
 import { processCommands } from './providers/processes';
+import { projectCommands, type ProjectCommandDeps } from './providers/projects';
 import { useLevelStack } from './useLevelStack';
 import type { Command } from './types';
 
@@ -44,6 +45,23 @@ const runningStatus = (projectId: string, processId: string): ProjectProcessStat
   processes: [{ processId, status: 'running' }],
 });
 
+/** Enough of the project deps to build a row; only status varies per refresh. */
+const projectDeps = (processStatuses: ProjectProcessStatus[]): ProjectCommandDeps =>
+  ({
+    ides: [],
+    terminals: [],
+    defaultIdeId: null,
+    defaultTerminalId: null,
+    gitProvider: () => null,
+    processStatuses,
+    processState: { configured: {}, loading: {} },
+    processDeps: noopProcessDeps,
+    scriptState: { scripts: {}, loading: {} },
+    scriptDeps: { runScript: () => {} },
+    loadProcesses: () => {},
+    loadScripts: () => {},
+  }) as unknown as ProjectCommandDeps;
+
 const noopPortDeps = {
   killPort: () => {},
   copyText: () => {},
@@ -81,7 +99,7 @@ describe('the palette list refreshing while it stays open', () => {
     expect(commands.value.map(command => command.title)).toEqual(['Port 5432']);
   });
 
-  it('flips a project row to Stop once its processes report running', async () => {
+  it('retires a project’s Start row once its processes report running', async () => {
     const projects = [project('p1', 'barnacles')];
     const statuses = ref<ProjectProcessStatus[]>([]);
     const state = { configured: { p1: [configuredProcess('web')] }, loading: {} };
@@ -96,7 +114,30 @@ describe('the palette list refreshing while it stays open', () => {
     statuses.value = [runningStatus('p1', 'web')];
     await nextTick();
 
-    expect(commands.value.map(command => command.title)).toEqual(['Stop barnacles']);
+    // Nothing left to start. Stop is not offered in its place: it lives in the
+    // project's own level now, and the project row is what shows it is up.
+    expect(commands.value).toEqual([]);
+  });
+
+  it('marks a project row as running on that same refresh', async () => {
+    // The other half of the row above disappearing: what tells you the project
+    // is up has to arrive as the Start row goes, or the refresh reads as the
+    // project having dropped out of the list.
+    const projects = [{ ...project('p1', 'barnacles'), technologies: [] } as ProjectWithDetails];
+    const statuses = ref<ProjectProcessStatus[]>([]);
+
+    const commands = computed<Command[]>(() =>
+      projectCommands(projects, projectDeps(statuses.value))
+    );
+
+    expect(commands.value[0].isRunning).toBeFalsy();
+    expect(commands.value[0].subtitle).toBe('/code/barnacles');
+
+    statuses.value = [runningStatus('p1', 'web')];
+    await nextTick();
+
+    expect(commands.value[0].isRunning).toBe(true);
+    expect(commands.value[0].subtitle).toBe('Running');
   });
 
   it('updates an open port level when the port behind it is killed', async () => {
