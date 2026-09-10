@@ -6,6 +6,7 @@ import type {
   StartProcess,
 } from '../../../shared/types/process';
 import { CONFIGURE_PROCESSES } from '@/composables/useConfigureProcessesParam';
+import { SELECTED_PROCESS_PARAM } from '@/composables/useSelectedProcessParam';
 import type { Command, CommandContext } from '../types';
 
 export interface ProcessCommandDeps {
@@ -374,6 +375,16 @@ const configureAction = (project: ProjectWithDetails): Command => ({
 export const configureRoute = (projectId: string): string =>
   `/projects/${projectId}/overview?configure=${CONFIGURE_PROCESSES}`;
 
+/**
+ * Where a process's output lives.
+ *
+ * The process id rides along so the tab opens on the one someone actually
+ * picked, rather than making them find it again in the sidebar. See
+ * useSelectedProcessParam.
+ */
+export const outputRoute = (projectId: string, processId: string): string =>
+  `/projects/${projectId}/terminals?${SELECTED_PROCESS_PARAM}=${encodeURIComponent(processId)}`;
+
 /** One configured process, with its verbs behind it. */
 const processRow = (
   project: ProjectWithDetails,
@@ -543,7 +554,7 @@ const processVerbs = (
       // The only verb here that needs a window. From the floating palette
       // navigate raises or creates a main window; everything else above is a
       // plain HTTP call, which is the point of the global hotkey.
-      run: (ctx: CommandContext) => ctx.navigate(`/projects/${project.id}/terminals`),
+      run: (ctx: CommandContext) => ctx.navigate(outputRoute(project.id, entry.id)),
     },
   ];
 };
