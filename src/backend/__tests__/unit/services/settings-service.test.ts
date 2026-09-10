@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createUnitTestContext, mockDatabaseForUnit } from '@test/contexts';
-import { settingsService } from '@backend/services/settings-service';
+import { settingsService, InvalidSettingValueError } from '@backend/services/settings-service';
 
 // Mock the database connection module
 mockDatabaseForUnit();
@@ -171,6 +171,111 @@ describe('SettingsService', () => {
     it('should return null for unknown setting', async () => {
       const value = settingsService.getDefaultValue('unknownKey');
       expect(value).toBeNull();
+    });
+  });
+
+  describe('numeric setting validation', () => {
+    // An emptied `v-model.number` input yields NaN, which JSON.stringify turns
+    // into null on the wire. String(null) stored "null", which read back as
+    // NaN -- and `depth > NaN` is false, so scans silently found nothing.
+    it('rejects null for a number-typed setting', async () => {
+      await expect(
+        settingsService.setSetting('scanMaxDepth', null as never, 'number')
+      ).rejects.toBeInstanceOf(InvalidSettingValueError);
+    });
+
+    it('rejects NaN for a number-typed setting', async () => {
+      await expect(
+        settingsService.setSetting('scanMaxDepth', NaN, 'number')
+      ).rejects.toBeInstanceOf(InvalidSettingValueError);
+    });
+
+    it('rejects a non-numeric string for a number-typed setting', async () => {
+      await expect(
+        settingsService.setSetting('scanMaxDepth', 'abc', 'number')
+      ).rejects.toBeInstanceOf(InvalidSettingValueError);
+    });
+
+    // Number(null) and Number('') are both 0, so a coercion-only guard would
+    // store a real depth of 0 -- a scan that finds nothing.
+    it('rejects an empty string rather than coercing it to 0', async () => {
+      await expect(settingsService.setSetting('scanMaxDepth', '', 'number')).rejects.toBeInstanceOf(
+        InvalidSettingValueError
+      );
+    });
+
+    // The declared-type branch was guarded first; auto-detect was not, which
+    // left the original bug fully intact for any caller that omits `type`.
+    it('rejects NaN when the type is inferred rather than declared', async () => {
+      await expect(settingsService.setSetting('scanMaxDepth', NaN)).rejects.toBeInstanceOf(
+        InvalidSettingValueError
+      );
+    });
+
+    it('rejects null when the type is inferred rather than declared', async () => {
+      await expect(
+        settingsService.setSetting('scanMaxDepth', null as never)
+      ).rejects.toBeInstanceOf(InvalidSettingValueError);
+    });
+
+    // Without a declared type, null used to infer `json` and store "null",
+    // corrupting the row's type so later reads went through JSON.parse.
+    it('does not corrupt the stored type when a bad value is rejected', async () => {
+      await settingsService.setSetting('scanMaxDepth', 5, 'number');
+      await expect(
+        settingsService.setSetting('scanMaxDepth', null as never)
+      ).rejects.toBeInstanceOf(InvalidSettingValueError);
+
+      const raw = await settingsService.getSetting('scanMaxDepth');
+      expect(raw?.type).toBe('number');
+      expect(raw?.value).toBe('5');
+    });
+
+    // Number() maps all of these onto plausible-looking numbers, so a denylist
+    // of "empty-ish" spellings let them through: [] and true both coerce.
+    it.each([
+      ['a boolean true', true],
+      ['a boolean false', false],
+      ['an empty array', []],
+      ['a single-element array', [5]],
+      ['an object', {}],
+      ['a whitespace-only string', '   '],
+    ])('rejects %s for a number-typed setting', async (_label, value) => {
+      await expect(
+        settingsService.setSetting('scanMaxDepth', value as never, 'number')
+      ).rejects.toBeInstanceOf(InvalidSettingValueError);
+    });
+
+    it('accepts a numeric string with surrounding whitespace', async () => {
+      await settingsService.setSetting('scanMaxDepth', ' 5 ', 'number');
+      expect(await settingsService.getValue<number>('scanMaxDepth')).toBe(5);
+    });
+
+    it('rejects Infinity for a number-typed setting', async () => {
+      await expect(
+        settingsService.setSetting('scanMaxDepth', Infinity, 'number')
+      ).rejects.toBeInstanceOf(InvalidSettingValueError);
+    });
+
+    it('leaves the previous value intact when a write is rejected', async () => {
+      await settingsService.setSetting('scanMaxDepth', 5, 'number');
+      await expect(
+        settingsService.setSetting('scanMaxDepth', null as never, 'number')
+      ).rejects.toBeInstanceOf(InvalidSettingValueError);
+
+      const value = await settingsService.getValue<number>('scanMaxDepth');
+      expect(value).toBe(5);
+    });
+
+    it('still accepts a numeric string, coerced to a number', async () => {
+      const setting = await settingsService.setSetting('scanMaxDepth', '4', 'number');
+      expect(setting.value).toBe('4');
+      expect(await settingsService.getValue<number>('scanMaxDepth')).toBe(4);
+    });
+
+    it('accepts a normal number', async () => {
+      await settingsService.setSetting('scanMaxDepth', 7, 'number');
+      expect(await settingsService.getValue<number>('scanMaxDepth')).toBe(7);
     });
   });
 });

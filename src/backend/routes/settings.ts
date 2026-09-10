@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { settingsService } from '../services/settings-service';
+import { settingsService, InvalidSettingValueError } from '../services/settings-service';
 import { toggleTrayIcon, toggleCliInstallation, syncCommandPaletteShortcut } from '../../main/main';
 import {
   scanDirectoryService,
@@ -81,7 +81,17 @@ settings.put('/:key', async c => {
       );
     }
 
-    const setting = await settingsService.setSetting(key, value, type);
+    let setting;
+    try {
+      setting = await settingsService.setSetting(key, value, type);
+    } catch (error) {
+      // A bad value is the client's error, not ours -- report 400 so the
+      // caller can correct it, rather than a generic 500.
+      if (error instanceof InvalidSettingValueError) {
+        return c.json({ error: error.message }, 400);
+      }
+      throw error;
+    }
 
     // Handle special cases for settings that trigger system changes
     if (key === 'showTrayIcon') {

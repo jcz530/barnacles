@@ -129,7 +129,14 @@ export class ProjectScanWebSocketService {
     try {
       // Get maxDepth from settings if not provided
       const settingMaxDepth = await settingsService.getValue<number>('scanMaxDepth');
-      const finalMaxDepth = maxDepth ?? settingMaxDepth ?? 2;
+      // 3 matches DEFAULT_SETTINGS.scanMaxDepth and the Settings UI default; it
+      // was 2, which silently scanned a level shallower than either.
+      //
+      // Reachable, despite getSetting falling back to DEFAULT_SETTINGS rather
+      // than returning null: getValue switches on the *stored* row's type, so a
+      // scanMaxDepth row written as json (what an emptied number input used to
+      // produce) parses back to null and lands here.
+      const finalMaxDepth = maxDepth ?? settingMaxDepth ?? 3;
 
       // Default directories if none provided
       const dirsToScan = directories || (await getDefaultScanDirectories());
