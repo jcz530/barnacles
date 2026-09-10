@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { DetectedIDE, DetectedTerminal, ProjectWithDetails } from '../../../shared/types/api';
 import type { ProcessStatus, ProjectProcessStatus } from '../../../shared/types/process';
 import type { Command, CommandContext } from '../types';
-import { levelDefaultItems } from '../ranking';
+import { defaultCommands, levelDefaultItems } from '../ranking';
 import { projectCommands, type ProjectCommandDeps } from './projects';
 
 const ide = (id: string, name: string): DetectedIDE =>
@@ -648,6 +648,41 @@ describe('a project that is running', () => {
     );
 
     expect(current.priority).toBeGreaterThan(live.priority ?? 0);
+  });
+
+  it('forms a section of its own, so favorites keep their budget', () => {
+    // Consolidating the old Stop rows onto the project row put running
+    // projects and favorites in one group capped at five, and running
+    // outranks favorite -- so four running projects left room for exactly one
+    // favorite in the empty list.
+    const projects = [
+      ...[1, 2, 3, 4].map(i => project({ id: `r${i}`, name: `running${i}` })),
+      ...[1, 2, 3, 4, 5, 6].map(i => project({ id: `f${i}`, name: `fav${i}`, isFavorite: true })),
+    ];
+    const statuses = [1, 2, 3, 4].map(i => running({}, `r${i}`));
+
+    const grouped = defaultCommands(projectCommands(projects, deps({ processStatuses: statuses })));
+
+    expect(grouped.map(group => group.label)).toEqual(['Running', 'Projects']);
+    expect(grouped[0].commands).toHaveLength(4);
+    expect(grouped[1].commands.map(row => row.title)).toEqual([
+      'fav1',
+      'fav2',
+      'fav3',
+      'fav4',
+      'fav5',
+    ]);
+  });
+
+  it('labels the section only while running, and only for the label', () => {
+    // The group id stays 'projects', so a search still ranks these against the
+    // other project rows -- it is the empty list this is about.
+    const [live] = projectCommands([project()], deps({ processStatuses: [running()] }));
+    const [idle] = projectCommands([project()], deps());
+
+    expect(live.groupLabel).toBe('Running');
+    expect(live.group).toBe('projects');
+    expect(idle.groupLabel).toBeUndefined();
   });
 
   it('answers a search for the verb its root row no longer carries', () => {

@@ -139,6 +139,20 @@ export const projectCommands = (
       subtitle: running ? runningSubtitle(status, urls) : project.path,
       isRunning: running,
       group: 'projects' as const,
+      // A section of its own, so what is up does not eat the budget favorites
+      // and the rest of the projects share.
+      //
+      // Consolidating the old "Stop <project>" rows onto the project row left
+      // running projects and favorites competing for one group's cap of five,
+      // and running outranks favorite -- so four running projects pushed all
+      // but one favorite out of the empty list entirely. They used to sit in
+      // Processes with a budget of their own; this gives them one again,
+      // without bringing back a row per verb to get it.
+      //
+      // Only a label: the group id stays 'projects', so a search still ranks
+      // these against the other project rows rather than in a bucket of their
+      // own. It is the empty list this is about.
+      ...(running ? { groupLabel: 'Running' } : {}),
       // Enough for the palette to render the project's own icon, the same one
       // the projects page shows. The component itself is resolved at render
       // time -- a command is plain data and importing a .vue file here would
