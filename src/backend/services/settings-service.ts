@@ -18,6 +18,8 @@ const DEFAULT_SETTINGS = {
       '~/Projects',
       '~/Code',
       '~/workspace',
+      '~/src',
+      '~/dev',
       '~/Documents/Projects',
     ]),
     type: 'json' as const,
