@@ -50,9 +50,22 @@ describe('trackApplicationActivation', () => {
     vi.resetModules();
   });
 
+  /**
+   * Loads the module with the platform forced to darwin.
+   *
+   * These cases are about the macOS activation events, which the module only
+   * subscribes to on darwin -- so on Linux and Windows the emits below reached
+   * nothing and the assertions failed. The suite has to run the same way on
+   * every runner, so the platform is pinned rather than inherited.
+   */
   const load = async () => {
-    const module = await import('./window-utils');
-    module.trackApplicationActivation();
+    let module!: typeof import('./window-utils');
+
+    await withPlatform('darwin', async () => {
+      module = await import('./window-utils');
+      module.trackApplicationActivation();
+    });
+
     return module;
   };
 

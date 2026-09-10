@@ -86,7 +86,7 @@ watch(accelerator, newValue => {
       <ShortcutRecorder v-model="accelerator" :disabled="!enabled" />
     </div>
 
-    <p v-if="registrationError" class="text-danger-600 dark:text-danger-400 text-sm">
+    <p v-if="registrationError" class="text-danger-600">
       {{ registrationError }} Try another combination — the in-app shortcut still works.
     </p>
     <p v-else-if="enabled && isRiskyAccelerator(accelerator)" class="text-muted-foreground text-sm">
