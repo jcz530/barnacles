@@ -21,6 +21,7 @@ import {
 import { useLevelStack } from '@/commands/useLevelStack';
 import { useCommandStatus } from '@/commands/useCommandStatus';
 import { useIsMac } from '@/composables/useIsMac';
+import { usePointerMoved } from '@/composables/usePointerMoved';
 import CommandPaletteItem from '../molecules/CommandPaletteItem.vue';
 import CommandPaletteFooter from '../molecules/CommandPaletteFooter.vue';
 
@@ -44,6 +45,7 @@ const emit = defineEmits<{
 
 const stack = useLevelStack(toRef(props, 'commands'));
 const isMac = useIsMac();
+const { moved: pointerMoved, arm: armPointerGate } = usePointerMoved();
 const { status, report, clear: clearStatus } = useCommandStatus();
 const { activeItems, activeQuery, breadcrumb, depth } = stack;
 
@@ -102,6 +104,12 @@ const focusInput = () => {
 
 /** Each open should start clean rather than resuming the last search. */
 const reset = () => {
+  // The floating window is shown *before* the main process sends the message
+  // that gets us here, so this cannot be what beats the synthetic pointermove --
+  // usePointerMoved keeps the pointer's last position across opens for that.
+  // This only clears the verdict, so a move made during the last open does not
+  // count as one made during this.
+  armPointerGate();
   stack.reset();
   clearStatus();
   focusInput();
@@ -304,11 +312,19 @@ const handleQueryInput = () => clearStatus();
     "project.open:anla4gsy..." into the input. The floating window outlives a
     single open, so it persisted there until the window was rebuilt.
   -->
+  <!--
+    highlight-on-hover stays off until the mouse actually moves. reka highlights
+    a row on pointermove rather than pointerenter, and the floating window opens
+    centred on the cursor's own display -- so it appears under a stationary
+    pointer, which fires one synthetic pointermove and handed the highlight to
+    whichever row landed beneath it instead of the first. See usePointerMoved.
+  -->
   <ComboboxRoot
     :open="true"
     :ignore-filter="true"
     :reset-search-term-on-select="false"
     :reset-search-term-on-blur="false"
+    :highlight-on-hover="pointerMoved"
     :class="['flex flex-col overflow-hidden', heightClass ?? 'max-h-[60vh]']"
     @highlight="highlightedId = ($event?.value as string) ?? null"
   >
