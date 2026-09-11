@@ -112,6 +112,34 @@ describe('IdeDetectorService.detectInstalledIDEs (macOS)', () => {
     expect(detected.find(ide => ide.id === 'webstorm')?.installed).toBe(false);
   });
 
+  it('finds Sublime Text by its bundle, so it can show its own icon', async () => {
+    // Sublime is a windowed editor whose `subl` is only a launcher. It carried
+    // no macAppName, so it was detected purely through PATH and was the one GUI
+    // editor reporting hasAppIcon: false.
+    installedBundles([[APPLICATIONS, 'Sublime Text.app']]);
+    mockedCommandExists.mockResolvedValue(false);
+
+    const detected = await ideDetectorService.detectInstalledIDEs();
+    const sublime = detected.find(ide => ide.id === 'sublime');
+
+    expect(sublime?.installed).toBe(true);
+    expect(sublime?.hasAppIcon).toBe(true);
+  });
+
+  it('still finds Sublime Text on PATH when no bundle is in a known location', async () => {
+    // Naming the bundle must not narrow detection: Sublime is not macOnly, so
+    // an install somewhere we do not search still resolves through `subl`. It
+    // simply has no icon to draw.
+    installedBundles([]);
+    mockedCommandExists.mockResolvedValue(true);
+
+    const detected = await ideDetectorService.detectInstalledIDEs();
+    const sublime = detected.find(ide => ide.id === 'sublime');
+
+    expect(sublime?.installed).toBe(true);
+    expect(sublime?.hasAppIcon).toBe(false);
+  });
+
   it('does not fall back to PATH for macOnly IDEs when the .app bundle is missing', async () => {
     // No bundles installed, but every command resolves on PATH. A regular IDE
     // should be reported as installed via PATH, while a macOnly IDE (e.g. Xcode)

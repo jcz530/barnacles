@@ -234,6 +234,12 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'subl',
     icon: 'sublime',
     color: '#FF9800',
+    // A GUI app, unlike the vim/emacs entries below that also carry no bundle:
+    // `subl` is its launcher, so without this Sublime was the one windowed
+    // editor detected purely through PATH -- and so the one drawing a colour
+    // swatch where every other windowed editor draws its own icon.
+    macAppName: 'Sublime Text.app',
+    macAppNames: ['Sublime Text.app', 'Sublime Text 4.app', 'Sublime Text 3.app'],
     winPaths: ['Sublime Text\\sublime_text.exe', 'Sublime Text 3\\sublime_text.exe'],
   },
   {
