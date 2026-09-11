@@ -4,6 +4,7 @@ import { computed, ref } from 'vue';
 import { DetectedTerminal, SETTING_KEYS } from '../../../../shared/types/api';
 import { useQueries } from '../../../composables/useQueries';
 import { Button } from '../../ui/button';
+import ToolIcon from '../atoms/ToolIcon.vue';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -152,10 +153,12 @@ const handleMainButtonClick = () => {
                     : 'text-muted-foreground'
                 "
               />
-              <div
-                v-if="terminal.color"
-                class="h-3 w-3 shrink-0 rounded-sm"
-                :style="{ backgroundColor: terminal.color }"
+              <ToolIcon
+                :tool-id="terminal.id"
+                :tool-name="terminal.name"
+                kind="terminal"
+                :has-app-icon="terminal.hasAppIcon"
+                :color="terminal.color"
               />
               <span class="flex-1">{{ terminal.name }}</span>
             </DropdownMenuItem>

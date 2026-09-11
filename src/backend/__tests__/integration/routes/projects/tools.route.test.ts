@@ -229,4 +229,60 @@ describe('Projects Tools API Integration Tests', () => {
       expect(response.status).toBe(404);
     });
   });
+  /**
+   * The icon routes read the filesystem and, on a hit, Electron's icon APIs.
+   * Covered here is what holds on any machine: an unknown tool, and a tool the
+   * mocked definitions do not list. A real extraction needs a running Electron
+   * app with the editor actually installed, which a test run cannot assume.
+   */
+  describe('GET /api/projects/ides/:ideId/icon', () => {
+    it('should return 404 for an unknown IDE', async () => {
+      const { app } = context.get();
+
+      const response = await get(app, '/api/projects/ides/not-a-real-ide/icon');
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should not be shadowed by the /ides/detected route', async () => {
+      const { app } = context.get();
+
+      // Both live under /ides. If the parameterised icon route matched first,
+      // this would try to serve an icon for an IDE named "detected".
+      const response = await get(app, '/api/projects/ides/detected');
+
+      expect([200, 500]).toContain(response.status);
+      if (response.status === 200) {
+        expect(Array.isArray((response.data as any).data)).toBe(true);
+      }
+    });
+
+    it('should not be shadowed by the /ides/available route', async () => {
+      const { app } = context.get();
+
+      const response = await get(app, '/api/projects/ides/available');
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray((response.data as any).data)).toBe(true);
+    });
+  });
+
+  describe('GET /api/projects/terminals/:terminalId/icon', () => {
+    it('should return 404 for an unknown terminal', async () => {
+      const { app } = context.get();
+
+      const response = await get(app, '/api/projects/terminals/not-a-real-terminal/icon');
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should not be shadowed by the /terminals/available route', async () => {
+      const { app } = context.get();
+
+      const response = await get(app, '/api/projects/terminals/available');
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray((response.data as any).data)).toBe(true);
+    });
+  });
 });

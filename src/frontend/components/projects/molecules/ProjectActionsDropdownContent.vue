@@ -15,6 +15,7 @@ import {
   Trash2,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
+import ToolIcon from '../atoms/ToolIcon.vue';
 import { useProjectActions } from '../../../composables/useProjectActions';
 import { useQueries } from '../../../composables/useQueries';
 import {
@@ -286,7 +287,20 @@ const handleOpenUrl = (url: string) => {
       @click="preferredIDE ? handleOpenInIDE() : undefined"
       :disabled="openProjectMutation.isPending.value"
     >
-      <ExternalLinkIcon class="mr-2 h-4 w-4" />
+      <!--
+        The named tool's own icon once one resolves; the generic glyph while the
+        row still reads "Open in IDE" and names no particular app.
+      -->
+      <ToolIcon
+        v-if="preferredIDE"
+        :tool-id="preferredIDE.id"
+        :tool-name="preferredIDE.name"
+        kind="ide"
+        :has-app-icon="preferredIDE.hasAppIcon"
+        :fallback="ExternalLinkIcon"
+        class="mr-2"
+      />
+      <ExternalLinkIcon v-else class="mr-2 h-4 w-4" />
       {{ preferredIDE ? `Open in ${preferredIDE.name}` : 'Open in IDE' }}
     </DropdownMenuSubTrigger>
     <DropdownMenuSubContent>
@@ -296,10 +310,13 @@ const handleOpenUrl = (url: string) => {
         @click="handleSelectIDE(ide.id)"
         :disabled="updateIDEMutation.isPending.value"
       >
-        <div
-          v-if="ide.color"
-          class="mr-2 h-3 w-3 rounded-sm"
-          :style="{ backgroundColor: ide.color }"
+        <ToolIcon
+          :tool-id="ide.id"
+          :tool-name="ide.name"
+          kind="ide"
+          :has-app-icon="ide.hasAppIcon"
+          :color="ide.color"
+          class="mr-2"
         />
         {{ ide.name }}
         <span v-if="ide.id === preferredIdeId" class="ml-auto text-xs text-slate-500">✓</span>
@@ -313,7 +330,16 @@ const handleOpenUrl = (url: string) => {
       @click="preferredTerminal ? handleOpenTerminal() : undefined"
       :disabled="openTerminalMutation.isPending.value"
     >
-      <TerminalIcon class="mr-2 h-4 w-4" />
+      <ToolIcon
+        v-if="preferredTerminal"
+        :tool-id="preferredTerminal.id"
+        :tool-name="preferredTerminal.name"
+        kind="terminal"
+        :has-app-icon="preferredTerminal.hasAppIcon"
+        :fallback="TerminalIcon"
+        class="mr-2"
+      />
+      <TerminalIcon v-else class="mr-2 h-4 w-4" />
       {{ preferredTerminal ? `Open in ${preferredTerminal.name}` : 'Open in Terminal' }}
     </DropdownMenuSubTrigger>
     <DropdownMenuSubContent>
@@ -323,10 +349,13 @@ const handleOpenUrl = (url: string) => {
         @click="handleSelectTerminal(terminal.id)"
         :disabled="updateTerminalMutation.isPending.value"
       >
-        <div
-          v-if="terminal.color"
-          class="mr-2 h-3 w-3 rounded-sm"
-          :style="{ backgroundColor: terminal.color }"
+        <ToolIcon
+          :tool-id="terminal.id"
+          :tool-name="terminal.name"
+          kind="terminal"
+          :has-app-icon="terminal.hasAppIcon"
+          :color="terminal.color"
+          class="mr-2"
         />
         {{ terminal.name }}
         <span v-if="terminal.id === preferredTerminalId" class="ml-auto text-xs text-slate-500"

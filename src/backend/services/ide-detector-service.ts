@@ -23,6 +23,8 @@ export interface IDE {
 export interface DetectedIDE extends IDE {
   installed: boolean;
   version?: string;
+  /** Whether a real app icon can be served for this IDE. */
+  hasAppIcon?: boolean;
 }
 
 const IDE_DEFINITIONS: IDE[] = [
@@ -324,10 +326,16 @@ class IdeDetectorService {
       const isInstalled = await this.checkIfInstalled(ide);
       const version = isInstalled ? await this.getVersion(ide) : undefined;
 
+      // Only a resolvable .app bundle yields an icon. Checked here rather than
+      // guessed from `macAppName` so a CLI-only editor, or one found on PATH
+      // without a bundle, is reported honestly and the UI keeps its glyph.
+      const hasAppIcon = isInstalled ? (await this.findMacAppBundle(ide)) !== null : false;
+
       detectedIDEs.push({
         ...ide,
         installed: isInstalled,
         version,
+        hasAppIcon,
       });
     }
 

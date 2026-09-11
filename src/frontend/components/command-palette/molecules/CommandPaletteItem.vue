@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ComboboxItem } from 'reka-ui';
-import { ChevronRight } from 'lucide-vue-next';
+import { ChevronRight, SquareTerminal } from 'lucide-vue-next';
 import type { Command } from '@/commands/types';
 import ProjectIcon from '@/components/projects/atoms/ProjectIcon.vue';
+import ToolIcon from '@/components/projects/atoms/ToolIcon.vue';
 import { Skeleton } from '@/components/ui/skeleton';
 import KeyHint from '@/components/atoms/KeyHint.vue';
 
@@ -42,6 +43,16 @@ const emit = defineEmits<{ select: [] }>();
       v-bind="command.projectIcon"
       size="sm"
       class="shrink-0"
+    />
+    <!--
+      The app's own icon where we have one. Kept out of the opacity treatment
+      the glyphs get: dimming a real icon reads as disabled rather than as
+      unselected, and several of these are dark enough already.
+    -->
+    <ToolIcon
+      v-else-if="command.toolIcon"
+      v-bind="command.toolIcon"
+      :fallback="command.icon ?? SquareTerminal"
     />
     <component
       :is="command.icon"

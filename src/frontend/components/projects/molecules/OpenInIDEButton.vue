@@ -4,6 +4,7 @@ import { computed, ref } from 'vue';
 import { type DetectedIDE, SETTING_KEYS } from '../../../../shared/types/api';
 import { useQueries } from '../../../composables/useQueries';
 import { Button } from '../../ui/button';
+import ToolIcon from '../atoms/ToolIcon.vue';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -152,10 +153,16 @@ const handleMainButtonClick = () => {
                     : 'text-muted-foreground'
                 "
               />
-              <div
-                v-if="ide.color"
-                class="h-3 w-3 shrink-0 rounded-sm"
-                :style="{ backgroundColor: ide.color }"
+              <!--
+                The app's real icon, falling back to the colour swatch for
+                CLI-only editors that have no bundle to read one from.
+              -->
+              <ToolIcon
+                :tool-id="ide.id"
+                :tool-name="ide.name"
+                kind="ide"
+                :has-app-icon="ide.hasAppIcon"
+                :color="ide.color"
               />
               <span class="flex-1">{{ ide.name }}</span>
             </DropdownMenuItem>

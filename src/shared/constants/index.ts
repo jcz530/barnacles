@@ -41,6 +41,9 @@ export const API_ROUTES = {
   PROJECTS_IDES_AVAILABLE: '/api/projects/ides/available',
   PROJECTS_TERMINALS_DETECTED: '/api/projects/terminals/detected',
   PROJECTS_TERMINALS_AVAILABLE: '/api/projects/terminals/available',
+  PROJECTS_IDE_ICON: (ideId: string) => `/api/projects/ides/${encodeURIComponent(ideId)}/icon`,
+  PROJECTS_TERMINAL_ICON: (terminalId: string) =>
+    `/api/projects/terminals/${encodeURIComponent(terminalId)}/icon`,
   TERMINALS: '/api/terminals',
   TERMINALS_WS: '/api/terminals/ws',
   PROCESS_WS: '/api/processes/ws',
