@@ -10,10 +10,10 @@ const tools = new Hono();
 /**
  * Serves the real app icon for a detected IDE or terminal.
  *
- * A 404 is the ordinary answer here, not an error: CLI-only tools (vim, emacs,
- * subl) have no `.app` bundle to read, and nothing outside macOS resolves at
- * all. The frontend falls back to its glyph on any non-200, so the two cases
- * need no distinguishing.
+ * A 404 is the ordinary answer here, not an error: a tool whose bundle is not
+ * installed has none to read an icon from, and nothing outside macOS resolves
+ * at all. The frontend falls back to its glyph on any non-200, so the two
+ * cases need no distinguishing.
  */
 async function serveToolIcon(
   bundleNames: string[],

@@ -234,10 +234,10 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'subl',
     icon: 'sublime',
     color: '#FF9800',
-    // A GUI app, unlike the vim/emacs entries below that also carry no bundle:
-    // `subl` is its launcher, so without this Sublime was the one windowed
-    // editor detected purely through PATH -- and so the one drawing a colour
-    // swatch where every other windowed editor draws its own icon.
+    // `subl` is only a launcher that forks a window and returns, so without
+    // this Sublime was the one windowed editor detected purely through PATH --
+    // and so the one drawing a colour swatch where every other windowed editor
+    // draws its own icon.
     macAppName: 'Sublime Text.app',
     macAppNames: ['Sublime Text.app', 'Sublime Text 4.app', 'Sublime Text 3.app'],
     winPaths: ['Sublime Text\\sublime_text.exe', 'Sublime Text 3\\sublime_text.exe'],
@@ -292,24 +292,11 @@ const IDE_DEFINITIONS: IDE[] = [
     macAppName: 'Void.app',
     winPaths: ['Void\\Void.exe', 'Programs\\Void\\Void.exe'],
   },
-  {
-    id: 'vim',
-    name: 'Vim',
-    executable: 'vim',
-    command: 'vim',
-    icon: 'vim',
-    color: '#019733',
-    winPaths: ['Vim\\vim*\\vim.exe'],
-  },
-  {
-    id: 'nvim',
-    name: 'Neovim',
-    executable: 'nvim',
-    command: 'nvim',
-    icon: 'neovim',
-    color: '#57A143',
-    winPaths: ['Neovim\\bin\\nvim.exe'],
-  },
+  // Terminal editors (vim, nvim) are deliberately absent: launching one means
+  // hosting it in a terminal, and the IDE path has none to give it. Run
+  // headless from the main process they just fail, so listing them offered a
+  // menu entry that could never work. Emacs stays because it ships a real GUI
+  // bundle, which `open -a` launches like any other app.
   {
     id: 'emacs',
     name: 'Emacs',
@@ -317,6 +304,7 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'emacs',
     icon: 'emacs',
     color: '#7F5AB6',
+    macAppName: 'Emacs.app',
     winPaths: ['Emacs\\*\\bin\\emacs.exe'],
   },
 ];

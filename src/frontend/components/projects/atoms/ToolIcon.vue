@@ -5,10 +5,10 @@ import { API_ROUTES, RUNTIME_CONFIG } from '../../../../shared/constants';
 /**
  * The real app icon for an IDE or terminal, falling back to a glyph.
  *
- * Only macOS serves these, and only for tools that ship an .app bundle -- vim
- * and emacs never will. `fallback` is therefore the normal rendering for a
- * large share of rows, not an error path, so it takes the caller's own glyph
- * rather than a generic one.
+ * Only macOS serves these, and only for tools whose .app bundle is actually
+ * installed. `fallback` is therefore the normal rendering for a large share of
+ * rows, not an error path, so it takes the caller's own glyph rather than a
+ * generic one.
  */
 const props = defineProps<{
   toolId: string;

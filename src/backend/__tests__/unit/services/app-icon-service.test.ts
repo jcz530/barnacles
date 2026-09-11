@@ -35,7 +35,7 @@ describe('app-icon-service', () => {
 
       const { findAppBundle } = await import('../../../services/app-icon-service');
 
-      // CLI-only editors (vim, emacs) reach this path.
+      // A tool defined without any bundle name reaches this path.
       expect(await findAppBundle([])).toBeNull();
     });
 
