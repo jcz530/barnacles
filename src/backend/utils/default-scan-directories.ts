@@ -14,6 +14,8 @@ export function getDefaultScanDirectoriesSync(): string[] {
     path.join(os.homedir(), 'Projects'),
     path.join(os.homedir(), 'Code'),
     path.join(os.homedir(), 'workspace'),
+    path.join(os.homedir(), 'src'),
+    path.join(os.homedir(), 'dev'),
     path.join(os.homedir(), 'Documents', 'Projects'),
   ];
 }

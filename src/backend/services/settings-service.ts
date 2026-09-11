@@ -18,6 +18,8 @@ const DEFAULT_SETTINGS = {
       '~/Projects',
       '~/Code',
       '~/workspace',
+      '~/src',
+      '~/dev',
       '~/Documents/Projects',
     ]),
     type: 'json' as const,
@@ -50,6 +52,34 @@ const DEFAULT_SETTINGS = {
   mcpUsageLogging: { value: 'true', type: 'boolean' as const },
   mcpUsageRetentionDays: { value: '90', type: 'number' as const },
 };
+
+/** Thrown when a setting's value cannot be stored as its declared type. */
+export class InvalidSettingValueError extends Error {}
+
+/**
+ * Coerce to a finite number, accepting only what is genuinely numeric.
+ *
+ * A positive type test rather than a denylist of bad spellings: `Number()`
+ * turns `true` into 1, `[]` into 0 and `null` into 0, so screening particular
+ * values let equivalents through -- `[]` produced the same depth-0 "scan finds
+ * nothing" outcome that rejecting `''` was meant to prevent.
+ */
+function toFiniteNumber(key: string, value: unknown): number {
+  const numeric =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && value.trim() !== ''
+        ? Number(value)
+        : NaN;
+
+  if (!Number.isFinite(numeric)) {
+    throw new InvalidSettingValueError(
+      `Setting "${key}" is numeric and requires a finite number; received ${JSON.stringify(value) ?? String(value)}.`
+    );
+  }
+
+  return numeric;
+}
 
 class SettingsService {
   /**
@@ -125,15 +155,33 @@ class SettingsService {
     value: string | number | boolean | object,
     type?: 'string' | 'number' | 'boolean' | 'json'
   ): Promise<Setting> {
+    // `null` is never a legitimate stored value, and it is what an emptied
+    // number input becomes on the wire: `v-model.number` yields NaN, and JSON
+    // has no NaN literal so `JSON.stringify` sends null. Left alone it stored
+    // as the string "null" under an inferred `json` type, corrupting the row's
+    // type permanently and reading back as null or NaN.
+    if (value === null || value === undefined) {
+      throw new InvalidSettingValueError(
+        `Setting "${key}" cannot be set to ${String(value)}. Provide a concrete value.`
+      );
+    }
+
+    // Numbers are validated whether the type was declared or inferred. Only
+    // checking the declared branch left the original bug intact: `setSetting`
+    // with no `type` auto-detects `typeof NaN === 'number'` and stored "NaN",
+    // which reads back as NaN -- and every `depth > NaN` comparison is false,
+    // so scanning silently found nothing.
+    const wantsNumber = type === 'number' || (type === undefined && typeof value === 'number');
+
     // Auto-detect type if not provided
     let inferredType = type;
     let stringValue: string;
 
-    if (type === undefined) {
-      if (typeof value === 'number') {
-        inferredType = 'number';
-        stringValue = String(value);
-      } else if (typeof value === 'boolean') {
+    if (wantsNumber) {
+      inferredType = 'number';
+      stringValue = String(toFiniteNumber(key, value));
+    } else if (type === undefined) {
+      if (typeof value === 'boolean') {
         inferredType = 'boolean';
         stringValue = String(value);
       } else if (typeof value === 'object') {

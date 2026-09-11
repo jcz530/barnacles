@@ -122,4 +122,84 @@ describe('Settings API Integration Tests', () => {
       expect(syncCommandPaletteShortcut).not.toHaveBeenCalled();
     });
   });
+
+  describe('numeric setting validation', () => {
+    /**
+     * NaN has no JSON literal, so an emptied `v-model.number` input reaches the
+     * API as null. Stored via String(), that became "null" and read back as
+     * NaN; since every `depth > NaN` comparison is false, scanning silently
+     * found nothing instead of failing.
+     */
+    it('rejects a null value for a numeric setting', async () => {
+      const response = await put(
+        context.get().app,
+        `/api/settings/${SETTING_KEYS.SCAN_MAX_DEPTH}`,
+        {
+          value: null,
+          type: 'number',
+        }
+      );
+
+      expect(response.status).toBe(400);
+    });
+
+    it('does not persist a rejected numeric value', async () => {
+      await put(context.get().app, `/api/settings/${SETTING_KEYS.SCAN_MAX_DEPTH}`, {
+        value: 5,
+        type: 'number',
+      });
+
+      await put(context.get().app, `/api/settings/${SETTING_KEYS.SCAN_MAX_DEPTH}`, {
+        value: null,
+        type: 'number',
+      });
+
+      const readBack = await get(context.get().app, `/api/settings/${SETTING_KEYS.SCAN_MAX_DEPTH}`);
+      expect(asSetting(readBack.data).value).toBe('5');
+    });
+
+    // useQueries sends `type: undefined` when a caller omits it, and
+    // JSON.stringify drops the key -- so the request reaches the route with no
+    // type at all and used to be stored via auto-detect without validation.
+    it('rejects a null value even when the request omits the type', async () => {
+      const response = await put(
+        context.get().app,
+        `/api/settings/${SETTING_KEYS.SCAN_MAX_DEPTH}`,
+        {
+          value: null,
+        }
+      );
+
+      expect(response.status).toBe(400);
+    });
+
+    it('leaves a valid stored depth readable as a number after a rejected write', async () => {
+      await put(context.get().app, `/api/settings/${SETTING_KEYS.SCAN_MAX_DEPTH}`, {
+        value: 6,
+        type: 'number',
+      });
+
+      await put(context.get().app, `/api/settings/${SETTING_KEYS.SCAN_MAX_DEPTH}`, {
+        value: null,
+      });
+
+      const readBack = await get(context.get().app, `/api/settings/${SETTING_KEYS.SCAN_MAX_DEPTH}`);
+      expect(asSetting(readBack.data).value).toBe('6');
+      expect((asSetting(readBack.data) as unknown as { type: string }).type).toBe('number');
+    });
+
+    it('still accepts a valid depth', async () => {
+      const response = await put(
+        context.get().app,
+        `/api/settings/${SETTING_KEYS.SCAN_MAX_DEPTH}`,
+        {
+          value: 4,
+          type: 'number',
+        }
+      );
+
+      expect(response.status).toBe(200);
+      expect(asSetting(response.data).value).toBe('4');
+    });
+  });
 });
