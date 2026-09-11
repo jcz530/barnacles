@@ -25,6 +25,17 @@ const props = defineProps<{
   /** Brand colour, drawn as a swatch when `fallback` is not given. */
   color?: string;
   size?: 'sm' | 'md';
+  /**
+   * Add the trailing margin the dropdown menus expect.
+   *
+   * Not unconditional: the plain Lucide glyphs in those menus all carry mr-2 on
+   * top of the row's own gap, so an icon without it indents its label 8px less
+   * than every other row. The command palette spaces its rows with gap-3 alone
+   * and its other icons take no margin, so the same class there would push these
+   * rows out of line instead. It lives in this component rather than on the call
+   * sites because a multi-root component drops an inherited class.
+   */
+  spaced?: boolean;
 }>();
 
 // Tracks load failures separately from `hasAppIcon` so a broken response falls
@@ -50,6 +61,8 @@ const iconUrl = computed(() => {
 });
 
 const sizeClasses = computed(() => (props.size === 'md' ? 'size-5' : 'size-4'));
+
+const boxClasses = computed(() => [sizeClasses.value, props.spaced ? 'mr-2' : '']);
 </script>
 
 <template>
@@ -57,10 +70,10 @@ const sizeClasses = computed(() => (props.size === 'md' ? 'size-5' : 'size-4'));
     v-if="iconUrl"
     :src="iconUrl"
     :alt="`${toolName} icon`"
-    :class="[sizeClasses, 'shrink-0 object-contain']"
+    :class="[boxClasses, 'shrink-0 object-contain']"
     @error="failed = true"
   />
-  <component v-else-if="fallback" :is="fallback" :class="[sizeClasses, 'shrink-0']" />
+  <component v-else-if="fallback" :is="fallback" :class="[boxClasses, 'shrink-0']" />
   <!--
     The swatch this replaced. A raw hex is allowed here because it is the
     vendor's own brand colour carried as data, not theme styling.
@@ -69,7 +82,7 @@ const sizeClasses = computed(() => (props.size === 'md' ? 'size-5' : 'size-4'));
     list mixing apps that have icons with CLI-only tools that do not would
     otherwise wrap its labels at two different offsets.
   -->
-  <span v-else-if="color" :class="[sizeClasses, 'flex shrink-0 items-center justify-center']">
+  <span v-else-if="color" :class="[boxClasses, 'flex shrink-0 items-center justify-center']">
     <span class="h-3 w-3 rounded-sm" :style="{ backgroundColor: color }" />
   </span>
 </template>

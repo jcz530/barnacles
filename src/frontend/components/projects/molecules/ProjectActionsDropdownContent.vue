@@ -283,7 +283,13 @@ const handleOpenUrl = (url: string) => {
 <template>
   <!-- Open in IDE sub-menu -->
   <DropdownMenuSub v-if="installedIDEs.length > 0">
+    <!--
+      gap-2 to match DropdownMenuItem, which sets it and SubTrigger does not:
+      without it these two rows sit their labels 8px left of every other row in
+      the menu.
+    -->
     <DropdownMenuSubTrigger
+      class="gap-2"
       @click="preferredIDE ? handleOpenInIDE() : undefined"
       :disabled="openProjectMutation.isPending.value"
     >
@@ -298,6 +304,7 @@ const handleOpenUrl = (url: string) => {
         kind="ide"
         :has-app-icon="preferredIDE.hasAppIcon"
         :fallback="ExternalLinkIcon"
+        spaced
       />
       <ExternalLinkIcon v-else class="mr-2 h-4 w-4" />
       {{ preferredIDE ? `Open in ${preferredIDE.name}` : 'Open in IDE' }}
@@ -315,6 +322,7 @@ const handleOpenUrl = (url: string) => {
           kind="ide"
           :has-app-icon="ide.hasAppIcon"
           :color="ide.color"
+          spaced
         />
         {{ ide.name }}
         <span v-if="ide.id === preferredIdeId" class="ml-auto text-xs text-slate-500">✓</span>
@@ -325,6 +333,7 @@ const handleOpenUrl = (url: string) => {
   <!-- Open in Terminal sub-menu -->
   <DropdownMenuSub v-if="installedTerminals.length > 0">
     <DropdownMenuSubTrigger
+      class="gap-2"
       @click="preferredTerminal ? handleOpenTerminal() : undefined"
       :disabled="openTerminalMutation.isPending.value"
     >
@@ -335,6 +344,7 @@ const handleOpenUrl = (url: string) => {
         kind="terminal"
         :has-app-icon="preferredTerminal.hasAppIcon"
         :fallback="TerminalIcon"
+        spaced
       />
       <TerminalIcon v-else class="mr-2 h-4 w-4" />
       {{ preferredTerminal ? `Open in ${preferredTerminal.name}` : 'Open in Terminal' }}
@@ -352,6 +362,7 @@ const handleOpenUrl = (url: string) => {
           kind="terminal"
           :has-app-icon="terminal.hasAppIcon"
           :color="terminal.color"
+          spaced
         />
         {{ terminal.name }}
         <span v-if="terminal.id === preferredTerminalId" class="ml-auto text-xs text-slate-500"
