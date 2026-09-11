@@ -305,6 +305,12 @@ const IDE_DEFINITIONS: IDE[] = [
     icon: 'emacs',
     color: '#7F5AB6',
     macAppName: 'Emacs.app',
+    // The bundle or nothing, the same rule Xcode uses. A terminal-only emacs on
+    // PATH would otherwise be offered here and then hang the request: the launch
+    // path runs the command with exec and no TTY, which for a terminal editor
+    // never returns. Only consulted under isMac, so a Linux emacs -- where
+    // terminal-only is the ordinary install -- still resolves through PATH.
+    macOnly: true,
     winPaths: ['Emacs\\*\\bin\\emacs.exe'],
   },
 ];

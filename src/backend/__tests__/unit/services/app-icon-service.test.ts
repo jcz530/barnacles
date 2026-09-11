@@ -139,9 +139,70 @@ describe('app-icon-service', () => {
 
       const { getAppIconPng } = await import('../../../services/app-icon-service');
 
-      // No Electron app is running under vitest, so the import or the call
-      // fails. A caller only ever needs to know "no icon".
+      // A path with no bundle behind it has no Info.plist to read an icon name
+      // from. A caller only ever needs to know "no icon".
       expect(await getAppIconPng('/Applications/Nonexistent.app')).toBeNull();
+    });
+
+    it('extracts once for concurrent callers rather than once each', async () => {
+      // A dropdown renders one <img> per installed tool and the browser fires
+      // them together, so the same bundle is asked for several times at once.
+      // Caching the settled value instead of the in-flight promise would leave a
+      // window where each of those starts its own PlistBuddy and sips pair.
+      const home = await mkdtemp(path.join(tmpdir(), 'barnacles-icon-home-'));
+      const bundle = path.join(home, 'Applications', 'Concurrent.app');
+      await mkdir(path.join(bundle, 'Contents'), { recursive: true });
+
+      vi.doMock('../../../../shared/utils/platform', () => ({
+        isMac: true,
+        getHomeDir: () => home,
+      }));
+
+      // Counts the reads of the bundle's Info.plist, which is the first thing a
+      // real extraction does; one per extraction attempt.
+      const realExecFile = (await import('child_process')).execFile;
+      let extractions = 0;
+      vi.doMock('child_process', async () => {
+        const actual = await vi.importActual<typeof import('child_process')>('child_process');
+        return {
+          ...actual,
+          execFile: ((...args: Parameters<typeof realExecFile>) => {
+            if (String(args[0]).includes('PlistBuddy')) extractions += 1;
+            return (actual.execFile as typeof realExecFile)(...args);
+          }) as typeof realExecFile,
+        };
+      });
+
+      const { getAppIconPng } = await import('../../../services/app-icon-service');
+
+      try {
+        await Promise.all(Array.from({ length: 8 }, () => getAppIconPng(bundle)));
+
+        expect(extractions).toBe(1);
+      } finally {
+        await rm(home, { recursive: true, force: true });
+      }
+    });
+
+    it('caches a miss, so a tool without an icon is not retried on every render', async () => {
+      const home = await mkdtemp(path.join(tmpdir(), 'barnacles-icon-home-'));
+      const bundle = path.join(home, 'Applications', 'NoIcon.app');
+      await mkdir(path.join(bundle, 'Contents'), { recursive: true });
+
+      vi.doMock('../../../../shared/utils/platform', () => ({
+        isMac: true,
+        getHomeDir: () => home,
+      }));
+
+      const { getAppIconPng } = await import('../../../services/app-icon-service');
+
+      try {
+        expect(await getAppIconPng(bundle)).toBeNull();
+        // Cached null, not an absent entry: the second call must not re-extract.
+        expect(await getAppIconPng(bundle)).toBeNull();
+      } finally {
+        await rm(home, { recursive: true, force: true });
+      }
     });
   });
 });

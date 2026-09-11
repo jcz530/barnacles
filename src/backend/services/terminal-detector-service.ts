@@ -15,6 +15,8 @@ export interface Terminal {
   color?: string;
   /** Name of the .app bundle on macOS, used to find the app's real icon. */
   macAppName?: string;
+  /** Alternate .app bundle names, for terminals that ship under several. */
+  macAppNames?: string[];
   platform: 'darwin' | 'win32' | 'linux' | 'all';
 }
 

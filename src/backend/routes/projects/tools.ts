@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { projectService } from '../../services/project';
 import { loadProject } from '../../middleware/project-loader';
 import type { ProjectContext } from '../../types/hono';
@@ -16,6 +16,7 @@ const tools = new Hono();
  * cases need no distinguishing.
  */
 async function serveToolIcon(
+  c: Context,
   bundleNames: string[],
   cacheKey: string
 ): Promise<Response | { notFound: true }> {
@@ -26,18 +27,26 @@ async function serveToolIcon(
   if (!png) return { notFound: true };
 
   // The bundle path is part of the validator: a JetBrains Toolbox update that
-  // moves an IDE to a new versioned directory changes it, so the year-long
-  // cache below cannot pin the previous install's icon.
+  // moves an IDE to a new versioned directory changes it, so the day-long cache
+  // below cannot pin the previous install's icon.
   const etag = `W/"${Buffer.from(`${cacheKey}:${bundlePath}:${png.byteLength}`).toString(
     'base64url'
   )}"`;
+
+  const cacheHeaders = { ETag: etag, 'Cache-Control': 'public, max-age=86400' };
+
+  // Answered here rather than by middleware: the backend has none, so without
+  // this the ETag would be sent and never acted on, and every revalidation
+  // would carry the whole image back. Matches the project icon route.
+  if (c.req.header('if-none-match') === etag) {
+    return new Response(null, { status: 304, headers: cacheHeaders });
+  }
 
   return new Response(new Uint8Array(png), {
     headers: {
       'Content-Type': 'image/png',
       'Content-Length': String(png.byteLength),
-      ETag: etag,
-      'Cache-Control': 'public, max-age=86400',
+      ...cacheHeaders,
     },
   });
 }
@@ -56,7 +65,7 @@ tools.get('/ides/:ideId/icon', async c => {
     }
 
     const bundleNames = ide.macAppNames ?? (ide.macAppName ? [ide.macAppName] : []);
-    const result = await serveToolIcon(bundleNames, ide.id);
+    const result = await serveToolIcon(c, bundleNames, ide.id);
 
     if ('notFound' in result) {
       return c.json({ error: 'No icon available for this IDE' }, 404);
@@ -81,10 +90,8 @@ tools.get('/terminals/:terminalId/icon', async c => {
       return c.json({ error: 'Unknown terminal' }, 404);
     }
 
-    const result = await serveToolIcon(
-      terminal.macAppName ? [terminal.macAppName] : [],
-      terminal.id
-    );
+    const bundleNames = terminal.macAppNames ?? (terminal.macAppName ? [terminal.macAppName] : []);
+    const result = await serveToolIcon(c, bundleNames, terminal.id);
 
     if ('notFound' in result) {
       return c.json({ error: 'No icon available for this terminal' }, 404);

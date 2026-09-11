@@ -298,7 +298,6 @@ const handleOpenUrl = (url: string) => {
         kind="ide"
         :has-app-icon="preferredIDE.hasAppIcon"
         :fallback="ExternalLinkIcon"
-        class="mr-2"
       />
       <ExternalLinkIcon v-else class="mr-2 h-4 w-4" />
       {{ preferredIDE ? `Open in ${preferredIDE.name}` : 'Open in IDE' }}
@@ -316,7 +315,6 @@ const handleOpenUrl = (url: string) => {
           kind="ide"
           :has-app-icon="ide.hasAppIcon"
           :color="ide.color"
-          class="mr-2"
         />
         {{ ide.name }}
         <span v-if="ide.id === preferredIdeId" class="ml-auto text-xs text-slate-500">✓</span>
@@ -337,7 +335,6 @@ const handleOpenUrl = (url: string) => {
         kind="terminal"
         :has-app-icon="preferredTerminal.hasAppIcon"
         :fallback="TerminalIcon"
-        class="mr-2"
       />
       <TerminalIcon v-else class="mr-2 h-4 w-4" />
       {{ preferredTerminal ? `Open in ${preferredTerminal.name}` : 'Open in Terminal' }}
@@ -355,7 +352,6 @@ const handleOpenUrl = (url: string) => {
           kind="terminal"
           :has-app-icon="terminal.hasAppIcon"
           :color="terminal.color"
-          class="mr-2"
         />
         {{ terminal.name }}
         <span v-if="terminal.id === preferredTerminalId" class="ml-auto text-xs text-slate-500"

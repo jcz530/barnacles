@@ -75,7 +75,7 @@ export async function findAppBundle(bundleNames: string[]): Promise<string | nul
  * contents without touching it, so a mtime-keyed cache can pin a stale icon
  * indefinitely. Process lifetime is the honest scope; a relaunch re-reads.
  */
-const cache = new Map<string, Buffer | null>();
+const cache = new Map<string, Promise<Buffer | null>>();
 
 /**
  * Reads the icon of the app bundle at `bundlePath` as PNG bytes.
@@ -87,12 +87,20 @@ const cache = new Map<string, Buffer | null>();
 export async function getAppIconPng(bundlePath: string): Promise<Buffer | null> {
   if (!isMac) return null;
 
-  const cached = cache.get(bundlePath);
-  if (cached !== undefined) return cached;
+  // The in-flight promise is what gets cached, not the value it settles to.
+  // Caching the value would leave a window between the miss and the write in
+  // which every concurrent caller starts its own extraction: a dropdown renders
+  // one <img> per installed tool and the browser fires them together, so a cold
+  // open would spawn two child processes per tool instead of two in total.
+  let inflight = cache.get(bundlePath);
+  if (!inflight) {
+    inflight = readIcon(bundlePath);
+    cache.set(bundlePath, inflight);
+  }
 
-  const png = await readIcon(bundlePath);
-  cache.set(bundlePath, png);
-  return png;
+  // readIcon resolves to null rather than rejecting, so a cached promise can
+  // never be a rejected one waiting to surface at an unrelated caller.
+  return inflight;
 }
 
 /** Rendered size. 64px stays crisp in the 16-20px slots these draw in at 2x. */

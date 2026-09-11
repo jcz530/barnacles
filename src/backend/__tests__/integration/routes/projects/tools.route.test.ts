@@ -14,7 +14,11 @@ vi.mock('@backend/services/ide-detector-service', () => ({
     detectIDEs: vi
       .fn()
       .mockResolvedValue([{ id: 'vscode', name: 'Visual Studio Code', path: '/usr/bin/code' }]),
-    getAvailableIDEs: vi.fn().mockReturnValue([{ id: 'vscode', name: 'Visual Studio Code' }]),
+    getAvailableIDEs: vi
+      .fn()
+      .mockReturnValue([
+        { id: 'vscode', name: 'Visual Studio Code', macAppName: 'Visual Studio Code.app' },
+      ]),
     openProjectInIDE: vi.fn().mockResolvedValue(undefined),
   },
 }));
@@ -29,6 +33,15 @@ vi.mock('@backend/services/terminal-detector-service', () => ({
     getAvailableTerminals: vi.fn().mockReturnValue([{ id: 'terminal', name: 'Terminal' }]),
     openTerminalAtPath: vi.fn().mockResolvedValue(undefined),
   },
+}));
+
+// Stubbed so the icon routes are exercised without depending on which editors
+// happen to be installed on the machine running the tests.
+vi.mock('@backend/services/app-icon-service', () => ({
+  findAppBundle: vi.fn(async (names: string[]) =>
+    names.length > 0 ? `/Applications/${names[0]}` : null
+  ),
+  getAppIconPng: vi.fn(async () => Buffer.from('fake-png-bytes')),
 }));
 
 describe('Projects Tools API Integration Tests', () => {
@@ -264,6 +277,39 @@ describe('Projects Tools API Integration Tests', () => {
 
       expect(response.status).toBe(200);
       expect(Array.isArray((response.data as any).data)).toBe(true);
+    });
+
+    it('answers a matching If-None-Match with 304 and no body', async () => {
+      const { app } = context.get();
+
+      // The backend runs no etag middleware, so the route has to answer
+      // revalidation itself; otherwise the ETag it sends is decorative and every
+      // refetch carries the whole image back.
+      const first = await app.request('/api/projects/ides/vscode/icon');
+
+      expect(first.status).toBe(200);
+
+      const etag = first.headers.get('etag');
+      expect(etag).toBeTruthy();
+
+      const second = await app.request('/api/projects/ides/vscode/icon', {
+        headers: { 'If-None-Match': etag as string },
+      });
+
+      expect(second.status).toBe(304);
+      expect(await second.text()).toBe('');
+    });
+
+    it('returns 404 for a known IDE whose bundle is not installed', async () => {
+      const { app } = context.get();
+
+      // Distinct from an unknown id: emacs is a real definition, but nothing
+      // resolves its bundle in CI. Both answer 404 so the frontend has one
+      // fallback path, and this pins that the known-but-absent case is handled
+      // rather than erroring.
+      const response = await get(app, '/api/projects/ides/emacs/icon');
+
+      expect(response.status).toBe(404);
     });
   });
 
