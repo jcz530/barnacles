@@ -1,22 +1,12 @@
 <script setup lang="ts">
 import type { SidebarProps } from '@/components/ui/sidebar';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from '@/components/ui/sidebar';
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/ui/sidebar';
 import { RouteNames } from '@/router';
-import LogoMark from '@/components/nav/atoms/LogoMark.vue';
 import NavMain from '@/components/nav/molecules/NavMain.vue';
 import NavSecondary from '@/components/nav/molecules/NavSecondary.vue';
 import NavUser from '@/components/nav/molecules/NavUser.vue';
 import ThemeToggle from '@/components/nav/molecules/ThemeToggle.vue';
 import { useApi } from '@/composables/useApi';
-import { useConfigs } from '@/composables/useConfigs';
 import { useQueries } from '@/composables/useQueries';
 import { useQuery } from '@tanstack/vue-query';
 import { computed } from 'vue';
@@ -28,7 +18,6 @@ const props = withDefaults(defineProps<SidebarProps>(), {
   variant: 'inset',
 });
 
-const config = useConfigs();
 const { apiCall } = useApi();
 const queries = useQueries();
 const route = useRoute();
@@ -93,25 +82,7 @@ const data = computed(() => ({
 
 <template>
   <Sidebar v-bind="props">
-    <SidebarHeader>
-      <SidebarMenu>
-        <SidebarMenuItem>
-          <SidebarMenuButton class="hover:bg-sidebar" size="lg" as-child>
-            <RouterLink to="/">
-              <div
-                class="text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
-              >
-                <LogoMark :width="32" :height="32" />
-              </div>
-              <div class="ml-2 grid flex-1 text-left text-lg leading-tight text-slate-600">
-                <span class="truncate font-semibold">{{ config.appName }}</span>
-                <!-- <span class="truncate text-xs"></span> -->
-              </div>
-            </RouterLink>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-    </SidebarHeader>
+    <SidebarHeader />
     <SidebarContent>
       <NavMain :items="data.navMain" />
       <!--      <NavProjects :projects="data.projects" />-->
