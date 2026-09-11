@@ -4,6 +4,7 @@ import path from 'path';
 import { promisify } from 'util';
 import { PermissionError } from '../../shared/errors/permission-error';
 import { isWindows, isMac, commandExists, getHomeDir } from '../../shared/utils/platform';
+import { findAppBundle } from './app-icon-service';
 
 const execAsync = promisify(exec);
 
@@ -376,29 +377,16 @@ class IdeDetectorService {
    * Finds the full path to an IDE's .app bundle on macOS, searching the
    * standard install locations including ~/Applications (used by JetBrains
    * Toolbox and per-user installs). Returns the path, or null if not found.
+   *
+   * Delegates rather than keeping its own copy of the search list. The icon
+   * route resolves bundles through findAppBundle, so a second list here could
+   * drift from it -- and a directory added to only one of them would silently
+   * mean `hasAppIcon` promising an icon the route cannot produce, or denying one
+   * it could. Terminals already share the same resolver.
    */
   private async findMacAppBundle(ide: IDE): Promise<string | null> {
     const bundleNames = ide.macAppNames ?? (ide.macAppName ? [ide.macAppName] : []);
-    if (bundleNames.length === 0) return null;
-
-    const searchDirs = [
-      '/Applications',
-      path.join(getHomeDir(), 'Applications'),
-      path.join(getHomeDir(), 'Applications', 'JetBrains Toolbox'),
-    ];
-
-    for (const dir of searchDirs) {
-      for (const bundleName of bundleNames) {
-        const fullPath = path.join(dir, bundleName);
-        try {
-          await fs.access(fullPath);
-          return fullPath;
-        } catch {
-          // Not here, keep looking
-        }
-      }
-    }
-    return null;
+    return findAppBundle(bundleNames);
   }
 
   /**

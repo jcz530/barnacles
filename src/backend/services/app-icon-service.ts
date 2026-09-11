@@ -74,6 +74,13 @@ export async function findAppBundle(bundleNames: string[]): Promise<string | nul
  * directory mtime is *not* a usable signal for that: several apps update their
  * contents without touching it, so a mtime-keyed cache can pin a stale icon
  * indefinitely. Process lifetime is the honest scope; a relaunch re-reads.
+ *
+ * One consequence worth knowing rather than fixing: this lives in the main
+ * process, so reloading the window does not clear it. An editor installed while
+ * Barnacles is running is detected straight away -- detection does not consult
+ * this cache -- but its icon stays a 404 until the app is restarted, because the
+ * miss recorded before it existed is still here. The row falls back to its glyph
+ * meanwhile, which is what it showed anyway.
  */
 const cache = new Map<string, Promise<Buffer | null>>();
 
