@@ -105,6 +105,19 @@ export interface PaletteItem {
     hasIcon: boolean;
   };
   /**
+   * Render an editor's or terminal's real app icon instead of `icon`, which
+   * otherwise gives every editor the same glyph -- twelve JetBrains IDEs in one
+   * list are indistinguishable without it. Described as data for the same
+   * reason as `projectIcon`: providers stay free of .vue imports, and `icon`
+   * below is the glyph to fall back to.
+   */
+  toolIcon?: {
+    toolId: string;
+    toolName: string;
+    kind: 'ide' | 'terminal';
+    hasAppIcon: boolean;
+  };
+  /**
    * Mark the row as live -- a project with a process up, most often.
    *
    * A dot rather than words in the title: the subtitle already says "Running",

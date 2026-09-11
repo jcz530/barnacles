@@ -14,7 +14,11 @@ vi.mock('@backend/services/ide-detector-service', () => ({
     detectIDEs: vi
       .fn()
       .mockResolvedValue([{ id: 'vscode', name: 'Visual Studio Code', path: '/usr/bin/code' }]),
-    getAvailableIDEs: vi.fn().mockReturnValue([{ id: 'vscode', name: 'Visual Studio Code' }]),
+    getAvailableIDEs: vi
+      .fn()
+      .mockReturnValue([
+        { id: 'vscode', name: 'Visual Studio Code', macAppName: 'Visual Studio Code.app' },
+      ]),
     openProjectInIDE: vi.fn().mockResolvedValue(undefined),
   },
 }));
@@ -29,6 +33,15 @@ vi.mock('@backend/services/terminal-detector-service', () => ({
     getAvailableTerminals: vi.fn().mockReturnValue([{ id: 'terminal', name: 'Terminal' }]),
     openTerminalAtPath: vi.fn().mockResolvedValue(undefined),
   },
+}));
+
+// Stubbed so the icon routes are exercised without depending on which editors
+// happen to be installed on the machine running the tests.
+vi.mock('@backend/services/app-icon-service', () => ({
+  findAppBundle: vi.fn(async (names: string[]) =>
+    names.length > 0 ? `/Applications/${names[0]}` : null
+  ),
+  getAppIconPng: vi.fn(async () => Buffer.from('fake-png-bytes')),
 }));
 
 describe('Projects Tools API Integration Tests', () => {
@@ -227,6 +240,95 @@ describe('Projects Tools API Integration Tests', () => {
       });
 
       expect(response.status).toBe(404);
+    });
+  });
+  /**
+   * The icon routes read the filesystem and, on a hit, Electron's icon APIs.
+   * Covered here is what holds on any machine: an unknown tool, and a tool the
+   * mocked definitions do not list. A real extraction needs a running Electron
+   * app with the editor actually installed, which a test run cannot assume.
+   */
+  describe('GET /api/projects/ides/:ideId/icon', () => {
+    it('should return 404 for an unknown IDE', async () => {
+      const { app } = context.get();
+
+      const response = await get(app, '/api/projects/ides/not-a-real-ide/icon');
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should not be shadowed by the /ides/detected route', async () => {
+      const { app } = context.get();
+
+      // Both live under /ides. If the parameterised icon route matched first,
+      // this would try to serve an icon for an IDE named "detected".
+      const response = await get(app, '/api/projects/ides/detected');
+
+      expect([200, 500]).toContain(response.status);
+      if (response.status === 200) {
+        expect(Array.isArray((response.data as any).data)).toBe(true);
+      }
+    });
+
+    it('should not be shadowed by the /ides/available route', async () => {
+      const { app } = context.get();
+
+      const response = await get(app, '/api/projects/ides/available');
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray((response.data as any).data)).toBe(true);
+    });
+
+    it('answers a matching If-None-Match with 304 and no body', async () => {
+      const { app } = context.get();
+
+      // The backend runs no etag middleware, so the route has to answer
+      // revalidation itself; otherwise the ETag it sends is decorative and every
+      // refetch carries the whole image back.
+      const first = await app.request('/api/projects/ides/vscode/icon');
+
+      expect(first.status).toBe(200);
+
+      const etag = first.headers.get('etag');
+      expect(etag).toBeTruthy();
+
+      const second = await app.request('/api/projects/ides/vscode/icon', {
+        headers: { 'If-None-Match': etag as string },
+      });
+
+      expect(second.status).toBe(304);
+      expect(await second.text()).toBe('');
+    });
+
+    it('returns 404 for a known IDE whose bundle is not installed', async () => {
+      const { app } = context.get();
+
+      // Distinct from an unknown id: emacs is a real definition, but nothing
+      // resolves its bundle in CI. Both answer 404 so the frontend has one
+      // fallback path, and this pins that the known-but-absent case is handled
+      // rather than erroring.
+      const response = await get(app, '/api/projects/ides/emacs/icon');
+
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('GET /api/projects/terminals/:terminalId/icon', () => {
+    it('should return 404 for an unknown terminal', async () => {
+      const { app } = context.get();
+
+      const response = await get(app, '/api/projects/terminals/not-a-real-terminal/icon');
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should not be shadowed by the /terminals/available route', async () => {
+      const { app } = context.get();
+
+      const response = await get(app, '/api/projects/terminals/available');
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray((response.data as any).data)).toBe(true);
     });
   });
 });

@@ -2,6 +2,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { PermissionError } from '../../shared/errors/permission-error';
 import { isWindows, isMac, isLinux, commandExists } from '../../shared/utils/platform';
+import { findAppBundle } from './app-icon-service';
 
 const execAsync = promisify(exec);
 
@@ -12,12 +13,18 @@ export interface Terminal {
   command: string;
   icon?: string;
   color?: string;
+  /** Name of the .app bundle on macOS, used to find the app's real icon. */
+  macAppName?: string;
+  /** Alternate .app bundle names, for terminals that ship under several. */
+  macAppNames?: string[];
   platform: 'darwin' | 'win32' | 'linux' | 'all';
 }
 
 export interface DetectedTerminal extends Terminal {
   installed: boolean;
   version?: string;
+  /** Whether a real app icon can be served for this terminal. */
+  hasAppIcon?: boolean;
 }
 
 // macOS terminal definitions
@@ -28,6 +35,7 @@ const MAC_TERMINALS: Terminal[] = [
     executable: 'open',
     command: 'open -a iTerm',
     icon: 'iterm',
+    macAppName: 'iTerm.app',
     color: '#000000',
     platform: 'darwin',
   },
@@ -37,6 +45,7 @@ const MAC_TERMINALS: Terminal[] = [
     executable: 'open',
     command: 'open -a Terminal',
     icon: 'terminal',
+    macAppName: 'Terminal.app',
     color: '#000000',
     platform: 'darwin',
   },
@@ -46,6 +55,7 @@ const MAC_TERMINALS: Terminal[] = [
     executable: 'open',
     command: 'open -a Warp',
     icon: 'warp',
+    macAppName: 'Warp.app',
     color: '#00D9FF',
     platform: 'darwin',
   },
@@ -55,6 +65,7 @@ const MAC_TERMINALS: Terminal[] = [
     executable: 'open',
     command: 'open -a Alacritty',
     icon: 'alacritty',
+    macAppName: 'Alacritty.app',
     color: '#F46D01',
     platform: 'darwin',
   },
@@ -64,6 +75,7 @@ const MAC_TERMINALS: Terminal[] = [
     executable: 'open',
     command: 'open -a kitty',
     icon: 'kitty',
+    macAppName: 'kitty.app',
     color: '#000000',
     platform: 'darwin',
   },
@@ -73,6 +85,7 @@ const MAC_TERMINALS: Terminal[] = [
     executable: 'open',
     command: 'open -a Hyper',
     icon: 'hyper',
+    macAppName: 'Hyper.app',
     color: '#000000',
     platform: 'darwin',
   },
@@ -82,6 +95,7 @@ const MAC_TERMINALS: Terminal[] = [
     executable: 'open',
     command: 'open -a WezTerm',
     icon: 'wezterm',
+    macAppName: 'WezTerm.app',
     color: '#4E49EE',
     platform: 'darwin',
   },
@@ -91,6 +105,7 @@ const MAC_TERMINALS: Terminal[] = [
     executable: 'open',
     command: 'open -a Ghostty',
     icon: 'ghostty',
+    macAppName: 'Ghostty.app',
     color: '#FF6B00',
     platform: 'darwin',
   },
@@ -207,10 +222,18 @@ class TerminalDetectorService {
       const isInstalled = await this.checkIfInstalled(terminal);
       const version = isInstalled ? await this.getVersion(terminal) : undefined;
 
+      // Resolved against the same search paths the icon route uses, so the flag
+      // cannot promise an icon the route then fails to produce.
+      const hasAppIcon =
+        isInstalled && terminal.macAppName
+          ? (await findAppBundle([terminal.macAppName])) !== null
+          : false;
+
       detectedTerminals.push({
         ...terminal,
         installed: isInstalled,
         version,
+        hasAppIcon,
       });
     }
 

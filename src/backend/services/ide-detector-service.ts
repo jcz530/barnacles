@@ -4,6 +4,7 @@ import path from 'path';
 import { promisify } from 'util';
 import { PermissionError } from '../../shared/errors/permission-error';
 import { isWindows, isMac, commandExists, getHomeDir } from '../../shared/utils/platform';
+import { findAppBundle } from './app-icon-service';
 
 const execAsync = promisify(exec);
 
@@ -23,6 +24,8 @@ export interface IDE {
 export interface DetectedIDE extends IDE {
   installed: boolean;
   version?: string;
+  /** Whether a real app icon can be served for this IDE. */
+  hasAppIcon?: boolean;
 }
 
 const IDE_DEFINITIONS: IDE[] = [
@@ -232,6 +235,12 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'subl',
     icon: 'sublime',
     color: '#FF9800',
+    // `subl` is only a launcher that forks a window and returns, so without
+    // this Sublime was the one windowed editor detected purely through PATH --
+    // and so the one drawing a colour swatch where every other windowed editor
+    // draws its own icon.
+    macAppName: 'Sublime Text.app',
+    macAppNames: ['Sublime Text.app', 'Sublime Text 4.app', 'Sublime Text 3.app'],
     winPaths: ['Sublime Text\\sublime_text.exe', 'Sublime Text 3\\sublime_text.exe'],
   },
   {
@@ -284,24 +293,11 @@ const IDE_DEFINITIONS: IDE[] = [
     macAppName: 'Void.app',
     winPaths: ['Void\\Void.exe', 'Programs\\Void\\Void.exe'],
   },
-  {
-    id: 'vim',
-    name: 'Vim',
-    executable: 'vim',
-    command: 'vim',
-    icon: 'vim',
-    color: '#019733',
-    winPaths: ['Vim\\vim*\\vim.exe'],
-  },
-  {
-    id: 'nvim',
-    name: 'Neovim',
-    executable: 'nvim',
-    command: 'nvim',
-    icon: 'neovim',
-    color: '#57A143',
-    winPaths: ['Neovim\\bin\\nvim.exe'],
-  },
+  // Terminal editors (vim, nvim) are deliberately absent: launching one means
+  // hosting it in a terminal, and the IDE path has none to give it. Run
+  // headless from the main process they just fail, so listing them offered a
+  // menu entry that could never work. Emacs stays because it ships a real GUI
+  // bundle, which `open -a` launches like any other app.
   {
     id: 'emacs',
     name: 'Emacs',
@@ -309,6 +305,13 @@ const IDE_DEFINITIONS: IDE[] = [
     command: 'emacs',
     icon: 'emacs',
     color: '#7F5AB6',
+    macAppName: 'Emacs.app',
+    // The bundle or nothing, the same rule Xcode uses. A terminal-only emacs on
+    // PATH would otherwise be offered here and then hang the request: the launch
+    // path runs the command with exec and no TTY, which for a terminal editor
+    // never returns. Only consulted under isMac, so a Linux emacs -- where
+    // terminal-only is the ordinary install -- still resolves through PATH.
+    macOnly: true,
     winPaths: ['Emacs\\*\\bin\\emacs.exe'],
   },
 ];
@@ -324,10 +327,16 @@ class IdeDetectorService {
       const isInstalled = await this.checkIfInstalled(ide);
       const version = isInstalled ? await this.getVersion(ide) : undefined;
 
+      // Only a resolvable .app bundle yields an icon. Checked here rather than
+      // guessed from `macAppName` so a CLI-only editor, or one found on PATH
+      // without a bundle, is reported honestly and the UI keeps its glyph.
+      const hasAppIcon = isInstalled ? (await this.findMacAppBundle(ide)) !== null : false;
+
       detectedIDEs.push({
         ...ide,
         installed: isInstalled,
         version,
+        hasAppIcon,
       });
     }
 
@@ -368,29 +377,16 @@ class IdeDetectorService {
    * Finds the full path to an IDE's .app bundle on macOS, searching the
    * standard install locations including ~/Applications (used by JetBrains
    * Toolbox and per-user installs). Returns the path, or null if not found.
+   *
+   * Delegates rather than keeping its own copy of the search list. The icon
+   * route resolves bundles through findAppBundle, so a second list here could
+   * drift from it -- and a directory added to only one of them would silently
+   * mean `hasAppIcon` promising an icon the route cannot produce, or denying one
+   * it could. Terminals already share the same resolver.
    */
   private async findMacAppBundle(ide: IDE): Promise<string | null> {
     const bundleNames = ide.macAppNames ?? (ide.macAppName ? [ide.macAppName] : []);
-    if (bundleNames.length === 0) return null;
-
-    const searchDirs = [
-      '/Applications',
-      path.join(getHomeDir(), 'Applications'),
-      path.join(getHomeDir(), 'Applications', 'JetBrains Toolbox'),
-    ];
-
-    for (const dir of searchDirs) {
-      for (const bundleName of bundleNames) {
-        const fullPath = path.join(dir, bundleName);
-        try {
-          await fs.access(fullPath);
-          return fullPath;
-        } catch {
-          // Not here, keep looking
-        }
-      }
-    }
-    return null;
+    return findAppBundle(bundleNames);
   }
 
   /**

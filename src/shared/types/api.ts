@@ -53,6 +53,12 @@ export interface IDE {
 export interface DetectedIDE extends IDE {
   installed: boolean;
   version?: string;
+  /**
+   * Whether this tool has a real app icon we can serve. False for CLI-only
+   * editors (vim, emacs) and everywhere outside macOS, which both render the
+   * generic glyph instead.
+   */
+  hasAppIcon?: boolean;
 }
 
 export interface Terminal {
@@ -67,6 +73,8 @@ export interface Terminal {
 export interface DetectedTerminal extends Terminal {
   installed: boolean;
   version?: string;
+  /** Whether this tool has a real app icon we can serve. See DetectedIDE. */
+  hasAppIcon?: boolean;
 }
 
 export interface TerminalInstance {

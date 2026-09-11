@@ -277,6 +277,7 @@ const projectActions = (
     setDefault: toolId => deps.setPreferredIde(project.id, toolId),
     projectName: project.name,
     idPrefix: `project.open-ide:${project.id}`,
+    kind: 'ide' as const,
     toolNoun: 'editors',
     keywords: ['ide', 'editor', 'code'],
   }),
@@ -291,6 +292,7 @@ const projectActions = (
     setDefault: toolId => deps.setPreferredTerminal(project.id, toolId),
     projectName: project.name,
     idPrefix: `project.open-terminal:${project.id}`,
+    kind: 'terminal' as const,
     toolNoun: 'terminals',
     keywords: ['terminal', 'shell', 'console'],
   }),
@@ -453,7 +455,9 @@ const remoteAction = (project: ProjectWithDetails, deps: ProjectCommandDeps): Co
   ];
 };
 
-interface ToolActionSpec<T extends { id: string; name: string }> {
+type ToolLike = { id: string; name: string; hasAppIcon?: boolean };
+
+interface ToolActionSpec<T extends ToolLike> {
   id: string;
   verb: string;
   fallbackTitle: string;
@@ -464,6 +468,8 @@ interface ToolActionSpec<T extends { id: string; name: string }> {
   setDefault: (toolId: string) => void | Promise<void>;
   projectName: string;
   idPrefix: string;
+  /** Which icon route serves this tool's real app icon. */
+  kind: 'ide' | 'terminal';
   /** Plural, for the "none detected" subtitle: "editors", "terminals". */
   toolNoun: string;
   /**
@@ -484,7 +490,7 @@ interface ToolActionSpec<T extends { id: string; name: string }> {
  * the picker instead of guessing -- the same thing the project page's split
  * button does when it has no preference to act on.
  */
-const toolAction = <T extends { id: string; name: string }>(spec: ToolActionSpec<T>): Command => {
+const toolAction = <T extends ToolLike>(spec: ToolActionSpec<T>): Command => {
   // Nothing detected at all. Offer the way to fix that rather than a row whose
   // list would be empty -- an empty level is a dead end you have to back out
   // of, and pushing one is refused, so the row would simply not respond.
@@ -506,6 +512,18 @@ const toolAction = <T extends { id: string; name: string }>(spec: ToolActionSpec
     title: spec.preferred ? `${spec.verb} ${spec.preferred.name}` : spec.fallbackTitle,
     group: 'projects' as const,
     icon: spec.icon,
+    // Only once a tool has resolved: with no preference the row names a kind
+    // of tool rather than one app, and the generic glyph is the honest image.
+    ...(spec.preferred
+      ? {
+          toolIcon: {
+            toolId: spec.preferred.id,
+            toolName: spec.preferred.name,
+            kind: spec.kind,
+            hasAppIcon: spec.preferred.hasAppIcon ?? false,
+          },
+        }
+      : {}),
     // The kind of tool, plus the one that resolved: "ide" finds this row even
     // when it reads "Open in VS Code", and so does "vs code".
     keywords: [...spec.keywords, spec.preferred?.name.toLowerCase() ?? ''].filter(Boolean),
@@ -532,14 +550,18 @@ const toolAction = <T extends { id: string; name: string }>(spec: ToolActionSpec
  * makes a palette untrustworthy. Setting a default is its own action, in its
  * own group so it reads as a separate block.
  */
-const toolPickerActions = <T extends { id: string; name: string }>(
-  spec: ToolActionSpec<T>
-): Command[] => [
+const toolPickerActions = <T extends ToolLike>(spec: ToolActionSpec<T>): Command[] => [
   ...spec.installed.map(tool => ({
     id: `${spec.idPrefix}.pick:${tool.id}`,
     title: tool.name,
     group: 'projects' as const,
     icon: spec.icon,
+    toolIcon: {
+      toolId: tool.id,
+      toolName: tool.name,
+      kind: spec.kind,
+      hasAppIcon: tool.hasAppIcon ?? false,
+    },
     primaryActionLabel: `${spec.verb} ${tool.name}`,
     run: async (ctx: CommandContext) => {
       await spec.open(tool.id);
