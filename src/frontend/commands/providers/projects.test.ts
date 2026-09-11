@@ -335,6 +335,23 @@ describe('opening a project’s tools', () => {
     expect(picker.find(a => a.id.includes('.set-default:'))?.group).toBe('app');
   });
 
+  it('heads each block by what it lists rather than where the rows came from', () => {
+    // The group has to stay 'projects' to rank and cap with the rest of the
+    // project's rows, so the heading is the only part that can say "IDEs".
+    const [command] = projectCommands([project()], deps());
+    const picker = findAction(command, 'open-ide')?.actions?.(ctx()) ?? [];
+
+    expect(picker.find(a => a.id.includes('.pick:'))?.groupLabel).toBe('IDEs');
+    expect(picker.find(a => a.id.includes('.set-default:'))?.groupLabel).toBe('Set Default');
+  });
+
+  it('heads the terminal picker with its own kind of tool', () => {
+    const [command] = projectCommands([project()], deps());
+    const picker = findAction(command, 'open-terminal')?.actions?.(ctx()) ?? [];
+
+    expect(picker.find(a => a.id.includes('.pick:'))?.groupLabel).toBe('Terminals');
+  });
+
   it('falls through when the project prefers an uninstalled editor', () => {
     const [command] = projectCommands(
       [project({ preferredIde: 'sublime' })],

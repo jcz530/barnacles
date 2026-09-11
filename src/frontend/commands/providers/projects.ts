@@ -278,6 +278,10 @@ const projectActions = (
     projectName: project.name,
     idPrefix: `project.open-ide:${project.id}`,
     toolNoun: 'editors',
+    // "IDEs" rather than "Editors", which is the word the subtitle above uses:
+    // the list runs from Vim to Xcode, and it matches the "Open in IDE" title
+    // this row already falls back to when no preference has resolved.
+    pickerLabel: 'IDEs',
     keywords: ['ide', 'editor', 'code'],
   }),
   toolAction({
@@ -292,6 +296,7 @@ const projectActions = (
     projectName: project.name,
     idPrefix: `project.open-terminal:${project.id}`,
     toolNoun: 'terminals',
+    pickerLabel: 'Terminals',
     keywords: ['terminal', 'shell', 'console'],
   }),
   {
@@ -467,6 +472,20 @@ interface ToolActionSpec<T extends { id: string; name: string }> {
   /** Plural, for the "none detected" subtitle: "editors", "terminals". */
   toolNoun: string;
   /**
+   * Heading over the picked-tool rows: "IDEs", "Terminals".
+   *
+   * The group's own label cannot say this. These rows stay in `projects` so they
+   * rank and cap with everything else the project owns, but two levels down a
+   * list of twelve editors under "Projects" names where the rows came from
+   * rather than what they are -- and the breadcrumb has already said which
+   * project we are in.
+   *
+   * Its own field rather than derived from `toolNoun`, which is a fragment of a
+   * sentence ("No editors detected") where this is a heading: they read
+   * differently and have no reason to stay in step.
+   */
+  pickerLabel: string;
+  /**
    * Words for the kind of tool, since the title stops containing them.
    *
    * Once a preferred tool resolves, this row reads "Open in VS Code" -- so
@@ -539,6 +558,7 @@ const toolPickerActions = <T extends { id: string; name: string }>(
     id: `${spec.idPrefix}.pick:${tool.id}`,
     title: tool.name,
     group: 'projects' as const,
+    groupLabel: spec.pickerLabel,
     icon: spec.icon,
     primaryActionLabel: `${spec.verb} ${tool.name}`,
     run: async (ctx: CommandContext) => {
@@ -550,6 +570,9 @@ const toolPickerActions = <T extends { id: string; name: string }>(
     id: `${spec.idPrefix}.set-default:${tool.id}`,
     title: `Always use ${tool.name} for ${spec.projectName}`,
     group: 'app' as const,
+    // Names what the block does rather than which layer owns it, matching the
+    // verb these rows already carry into the footer.
+    groupLabel: 'Set Default',
     icon: Star,
     primaryActionLabel: 'Set Default',
     run: async (ctx: CommandContext) => {
