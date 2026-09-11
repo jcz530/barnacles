@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import LogoMark from '@/components/nav/atoms/LogoMark.vue';
+import { useConfigs } from '@/composables/useConfigs';
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -7,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import PaletteSearchButton from './PaletteSearchButton.vue';
 
 const router = useRouter();
+const config = useConfigs();
 
 // Track navigation history manually
 const historyStack = ref<string[]>([router.currentRoute.value.fullPath]);
@@ -68,8 +71,13 @@ updateNavigationButtons();
   <div
     class="title-bar bg-sidebar fixed top-0 right-0 left-0 z-[1000] flex h-10 items-center"
     :class="{ 'pl-20': isMac, 'pl-2': !isMac }"
+    :style="{ '--controls-end': isMac ? '22rem' : '17.5rem' }"
   >
-    <div class="ml-12 flex gap-4">
+    <div class="ml- flex items-center gap-4">
+      <RouterLink to="/" class="no-drag mx-4 flex items-center gap-2 text-slate-600">
+        <LogoMark :width="20" :height="20" />
+        <span class="truncate text-sm font-semibold">{{ config.appName }}</span>
+      </RouterLink>
       <SidebarTrigger />
       <!-- Back/Forward Navigation Buttons -->
       <div class="relative items-center gap-1 px-2">
@@ -130,15 +138,25 @@ updateNavigationButtons();
  * Centred on the viewport's full width, scrollbar included, so that locking
  * scroll for a dialog -- which removes the scrollbar and widens the layout
  * viewport -- moves nothing.
+ *
+ * Centring is expressed as an explicit left edge (50vw minus half the button's
+ * 16rem width) rather than a -50% translate, so that it can be clamped: being
+ * out of flow, the button is invisible to the controls on its left and would
+ * otherwise slide straight over the back/forward arrows as the window narrows.
+ * max() holds it clear of them, so it sits centred while there is room and
+ * saddles up beside them once there is not. The floor tracks where those
+ * controls actually end, which differs by platform: the bar reserves 80px for
+ * the traffic lights on macOS and 8px elsewhere.
  */
 .palette-search {
   top: 50%;
-  left: 50vw;
-  transform: translate(-50%, -50%);
+  left: max(var(--controls-end), 50vw - 8rem);
+  transform: translateY(-50%);
 }
 
 /* Make buttons clickable in drag region */
-button {
+button,
+.no-drag {
   -webkit-app-region: no-drag;
 }
 </style>
