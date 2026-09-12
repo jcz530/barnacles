@@ -81,6 +81,23 @@ Launch what you need instantly:
 ![Projects list in card view with technology badges](assets/images/screenshots/barnacles-screenshot-projects-cards.png)
 <!-- /screenshot:projects-cards -->
 
+### ⌨️ Command Palette
+
+Press <kbd>⌘K</kbd> (<kbd>Ctrl+K</kbd> on Windows and Linux) to search every project, port, and command from one input:
+
+- Jump to any project, or drill into its actions — open in your IDE or terminal, reveal in Finder, copy the path, view it on GitHub
+- Start, stop, and restart a project's processes, or run any script from its `package.json`
+- Open a running project's `localhost` URL, or kill whatever is holding a port
+- Navigate anywhere in the app, switch between light and dark, or kick off a scan
+
+Projects you're already running float to the top, so the thing you want is usually the first row.
+
+**Optionally, from anywhere on your computer.** Turn on the global shortcut and the palette opens over whatever app you're in — no switching to Barnacles first. Kill a stuck port from your editor, restart a dev server from your browser, and carry on. It's off by default; enable it under **Settings → Keyboard Shortcuts → "Global command palette shortcut"** and record whatever combination you like. If Barnacles is already the app you're in, the same shortcut just opens the palette in place.
+
+<!-- screenshot:command-palette -->
+![Barnacles command palette open over the projects list, showing grouped commands](assets/images/screenshots/barnacles-screenshot-command-palette.png)
+<!-- /screenshot:command-palette -->
+
 ### 💻 Command Line Interface
 
 Prefer the terminal? Barnacles includes a full-featured CLI:

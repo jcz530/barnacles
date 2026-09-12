@@ -90,6 +90,9 @@ export class ProcessManagerService {
   /** Populated only in demo mode, by loadDemoProcesses(). */
   private demoProcesses: ProjectProcessStatus[] = [];
 
+  /** Scrollback for the demo processes, resolved by loadDemoProcesses(). */
+  private demoProcessOutput: ((processId: string) => string[] | null) | null = null;
+
   /**
    * Load the mocked demo processes.
    *
@@ -98,9 +101,10 @@ export class ProcessManagerService {
    * packaged build loads.
    */
   async loadDemoProcesses(): Promise<void> {
-    const { getDemoRunningProcesses } =
+    const { getDemoRunningProcesses, getDemoProcessOutput } =
       await import('../../shared/database/demo/data/running-processes');
     this.demoProcesses = getDemoRunningProcesses();
+    this.demoProcessOutput = getDemoProcessOutput;
   }
 
   /**
@@ -836,6 +840,20 @@ export class ProcessManagerService {
   ): { unsubscribe: () => void; snapshot: string[]; seq: number } | null {
     const found = this.findRunning(processId);
     if (!found) {
+      // getProcessStatus() reports the demo fixtures as running, so the UI
+      // lists and auto-selects them, but they have no PTY to attach to. Without
+      // this the socket is refused and the pane renders "[Process not found]".
+      // Replay seeded scrollback instead; there is no live stream to follow.
+      const demoSnapshot = this.getMockedProcesses().some(status =>
+        status.processes.some(process => process.processId === processId)
+      )
+        ? this.demoProcessOutput?.(processId)
+        : null;
+
+      if (demoSnapshot) {
+        return { snapshot: [...demoSnapshot], seq: demoSnapshot.length, unsubscribe: () => {} };
+      }
+
       return null;
     }
 

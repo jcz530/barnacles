@@ -70,7 +70,7 @@ export const SHOTS = [
     settleMs: 800,
     targets: {
       readme: { marker: 'stats' },
-      marketing: { stepId: 'new', file: 'stats' },
+      marketing: { stepId: 5, file: 'stats' },
     },
   },
   {
@@ -129,6 +129,23 @@ export const SHOTS = [
   {
     name: 'project-files',
     route: `/projects/${FEATURED}/files`,
+    // Click a file so the preview pane renders content. Without this the right
+    // half of the frame is the "Select a file to view its contents" empty
+    // state, which contradicts the description below.
+    //
+    // FileTreeItem stamps each row with data-tree-item="<path>", which is a far
+    // steadier hook than matching on row text.
+    afterLoad: `(async () => {
+      const row = document.querySelector('[data-tree-item$="README.md"]');
+      if (!row) throw new Error('file tree row for README.md not found');
+      row.click();
+      await new Promise(resolve => setTimeout(resolve, 700));
+      if (document.body.textContent.includes('Select a file to view its contents')) {
+        throw new Error('file preview still shows the empty state after clicking');
+      }
+      return true;
+    })()`,
+    settleMs: 900,
     title: 'Browse Project Files',
     description: 'Explore a project’s file tree and read any file without leaving Barnacles.',
     alt: 'Project file browser with a file tree',
@@ -177,6 +194,46 @@ export const SHOTS = [
   // directory of every listening process — which puts the capturing machine's
   // username and project paths into a published screenshot. Demo data cannot
   // mask it, because the page reads the process table rather than the database.
+  {
+    // The in-app palette is an overlay, not a route, so it is opened by
+    // dispatching the same CommandOrControl+K keydown useHotkeys listens for.
+    // Captured over /projects so it reads as an overlay on a populated app
+    // rather than floating on an empty page.
+    //
+    // The registry's queries (projects, ports, process status) only start once
+    // the palette is open — after waitForData() has already declared the page
+    // idle — so this needs a settle long enough to cover them.
+    name: 'command-palette',
+    route: '/projects',
+    storage: projectsView('card'),
+    afterLoad: `(async () => {
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true })
+      );
+      await new Promise(resolve => setTimeout(resolve, 600));
+      return Boolean(document.querySelector('[role="dialog"]'));
+    })()`,
+    settleMs: 900,
+    title: 'Everything, One Keystroke Away',
+    description:
+      'Press ⌘K to jump to any project, run a script, kill a port, or switch themes without touching the mouse. Turn on the global shortcut and the same palette opens from any app, without switching to Barnacles first.',
+    alt: 'Barnacles command palette open over the projects list, showing grouped commands',
+    targets: {
+      readme: { marker: 'command-palette' },
+      marketing: {
+        stepId: 'new',
+        file: 'command-palette',
+        icon: 'material-symbols:keyboard-command-key',
+        color: 'blue',
+        features: [
+          'Open it anywhere with ⌘K, or from any app with the global shortcut',
+          'Jump to a project, then drill into its own actions',
+          'Run a script, restart a process, or kill whatever holds a port',
+          'Projects you are already running rank first',
+        ],
+      },
+    },
+  },
   {
     name: 'settings',
     route: '/settings',
@@ -232,7 +289,7 @@ export const SHOTS = [
     alt: 'MCP page showing usage stats and a tool catalog with call counts',
     targets: {
       readme: { marker: 'mcp' },
-      marketing: { stepId: 'new', file: 'mcp' },
+      marketing: { stepId: 6, file: 'mcp' },
     },
   },
   {
@@ -278,7 +335,7 @@ export const SHOTS = [
     alt: 'Barnacles CLI listing projects in a terminal',
     targets: {
       readme: { marker: 'cli' },
-      marketing: { stepId: 5, file: 'cli' },
+      marketing: { stepId: 7, file: 'cli' },
     },
   },
 ];
