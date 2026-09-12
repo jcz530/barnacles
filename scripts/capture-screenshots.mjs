@@ -231,6 +231,14 @@ async function capture(win, cornerWin, shot, theme, outputFileName) {
   await seedUiState(win, state);
   await win.loadURL(target);
 
+  // Shots differ only by the URL hash, which Electron treats as an in-document
+  // navigation: the bundle is never re-evaluated, so module-level state outlives
+  // the "navigation". An overlay left open by one shot (the command palette) was
+  // still open in every shot captured after it. Reload so each shot starts from
+  // a freshly booted app, the same guarantee seedUiState gives for localStorage.
+  await win.webContents.reload();
+  await new Promise(resolve => win.webContents.once('did-finish-load', resolve));
+
   // A shot whose queries never settle would otherwise be captured mid-skeleton
   // and published as a loading spinner.
   if (!(await waitForData(win))) {
