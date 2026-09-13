@@ -18,10 +18,13 @@ import SearchInput from '@/components/molecules/SearchInput.vue';
 import { SETTINGS_SECTIONS } from '@/constants/settings';
 import { useSettingsSearch } from '@/composables/useSettingsSearch';
 import { useSettingsNav } from '@/composables/useSettingsNav';
+import { useRouter } from 'vue-router';
 
 const props = withDefaults(defineProps<SidebarProps>(), {
   variant: 'inset',
 });
+
+const router = useRouter();
 
 const { navigate, activeSectionId } = useSettingsNav();
 
@@ -45,16 +48,16 @@ onMounted(() => {
  */
 
 /**
- * Escape clears the filter, and clears the field a second time by blurring it.
- * The two-step matches how a search field behaves elsewhere: the first press
- * undoes the search, the second gives up the field.
+ * Escape backs out one level at a time: first it undoes the search, then it
+ * leaves settings altogether. Nothing to clear means nothing to stay for, so
+ * the second press is the same "give up and go back" the Back to app link is.
  */
-function onEscape(event: KeyboardEvent) {
+function onEscape() {
   if (query.value !== '') {
     clear();
     return;
   }
-  (event.target as HTMLElement | null)?.blur();
+  void router.push('/');
 }
 
 /** Enter jumps to the best match and highlights it, reusing the deep-link ring. */
@@ -89,7 +92,19 @@ function onArrow(direction: 1 | -1) {
 </script>
 
 <template>
-  <Sidebar v-bind="props">
+  <!--
+    Arrows and Escape are bound on the rail rather than on the search field.
+    Clicking a heading moves focus to that link, and handlers living on the
+    input would stop firing the moment the mouse was used -- so picking a
+    section by mouse would end keyboard navigation until you clicked back into
+    the field. On the root they work wherever focus landed inside the sidebar.
+  -->
+  <Sidebar
+    v-bind="props"
+    @keydown.esc.prevent="onEscape"
+    @keydown.down.prevent="onArrow(1)"
+    @keydown.up.prevent="onArrow(-1)"
+  >
     <SidebarHeader>
       <!--
         Leaving settings is a destination, not a nav item, so it sits above the
@@ -112,10 +127,7 @@ function onArrow(direction: 1 | -1) {
           ref="searchRef"
           v-model="query"
           placeholder="Search settings…"
-          @keydown.esc.prevent="onEscape"
           @keydown.enter.prevent="onEnter"
-          @keydown.down.prevent="onArrow(1)"
-          @keydown.up.prevent="onArrow(-1)"
         />
       </div>
     </SidebarHeader>
