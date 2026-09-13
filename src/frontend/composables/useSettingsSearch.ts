@@ -41,6 +41,16 @@ const visibleSections = computed(() =>
 
 const hasResults = computed(() => visibleSections.value.length > 0);
 
+/**
+ * The best match for the current query, for Enter-to-jump.
+ *
+ * Taken from the Fuse results rather than the first row of `visibleSections`:
+ * those are rebuilt in registry order, which would send Enter to whichever
+ * match happens to sit highest on the page instead of the one the ranking
+ * considers closest to what was typed.
+ */
+const firstMatch = computed(() => (isSearching.value ? (filteredItems.value[0] ?? null) : null));
+
 export function useSettingsSearch() {
   function clear() {
     query.value = '';
@@ -51,6 +61,7 @@ export function useSettingsSearch() {
     isSearching,
     visibleSections,
     hasResults,
+    firstMatch,
     clear,
   };
 }

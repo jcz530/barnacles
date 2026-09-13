@@ -25,7 +25,7 @@ const props = withDefaults(defineProps<SidebarProps>(), {
 
 const { navigate, activeSectionId } = useSettingsNav();
 
-const { query, isSearching, visibleSections, hasResults } = useSettingsSearch();
+const { query, isSearching, visibleSections, hasResults, firstMatch, clear } = useSettingsSearch();
 
 // Sections carry their own settings while searching, so the sidebar shows the
 // same matches the page does rather than a second opinion about the query.
@@ -36,6 +36,56 @@ const searchRef = ref<InstanceType<typeof SearchInput> | null>(null);
 onMounted(() => {
   searchRef.value?.focus();
 });
+
+/*
+ * Keys are handled here rather than inside SearchInput: that molecule is shared
+ * with the projects list and the file tree, which have their own ideas about
+ * what Enter and the arrows mean. Scoping the bindings to this field keeps the
+ * behaviour local to settings.
+ */
+
+/**
+ * Escape clears the filter, and clears the field a second time by blurring it.
+ * The two-step matches how a search field behaves elsewhere: the first press
+ * undoes the search, the second gives up the field.
+ */
+function onEscape(event: KeyboardEvent) {
+  if (query.value !== '') {
+    clear();
+    return;
+  }
+  (event.target as HTMLElement | null)?.blur();
+}
+
+/** Enter jumps to the best match and highlights it, reusing the deep-link ring. */
+function onEnter() {
+  const match = firstMatch.value;
+  if (!match) return;
+  navigate(match.sectionId, match.key);
+}
+
+/**
+ * Up/Down step between section headings.
+ *
+ * While a search is active the visible sections are the filtered ones, so the
+ * arrows walk what is actually on screen rather than the full registry.
+ */
+function onArrow(direction: 1 | -1) {
+  const list = isSearching.value ? visibleSections.value : SETTINGS_SECTIONS;
+  if (list.length === 0) return;
+
+  const index = list.findIndex(section => section.id === activeSectionId.value);
+  // No active section yet (nothing scrolled): Down starts at the top, Up at the
+  // bottom, so the first press always lands somewhere sensible.
+  const next =
+    index === -1
+      ? direction === 1
+        ? 0
+        : list.length - 1
+      : Math.min(Math.max(index + direction, 0), list.length - 1);
+
+  navigate(list[next].id);
+}
 </script>
 
 <template>
@@ -58,7 +108,15 @@ onMounted(() => {
       </SidebarMenu>
 
       <div class="px-1 pb-1">
-        <SearchInput ref="searchRef" v-model="query" placeholder="Search settings…" />
+        <SearchInput
+          ref="searchRef"
+          v-model="query"
+          placeholder="Search settings…"
+          @keydown.esc.prevent="onEscape"
+          @keydown.enter.prevent="onEnter"
+          @keydown.down.prevent="onArrow(1)"
+          @keydown.up.prevent="onArrow(-1)"
+        />
       </div>
     </SidebarHeader>
 
@@ -69,9 +127,14 @@ onMounted(() => {
             v-for="section in isSearching ? visibleSections : sections"
             :key="section.id"
           >
+            <!--
+              The heading highlights during a search as well as outside one: the
+              arrow keys walk the filtered sections, and a selection you cannot
+              see is a selection you cannot use.
+            -->
             <SidebarMenuButton
               as-child
-              :is-active="!isSearching && activeSectionId === section.id"
+              :is-active="activeSectionId === section.id"
               :tooltip="section.title"
             >
               <a :href="`#${section.id}`" @click.prevent="navigate(section.id)">
