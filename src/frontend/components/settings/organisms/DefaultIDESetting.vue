@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
 import Button from '../../ui/button/Button.vue';
+import SettingRow from '../molecules/SettingRow.vue';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,12 +62,11 @@ const selectedIde = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <label for="defaultIde" class="text-sm font-medium">Default IDE</label>
-    <p class="text-muted-foreground text-sm">
-      Choose which IDE to use when opening projects. This will be used as the default when clicking
-      "Open in IDE".
-    </p>
+  <SettingRow
+    label-for="defaultIde"
+    label="Default IDE"
+    description='Choose which IDE to use when opening projects. This will be used as the default when clicking "Open in IDE".'
+  >
     <div class="flex items-center gap-4">
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
@@ -111,8 +111,8 @@ const selectedIde = computed(() => {
       </Button>
       <span v-if="isSaving" class="text-muted-foreground text-sm">Saving...</span>
     </div>
-    <p class="text-muted-foreground text-xs">
+    <p class="text-muted-foreground mt-2 text-xs">
       Default: None (Ask each time) • Current: {{ selectedIde ? selectedIde.name : 'None' }}
     </p>
-  </div>
+  </SettingRow>
 </template>

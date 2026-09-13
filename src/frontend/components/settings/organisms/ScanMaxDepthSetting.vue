@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
 import Button from '../../ui/button/Button.vue';
 import Input from '../../ui/input/Input.vue';
+import SettingRow from '../molecules/SettingRow.vue';
 
 const { useSettingsQuery, useUpdateSettingMutation } = useQueries();
 
@@ -93,12 +94,11 @@ const isSaving = computed(() => updateSettingMutation.isPending.value);
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <label for="scanMaxDepth" class="text-sm font-medium">Scan Maximum Depth</label>
-    <p class="text-muted-foreground text-sm">
-      Maximum directory depth to scan when searching for projects. Increase this value if your
-      projects are nested deeper in subdirectories.
-    </p>
+  <SettingRow
+    label-for="scanMaxDepth"
+    label="Scan Maximum Depth"
+    description="Maximum directory depth to scan when searching for projects. Increase this value if your projects are nested deeper in subdirectories."
+  >
     <div class="flex items-center gap-4">
       <Input
         id="scanMaxDepth"
@@ -134,9 +134,9 @@ const isSaving = computed(() => updateSettingMutation.isPending.value);
       </Button>
       <span v-if="isSaving" class="text-muted-foreground text-sm">Saving...</span>
     </div>
-    <p class="text-muted-foreground text-xs">
+    <p class="text-muted-foreground mt-2 text-xs">
       Default: {{ DEFAULT_SCAN_MAX_DEPTH }} • Current: {{ lastSavedDepth }} (Projects nested up to
       {{ lastSavedDepth }} levels deep will be found)
     </p>
-  </div>
+  </SettingRow>
 </template>

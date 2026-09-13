@@ -5,6 +5,7 @@ import Button from '../../ui/button/Button.vue';
 import FolderAutocompleteInput from '../../molecules/FolderAutocompleteInput.vue';
 import DirectoryTagList from '../molecules/DirectoryTagList.vue';
 import { Plus, RotateCcw } from 'lucide-vue-next';
+import SettingRow from '../molecules/SettingRow.vue';
 
 const { useSettingsQuery, useUpdateSettingMutation, useDefaultSettingQuery } = useQueries();
 
@@ -118,13 +119,12 @@ const isSaving = computed(() => updateSettingMutation.isPending.value);
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <label class="text-sm font-medium">Scan Directories</label>
-    <p class="text-muted-foreground text-sm">
+  <SettingRow label="Scan Directories">
+    <template #description>
       Base directories to scan for projects. The scanner will search these locations for projects up
       to the configured maximum depth. Use
       <code class="bg-muted rounded px-1 py-0.5 text-xs">~</code> for your home directory.
-    </p>
+    </template>
 
     <!-- List of included directories -->
     <DirectoryTagList
@@ -166,5 +166,5 @@ const isSaving = computed(() => updateSettingMutation.isPending.value);
       {{ includedDirectories.length }}
       {{ includedDirectories.length === 1 ? 'directory' : 'directories' }} will be scanned
     </p>
-  </div>
+  </SettingRow>
 </template>

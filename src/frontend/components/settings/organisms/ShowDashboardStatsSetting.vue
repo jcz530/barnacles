@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
 import { Switch } from '../../ui/switch';
-import { Label } from '../../ui/label';
+import SettingRow from '../molecules/SettingRow.vue';
 
 const { useSettingsQuery, useUpdateSettingMutation } = useQueries();
 
@@ -41,13 +41,12 @@ watch(showDashboardStats, async newValue => {
 </script>
 
 <template>
-  <div class="flex items-center justify-between">
-    <div class="space-y-0.5">
-      <Label for="show-dashboard-stats">Show Git Statistics on Dashboard</Label>
-      <div class="text-muted-foreground text-sm">
-        Display your git commit statistics and streaks on the dashboard
-      </div>
-    </div>
+  <SettingRow
+    layout="inline"
+    label-for="show-dashboard-stats"
+    label="Show Git Statistics on Dashboard"
+    description="Display your git commit statistics and streaks on the dashboard"
+  >
     <Switch id="show-dashboard-stats" v-model="showDashboardStats" />
-  </div>
+  </SettingRow>
 </template>
