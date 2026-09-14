@@ -9,6 +9,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 const push = vi.fn();
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
 
+const returnPath = { value: '/' };
+vi.mock('@/composables/useSettingsReturn', () => ({
+  useSettingsReturn: () => ({ returnPath }),
+}));
+
 const searchState = { value: '' };
 const clear = vi.fn(() => {
   searchState.value = '';
@@ -72,6 +77,15 @@ describe('useSettingsEscape', () => {
 
     expect(push).toHaveBeenCalledWith('/');
     expect(clear).not.toHaveBeenCalled();
+  });
+
+  it('returns to the page settings was opened from', () => {
+    returnPath.value = '/ports';
+
+    handler?.(keyEvent('Escape'));
+
+    expect(push).toHaveBeenCalledWith('/ports');
+    returnPath.value = '/';
   });
 
   it('clears the search first, without leaving the page', () => {

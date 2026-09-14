@@ -1,6 +1,7 @@
 import { useEventListener } from '@vueuse/core';
 import { useRouter } from 'vue-router';
 import { useSettingsSearch } from '@/composables/useSettingsSearch';
+import { useSettingsReturn } from '@/composables/useSettingsReturn';
 
 /**
  * The parts of a keydown this reads, structurally rather than as
@@ -54,6 +55,7 @@ const OPEN_LAYER = [
 export function useSettingsEscape() {
   const router = useRouter();
   const { query, clear } = useSettingsSearch();
+  const { returnPath } = useSettingsReturn();
 
   useEventListener(window, 'keydown', (event: EscapeKeyEvent) => {
     if (event.key !== 'Escape') return;
@@ -70,6 +72,6 @@ export function useSettingsEscape() {
       return;
     }
 
-    void router.push('/');
+    void router.push(returnPath.value);
   });
 }

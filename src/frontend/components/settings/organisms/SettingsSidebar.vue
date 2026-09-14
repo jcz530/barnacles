@@ -18,6 +18,7 @@ import SearchInput from '@/components/molecules/SearchInput.vue';
 import { SETTINGS_SECTIONS } from '@/constants/settings';
 import { useSettingsSearch } from '@/composables/useSettingsSearch';
 import { useSettingsNav } from '@/composables/useSettingsNav';
+import { useSettingsReturn } from '@/composables/useSettingsReturn';
 
 const props = withDefaults(defineProps<SidebarProps>(), {
   variant: 'inset',
@@ -26,6 +27,8 @@ const props = withDefaults(defineProps<SidebarProps>(), {
 const { navigate, activeSectionId } = useSettingsNav();
 
 const { query, isSearching, visibleSections, hasResults, firstMatch } = useSettingsSearch();
+
+const { returnPath } = useSettingsReturn();
 
 // Sections carry their own settings while searching, so the sidebar shows the
 // same matches the page does rather than a second opinion about the query.
@@ -96,7 +99,7 @@ function onArrow(direction: 1 | -1) {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton as-child size="sm" class="text-muted-foreground">
-            <RouterLink to="/">
+            <RouterLink :to="returnPath">
               <ArrowLeft />
               <span>Back to app</span>
             </RouterLink>

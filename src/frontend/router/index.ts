@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory, createWebHistory, RouteRecordRaw } from 'vue-router';
 import DefaultLayout from '../layouts/DefaultLayout.vue';
+import { recordSettingsReturn } from '../composables/useSettingsReturn';
 import ProjectOverviewTab from '../components/projects/organisms/ProjectOverviewTab.vue';
 import ProjectReadmeTab from '../components/projects/organisms/ProjectReadmeTab.vue';
 import ProjectTerminalsTab from '../components/projects/organisms/ProjectTerminalsTab.vue';
@@ -264,6 +265,9 @@ const router = createRouter({
 
 // Update document title and window title on route changes
 router.afterEach(to => {
+  // Remember where settings was opened from, so leaving it returns there.
+  recordSettingsReturn(to);
+
   const pageTitle = (to.name as string) || 'Barnacles';
   document.title = pageTitle;
 
