@@ -8,47 +8,48 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { RouteNames } from '@/router';
-import { useDark, useLocalStorage } from '@vueuse/core';
+import { useColorMode } from '@vueuse/core';
 import { useRoute } from 'vue-router';
 import { Cog, Moon, Palette, Sun, SunMoon } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const route = useRoute();
 
-const isDark = useDark({
+/**
+ * useColorMode owns the light/dark/auto tri-state: it resolves `auto` against
+ * the system preference, writes the class onto <html>, and persists to
+ * localStorage. `emitAuto` keeps `auto` distinguishable from the light or dark
+ * it currently resolves to, which is what the icon and label need.
+ *
+ * useDark, which this used alongside a separate ref before, is useColorMode
+ * with the auto state collapsed away — and both defaulted to the same
+ * 'vueuse-color-scheme' storage key, so each write raced the other.
+ *
+ * valueLight must stay 'light': main.css pairs a `.dark` block with `:root`,
+ * and useColorInversion keys its inversion off the same class.
+ */
+const mode = useColorMode({
   selector: 'html',
   attribute: 'class',
-  valueDark: 'dark',
-  valueLight: 'light',
+  modes: { light: 'light', dark: 'dark' },
+  emitAuto: true,
+  initialValue: 'auto',
 });
 
-// Track the mode: 'light', 'dark', or 'auto'
-const themeMode = useLocalStorage<'light' | 'dark' | 'auto'>('vueuse-color-scheme', 'auto');
-
 const currentIcon = computed(() => {
-  if (themeMode.value === 'auto') return SunMoon;
-  return isDark.value ? Moon : Sun;
+  if (mode.value === 'auto') return SunMoon;
+  return mode.value === 'dark' ? Moon : Sun;
 });
 
 const currentLabel = computed(() => {
-  if (themeMode.value === 'auto') return 'Auto';
-  return isDark.value ? 'Dark' : 'Light';
+  if (mode.value === 'auto') return 'Auto';
+  return mode.value === 'dark' ? 'Dark' : 'Light';
 });
 
 function cycleTheme() {
-  const modes: Array<'light' | 'dark' | 'auto'> = ['light', 'dark', 'auto'];
-  const currentIndex = modes.indexOf(themeMode.value);
-  const nextMode = modes[(currentIndex + 1) % modes.length];
-
-  themeMode.value = nextMode;
-
-  if (nextMode === 'auto') {
-    // Set based on system preference
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    isDark.value = prefersDark;
-  } else {
-    isDark.value = nextMode === 'dark';
-  }
+  const modes = ['light', 'dark', 'auto'] as const;
+  const currentIndex = modes.indexOf(mode.value as (typeof modes)[number]);
+  mode.value = modes[(currentIndex + 1) % modes.length];
 }
 const isActive = computed(() => route.path.startsWith('/theme'));
 const isSettingsActive = computed(() => route.path.startsWith('/settings'));
