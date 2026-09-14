@@ -1,9 +1,17 @@
-import { useCssVar, useDark } from '@vueuse/core';
+import { useDark } from '@vueuse/core';
 import { watch } from 'vue';
 
 /**
- * Composable to automatically invert Tailwind color scales in dark mode
- * Uses VueUse's useCssVar to dynamically update CSS variables
+ * Composable to automatically invert Tailwind color scales in dark mode.
+ *
+ * Dark mode here is palette inversion, not `dark:` variants: every registered
+ * --color-<name>-<shade> is rewritten to its 1000-shade counterpart (50<->950,
+ * 100<->900, ...) as an inline style on <html>. That means `bg-slate-50` is
+ * already theme-aware, and stacking a `dark:` variant on top would fight it.
+ *
+ * Only palettes declared in main.css can invert — Tailwind emits an undeclared
+ * palette as a literal with no var() to override — so colorScales below must
+ * stay in sync with the --color-* scales in assets/css/main.css.
  */
 export function useColorInversion() {
   const isDark = useDark({
@@ -39,6 +47,10 @@ export function useColorInversion() {
     pink: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
     rose: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
     primary: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
+    secondary: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
+    tertiary: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
+    success: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
+    danger: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
   };
 
   // Store original values for light mode
@@ -49,16 +61,20 @@ export function useColorInversion() {
     return 1000 - shade;
   }
 
-  // Initialize and store original color values
+  /**
+   * Read current computed --color-*-* values and cache them as the light-mode
+   * originals. getComputedStyle picks up both the stylesheet defaults and the
+   * inline overrides useTheme writes, and reads the whole document once rather
+   * than per variable.
+   */
   function initializeColors() {
+    const computed = getComputedStyle(document.documentElement);
     for (const [colorName, shades] of Object.entries(colorScales)) {
       for (const shade of shades) {
         const varName = `--color-${colorName}-${shade}`;
-        const cssVar = useCssVar(varName, document.documentElement);
-
-        // Store the original value
-        if (cssVar.value) {
-          originalValues.set(varName, cssVar.value);
+        const value = computed.getPropertyValue(varName).trim();
+        if (value) {
+          originalValues.set(varName, value);
         }
       }
     }
@@ -66,6 +82,7 @@ export function useColorInversion() {
 
   // Apply color inversion based on dark mode state
   function applyColorInversion() {
+    const root = document.documentElement;
     if (isDark.value) {
       // Dark mode: invert colors
       for (const [colorName, shades] of Object.entries(colorScales)) {
@@ -79,16 +96,14 @@ export function useColorInversion() {
 
           if (invertedValue) {
             // Set the current shade to the inverted value
-            const cssVar = useCssVar(currentVarName, document.documentElement);
-            cssVar.value = invertedValue;
+            root.style.setProperty(currentVarName, invertedValue);
           }
         }
       }
     } else {
       // Light mode: restore original colors
       for (const [varName, originalValue] of originalValues.entries()) {
-        const cssVar = useCssVar(varName, document.documentElement);
-        cssVar.value = originalValue;
+        root.style.setProperty(varName, originalValue);
       }
     }
   }
@@ -102,6 +117,9 @@ export function useColorInversion() {
   /**
    * Re-initialize colors after a theme change
    * This should be called after custom theme colors are applied
+   *
+   * applyThemeVariables always writes light-mode values, so they can be read
+   * back directly as the new originals regardless of the current dark state.
    */
   function reinitializeColors() {
     originalValues.clear();
