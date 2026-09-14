@@ -13,15 +13,22 @@ import { resolve } from 'node:path';
  * from Tailwind's built-in palette) but useTheme overrides it per theme, so it
  * has to invert too.
  */
-const root = resolve(__dirname, '../../..', '..');
+const root = resolve(__dirname, '..', '..', '..');
 const read = (p: string) => readFileSync(resolve(root, p), 'utf8');
 
-/** Palettes useTheme generates and writes as --color-<name>-<shade>. */
+/**
+ * Palettes useTheme generates and writes. Read from the `palettes` map it
+ * builds, which is the declaration site — regexing the --color-${name}
+ * template literal would just match the loop variable.
+ */
 function themedPalettes(): Set<string> {
   const src = read('src/frontend/composables/useTheme.ts');
+  const block = src.slice(
+    src.indexOf('const palettes = {'),
+    src.indexOf('for (const [name, palette]')
+  );
   const names = new Set<string>();
-  for (const m of src.matchAll(/--color-\$\{?([a-z]+)/g)) names.add(m[1]);
-  for (const m of src.matchAll(/`--color-([a-z]+)-\$\{/g)) names.add(m[1]);
+  for (const m of block.matchAll(/^\s{6}([a-z]+):\s*\w+Palette,/gm)) names.add(m[1]);
   return names;
 }
 
@@ -64,6 +71,38 @@ describe('color inversion covers every themeable palette', () => {
           1000 - shade
         );
       }
+    }
+  });
+});
+
+/**
+ * useDark and useColorMode both default to the storage key
+ * 'vueuse-color-scheme', and useDark IS useColorMode with the auto state
+ * collapsed away. Pairing a useDark with a useLocalStorage on that same key
+ * gives two refs writing one slot: ThemeToggle raced itself, and the command
+ * palette's toggleTheme wrote the stored value without ever applying the class
+ * to <html>. One ref per surface, and never a raw useLocalStorage on that key.
+ */
+describe('color mode is owned by one ref per surface', () => {
+  const surfaces = [
+    'src/frontend/components/nav/molecules/ThemeToggle.vue',
+    'src/frontend/commands/useCommandRegistry.ts',
+  ];
+
+  it('never pairs a color-mode ref with a raw useLocalStorage on its key', () => {
+    for (const file of surfaces) {
+      const src = read(file);
+      expect(src, `${file} writes the color-mode key through raw storage`).not.toMatch(
+        /useLocalStorage<[^>]*>\('vueuse-color-scheme'/
+      );
+    }
+  });
+
+  it('keeps the light class name that main.css and the inversion key off', () => {
+    // main.css pairs a `.dark` block with `:root`, and useColorInversion reads
+    // the same class, so a bare '' light value would desync the inversion.
+    for (const file of surfaces) {
+      expect(read(file), `${file} must map light -> 'light'`).toMatch(/light:\s*'light'/);
     }
   });
 });

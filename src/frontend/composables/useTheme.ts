@@ -1,4 +1,3 @@
-import { useCssVar } from '@vueuse/core';
 import { computed, watch } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import { generateShades } from '../../shared/utilities/shade-generator';
@@ -6,6 +5,27 @@ import type { Theme } from '../../shared/types/theme';
 import { useQueries } from './useQueries';
 
 const TAILWIND_SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+
+/**
+ * Write (or clear, on null) a CSS variable as an inline style on <html>.
+ *
+ * Inline rather than a stylesheet because useColorInversion reads these back
+ * with getComputedStyle and re-inverts them, and inline styles outrank author
+ * stylesheets — if the two sides wrote at different precedence levels, one
+ * would silently override the other.
+ *
+ * Plain setProperty rather than VueUse's useCssVar because useCssVar is a
+ * reactive ref, not a setter: each call builds a shallowRef, a computed and
+ * two persistent watchers, with no disposal. Called once per variable in here
+ * it leaked watchers on every theme change and every live-preview keystroke.
+ */
+function setVar(name: string, value: string | null) {
+  if (value === null) {
+    document.documentElement.style.removeProperty(name);
+  } else {
+    document.documentElement.style.setProperty(name, value);
+  }
+}
 
 /**
  * Composable for managing application themes
@@ -101,47 +121,21 @@ export function useTheme() {
       return;
     }
 
-    // Apply primary color palette
-    primaryPalette.shades.forEach((shade, index) => {
-      const shadeName = TAILWIND_SHADES[index];
-      const cssVar = useCssVar(`--color-primary-${shadeName}`, document.documentElement);
-      cssVar.value = shade.hex;
-    });
+    // Apply the generated palettes
+    const palettes = {
+      primary: primaryPalette,
+      secondary: secondaryPalette,
+      tertiary: tertiaryPalette,
+      slate: slatePalette,
+      success: successPalette,
+      danger: dangerPalette,
+    };
 
-    // Apply secondary color palette
-    secondaryPalette.shades.forEach((shade, index) => {
-      const shadeName = TAILWIND_SHADES[index];
-      const cssVar = useCssVar(`--color-secondary-${shadeName}`, document.documentElement);
-      cssVar.value = shade.hex;
-    });
-
-    // Apply tertiary color palette
-    tertiaryPalette.shades.forEach((shade, index) => {
-      const shadeName = TAILWIND_SHADES[index];
-      const cssVar = useCssVar(`--color-tertiary-${shadeName}`, document.documentElement);
-      cssVar.value = shade.hex;
-    });
-
-    // Apply slate color palette
-    slatePalette.shades.forEach((shade, index) => {
-      const shadeName = TAILWIND_SHADES[index];
-      const cssVar = useCssVar(`--color-slate-${shadeName}`, document.documentElement);
-      cssVar.value = shade.hex;
-    });
-
-    // Apply success color palette
-    successPalette.shades.forEach((shade, index) => {
-      const shadeName = TAILWIND_SHADES[index];
-      const cssVar = useCssVar(`--color-success-${shadeName}`, document.documentElement);
-      cssVar.value = shade.hex;
-    });
-
-    // Apply danger color palette
-    dangerPalette.shades.forEach((shade, index) => {
-      const shadeName = TAILWIND_SHADES[index];
-      const cssVar = useCssVar(`--color-danger-${shadeName}`, document.documentElement);
-      cssVar.value = shade.hex;
-    });
+    for (const [name, palette] of Object.entries(palettes)) {
+      palette.shades.forEach((shade, index) => {
+        setVar(`--color-${name}-${TAILWIND_SHADES[index]}`, shade.hex);
+      });
+    }
 
     // Apply border radius
     const radiusMap = {
@@ -151,41 +145,20 @@ export function useTheme() {
       lg: '0.875rem', // 14px
       xl: '1.25rem', // 20px
     };
-    const radiusCssVar = useCssVar('--radius', document.documentElement);
-    radiusCssVar.value = radiusMap[theme.borderRadius];
+    setVar('--radius', radiusMap[theme.borderRadius]);
 
-    // Apply font families
-    if (theme.fontUi) {
-      const fontUiVar = useCssVar('--font-ui', document.documentElement);
-      fontUiVar.value = `"${theme.fontUi}", sans-serif`;
-    } else {
-      const fontUiVar = useCssVar('--font-ui', document.documentElement);
-      fontUiVar.value = ''; // Reset to default
-    }
-
-    if (theme.fontHeading) {
-      const fontHeadingVar = useCssVar('--font-heading', document.documentElement);
-      fontHeadingVar.value = `"${theme.fontHeading}", sans-serif`;
-    } else {
-      const fontHeadingVar = useCssVar('--font-heading', document.documentElement);
-      fontHeadingVar.value = ''; // Reset to default
-    }
-
-    if (theme.fontCode) {
-      const fontCodeVar = useCssVar('--font-code', document.documentElement);
-      fontCodeVar.value = `"${theme.fontCode}", monospace`;
-    } else {
-      const fontCodeVar = useCssVar('--font-code', document.documentElement);
-      fontCodeVar.value = ''; // Reset to default
-    }
+    // Apply font families. A theme with no font falls back to the stylesheet
+    // default, which means removing the override rather than setting it empty.
+    setVar('--font-ui', theme.fontUi ? `"${theme.fontUi}", sans-serif` : null);
+    setVar('--font-heading', theme.fontHeading ? `"${theme.fontHeading}", sans-serif` : null);
+    setVar('--font-code', theme.fontCode ? `"${theme.fontCode}", monospace` : null);
 
     // Apply custom CSS variables if any
     if (theme.customCssVars) {
       try {
         const customVars = JSON.parse(theme.customCssVars);
         for (const [varName, varValue] of Object.entries(customVars)) {
-          const cssVar = useCssVar(varName, document.documentElement);
-          cssVar.value = varValue as string;
+          setVar(varName, varValue as string);
         }
       } catch (error) {
         console.error('Failed to parse custom CSS variables:', error);

@@ -9,9 +9,25 @@ import { watch } from 'vue';
  * 100<->900, ...) as an inline style on <html>. That means `bg-slate-50` is
  * already theme-aware, and stacking a `dark:` variant on top would fight it.
  *
- * Only palettes declared in main.css can invert — Tailwind emits an undeclared
- * palette as a literal with no var() to override — so colorScales below must
- * stay in sync with the --color-* scales in assets/css/main.css.
+ * colorScales below must cover every palette useTheme writes, or the missing
+ * one resolves in light mode and silently stays light in dark mode. That set
+ * is not the same as the set main.css declares: slate is never declared there
+ * (it comes from Tailwind's built-in palette) but useTheme overrides it per
+ * theme, so it has to invert too. A palette neither declared nor written is
+ * inert — Tailwind emits it as a literal with no var() to override.
+ *
+ * Read and write through getComputedStyle and root.style.setProperty rather
+ * than a stylesheet or VueUse's useCssVar, for two separate reasons:
+ *
+ * - Precedence. useTheme writes its generated palettes as inline styles on
+ *   <html>, and inline styles outrank author stylesheets, so an inversion
+ *   injected via useStyleTag would be silently overridden by the theme's own
+ *   writes. Both sides have to write at the same level; moving either one to
+ *   a stylesheet breaks the other.
+ * - Cost. useCssVar is a reactive ref, not a getter: every call builds a
+ *   shallowRef, a computed and two persistent watchers, and it has no
+ *   disposal. Called once per variable here it leaked ~506 watchers per theme
+ *   change.
  */
 export function useColorInversion() {
   const isDark = useDark({
