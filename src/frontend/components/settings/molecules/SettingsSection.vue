@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-
 /*
  * A settings section: the heading the sidebar navigates to, plus its settings.
  *
@@ -9,20 +7,21 @@ import { onMounted, ref } from 'vue';
  * which carries no explicit size, so section titles landed at the same size as
  * the labels beneath them and the page had no visible structure to skim.
  */
-const props = defineProps<{
+defineProps<{
   id: string;
   title: string;
   description?: string;
 }>();
 
-const el = ref<HTMLElement | null>(null);
-
-const emit = defineEmits<{ mounted: [id: string, el: HTMLElement] }>();
-
-// Hands the anchor element up to the page, which owns the scroll-spy observer.
-onMounted(() => {
-  if (el.value) emit('mounted', props.id, el.value);
-});
+/*
+ * No mount-time emit handing the anchor element to the page.
+ *
+ * A filtered section that survives a search is *patched* rather than remounted,
+ * so `onMounted` never fires again and the page would be left holding no
+ * observer for it -- scroll-spy went dead for exactly the sections a search
+ * kept. The page now looks its anchors up by id after each render instead,
+ * which sees patched, added and removed sections alike.
+ */
 </script>
 
 <template>
@@ -32,7 +31,7 @@ onMounted(() => {
     to `block: 'start'` lands underneath it; the remaining 16px is breathing room
     above the heading rather than butting it against the chrome.
   -->
-  <section :id="id" ref="el" class="scroll-mt-14">
+  <section :id="id" class="scroll-mt-14">
     <div class="border-border border-b pb-3">
       <h2 class="text-lg font-semibold tracking-tight">{{ title }}</h2>
       <p v-if="description" class="text-muted-foreground mt-1 text-sm">{{ description }}</p>

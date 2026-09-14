@@ -109,6 +109,18 @@ describe('useScrollSpy', () => {
     expect(activeId.value).toBe('one');
   });
 
+  it('forgets the active section on reset', () => {
+    const { activeId, reset } = setup();
+    intersect(0, true);
+    expect(activeId.value).toBe('one');
+
+    // A search changes which sections exist. Keeping the old active id would
+    // highlight a heading that is no longer on the page, and would make the
+    // arrow keys count from a section that is not in the list.
+    reset();
+    expect(activeId.value).toBeNull();
+  });
+
   it('stops observing after reset', () => {
     const spy = setup();
     expect(observers).toHaveLength(3);

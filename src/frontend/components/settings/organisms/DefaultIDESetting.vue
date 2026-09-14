@@ -71,6 +71,7 @@ const selectedIde = computed(() => {
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
           <Button
+            id="defaultIde"
             variant="outline"
             :class="['w-64 justify-start', isDefaultValue ? 'text-muted-foreground' : '']"
           >

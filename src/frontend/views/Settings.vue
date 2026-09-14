@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs';
-import { computed, nextTick, onMounted, ref, watch, type Component } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, type Component } from 'vue';
 import { useRoute } from 'vue-router';
 import { SETTING_KEYS, type SettingKey } from '../../shared/types/api';
 import SettingWrapper from '../components/settings/molecules/SettingWrapper.vue';
@@ -70,10 +70,28 @@ const { activeId, observe, setActive, reset } = useScrollSpy({
   sectionIds: () => sectionsToRender.value.map(section => section.id),
 });
 
-// Sections register their anchor element as they mount.
-function registerSection(id: string, el: HTMLElement) {
-  observe(el, id);
+/*
+ * Re-attach the scroll-spy to whatever sections are currently rendered.
+ *
+ * Driven by the rendered list rather than by each section's mount hook: a
+ * section that survives a search is patched in place, never remounted, so a
+ * mount-time registration left those sections -- the ones the search kept --
+ * with no observer at all and scroll-spy silently half-dead.
+ *
+ * Post-flush so the DOM matches `sectionsToRender` before the elements are
+ * looked up.
+ */
+function attachScrollSpy() {
+  reset();
+  for (const section of sectionsToRender.value) {
+    const el = document.getElementById(section.id);
+    if (el) observe(el, section.id);
+  }
 }
+
+// `immediate` would run during setup, before there is any DOM to look up.
+onMounted(attachScrollSpy);
+watch(sectionsToRender, attachScrollSpy, { flush: 'post' });
 
 function scrollToSetting(settingKey: SettingKey) {
   const element = document.querySelector(`[data-setting="${settingKey}"]`);
@@ -121,11 +139,12 @@ onMounted(async () => {
 });
 
 /*
- * A search swaps which sections are mounted, and the old observers point at
- * elements that no longer exist. Tearing them down lets the freshly mounted
- * sections re-register through @mounted on the next tick.
+ * The query outlives this component -- it is module-level so the sidebar and
+ * the page can share it -- so leaving settings with a filter on would bring it
+ * back on the next visit, showing a page missing most of its sections for no
+ * visible reason.
  */
-watch(isSearching, () => reset());
+onUnmounted(clear);
 </script>
 
 <template>
@@ -150,7 +169,6 @@ watch(isSearching, () => reset());
           :id="section.id"
           :title="section.title"
           :description="section.description"
-          @mounted="registerSection"
         >
           <div v-for="setting in section.settings" :key="setting.key" class="py-5 first:pt-4">
             <SettingWrapper :setting-key="setting.key" :highlighted="highlightedSetting">

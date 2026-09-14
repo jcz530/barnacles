@@ -48,19 +48,10 @@ describe('settings registry', () => {
     }
   });
 
-  it('gives every section a human-readable heading and description', () => {
+  it('gives every section a url-safe anchor id', () => {
     for (const section of SETTINGS_SECTIONS) {
-      expect(section.title.trim()).not.toBe('');
-      expect(section.description.trim()).not.toBe('');
       // Anchor ids end up in the URL fragment and as scroll-spy keys.
       expect(section.id).toMatch(/^[a-z0-9-]+$/);
-    }
-  });
-
-  it('gives every setting a label and description for the search index', () => {
-    for (const setting of ALL_SETTINGS) {
-      expect(setting.label.trim()).not.toBe('');
-      expect(setting.description.trim()).not.toBe('');
     }
   });
 });

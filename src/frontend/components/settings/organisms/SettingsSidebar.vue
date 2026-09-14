@@ -30,10 +30,6 @@ const { query, isSearching, visibleSections, hasResults, firstMatch } = useSetti
 
 const { returnPath } = useSettingsReturn();
 
-// Sections carry their own settings while searching, so the sidebar shows the
-// same matches the page does rather than a second opinion about the query.
-const sections = ref(SETTINGS_SECTIONS);
-
 const searchRef = ref<InstanceType<typeof SearchInput> | null>(null);
 
 onMounted(() => {
@@ -89,7 +85,12 @@ function onArrow(direction: 1 | -1) {
     Escape is not here: it applies to the whole settings page, not just the
     rail, so useSettingsEscape owns it at the window.
   -->
-  <Sidebar v-bind="props" @keydown.down.prevent="onArrow(1)" @keydown.up.prevent="onArrow(-1)">
+  <Sidebar
+    v-bind="props"
+    aria-label="Settings sections"
+    @keydown.down.prevent="onArrow(1)"
+    @keydown.up.prevent="onArrow(-1)"
+  >
     <SidebarHeader>
       <!--
         Leaving settings is a destination, not a nav item, so it sits above the
@@ -119,6 +120,7 @@ function onArrow(direction: 1 | -1) {
           v-model="query"
           placeholder="Search settings…"
           input-class="bg-background shadow-none"
+          aria-label="Search settings"
           @keydown.enter.prevent="onEnter"
         />
       </div>
@@ -128,7 +130,7 @@ function onArrow(direction: 1 | -1) {
       <SidebarGroup>
         <SidebarMenu>
           <SidebarMenuItem
-            v-for="section in isSearching ? visibleSections : sections"
+            v-for="section in isSearching ? visibleSections : SETTINGS_SECTIONS"
             :key="section.id"
           >
             <!--
@@ -141,7 +143,11 @@ function onArrow(direction: 1 | -1) {
               :is-active="activeSectionId === section.id"
               :tooltip="section.title"
             >
-              <a :href="`#${section.id}`" @click.prevent="navigate(section.id)">
+              <a
+                :href="`#${section.id}`"
+                :aria-current="activeSectionId === section.id ? 'location' : undefined"
+                @click.prevent="navigate(section.id)"
+              >
                 <component :is="section.icon" />
                 <span>{{ section.title }}</span>
               </a>

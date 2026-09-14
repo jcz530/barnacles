@@ -102,6 +102,7 @@ watch(retentionDays, async newValue => {
     >
       <Switch
         id="mcp-usage-logging"
+        aria-labelledby="mcp-usage-logging-label"
         v-model="usageLogging"
         :disabled="updateSettingMutation.isPending.value"
       />

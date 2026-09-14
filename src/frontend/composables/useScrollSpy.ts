@@ -93,6 +93,13 @@ export function useScrollSpy({ sectionIds, root }: UseScrollSpyOptions) {
     stops.forEach(stop => stop());
     stops.length = 0;
     visible.clear();
+    /*
+     * The active section is dropped along with the observers. Keeping it would
+     * leave the sidebar highlighting a heading that a search has since filtered
+     * away, and would make the arrow keys count from a section that is no
+     * longer in the list.
+     */
+    activeId.value = null;
   }
 
   onBeforeUnmount(reset);

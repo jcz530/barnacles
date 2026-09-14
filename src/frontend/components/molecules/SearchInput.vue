@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import { ref, type HTMLAttributes } from 'vue';
+
+/*
+ * Attributes land on the field, not the positioning wrapper. The root is a div
+ * holding the icon and clear button, so an aria-label passed by a caller would
+ * otherwise name that div and leave the input itself unnamed.
+ */
+defineOptions({ inheritAttrs: false });
 import { Search, X } from 'lucide-vue-next';
 import { Input } from '../ui/input';
 import { cn } from '@/lib/utils';
@@ -35,12 +42,15 @@ defineExpose({
     <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
     <Input
       ref="inputRef"
+      v-bind="$attrs"
       v-model="modelValue"
       :placeholder="placeholder"
       :class="cn('pr-10 pl-10', inputClass)"
     />
     <button
       v-if="modelValue"
+      type="button"
+      aria-label="Clear search"
       @click="clearSearch"
       class="absolute top-1/2 right-3 -translate-y-1/2 text-slate-500 hover:text-slate-700"
     >

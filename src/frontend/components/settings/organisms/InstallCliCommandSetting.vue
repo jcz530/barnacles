@@ -66,6 +66,10 @@ watch(installCliCommand, async newValue => {
     label="Install CLI Command"
     description='Install the "barnacles" command for use in your terminal'
   >
-    <Switch id="install-cli-command" v-model="installCliCommand" />
+    <Switch
+      id="install-cli-command"
+      aria-labelledby="install-cli-command-label"
+      v-model="installCliCommand"
+    />
   </SettingRow>
 </template>

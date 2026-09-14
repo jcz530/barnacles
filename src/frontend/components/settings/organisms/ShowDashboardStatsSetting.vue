@@ -47,6 +47,10 @@ watch(showDashboardStats, async newValue => {
     label="Show Git Statistics on Dashboard"
     description="Display your git commit statistics and streaks on the dashboard"
   >
-    <Switch id="show-dashboard-stats" v-model="showDashboardStats" />
+    <Switch
+      id="show-dashboard-stats"
+      aria-labelledby="show-dashboard-stats-label"
+      v-model="showDashboardStats"
+    />
   </SettingRow>
 </template>

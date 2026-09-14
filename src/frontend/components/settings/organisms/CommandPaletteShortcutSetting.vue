@@ -75,7 +75,11 @@ watch(accelerator, newValue => {
       label="Global command palette shortcut"
       description="Open the command palette from any app, without switching to Barnacles first"
     >
-      <Switch id="command-palette-shortcut" v-model="enabled" />
+      <Switch
+        id="command-palette-shortcut"
+        aria-labelledby="command-palette-shortcut-label"
+        v-model="enabled"
+      />
     </SettingRow>
 
     <div class="flex items-start justify-between gap-4">

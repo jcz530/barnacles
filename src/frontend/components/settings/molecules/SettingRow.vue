@@ -30,8 +30,15 @@ withDefaults(
 <template>
   <div :class="layout === 'inline' ? 'flex items-center justify-between gap-4' : 'flex flex-col'">
     <div :class="['space-y-1', layout === 'inline' ? 'min-w-0' : '']">
+      <!--
+        The label carries an id so a non-labelable control can point back at it
+        with aria-labelledby. `for` alone is not enough here: reka-ui renders a
+        Switch as a <button role="switch">, and `for` only associates with
+        labelable elements, so the name would depend on browser leniency.
+      -->
       <component
         :is="labelFor ? 'label' : 'div'"
+        :id="labelFor ? `${labelFor}-label` : undefined"
         :for="labelFor"
         class="text-foreground block text-sm leading-none font-medium"
       >

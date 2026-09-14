@@ -73,6 +73,7 @@ const selectedTerminal = computed(() => {
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
           <Button
+            id="defaultTerminal"
             variant="outline"
             :class="['w-64 justify-start', isDefaultValue ? 'text-muted-foreground' : '']"
           >

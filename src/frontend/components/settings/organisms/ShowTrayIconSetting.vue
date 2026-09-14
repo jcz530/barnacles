@@ -47,6 +47,6 @@ watch(showTrayIcon, async newValue => {
     label="Show Tray Icon"
     description="Display Barnacles icon in the system tray for quick access"
   >
-    <Switch id="show-tray-icon" v-model="showTrayIcon" />
+    <Switch id="show-tray-icon" aria-labelledby="show-tray-icon-label" v-model="showTrayIcon" />
   </SettingRow>
 </template>
