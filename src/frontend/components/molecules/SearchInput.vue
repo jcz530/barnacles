@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, type HTMLAttributes } from 'vue';
 import { Search, X } from 'lucide-vue-next';
 import { Input } from '../ui/input';
+import { cn } from '@/lib/utils';
 
 const modelValue = defineModel<string>({ required: true });
 
-const { placeholder = 'Search projects...' } = defineProps<{
+const { placeholder = 'Search projects...', inputClass = '' } = defineProps<{
   placeholder?: string;
+  /** Extra classes for the field itself, for callers that restyle it. */
+  inputClass?: HTMLAttributes['class'];
 }>();
 const inputRef = ref<any>(null);
 
@@ -30,7 +33,12 @@ defineExpose({
 <template>
   <div class="relative flex-1">
     <Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
-    <Input ref="inputRef" v-model="modelValue" :placeholder="placeholder" class="pr-10 pl-10" />
+    <Input
+      ref="inputRef"
+      v-model="modelValue"
+      :placeholder="placeholder"
+      :class="cn('pr-10 pl-10', inputClass)"
+    />
     <button
       v-if="modelValue"
       @click="clearSearch"

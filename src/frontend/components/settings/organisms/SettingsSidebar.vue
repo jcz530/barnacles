@@ -108,10 +108,17 @@ function onArrow(direction: 1 | -1) {
       </SidebarMenu>
 
       <div class="px-1 pb-1">
+        <!--
+          bg-background and shadow-none, matching shadcn's own SidebarInput: the
+          rail is slate-200, so a field a shade lighter reads as an inset well
+          rather than a card lifted off the chrome, which is what the default
+          shadow suggests.
+        -->
         <SearchInput
           ref="searchRef"
           v-model="query"
           placeholder="Search settings…"
+          input-class="bg-background shadow-none"
           @keydown.enter.prevent="onEnter"
         />
       </div>
