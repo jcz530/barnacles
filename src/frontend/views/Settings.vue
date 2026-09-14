@@ -130,7 +130,14 @@ watch(isSearching, () => reset());
 
 <template>
   <div>
-    <section class="mx-auto mt-4 w-full max-w-3xl">
+    <!--
+      max-w-5xl rather than a narrower prose measure: these rows put their
+      control at the right edge, so capping the column tighter only pushes the
+      label and its switch further apart on a wide window. Below roughly 1100px
+      the pane is narrower than this cap anyway, so small windows keep the
+      layout they already had.
+    -->
+    <section class="mx-auto mt-4 w-full max-w-5xl">
       <div class="mb-8">
         <h1 class="text-2xl font-semibold tracking-tight">Settings</h1>
         <p class="text-muted-foreground mt-1 text-sm">Manage your application preferences</p>
