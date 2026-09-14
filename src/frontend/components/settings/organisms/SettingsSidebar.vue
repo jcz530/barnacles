@@ -18,17 +18,14 @@ import SearchInput from '@/components/molecules/SearchInput.vue';
 import { SETTINGS_SECTIONS } from '@/constants/settings';
 import { useSettingsSearch } from '@/composables/useSettingsSearch';
 import { useSettingsNav } from '@/composables/useSettingsNav';
-import { useRouter } from 'vue-router';
 
 const props = withDefaults(defineProps<SidebarProps>(), {
   variant: 'inset',
 });
 
-const router = useRouter();
-
 const { navigate, activeSectionId } = useSettingsNav();
 
-const { query, isSearching, visibleSections, hasResults, firstMatch, clear } = useSettingsSearch();
+const { query, isSearching, visibleSections, hasResults, firstMatch } = useSettingsSearch();
 
 // Sections carry their own settings while searching, so the sidebar shows the
 // same matches the page does rather than a second opinion about the query.
@@ -46,19 +43,6 @@ onMounted(() => {
  * what Enter and the arrows mean. Scoping the bindings to this field keeps the
  * behaviour local to settings.
  */
-
-/**
- * Escape backs out one level at a time: first it undoes the search, then it
- * leaves settings altogether. Nothing to clear means nothing to stay for, so
- * the second press is the same "give up and go back" the Back to app link is.
- */
-function onEscape() {
-  if (query.value !== '') {
-    clear();
-    return;
-  }
-  void router.push('/');
-}
 
 /** Enter jumps to the best match and highlights it, reusing the deep-link ring. */
 function onEnter() {
@@ -93,18 +77,16 @@ function onArrow(direction: 1 | -1) {
 
 <template>
   <!--
-    Arrows and Escape are bound on the rail rather than on the search field.
-    Clicking a heading moves focus to that link, and handlers living on the
-    input would stop firing the moment the mouse was used -- so picking a
-    section by mouse would end keyboard navigation until you clicked back into
-    the field. On the root they work wherever focus landed inside the sidebar.
+    Arrows are bound on the rail rather than on the search field. Clicking a
+    heading moves focus to that link, and handlers living on the input would
+    stop firing the moment the mouse was used -- so picking a section by mouse
+    would end keyboard navigation until you clicked back into the field. On the
+    root they work wherever focus landed inside the sidebar.
+
+    Escape is not here: it applies to the whole settings page, not just the
+    rail, so useSettingsEscape owns it at the window.
   -->
-  <Sidebar
-    v-bind="props"
-    @keydown.esc.prevent="onEscape"
-    @keydown.down.prevent="onArrow(1)"
-    @keydown.up.prevent="onArrow(-1)"
-  >
+  <Sidebar v-bind="props" @keydown.down.prevent="onArrow(1)" @keydown.up.prevent="onArrow(-1)">
     <SidebarHeader>
       <!--
         Leaving settings is a destination, not a nav item, so it sits above the

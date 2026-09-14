@@ -9,6 +9,7 @@ import { SETTINGS_SECTIONS } from '@/constants/settings';
 import { useSettingsSearch } from '@/composables/useSettingsSearch';
 import { useScrollSpy } from '@/composables/useScrollSpy';
 import { useSettingsNav } from '@/composables/useSettingsNav';
+import { useSettingsEscape } from '@/composables/useSettingsEscape';
 import ScanMaxDepthSetting from '../components/settings/organisms/ScanMaxDepthSetting.vue';
 import ScanIncludedDirectoriesSetting from '../components/settings/organisms/ScanIncludedDirectoriesSetting.vue';
 import ScanExcludedDirectoriesSetting from '../components/settings/organisms/ScanExcludedDirectoriesSetting.vue';
@@ -51,6 +52,9 @@ const SETTING_COMPONENTS: Record<string, Component> = {
 };
 
 const { isSearching, visibleSections, hasResults, query, clear } = useSettingsSearch();
+
+// Escape leaves settings from anywhere on the page, not just from the rail.
+useSettingsEscape();
 const sectionsToRender = computed(() =>
   isSearching.value ? visibleSections.value : SETTINGS_SECTIONS
 );
