@@ -183,8 +183,8 @@ samp {
   --sidebar-ring: var(--color-primary-400);
 }
 .dark {
-  --color-white: var(--color-slate-300);
-  --background: var(--color-slate-300);
+  --color-white: var(--color-slate-100);
+  --background: var(--color-slate-100);
   /* --foreground: var(--color-slate-50); */
   --card: var(--color-slate-200);
 }
