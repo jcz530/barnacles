@@ -2,10 +2,10 @@
 import { ref, watch } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
 import { Switch } from '../../ui/switch';
-import { Label } from '../../ui/label';
 import ShortcutRecorder from '../molecules/ShortcutRecorder.vue';
 import { isRiskyAccelerator } from '@/utils/accelerator';
 import { SETTING_KEYS } from '../../../../shared/types/api';
+import SettingRow from '../molecules/SettingRow.vue';
 
 const { useSettingsQuery, useUpdateSettingMutation } = useQueries();
 
@@ -69,15 +69,18 @@ watch(accelerator, newValue => {
 
 <template>
   <div class="space-y-3">
-    <div class="flex items-center justify-between">
-      <div class="space-y-0.5">
-        <Label for="command-palette-shortcut">Global command palette shortcut</Label>
-        <div class="text-muted-foreground text-sm">
-          Open the command palette from any app, without switching to Barnacles first
-        </div>
-      </div>
-      <Switch id="command-palette-shortcut" v-model="enabled" />
-    </div>
+    <SettingRow
+      layout="inline"
+      label-for="command-palette-shortcut"
+      label="Global command palette shortcut"
+      description="Open the command palette from any app, without switching to Barnacles first"
+    >
+      <Switch
+        id="command-palette-shortcut"
+        aria-labelledby="command-palette-shortcut-label"
+        v-model="enabled"
+      />
+    </SettingRow>
 
     <div class="flex items-start justify-between gap-4">
       <div class="text-muted-foreground text-sm">

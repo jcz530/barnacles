@@ -2,8 +2,8 @@
 import { ref, watch } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
 import { Switch } from '../../ui/switch';
-import { Label } from '../../ui/label';
 import { toastDanger, toastSuccess } from '../../ui/sonner';
+import SettingRow from '../molecules/SettingRow.vue';
 
 const { useSettingsQuery, useUpdateSettingMutation } = useQueries();
 
@@ -60,13 +60,16 @@ watch(installCliCommand, async newValue => {
 </script>
 
 <template>
-  <div class="flex items-center justify-between">
-    <div class="space-y-0.5">
-      <Label for="install-cli-command">Install CLI Command</Label>
-      <div class="text-muted-foreground text-sm">
-        Install the "barnacles" command for use in your terminal
-      </div>
-    </div>
-    <Switch id="install-cli-command" v-model="installCliCommand" />
-  </div>
+  <SettingRow
+    layout="inline"
+    label-for="install-cli-command"
+    label="Install CLI Command"
+    description='Install the "barnacles" command for use in your terminal'
+  >
+    <Switch
+      id="install-cli-command"
+      aria-labelledby="install-cli-command-label"
+      v-model="installCliCommand"
+    />
+  </SettingRow>
 </template>

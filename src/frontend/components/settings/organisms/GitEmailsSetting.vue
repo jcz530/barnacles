@@ -5,6 +5,7 @@ import Button from '../../ui/button/Button.vue';
 import Input from '../../ui/input/Input.vue';
 import { Badge } from '../../ui/badge';
 import { Plus, RotateCcw, X, Mail } from 'lucide-vue-next';
+import SettingRow from '../molecules/SettingRow.vue';
 
 const { useSettingsQuery, useUpdateSettingMutation, useDefaultSettingQuery } = useQueries();
 
@@ -134,13 +135,10 @@ const canAddEmail = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <label class="text-sm font-medium">Git Author Emails</label>
-    <p class="text-muted-foreground text-sm">
-      Add email addresses used for commits across your projects. Git stats will include commits from
-      all these emails. Per-project emails are automatically detected.
-    </p>
-
+  <SettingRow
+    label="Git Author Emails"
+    description="Add email addresses used for commits across your projects. Git stats will include commits from all these emails. Per-project emails are automatically detected."
+  >
     <!-- Global email display -->
     <div v-if="globalEmail" class="bg-muted/50 mt-2 flex items-center gap-2 rounded-md p-2 text-sm">
       <Mail :size="14" class="text-muted-foreground" />
@@ -205,5 +203,5 @@ const canAddEmail = computed(() => {
     <p class="text-muted-foreground mt-2 text-xs">
       {{ emails.length }} additional {{ emails.length === 1 ? 'email' : 'emails' }} configured
     </p>
-  </div>
+  </SettingRow>
 </template>

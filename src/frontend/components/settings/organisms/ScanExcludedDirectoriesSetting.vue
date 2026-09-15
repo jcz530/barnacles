@@ -5,6 +5,7 @@ import Button from '../../ui/button/Button.vue';
 import FolderAutocompleteInput from '../../molecules/FolderAutocompleteInput.vue';
 import DirectoryTagList from '../molecules/DirectoryTagList.vue';
 import { Plus, RotateCcw } from 'lucide-vue-next';
+import SettingRow from '../molecules/SettingRow.vue';
 
 const { useSettingsQuery, useUpdateSettingMutation, useDefaultSettingQuery } = useQueries();
 
@@ -113,13 +114,10 @@ const isSaving = computed(() => updateSettingMutation.isPending.value);
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <label class="text-sm font-medium">Excluded Directories</label>
-    <p class="text-muted-foreground text-sm">
-      Directories to exclude when scanning and calculating project statistics. These folders will be
-      completely ignored during project analysis.
-    </p>
-
+  <SettingRow
+    label="Excluded Directories"
+    description="Directories to exclude when scanning and calculating project statistics. These folders will be completely ignored during project analysis."
+  >
     <!-- List of excluded directories -->
     <DirectoryTagList
       :directories="excludedDirectories"
@@ -162,5 +160,5 @@ const isSaving = computed(() => updateSettingMutation.isPending.value);
       <code class="bg-muted rounded px-1 py-0.5 text-xs">.gitignore</code> are also automatically
       excluded
     </p>
-  </div>
+  </SettingRow>
 </template>
