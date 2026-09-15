@@ -72,12 +72,12 @@ const shape = computed(() => SHAPES[props.state]);
 
 <style scoped>
 .process-state-icon path {
-  transition: d 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: d 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Spin the whole glyph, not the path, so the morph and the rotation compose. */
 .process-state-icon.is-spinning {
-  animation: process-icon-spin 1.1s linear infinite;
+  animation: process-icon-spin 1100ms linear infinite;
   transform-origin: 50% 50%;
 }
 
