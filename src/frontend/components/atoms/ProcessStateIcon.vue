@@ -87,14 +87,25 @@ const shape = computed(() => SHAPES[props.state]);
   }
 }
 
-/* Shapes still change, just without the tween or the spin. */
+/* Shapes still change, just without the tween or the spin.
+ *
+ * Split the same way as CopyButton: the media query for the OS preference, the
+ * root class for the in-app setting, which can override it either way. */
 @media (prefers-reduced-motion: reduce) {
-  .process-state-icon path {
+  :root:not(.no-reduce-motion) .process-state-icon path {
     transition: none;
   }
 
-  .process-state-icon.is-spinning {
+  :root:not(.no-reduce-motion) .process-state-icon.is-spinning {
     animation: none;
   }
+}
+
+:root.reduce-motion .process-state-icon path {
+  transition: none;
+}
+
+:root.reduce-motion .process-state-icon.is-spinning {
+  animation: none;
 }
 </style>

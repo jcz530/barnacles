@@ -117,6 +117,12 @@ export const SETTINGS_SECTIONS: SettingsSectionDef[] = [
         keywords: ['commits', 'streaks', 'home', 'heatmap'],
       },
       {
+        key: SETTING_KEYS.REDUCED_MOTION,
+        label: 'Reduce Motion',
+        description: 'Turn down animations like icon transitions and spinners.',
+        keywords: ['animation', 'motion', 'accessibility', 'transitions', 'vestibular'],
+      },
+      {
         key: SETTING_KEYS.SHOW_TRAY_ICON,
         label: 'Show Tray Icon',
         description: 'Display the Barnacles icon in the system tray for quick access.',

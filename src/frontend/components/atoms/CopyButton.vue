@@ -116,11 +116,21 @@ async function handleCopy() {
   transform: scale(0.3) rotate(90deg);
 }
 
-/* Still swap the icons, just without the spin/scale. */
+/* Still swap the icons, just without the spin/scale.
+ *
+ * Two rules rather than one: the media query covers the OS preference, and the
+ * root class covers the in-app setting, which can also turn motion back on when
+ * the OS asks to reduce it. `:root:not(.no-reduce-motion)` is what lets an
+ * explicit "never reduce" win over the query. */
 @media (prefers-reduced-motion: reduce) {
-  .icon-swap-enter-active,
-  .icon-swap-leave-active {
+  :root:not(.no-reduce-motion) .icon-swap-enter-active,
+  :root:not(.no-reduce-motion) .icon-swap-leave-active {
     transition: none;
   }
+}
+
+:root.reduce-motion .icon-swap-enter-active,
+:root.reduce-motion .icon-swap-leave-active {
+  transition: none;
 }
 </style>
