@@ -394,7 +394,7 @@ watch(visibleStats, stats => {
           v-for="stat in visibleStats"
           :key="stat.key"
           type="button"
-          class="focus-visible:ring-primary-500 cursor-pointer rounded-lg text-left transition-colors hover:bg-slate-50 focus-visible:ring-2 focus-visible:outline-none"
+          class="focus-visible:ring-primary-500 cursor-pointer rounded-lg text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
           :aria-label="`Show ${stat.label} details`"
           @click="expandedKey = stat.key"
         >
