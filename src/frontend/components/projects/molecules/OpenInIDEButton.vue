@@ -106,11 +106,11 @@ const handleMainButtonClick = () => {
   <div class="inline-flex">
     <!-- Main button - Opens IDE if preferred IDE is set, otherwise opens dropdown -->
     <Button
-      variant="secondaryThemed"
+      variant="outline"
       size="sm"
       :disabled="isLoading || openProjectMutation.isPending.value"
       @click="handleMainButtonClick"
-      class="rounded-r-none border-r border-r-slate-50/20"
+      class="border-r-border rounded-r-none border-r"
     >
       <ExternalLink class="mr-2 h-4 w-4" />
       {{ preferredIDE ? `Open in ${preferredIDE.name}` : 'Select IDE' }}
@@ -119,12 +119,7 @@ const handleMainButtonClick = () => {
     <!-- Dropdown trigger button -->
     <DropdownMenu v-model:open="dropdownOpen">
       <DropdownMenuTrigger as-child>
-        <Button
-          variant="secondaryThemed"
-          size="sm"
-          :disabled="isLoading"
-          class="rounded-l-none px-2"
-        >
+        <Button variant="outline" size="sm" :disabled="isLoading" class="rounded-l-none px-2">
           <ChevronDown class="h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>
