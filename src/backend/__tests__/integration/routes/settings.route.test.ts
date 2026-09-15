@@ -44,6 +44,43 @@ describe('Settings API Integration Tests', () => {
     });
   });
 
+  describe('reduced motion setting', () => {
+    it('defaults to following the system preference', async () => {
+      const response = await get(context.get().app, '/api/settings');
+
+      expect(response.status).toBe(200);
+      const setting = asSettingList(response.data).find(
+        (item: { key: string }) => item.key === SETTING_KEYS.REDUCED_MOTION
+      );
+      // Deferring to the OS is the accessible default; the other values exist
+      // to override it in either direction.
+      expect(setting?.value).toBe('system');
+    });
+
+    it('persists an explicit override', async () => {
+      const response = await put(
+        context.get().app,
+        `/api/settings/${SETTING_KEYS.REDUCED_MOTION}`,
+        { value: 'always', type: 'string' }
+      );
+
+      expect(response.status).toBe(200);
+      expect(asSetting(response.data).value).toBe('always');
+
+      const readBack = await get(context.get().app, `/api/settings/${SETTING_KEYS.REDUCED_MOTION}`);
+      expect(asSetting(readBack.data).value).toBe('always');
+    });
+
+    it('is a renderer-only preference with no system side effects', async () => {
+      await put(context.get().app, `/api/settings/${SETTING_KEYS.REDUCED_MOTION}`, {
+        value: 'never',
+        type: 'string',
+      });
+
+      expect(syncCommandPaletteShortcut).not.toHaveBeenCalled();
+    });
+  });
+
   describe('command palette shortcut settings', () => {
     it('falls back to defaults when nothing has been saved', async () => {
       const response = await get(context.get().app, '/api/settings');

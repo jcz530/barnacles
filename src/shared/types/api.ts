@@ -184,6 +184,7 @@ export const SETTING_KEYS = {
   MCP_SERVER: 'mcpServer',
   MCP_USAGE_LOGGING: 'mcpUsageLogging',
   MCP_USAGE_RETENTION_DAYS: 'mcpUsageRetentionDays',
+  REDUCED_MOTION: 'reducedMotion',
   SCAN_EXCLUDED_DIRECTORIES: 'scanExcludedDirectories',
   SCAN_INCLUDED_DIRECTORIES: 'scanIncludedDirectories',
   SCAN_MAX_DEPTH: 'scanMaxDepth',

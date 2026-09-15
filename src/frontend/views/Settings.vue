@@ -18,6 +18,7 @@ import DefaultTerminalSetting from '../components/settings/organisms/DefaultTerm
 import ShowTrayIconSetting from '../components/settings/organisms/ShowTrayIconSetting.vue';
 import CommandPaletteShortcutSetting from '../components/settings/organisms/CommandPaletteShortcutSetting.vue';
 import ShowDashboardStatsSetting from '../components/settings/organisms/ShowDashboardStatsSetting.vue';
+import ReducedMotionSetting from '../components/settings/organisms/ReducedMotionSetting.vue';
 import InstallCliCommandSetting from '../components/settings/organisms/InstallCliCommandSetting.vue';
 import McpServerSetting from '../components/settings/organisms/McpServerSetting.vue';
 import McpUsageLoggingSetting from '../components/settings/organisms/McpUsageLoggingSetting.vue';
@@ -43,6 +44,7 @@ const SETTING_COMPONENTS: Record<string, Component> = {
   [SETTING_KEYS.DEFAULT_TERMINAL]: DefaultTerminalSetting,
   [SETTING_KEYS.THEMES]: ThemesSetting,
   [SETTING_KEYS.SHOW_DASHBOARD_STATS]: ShowDashboardStatsSetting,
+  [SETTING_KEYS.REDUCED_MOTION]: ReducedMotionSetting,
   [SETTING_KEYS.SHOW_TRAY_ICON]: ShowTrayIconSetting,
   [SETTING_KEYS.COMMAND_PALETTE_SHORTCUT]: CommandPaletteShortcutSetting,
   [SETTING_KEYS.GIT_EMAILS]: GitEmailsSetting,

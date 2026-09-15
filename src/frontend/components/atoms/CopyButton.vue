@@ -89,11 +89,11 @@ async function handleCopy() {
 /* Entering: the copy icon rotates in, the check overshoots in. `mode="out-in"`
    means the outgoing icon finishes leaving before these run. */
 .icon-swap-enter-active {
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 90ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .icon-swap-leave-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 1, 1);
+  transition: all 90ms cubic-bezier(0.4, 0, 1, 1);
 }
 
 .copy-icon.icon-swap-enter-from {
@@ -116,11 +116,21 @@ async function handleCopy() {
   transform: scale(0.3) rotate(90deg);
 }
 
-/* Still swap the icons, just without the spin/scale. */
+/* Still swap the icons, just without the spin/scale.
+ *
+ * Two rules rather than one: the media query covers the OS preference, and the
+ * root class covers the in-app setting, which can also turn motion back on when
+ * the OS asks to reduce it. `:root:not(.no-reduce-motion)` is what lets an
+ * explicit "never reduce" win over the query. */
 @media (prefers-reduced-motion: reduce) {
-  .icon-swap-enter-active,
-  .icon-swap-leave-active {
+  :root:not(.no-reduce-motion) .icon-swap-enter-active,
+  :root:not(.no-reduce-motion) .icon-swap-leave-active {
     transition: none;
   }
+}
+
+:root.reduce-motion .icon-swap-enter-active,
+:root.reduce-motion .icon-swap-leave-active {
+  transition: none;
 }
 </style>

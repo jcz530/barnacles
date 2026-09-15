@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { onKeyStroke } from '@vueuse/core';
 import { useColorInversion } from '@/composables/useColorInversion';
 import { useTheme } from '@/composables/useTheme';
+import { useReducedMotionRoot } from '@/composables/useReducedMotion';
+import { useQueries } from '@/composables/useQueries';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
@@ -47,6 +49,20 @@ const { reinitializeColors } = useColorInversion();
 
 // Set up theming system
 const { activeTheme } = useTheme();
+
+/*
+ * Apply the motion preference to the document root.
+ *
+ * Done here rather than in the settings row because the row is only mounted
+ * while the settings page is open, and the preference has to hold for the whole
+ * app. The settings query feeds it the stored value; after that the row updates
+ * the shared state directly, since the update mutation deliberately does not
+ * invalidate `['settings']`.
+ */
+const { syncFromSettings } = useReducedMotionRoot();
+const { useSettingsQuery } = useQueries();
+const appSettingsQuery = useSettingsQuery({ enabled: true });
+watch(() => appSettingsQuery.data.value, syncFromSettings, { immediate: true });
 
 // Re-initialize color inversion whenever the active theme changes
 // This ensures dark mode works correctly with custom theme colors
