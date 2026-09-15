@@ -34,12 +34,12 @@ function themedPalettes(): Set<string> {
 
 function colorScalesBlock(): string {
   const src = read('src/frontend/composables/useColorInversion.ts');
-  return src.slice(src.indexOf('const colorScales'), src.indexOf('// Store original values'));
+  return src.slice(src.indexOf('const colorScales'), src.indexOf('function getInvertedShade'));
 }
 
 function invertedPalettes(): Set<string> {
   const names = new Set<string>();
-  for (const m of colorScalesBlock().matchAll(/^\s{4}([a-z]+):\s*\[/gm)) names.add(m[1]);
+  for (const m of colorScalesBlock().matchAll(/^\s{2}([a-z]+):\s*\[/gm)) names.add(m[1]);
   return names;
 }
 
@@ -57,6 +57,13 @@ describe('color inversion covers every themeable palette', () => {
     ]);
   });
 
+  it('actually parses a colorScales block', () => {
+    // These checks slice the source between markers. When the markers drift the
+    // slice comes back empty and every coverage assertion below passes
+    // vacuously, so assert the parse found something first.
+    expect(invertedPalettes().size).toBeGreaterThan(20);
+  });
+
   it('inverts every palette useTheme writes', () => {
     const inverted = invertedPalettes();
     const missing = [...themedPalettes()].filter(p => !inverted.has(p)).sort();
@@ -64,7 +71,7 @@ describe('color inversion covers every themeable palette', () => {
   });
 
   it('gives every shade a 1000-complement within the same scale', () => {
-    for (const m of colorScalesBlock().matchAll(/^\s{4}([a-z]+):\s*\[([^\]]+)\]/gm)) {
+    for (const m of colorScalesBlock().matchAll(/^\s{2}([a-z]+):\s*\[([^\]]+)\]/gm)) {
       const shades = m[2].split(',').map(s => Number(s.trim()));
       for (const shade of shades) {
         expect(shades, `${m[1]}-${shade} has no ${1000 - shade} counterpart`).toContain(
@@ -104,5 +111,51 @@ describe('color mode is owned by one ref per surface', () => {
     for (const file of surfaces) {
       expect(read(file), `${file} must map light -> 'light'`).toMatch(/light:\s*'light'/);
     }
+  });
+});
+
+/**
+ * The half-light bug: useTheme has six callers, and every instance used to
+ * register watch(activeTheme, ..., { immediate: true }). TanStack serves the
+ * cached theme synchronously, so mounting any component that merely reads the
+ * theme re-ran applyThemeVariables and repainted the LIGHT palette. Nothing
+ * re-inverted it -- App's reinit watcher was immediate:false and only fired on
+ * an actual change -- so visiting /themes in dark mode left the app half
+ * inverted, with .dark's --background: var(--color-slate-300) resolving against
+ * an un-inverted slate.
+ */
+describe('theme application has a single owner', () => {
+  const useTheme = () => read('src/frontend/composables/useTheme.ts');
+
+  it('gates the apply watcher behind an explicit opt-in', () => {
+    expect(useTheme()).toMatch(/if \(options\.applyToDocument && !hasApplyOwner\)/);
+  });
+
+  it('re-inverts synchronously at the end of applyThemeVariables', () => {
+    const src = useTheme();
+    const body = src.slice(src.indexOf('function applyThemeVariables'));
+    const end = body.indexOf('\n  }');
+    expect(body.slice(0, end), 'applyThemeVariables must re-invert after writing').toMatch(
+      /reinitializeColors\(\);/
+    );
+  });
+
+  it('is opted into by App and by nobody else', () => {
+    const optedIn = [
+      'src/frontend/App.vue',
+      'src/frontend/views/Themes.vue',
+      'src/frontend/views/ThemeEditor.vue',
+      'src/frontend/components/settings/molecules/ThemeCard.vue',
+      'src/frontend/components/settings/organisms/ThemesSetting.vue',
+      'src/frontend/components/nav/atoms/LogoMark.vue',
+    ].filter(f => /applyToDocument:\s*true/.test(read(f)));
+
+    expect(optedIn).toEqual(['src/frontend/App.vue']);
+  });
+
+  it('does not re-invert on a timer', () => {
+    // The old App watcher guessed at 50ms for the CSS writes to land. The
+    // apply path is synchronous, so a timer here means the race is back.
+    expect(read('src/frontend/App.vue')).not.toMatch(/setTimeout[\s\S]{0,80}reinitializeColors/);
   });
 });

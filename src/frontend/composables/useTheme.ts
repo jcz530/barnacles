@@ -1,10 +1,29 @@
-import { computed, watch } from 'vue';
+import { computed, onScopeDispose, watch } from 'vue';
 import { useLocalStorage } from '@vueuse/core';
 import { generateShades } from '../../shared/utilities/shade-generator';
 import type { Theme } from '../../shared/types/theme';
+import { reinitializeColors } from './useColorInversion';
 import { useQueries } from './useQueries';
 
 const TAILWIND_SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+
+/**
+ * Whether some live instance is already driving applyThemeVariables. The
+ * palette belongs to the one <html> element, so exactly one watcher should
+ * write it however many components hold a useTheme.
+ */
+let hasApplyOwner = false;
+
+/**
+ * Options for useTheme.
+ *
+ * `applyToDocument` opts a caller in to owning the apply-and-invert watcher.
+ * App passes it; every other caller just reads or mutates themes and must not,
+ * or mounting one of them would repaint the palette (see the watcher below).
+ */
+export interface UseThemeOptions {
+  applyToDocument?: boolean;
+}
 
 /**
  * Write (or clear, on null) a CSS variable as an inline style on <html>.
@@ -31,7 +50,7 @@ function setVar(name: string, value: string | null) {
  * Composable for managing application themes
  * Handles fetching, applying, and updating themes with live preview
  */
-export function useTheme() {
+export function useTheme(options: UseThemeOptions = {}) {
   const {
     useThemesQuery,
     useActiveThemeQuery,
@@ -164,6 +183,12 @@ export function useTheme() {
         console.error('Failed to parse custom CSS variables:', error);
       }
     }
+
+    // Everything above wrote light-mode values, so in dark mode the palette on
+    // the element is now wrong. Re-invert here, synchronously, rather than
+    // leaving it to a watcher somewhere else: this is the only point that knows
+    // the writes have finished.
+    reinitializeColors();
   }
 
   /**
@@ -174,16 +199,35 @@ export function useTheme() {
     applyThemeVariables(theme);
   }
 
-  // Apply active theme when it loads or changes
-  watch(
-    activeTheme,
-    newTheme => {
-      if (newTheme) {
-        applyThemeVariables(newTheme);
-      }
-    },
-    { immediate: true }
-  );
+  /**
+   * Apply the active theme when it loads or changes.
+   *
+   * Guarded because useTheme has six callers, and most only read activeTheme.
+   * Every instance used to register this watcher with `immediate: true`, and
+   * TanStack serves the cached theme synchronously, so merely mounting a
+   * component that reads the theme re-ran applyThemeVariables -- repainting the
+   * light palette. In dark mode that left the app half-inverted until something
+   * else happened to re-invert it: navigating to /themes was enough.
+   *
+   * One owner claims it, so the apply happens once per actual change.
+   */
+  if (options.applyToDocument && !hasApplyOwner) {
+    hasApplyOwner = true;
+
+    watch(
+      activeTheme,
+      newTheme => {
+        if (newTheme) {
+          applyThemeVariables(newTheme);
+        }
+      },
+      { immediate: true }
+    );
+
+    onScopeDispose(() => {
+      hasApplyOwner = false;
+    }, true);
+  }
 
   return {
     // Queries
