@@ -18,7 +18,7 @@ const props = defineProps<Props>();
 const linkClasses = computed(() =>
   cn(
     `text-foreground inline-flex h-[calc(100%-1px)] cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:outline-1 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
-    props.active && 'bg-background shadow-sm'
+    props.active && 'bg-background shadow-2xs'
   )
 );
 </script>
