@@ -200,6 +200,7 @@ samp {
   /* --foreground: var(--color-slate-50); */
   --card: var(--color-slate-300);
   --border: var(--color-slate-400);
+  --sidebar-accent-foreground: var(--color-slate-900);
 }
 
 @layer base {
