@@ -45,10 +45,13 @@ if (window.electron?.commandPalette) {
 }
 
 // Set up dark mode with automatic color inversion
-const { reinitializeColors } = useColorInversion();
+useColorInversion();
 
-// Set up theming system
-const { activeTheme } = useTheme();
+// Set up theming system. App is the one caller that writes the theme to the
+// document; the rest only read or mutate. Re-inverting after a theme change is
+// useTheme's own job now -- it does it synchronously, right after the writes,
+// instead of the timer that used to sit here racing them.
+useTheme({ applyToDocument: true });
 
 /*
  * Apply the motion preference to the document root.
@@ -63,21 +66,6 @@ const { syncFromSettings } = useReducedMotionRoot();
 const { useSettingsQuery } = useQueries();
 const appSettingsQuery = useSettingsQuery({ enabled: true });
 watch(() => appSettingsQuery.data.value, syncFromSettings, { immediate: true });
-
-// Re-initialize color inversion whenever the active theme changes
-// This ensures dark mode works correctly with custom theme colors
-watch(
-  activeTheme,
-  newTheme => {
-    if (newTheme) {
-      // Wait a tick for theme CSS variables to be applied
-      setTimeout(() => {
-        reinitializeColors();
-      }, 50);
-    }
-  },
-  { immediate: false }
-);
 
 // Initialize WebSocket connection for project scanning (global across all pages)
 const { connect: connectScanWebSocket } = useProjectScanWebSocket();

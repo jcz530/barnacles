@@ -1,5 +1,5 @@
 import { computed, ref, type Ref } from 'vue';
-import { useDark, useLocalStorage } from '@vueuse/core';
+import { useColorMode } from '@vueuse/core';
 import { toast } from 'vue-sonner';
 import { useQueries } from '@/composables/useQueries';
 import type { RunnableScript, StartProcess } from '@shared/types/process';
@@ -106,13 +106,21 @@ export const useCommandRegistry = (isOpen: Ref<boolean>, currentProjectId?: Ref<
     });
   };
 
-  const isDark = useDark({
+  /**
+   * One ref for the mode, not a useDark alongside a useLocalStorage: both
+   * default to the same 'vueuse-color-scheme' key, so writing the raw storage
+   * ref set the stored value without ever applying the class to <html>.
+   *
+   * No emitAuto here -- this only needs the resolved light/dark to toggle
+   * against and to report. ThemeToggle owns the three-way cycle.
+   */
+  const colorMode = useColorMode({
     selector: 'html',
     attribute: 'class',
-    valueDark: 'dark',
-    valueLight: 'light',
+    modes: { light: 'light', dark: 'dark' },
+    initialValue: 'auto',
   });
-  const themeMode = useLocalStorage<'light' | 'dark' | 'auto'>('vueuse-color-scheme', 'auto');
+  const isDark = computed(() => colorMode.value === 'dark');
 
   /**
    * Configured processes, per project, for the projects someone has opened.
@@ -303,7 +311,7 @@ export const useCommandRegistry = (isOpen: Ref<boolean>, currentProjectId?: Ref<
       ...appCommands({
         rescanAll: () => startScan(),
         toggleTheme: () => {
-          themeMode.value = isDark.value ? 'light' : 'dark';
+          colorMode.value = isDark.value ? 'light' : 'dark';
         },
         isDark: () => isDark.value,
         newWindow: async () => {
