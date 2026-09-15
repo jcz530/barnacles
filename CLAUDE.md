@@ -104,7 +104,7 @@ This is an Electron application with a Vue.js frontend and Hono API backend that
 ### Main Architecture Components
 
 - **Main Process** (`src/main/`) - Electron's main process that manages application lifecycle, windows, and native APIs
-- **Backend API** (`src/backend/`) - Hono server running on port 3001 that provides REST API endpoints
+- **Backend API** (`src/backend/`) - Hono server running on port 51000 that provides REST API endpoints
 - **Frontend** (`src/frontend/`) - Vue.js application that renders the UI using shadcn-vue components and Tailwind CSS
 - **Shared** (`src/shared/`) - Common types, constants, and utilities used across processes
 - **Preload** (`src/preload.ts`) - Bridge script for secure communication between renderer and main processes
@@ -112,7 +112,7 @@ This is an Electron application with a Vue.js frontend and Hono API backend that
 ### Key Application Flow
 
 1. Main process starts (`src/main/main.ts`) and initializes:
-   - Hono API server on port 3001
+   - Hono API server on port 51000 (or the next free port above it)
    - IPC communication setup
    - Main window creation
 2. Frontend Vue app connects to the API server via HTTP requests (not IPC)
@@ -131,7 +131,17 @@ This is an Electron application with a Vue.js frontend and Hono API backend that
 
 ### Important Configuration
 
-- API server runs on `localhost:3001` (configurable in `src/shared/constants/`)
+- API server runs on `localhost:51000`, set by `APP_CONFIG.API_PORT_PREFERRED` in
+  `src/shared/constants/`. **The port is negotiated at startup, not fixed**:
+  `src/backend/server.ts` walks upward from the preferred port until it finds a
+  free one, so a second instance (a dev build alongside a running app) lands on
+  51001 and so on. The renderer learns the real port from
+  `window.electronAPI.getApiConfig()` before mount, so when poking at the API by
+  hand, check which port the instance you care about is actually on rather than
+  assuming 51000. Outside Electron that bridge is undefined and the default
+  stands, which means a page opened straight from the Vite dev server in a plain
+  browser cannot reach the API at all (no theme, no data).
+- Vite dev server runs on port 5734 (`APP_CONFIG.VITE_DEV_SERVER_PORT`)
 - Window dimensions and constraints defined in `APP_CONFIG.WINDOW_SIZE`
 - API routes are centrally defined in `API_ROUTES` constant
 
