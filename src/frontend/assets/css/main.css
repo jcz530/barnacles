@@ -178,7 +178,7 @@ samp {
   --sidebar-foreground: var(--color-slate-800);
   --sidebar-primary-foreground: var(--color-slate-200);
   --sidebar-accent: var(--color-primary-500);
-  --sidebar-accent-foreground: var(--color-primary-50);
+  --sidebar-accent-foreground: var(--color-slate-50);
   --sidebar-border: var(--color-slate-300);
   --sidebar-ring: var(--color-primary-400);
 }
