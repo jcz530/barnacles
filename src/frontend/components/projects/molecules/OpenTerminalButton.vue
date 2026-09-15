@@ -107,11 +107,11 @@ const handleMainButtonClick = () => {
   <div class="inline-flex">
     <!-- Main button - Opens terminal if preferred terminal is set, otherwise opens dropdown -->
     <Button
-      variant="outline"
+      variant="tertiary"
       size="sm"
       :disabled="isLoading || openTerminalMutation.isPending.value"
       @click="handleMainButtonClick"
-      class="border-r-muted-foreground/20 rounded-r-none border-r"
+      class="rounded-r-none border-r border-r-slate-50/20"
     >
       <TerminalIcon class="mr-2 h-4 w-4" />
       {{ preferredTerminal ? `Open ${preferredTerminal.name}` : 'Select Terminal' }}
@@ -120,7 +120,7 @@ const handleMainButtonClick = () => {
     <!-- Dropdown trigger button -->
     <DropdownMenu v-model:open="dropdownOpen">
       <DropdownMenuTrigger as-child>
-        <Button variant="outline" size="sm" :disabled="isLoading" class="rounded-l-none px-2">
+        <Button variant="tertiary" size="sm" :disabled="isLoading" class="rounded-l-none px-2">
           <ChevronDown class="h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>

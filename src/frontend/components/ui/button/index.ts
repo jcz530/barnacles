@@ -15,6 +15,14 @@ export const buttonVariants = cva(
           'bg-success-500 text-slate-50 shadow-xs hover:bg-success-600/90 focus-visible:bg-success-600/20 ',
         outline: 'border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground',
         secondary: 'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80',
+        // `secondary` above is shadcn's near-white surface, unrelated to the
+        // theme's secondary colour. These two follow the themed ramps, like
+        // `success` does, so they track the user's palette and invert in dark
+        // mode.
+        secondaryThemed:
+          'bg-secondary-500 text-slate-50 shadow-xs hover:bg-secondary-600 focus-visible:ring-secondary-500/20',
+        tertiary:
+          'bg-tertiary-500 text-slate-50 shadow-xs hover:bg-tertiary-600 focus-visible:ring-tertiary-500/20',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
         link: 'text-primary underline-offset-4 hover:underline',
       },
