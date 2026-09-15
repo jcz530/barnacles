@@ -61,7 +61,16 @@ describe('color inversion covers every themeable palette', () => {
     // These checks slice the source between markers. When the markers drift the
     // slice comes back empty and every coverage assertion below passes
     // vacuously, so assert the parse found something first.
-    expect(invertedPalettes().size).toBeGreaterThan(20);
+    expect(invertedPalettes().size).toBeGreaterThanOrEqual(6);
+  });
+
+  it('inverts only palettes useTheme writes', () => {
+    // The stock Tailwind scales must NOT be here: main.css declares no
+    // --color-<stock>-* variable, so Tailwind emits those utilities as literal
+    // colours and the write changes nothing -- but it does leave an inverted
+    // value on the element for the next read to mistake for an original.
+    const extra = [...invertedPalettes()].filter(p => !themedPalettes().has(p)).sort();
+    expect(extra, `inverted but never written by useTheme: ${extra.join(', ')}`).toEqual([]);
   });
 
   it('inverts every palette useTheme writes', () => {
@@ -136,7 +145,7 @@ describe('theme application has a single owner', () => {
     const body = src.slice(src.indexOf('function applyThemeVariables'));
     const end = body.indexOf('\n  }');
     expect(body.slice(0, end), 'applyThemeVariables must re-invert after writing').toMatch(
-      /reinitializeColors\(\);/
+      /reinitializeColors\(lightPalette\);/
     );
   });
 
@@ -157,5 +166,38 @@ describe('theme application has a single owner', () => {
     // The old App watcher guessed at 50ms for the CSS writes to land. The
     // apply path is synchronous, so a timer here means the race is back.
     expect(read('src/frontend/App.vue')).not.toMatch(/setTimeout[\s\S]{0,80}reinitializeColors/);
+  });
+});
+
+/**
+ * The palette folding in on itself: initializeColors used to read the element
+ * unconditionally, so any read taken while dark cached the values the inversion
+ * had already written AS the light originals. Light then restored inverted
+ * values and dark inverted them a second time -- light rendered dark, dark
+ * rendered washed out, and cycling modes made it worse each pass.
+ */
+describe('the light cache is never read back from an inverted element', () => {
+  const src = () => read('src/frontend/composables/useColorInversion.ts');
+
+  it('only reads the element while light', () => {
+    const body = src().slice(src().indexOf('function initializeColors'));
+    const end = body.indexOf('\n}');
+    const fn = body.slice(0, end);
+    expect(fn, 'the getComputedStyle read must be guarded by the dark check').toMatch(
+      /if \(!document\.documentElement\.classList\.contains\('dark'\)\)[\s\S]*getComputedStyle/
+    );
+  });
+
+  it('takes written values as overrides instead of reading them back', () => {
+    expect(src()).toMatch(/function initializeColors\(overrides\?: Record<string, string>\)/);
+    expect(src()).toMatch(
+      /export function reinitializeColors\(overrides\?: Record<string, string>\)/
+    );
+  });
+
+  it('has useTheme pass the light values it just wrote', () => {
+    const theme = read('src/frontend/composables/useTheme.ts');
+    expect(theme).toMatch(/lightPalette\[varName\] = shade\.hex;/);
+    expect(theme).toMatch(/reinitializeColors\(lightPalette\)/);
   });
 });

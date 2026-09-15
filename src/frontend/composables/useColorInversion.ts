@@ -36,30 +36,20 @@ import { watch } from 'vue';
  */
 const originalValues = new Map<string, string>();
 
-/** Scales to inverted. Must cover every palette useTheme writes (see above). */
+/**
+ * The palettes that invert: exactly the six useTheme generates.
+ *
+ * The stock Tailwind scales (gray, red, blue, amber, ...) are deliberately not
+ * here. main.css declares no --color-<stock>-* variable, so Tailwind compiles
+ * `text-amber-600` to a literal colour with no var() to override -- writing
+ * those variables never changed a pixel. It did, however, leave inverted values
+ * on the element for the next read to mistake for originals, which is one of
+ * the ways the palette folded in on itself. A utility using a stock palette is
+ * simply not theme-aware; the fix for that is to use a theme palette, not to
+ * invert a variable nothing reads.
+ */
 const colorScales = {
   slate: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  gray: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  zinc: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  neutral: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  stone: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  red: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  orange: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  amber: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  yellow: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  lime: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  green: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  emerald: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  teal: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  cyan: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  sky: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  blue: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  indigo: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  violet: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  purple: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  fuchsia: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  pink: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  rose: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
   primary: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
   secondary: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
   tertiary: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
@@ -73,20 +63,37 @@ function getInvertedShade(shade: number): number {
 }
 
 /**
- * Read current computed --color-*-* values and cache them as the light-mode
- * originals. getComputedStyle picks up both the stylesheet defaults and the
- * inline overrides useTheme writes, and reads the whole document once rather
- * than per variable.
+ * Cache the light-mode palette, which every inversion is computed from.
+ *
+ * Never read back a value we may have written ourselves. Reading the element
+ * while dark would cache the values we previously inverted AS the originals --
+ * a palette folded in on itself, where light restores inverted values and dark
+ * inverts them a second time. That is what made light render dark and dark
+ * render washed out after cycling modes.
+ *
+ * So the element is only read for scales nothing has overridden yet (the stock
+ * Tailwind palettes, straight from the stylesheet), and only while light.
+ * useTheme's generated palettes arrive through `overrides` instead: it has the
+ * light hex values in hand before it writes them, so they never have to be read
+ * back off an element that may already be inverted.
  */
-function initializeColors() {
-  const computed = getComputedStyle(document.documentElement);
-  for (const [colorName, shades] of Object.entries(colorScales)) {
-    for (const shade of shades) {
-      const varName = `--color-${colorName}-${shade}`;
-      const value = computed.getPropertyValue(varName).trim();
-      if (value) {
-        originalValues.set(varName, value);
+function initializeColors(overrides?: Record<string, string>) {
+  if (!document.documentElement.classList.contains('dark')) {
+    const computed = getComputedStyle(document.documentElement);
+    for (const [colorName, shades] of Object.entries(colorScales)) {
+      for (const shade of shades) {
+        const varName = `--color-${colorName}-${shade}`;
+        const value = computed.getPropertyValue(varName).trim();
+        if (value) {
+          originalValues.set(varName, value);
+        }
       }
+    }
+  }
+
+  if (overrides) {
+    for (const [varName, value] of Object.entries(overrides)) {
+      originalValues.set(varName, value);
     }
   }
 }
@@ -131,15 +138,15 @@ function applyColorInversion() {
  * Re-cache the palette and re-apply the inversion. Call straight after writing
  * new --color-* values, which useTheme does on every apply and live preview.
  *
+ * Pass the light-mode values just written as `overrides`. They are the ones
+ * that must not be read back off the element -- see initializeColors.
+ *
  * Exported as a plain function, not through the composable: useTheme needs it
  * and is not a component, and the state it works on is module-level anyway.
- *
- * Safe to call in either mode. Callers write light-mode values, so what is read
- * back here is always a light palette regardless of the current dark state.
  */
-export function reinitializeColors() {
+export function reinitializeColors(overrides?: Record<string, string>) {
   originalValues.clear();
-  initializeColors();
+  initializeColors(overrides);
   applyColorInversion();
 }
 

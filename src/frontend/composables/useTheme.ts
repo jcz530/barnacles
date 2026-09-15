@@ -150,9 +150,16 @@ export function useTheme(options: UseThemeOptions = {}) {
       danger: dangerPalette,
     };
 
+    // Kept to hand to the inversion below. These are the light-mode values by
+    // construction, which is exactly what it must not try to read back off an
+    // element that may already be inverted.
+    const lightPalette: Record<string, string> = {};
+
     for (const [name, palette] of Object.entries(palettes)) {
       palette.shades.forEach((shade, index) => {
-        setVar(`--color-${name}-${TAILWIND_SHADES[index]}`, shade.hex);
+        const varName = `--color-${name}-${TAILWIND_SHADES[index]}`;
+        lightPalette[varName] = shade.hex;
+        setVar(varName, shade.hex);
       });
     }
 
@@ -187,8 +194,8 @@ export function useTheme(options: UseThemeOptions = {}) {
     // Everything above wrote light-mode values, so in dark mode the palette on
     // the element is now wrong. Re-invert here, synchronously, rather than
     // leaving it to a watcher somewhere else: this is the only point that knows
-    // the writes have finished.
-    reinitializeColors();
+    // the writes have finished -- and the only one holding the light values.
+    reinitializeColors(lightPalette);
   }
 
   /**
