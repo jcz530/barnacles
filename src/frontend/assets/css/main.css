@@ -182,11 +182,22 @@ samp {
   --sidebar-border: var(--color-slate-300);
   --sidebar-ring: var(--color-primary-400);
 }
+/*
+ * Shades here read inverted: the palette swaps each shade for its 1000-minus
+ * counterpart in dark mode, so slate-50 lands on the darkest rung.
+ *
+ * A shadow is a dark smudge, and there is nothing left to darken on a near
+ * black ground, so cards are lifted by lightness instead: the ground drops two
+ * rungs below the card rather than one, and the border goes lighter than the
+ * card so its edge reads as a highlight rather than a seam. The shadow stays,
+ * but as a supporting cue rather than the whole effect.
+ */
 .dark {
   --color-white: var(--color-slate-100);
-  --background: var(--color-slate-100);
+  --background: var(--color-slate-50);
   /* --foreground: var(--color-slate-50); */
   --card: var(--color-slate-200);
+  --border: var(--color-slate-300);
 }
 
 @layer base {
