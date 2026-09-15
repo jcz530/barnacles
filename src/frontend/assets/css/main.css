@@ -162,8 +162,8 @@ samp {
   --popover-foreground: var(--color-slate-800);
   --primary: var(--color-primary-500);
   --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
+  --secondary: var(--color-secondary-100);
+  --secondary-foreground: var(--color-secondary-900);
   --muted: var(--color-slate-100);
   --muted-foreground: var(--color-slate-300);
   --accent: var(--color-slate-100);
