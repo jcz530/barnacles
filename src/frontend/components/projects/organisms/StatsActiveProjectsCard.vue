@@ -51,11 +51,7 @@ const share = (commits: number) =>
 
     <CardContent>
       <div v-if="isLoading" class="space-y-3">
-        <div
-          v-for="row in 5"
-          :key="row"
-          class="h-8 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800"
-        />
+        <div v-for="row in 5" :key="row" class="h-8 animate-pulse rounded-md bg-slate-100" />
       </div>
 
       <p v-else-if="!visible.length" class="py-8 text-center text-sm text-slate-500">
@@ -65,10 +61,7 @@ const share = (commits: number) =>
       <ul v-else class="space-y-3">
         <li v-for="project in visible" :key="project.projectPath">
           <div class="flex items-baseline justify-between gap-3">
-            <span
-              class="truncate text-sm text-slate-700 dark:text-slate-300"
-              :title="project.projectPath"
-            >
+            <span class="truncate text-sm text-slate-700" :title="project.projectPath">
               {{ displayName(project.projectPath) }}
             </span>
             <span class="shrink-0 text-xs text-slate-500">
@@ -78,7 +71,7 @@ const share = (commits: number) =>
             </span>
           </div>
 
-          <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+          <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
             <div
               class="bg-primary-500 h-full rounded-full"
               :style="{ width: `${(project.commits / maxCommits) * 100}%` }"
@@ -86,12 +79,8 @@ const share = (commits: number) =>
           </div>
 
           <div class="mt-1 flex gap-3 font-mono text-[10px]">
-            <span class="text-success-600 dark:text-success-400">
-              +{{ project.linesAdded.toLocaleString() }}
-            </span>
-            <span class="text-danger-600 dark:text-danger-400">
-              −{{ project.linesRemoved.toLocaleString() }}
-            </span>
+            <span class="text-success-600"> +{{ project.linesAdded.toLocaleString() }} </span>
+            <span class="text-danger-600"> −{{ project.linesRemoved.toLocaleString() }} </span>
             <span class="text-slate-400">
               {{ project.filesChanged.toLocaleString() }}
               {{ project.filesChanged === 1 ? 'file' : 'files' }}

@@ -60,7 +60,7 @@ watch(
 <template>
   <div ref="wrapper" class="w-full">
     <div
-      class="relative mx-auto overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800"
+      class="relative mx-auto overflow-hidden rounded-lg border border-slate-200"
       :style="{ height: `${scaledHeight}px`, width: `${scaledWidth}px` }"
     >
       <iframe

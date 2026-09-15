@@ -36,9 +36,8 @@ const model = defineModel<T>({ required: true });
       :aria-checked="model === option.value"
       :class="
         cn(
-          `text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:outline-1 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
-          model === option.value &&
-            'bg-background dark:text-foreground dark:border-input dark:bg-input/30 shadow-sm'
+          `text-foreground inline-flex h-[calc(100%-1px)] cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:outline-1 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+          model === option.value && 'bg-background shadow-sm'
         )
       "
       @click="model = option.value"

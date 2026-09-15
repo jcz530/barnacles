@@ -39,7 +39,7 @@ const chartData = computed(() =>
     </CardHeader>
 
     <CardContent>
-      <div v-if="isLoading" class="h-32 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />
+      <div v-if="isLoading" class="h-32 animate-pulse rounded-md bg-slate-100" />
 
       <p v-else-if="!languages.length" class="py-8 text-center text-sm text-slate-500">
         No commits in {{ monthLabel }}
@@ -67,7 +67,7 @@ const chartData = computed(() =>
               @mouseleave="onHover(null)"
             >
               <span class="size-3 shrink-0 rounded-full" :style="{ backgroundColor: item.color }" />
-              <span class="text-slate-700 dark:text-slate-300">{{ item.label }}</span>
+              <span class="text-slate-700">{{ item.label }}</span>
               <span class="text-slate-400">{{ item.percentage }}%</span>
             </div>
           </div>

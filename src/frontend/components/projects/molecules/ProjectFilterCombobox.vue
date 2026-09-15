@@ -85,7 +85,7 @@ const clear = () => emit('update:modelValue', []);
          default treatment. -->
     <ComboboxList
       align="start"
-      class="p-0 [&_[data-slot=command-input-wrapper]]:rounded-none [&_[data-slot=command-input-wrapper]]:border-0 [&_[data-slot=command-input-wrapper]]:border-b [&_[data-slot=command-input-wrapper]]:border-slate-200 [&_[data-slot=command-input-wrapper]]:shadow-none dark:[&_[data-slot=command-input-wrapper]]:border-slate-700"
+      class="p-0 [&_[data-slot=command-input-wrapper]]:rounded-none [&_[data-slot=command-input-wrapper]]:border-0 [&_[data-slot=command-input-wrapper]]:border-b [&_[data-slot=command-input-wrapper]]:border-slate-200 [&_[data-slot=command-input-wrapper]]:shadow-none"
     >
       <!-- reka-ui filters the items below against this input as you type. -->
       <ComboboxInput placeholder="Search projects..." />
@@ -117,10 +117,10 @@ const clear = () => emit('update:modelValue', []);
 
       <template v-if="modelValue.length">
         <!-- Matches the rule under the search input above. -->
-        <ComboboxSeparator class="mx-0 bg-slate-200 dark:bg-slate-700" />
+        <ComboboxSeparator class="mx-0 bg-slate-200" />
         <button
           type="button"
-          class="w-full px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+          class="w-full px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-100"
           @click="clear"
         >
           Clear filters
