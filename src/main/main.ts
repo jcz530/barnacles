@@ -14,6 +14,7 @@ import { installCli, uninstallCli, isCliInstalled } from './cli-manager';
 import {
   getMainWindows,
   getShowingUtilityWindow,
+  raiseWindow,
   trackApplicationActivation,
 } from './window-utils';
 import {
@@ -259,9 +260,7 @@ app.on('second-instance', (_event, commandLine) => {
 
   if (mainWindows.length > 0) {
     const [existingWindow] = mainWindows;
-    if (existingWindow.isMinimized()) existingWindow.restore();
-    existingWindow.show();
-    existingWindow.focus();
+    raiseWindow(existingWindow);
   } else {
     createAppWindow();
   }
@@ -360,8 +359,7 @@ app.on('activate', async () => {
   if (visibleMainWindows.length === 0) {
     if (mainWindows.length > 0) {
       // Show the first hidden main window
-      mainWindows[0].show();
-      mainWindows[0].focus();
+      raiseWindow(mainWindows[0]);
     } else {
       // Create a new window if none exist
       await createAppWindow();

@@ -22,10 +22,16 @@ const dismiss = () => {
  * Hand it to a main window instead, creating one if every window is closed.
  */
 const navigate = async (path: string) => {
+  // Dismissed first, not last. Hiding the palette drops its
+  // visible-on-all-workspaces flag, and on macOS that transforms the process
+  // type back -- briefly hiding the window and the dock tile. Running it after
+  // the raise landed that flicker on top of the window we had just brought
+  // forward; running it first lets the raise be the last thing that happens.
+  dismiss();
+
   const result = await window.electron.showOrCreateWindow();
   if (!result?.success) return;
   await window.electron.navigateToProject(path);
-  dismiss();
 };
 
 const onSelect = (command: Command) =>

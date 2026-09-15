@@ -45,6 +45,35 @@ export const isMainWindow = (win: BrowserWindow): boolean =>
 export const getMainWindows = (): BrowserWindow[] =>
   BrowserWindow.getAllWindows().filter(isMainWindow);
 
+/**
+ * Bring a window to the front, activating the application along with it.
+ *
+ * show() and focus() order windows *within* an application; neither makes an
+ * inactive app frontmost. That is fine from a main window, but every caller
+ * here can run while another app is in front -- most sharply the floating
+ * command palette, which is an NSPanel precisely so that showing it does not
+ * activate Barnacles. Opening a project from it used to show and focus a window
+ * that stayed behind whatever you were looking at, and the app then held
+ * keyboard focus with nothing visible on screen.
+ *
+ * app.focus({ steal: true }) is the documented lever for that, but it is a
+ * request rather than a command: macOS 14 deprecated focus stealing, so the OS
+ * may decline it. It is still the best available, and it is what closes the
+ * common case.
+ */
+export const raiseWindow = (win: BrowserWindow): void => {
+  if (win.isDestroyed()) return;
+
+  // show() alone leaves a minimized window minimized.
+  if (win.isMinimized()) win.restore();
+  if (!win.isVisible()) win.show();
+  win.focus();
+
+  // Only macOS separates "this window has focus" from "this app is frontmost";
+  // elsewhere focus() already brought the application forward.
+  if (process.platform === 'darwin') app.focus({ steal: true });
+};
+
 // Whether Barnacles is the frontmost application.
 //
 // BrowserWindow.getFocusedWindow() cannot answer this: it reports the window
