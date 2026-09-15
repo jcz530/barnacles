@@ -2,20 +2,18 @@
 import { useTheme } from '@/composables/useTheme';
 import { Palette } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { RouteNames } from '@/router';
+import SettingRow from '../molecules/SettingRow.vue';
 
 const { activeTheme } = useTheme();
 </script>
 
 <template>
   <div class="space-y-3">
-    <div>
-      <Label>Theme</Label>
-      <p class="text-muted-foreground text-sm">
-        Customize the application's color scheme and design tokens
-      </p>
-    </div>
+    <SettingRow
+      label="Theme"
+      description="Customize the application's color scheme and design tokens"
+    />
 
     <div class="flex items-center gap-3">
       <!-- Active Theme Display -->

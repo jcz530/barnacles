@@ -3,7 +3,6 @@ import { computed, ref, watch } from 'vue';
 import { Trash2 } from 'lucide-vue-next';
 import { useQueries } from '../../../composables/useQueries';
 import { Switch } from '../../ui/switch';
-import { Label } from '../../ui/label';
 import { Button } from '../../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import {
@@ -18,6 +17,7 @@ import {
   AlertDialogTrigger,
 } from '../../ui/alert-dialog';
 import { SETTING_KEYS } from '../../../../shared/types/api';
+import SettingRow from '../molecules/SettingRow.vue';
 
 const { useSettingsQuery, useUpdateSettingMutation, useEventsQuery, useClearEventsMutation } =
   useQueries();
@@ -94,22 +94,19 @@ watch(retentionDays, async newValue => {
 
 <template>
   <div class="space-y-3">
-    <div class="flex items-center justify-between">
-      <div class="space-y-0.5">
-        <Label for="mcp-usage-logging" class="text-sm font-medium">MCP usage logging</Label>
-        <div class="text-muted-foreground text-sm">
-          Record each MCP tool call — the tool name, whether it succeeded, how long it took, which
-          client made it, and the arguments it was given. Tool results are never recorded. Stays on
-          this machine and powers the MCP page.
-        </div>
-      </div>
+    <SettingRow
+      layout="inline"
+      label-for="mcp-usage-logging"
+      label="MCP usage logging"
+      description="Record each MCP tool call — the tool name, whether it succeeded, how long it took, which client made it, and the arguments it was given. Tool results are never recorded. Stays on this machine and powers the MCP page."
+    >
       <Switch
         id="mcp-usage-logging"
+        aria-labelledby="mcp-usage-logging-label"
         v-model="usageLogging"
         :disabled="updateSettingMutation.isPending.value"
-        class="ml-4 shrink-0"
       />
-    </div>
+    </SettingRow>
 
     <div v-if="usageLogging" class="flex items-center justify-between gap-4">
       <div class="text-muted-foreground text-sm">Delete recorded calls older than</div>

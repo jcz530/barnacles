@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { onKeyStroke } from '@vueuse/core';
 import { useColorInversion } from '@/composables/useColorInversion';
 import { useTheme } from '@/composables/useTheme';
+import { useReducedMotionRoot } from '@/composables/useReducedMotion';
+import { useQueries } from '@/composables/useQueries';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useProjectScanWebSocket } from '@/composables/useProjectScanWebSocket';
@@ -50,6 +52,20 @@ useColorInversion();
 // useTheme's own job now -- it does it synchronously, right after the writes,
 // instead of the timer that used to sit here racing them.
 useTheme({ applyToDocument: true });
+
+/*
+ * Apply the motion preference to the document root.
+ *
+ * Done here rather than in the settings row because the row is only mounted
+ * while the settings page is open, and the preference has to hold for the whole
+ * app. The settings query feeds it the stored value; after that the row updates
+ * the shared state directly, since the update mutation deliberately does not
+ * invalidate `['settings']`.
+ */
+const { syncFromSettings } = useReducedMotionRoot();
+const { useSettingsQuery } = useQueries();
+const appSettingsQuery = useSettingsQuery({ enabled: true });
+watch(() => appSettingsQuery.data.value, syncFromSettings, { immediate: true });
 
 // Initialize WebSocket connection for project scanning (global across all pages)
 const { connect: connectScanWebSocket } = useProjectScanWebSocket();

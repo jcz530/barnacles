@@ -8,6 +8,7 @@ import { Button } from '../../ui/button';
 import McpInstallGuide from '../../mcp/organisms/McpInstallGuide.vue';
 import { SETTING_KEYS } from '../../../../shared/types/api';
 import { RouteNames } from '../../../router';
+import SettingRow from '../molecules/SettingRow.vue';
 
 const emit = defineEmits<{
   'jump-to-setting': [key: (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS]];
@@ -27,10 +28,10 @@ const isCliInstalled = computed(() => {
 
 <template>
   <div class="space-y-3">
-    <div class="flex items-center justify-between">
-      <div class="space-y-0.5">
-        <div class="flex items-center gap-2">
-          <span class="text-sm font-medium">MCP Server</span>
+    <SettingRow layout="inline" label="MCP Server">
+      <template #label>
+        <span class="flex items-center gap-2">
+          MCP Server
           <Badge
             v-if="isCliInstalled"
             variant="outline"
@@ -39,23 +40,18 @@ const isCliInstalled = computed(() => {
             Available
           </Badge>
           <Badge v-else variant="outline" class="text-muted-foreground"> Requires CLI </Badge>
-        </div>
-        <div class="text-muted-foreground text-sm">
-          Lets LLM clients (Claude Code, Claude Desktop, Cursor, Gemini CLI, VS Code, OpenCode, and
-          others) start/stop dev processes, read logs, check ports, and look up project info via the
-          "barnacles" command.
-        </div>
-      </div>
-      <Button
-        variant="outline"
-        size="sm"
-        class="shrink-0"
-        @click="router.push({ name: RouteNames.McpSetup })"
-      >
+        </span>
+      </template>
+      <template #description>
+        Lets LLM clients (Claude Code, Claude Desktop, Cursor, Gemini CLI, VS Code, OpenCode, and
+        others) start/stop dev processes, read logs, check ports, and look up project info via the
+        "barnacles" command.
+      </template>
+      <Button variant="outline" size="sm" @click="router.push({ name: RouteNames.McpSetup })">
         <ExternalLink class="mr-2 h-4 w-4" />
         Setup guide
       </Button>
-    </div>
+    </SettingRow>
 
     <div v-if="!isCliInstalled" class="flex items-center justify-between gap-3">
       <div class="text-muted-foreground text-sm">

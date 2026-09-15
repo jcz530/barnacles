@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 const listeners = new Map<string, ((...args: unknown[]) => void)[]>();
 let focusedWindow: unknown = null;
+const appFocus = vi.fn();
 
 const emit = (event: string, ...args: unknown[]) => {
   for (const listener of listeners.get(event) ?? []) listener(...args);
@@ -16,6 +17,7 @@ vi.mock('electron', () => ({
     on: (event: string, listener: (...args: unknown[]) => void) => {
       listeners.set(event, [...(listeners.get(event) ?? []), listener]);
     },
+    focus: (...args: unknown[]) => appFocus(...args),
   },
   BrowserWindow: {
     getAllWindows: () => [],
@@ -42,6 +44,121 @@ const withPlatform = async (platform: string, run: () => Promise<void>) => {
     if (original) Object.defineProperty(process, 'platform', original);
   }
 };
+
+/**
+ * A window that records what raiseWindow did to it. Defaults are the awkward
+ * case the helper exists for: hidden and minimized.
+ */
+const stubWindow = (overrides: Partial<Record<string, unknown>> = {}) => {
+  const calls: string[] = [];
+  return {
+    calls,
+    isDestroyed: () => false,
+    isMinimized: () => true,
+    isVisible: () => false,
+    restore: () => calls.push('restore'),
+    show: () => calls.push('show'),
+    focus: () => calls.push('focus'),
+    ...overrides,
+  };
+};
+
+describe('raiseWindow', () => {
+  beforeEach(() => {
+    listeners.clear();
+    appFocus.mockClear();
+    vi.resetModules();
+  });
+
+  const load = async (platform: string) => {
+    let module!: typeof import('./window-utils');
+    await withPlatform(platform, async () => {
+      module = await import('./window-utils');
+    });
+    return module;
+  };
+
+  /** raiseWindow reads process.platform when called, not at import. */
+  const raiseOn = async (platform: string, win: unknown) => {
+    const { raiseWindow } = await load(platform);
+    await withPlatform(platform, async () => {
+      raiseWindow(win as Parameters<typeof raiseWindow>[0]);
+    });
+  };
+
+  it('un-minimizes before showing', async () => {
+    // show() on a minimized window leaves it minimized. This is the gap the
+    // palette path had: opening a project while the window was minimized
+    // show()d and focus()ed it without ever bringing it back up.
+    const win = stubWindow();
+
+    await raiseOn('darwin', win);
+
+    expect(win.calls).toEqual(['restore', 'show', 'focus']);
+  });
+
+  it('activates the application on macOS', async () => {
+    // The whole point. focus() orders windows within an app; only this makes
+    // an inactive app frontmost, which is the state every caller can be in.
+    await raiseOn('darwin', stubWindow());
+
+    expect(appFocus).toHaveBeenCalledWith({ steal: true });
+  });
+
+  it('suppresses the activate handler while it activates', async () => {
+    // Activating fires `activate`, whose handler raises getMainWindows()[0].
+    // That is the wrong window whenever a different one was asked for, so the
+    // flag has to be up at the moment app.focus runs -- not merely set and
+    // cleared around it.
+    const { raiseWindow, getShowingUtilityWindow } = await load('darwin');
+    let flagDuringFocus = false;
+    appFocus.mockImplementation(() => {
+      flagDuringFocus = getShowingUtilityWindow();
+    });
+
+    await withPlatform('darwin', async () => {
+      raiseWindow(stubWindow() as unknown as Parameters<typeof raiseWindow>[0]);
+    });
+
+    expect(flagDuringFocus).toBe(true);
+  });
+
+  it('leaves activation to focus() off macOS', async () => {
+    // Elsewhere window focus already carries the application forward, so the
+    // extra call would be noise.
+    await raiseOn('win32', stubWindow());
+
+    expect(appFocus).not.toHaveBeenCalled();
+  });
+
+  it('still activates a window that is already up', async () => {
+    // isVisible() is true for a window another app is covering, and focus()
+    // only orders windows within an app -- so the activation is exactly what
+    // this case needs, not something to skip alongside show().
+    await raiseOn('darwin', stubWindow({ isMinimized: () => false, isVisible: () => true }));
+
+    expect(appFocus).toHaveBeenCalledWith({ steal: true });
+  });
+
+  it('does not re-show a window that is already visible', async () => {
+    const win = stubWindow({ isMinimized: () => false, isVisible: () => true });
+
+    await raiseOn('darwin', win);
+
+    expect(win.calls).toEqual(['focus']);
+  });
+
+  it('ignores a destroyed window', async () => {
+    // Windows can close between a palette action being chosen and the raise
+    // running; touching one then throws.
+    const win = stubWindow({ isDestroyed: () => true });
+
+    await raiseOn('darwin', win);
+
+    expect(win.calls).toEqual([]);
+    expect(appFocus).not.toHaveBeenCalled();
+  });
+});
 
 describe('trackApplicationActivation', () => {
   beforeEach(() => {

@@ -238,6 +238,21 @@ const runningSubtitle = (status: ProjectProcessStatus | undefined, urls: Running
  */
 export const statsRoute = (projectId: string): string => `/stats?projectId=${projectId}`;
 
+/**
+ * Heading over a project's own verbs, one level in.
+ *
+ * The group id stays 'projects', so these still rank against the project's
+ * other rows; only the heading changes. Note that grouping keys on the label as
+ * well as the id, so they form their own section and cap separately -- which
+ * costs nothing here, since a level lifts the per-group cap entirely.
+ *
+ * "Projects" is right at the root, where the rows *are* projects, but over Open
+ * in IDE and Copy Path it names where the rows came from rather than what they
+ * are -- and the breadcrumb has already said which project we are in. The same
+ * reasoning as the "IDEs" and "Terminals" pickers a level further down.
+ */
+const PROJECT_ACTIONS_LABEL = 'Project Actions';
+
 /** The actions offered for one project, in the order they are most wanted. */
 const projectActions = (
   project: ProjectWithDetails,
@@ -251,6 +266,7 @@ const projectActions = (
     title: 'Open Project',
     subtitle: project.path,
     group: 'projects' as const,
+    groupLabel: PROJECT_ACTIONS_LABEL,
     // The glyph the sidebar gives Projects, so the row reads as "the project"
     // rather than as a generic "open something elsewhere" arrow.
     icon: FolderGit2,
@@ -305,6 +321,7 @@ const projectActions = (
     id: `project.reveal:${project.id}`,
     title: 'Reveal in Finder',
     group: 'projects' as const,
+    groupLabel: PROJECT_ACTIONS_LABEL,
     icon: FolderOpen,
     primaryActionLabel: 'Reveal',
     run: ctx => {
@@ -319,6 +336,7 @@ const projectActions = (
     id: `project.stats:${project.id}`,
     title: 'View Stats',
     group: 'projects' as const,
+    groupLabel: PROJECT_ACTIONS_LABEL,
     // The glyph the project page's git card gives this same destination, so
     // the two read as the one action rather than two similar ones.
     icon: ChartLine,
@@ -333,6 +351,7 @@ const projectActions = (
     id: `project.favorite:${project.id}`,
     title: project.isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
     group: 'projects' as const,
+    groupLabel: PROJECT_ACTIONS_LABEL,
     icon: project.isFavorite ? StarOff : Star,
     primaryActionLabel: project.isFavorite ? 'Remove' : 'Add',
     keywords: ['favourite', 'star', 'unstar', 'pin', 'bookmark'],
@@ -362,6 +381,7 @@ const projectActions = (
     title: 'Copy Path',
     subtitle: project.path,
     group: 'projects' as const,
+    groupLabel: PROJECT_ACTIONS_LABEL,
     // The same glyph the projects page's dropdown gives this action.
     icon: Copy,
     primaryActionLabel: 'Copy',
@@ -410,6 +430,7 @@ const openUrlActions = (
     // more useful of the two by then.
     subtitle: urls.length > 1 ? entry.name : entry.url,
     group: 'projects' as const,
+    groupLabel: PROJECT_ACTIONS_LABEL,
     icon: Link,
     primaryActionLabel: 'Open in Browser',
     keywords: ['url', 'browser', 'localhost', 'open', 'preview', entry.name],
@@ -446,6 +467,7 @@ const remoteAction = (project: ProjectWithDetails, deps: ProjectCommandDeps): Co
       title: named ? `View on ${provider.name}` : 'View Remote',
       subtitle: provider.webUrl,
       group: 'projects' as const,
+      groupLabel: PROJECT_ACTIONS_LABEL,
       // The same glyph the projects page's dropdown gives this action.
       icon: ExternalLink,
       primaryActionLabel: named ? `Open ${provider.name}` : 'Open Remote',
@@ -519,6 +541,7 @@ const toolAction = <T extends ToolLike>(spec: ToolActionSpec<T>): Command => {
       title: spec.fallbackTitle,
       subtitle: `No ${spec.toolNoun} detected`,
       group: 'projects' as const,
+      groupLabel: PROJECT_ACTIONS_LABEL,
       icon: spec.icon,
       keywords: spec.keywords,
       primaryActionLabel: 'Open Settings',
@@ -530,6 +553,7 @@ const toolAction = <T extends ToolLike>(spec: ToolActionSpec<T>): Command => {
     id: spec.id,
     title: spec.preferred ? `${spec.verb} ${spec.preferred.name}` : spec.fallbackTitle,
     group: 'projects' as const,
+    groupLabel: PROJECT_ACTIONS_LABEL,
     icon: spec.icon,
     // Only once a tool has resolved: with no preference the row names a kind
     // of tool rather than one app, and the generic glyph is the honest image.

@@ -51,6 +51,9 @@ const DEFAULT_SETTINGS = {
   gitEmails: { value: JSON.stringify([]), type: 'json' as const },
   mcpUsageLogging: { value: 'true', type: 'boolean' as const },
   mcpUsageRetentionDays: { value: '90', type: 'number' as const },
+  // 'system' follows the OS accessibility preference. The other two values
+  // override it in either direction, which a media query alone cannot express.
+  reducedMotion: { value: 'system', type: 'string' as const },
 };
 
 /** Thrown when a setting's value cannot be stored as its declared type. */

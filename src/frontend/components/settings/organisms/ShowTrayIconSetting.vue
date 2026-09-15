@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
 import { Switch } from '../../ui/switch';
-import { Label } from '../../ui/label';
+import SettingRow from '../molecules/SettingRow.vue';
 
 const { useSettingsQuery, useUpdateSettingMutation } = useQueries();
 
@@ -41,13 +41,12 @@ watch(showTrayIcon, async newValue => {
 </script>
 
 <template>
-  <div class="flex items-center justify-between">
-    <div class="space-y-0.5">
-      <Label for="show-tray-icon">Show Tray Icon</Label>
-      <div class="text-muted-foreground text-sm">
-        Display Barnacles icon in the system tray for quick access
-      </div>
-    </div>
-    <Switch id="show-tray-icon" v-model="showTrayIcon" />
-  </div>
+  <SettingRow
+    layout="inline"
+    label-for="show-tray-icon"
+    label="Show Tray Icon"
+    description="Display Barnacles icon in the system tray for quick access"
+  >
+    <Switch id="show-tray-icon" aria-labelledby="show-tray-icon-label" v-model="showTrayIcon" />
+  </SettingRow>
 </template>

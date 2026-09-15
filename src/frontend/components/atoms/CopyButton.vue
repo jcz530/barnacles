@@ -56,12 +56,14 @@ async function handleCopy() {
     :title="title || (isCopied ? copiedLabel : 'Copy to clipboard')"
     @click="handleCopy"
   >
+    <!-- No `appear` on the Transition: Vue skips enter animations on the initial
+         render, so the icon is still on mount and only animates once the user
+         has actually clicked. -->
     <div class="icon-container">
-      <Copy :class="[iconSize, { hidden: isCopied, visible: !isCopied }]" class="copy-icon" />
-      <Check
-        :class="[iconSize, { hidden: !isCopied, visible: isCopied }]"
-        class="check-icon text-success-500"
-      />
+      <Transition name="icon-swap" mode="out-in">
+        <Check v-if="isCopied" key="check" :class="iconSize" class="check-icon text-success-500" />
+        <Copy v-else key="copy" :class="iconSize" class="copy-icon" />
+      </Transition>
     </div>
     <span v-if="label" :class="{ 'ml-2': true }">
       {{ isCopied ? copiedLabel : label }}
@@ -82,69 +84,53 @@ async function handleCopy() {
 .copy-icon,
 .check-icon {
   position: absolute;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.copy-icon.visible {
-  animation: fadeInRotate 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+/* Entering: the copy icon rotates in, the check overshoots in. `mode="out-in"`
+   means the outgoing icon finishes leaving before these run. */
+.icon-swap-enter-active {
+  transition: all 90ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.copy-icon.hidden {
-  animation: fadeOutRotate 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+.icon-swap-leave-active {
+  transition: all 90ms cubic-bezier(0.4, 0, 1, 1);
 }
 
-.check-icon.visible {
-  animation: fadeInScale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+.copy-icon.icon-swap-enter-from {
+  opacity: 0;
+  transform: scale(0.5) rotate(-180deg);
 }
 
-.check-icon.hidden {
-  animation: fadeOutScale 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+.copy-icon.icon-swap-leave-to {
+  opacity: 0;
+  transform: scale(0.5) rotate(180deg);
 }
 
-@keyframes fadeInRotate {
-  from {
-    opacity: 0;
-    transform: scale(0.5) rotate(-180deg);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) rotate(0deg);
-  }
+.check-icon.icon-swap-enter-from {
+  opacity: 0;
+  transform: scale(0.3) rotate(-90deg);
 }
 
-@keyframes fadeOutRotate {
-  from {
-    opacity: 1;
-    transform: scale(1) rotate(0deg);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.5) rotate(180deg);
-  }
+.check-icon.icon-swap-leave-to {
+  opacity: 0;
+  transform: scale(0.3) rotate(90deg);
 }
 
-@keyframes fadeInScale {
-  0% {
-    opacity: 0;
-    transform: scale(0.3) rotate(-90deg);
-  }
-  60% {
-    transform: scale(1.15) rotate(5deg);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) rotate(0deg);
+/* Still swap the icons, just without the spin/scale.
+ *
+ * Two rules rather than one: the media query covers the OS preference, and the
+ * root class covers the in-app setting, which can also turn motion back on when
+ * the OS asks to reduce it. `:root:not(.no-reduce-motion)` is what lets an
+ * explicit "never reduce" win over the query. */
+@media (prefers-reduced-motion: reduce) {
+  :root:not(.no-reduce-motion) .icon-swap-enter-active,
+  :root:not(.no-reduce-motion) .icon-swap-leave-active {
+    transition: none;
   }
 }
 
-@keyframes fadeOutScale {
-  from {
-    opacity: 1;
-    transform: scale(1) rotate(0deg);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.3) rotate(90deg);
-  }
+:root.reduce-motion .icon-swap-enter-active,
+:root.reduce-motion .icon-swap-leave-active {
+  transition: none;
 }
 </style>

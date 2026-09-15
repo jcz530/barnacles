@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
 import Button from '../../ui/button/Button.vue';
+import SettingRow from '../molecules/SettingRow.vue';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,16 +64,16 @@ const selectedTerminal = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <label for="defaultTerminal" class="text-sm font-medium">Default Terminal</label>
-    <p class="text-muted-foreground text-sm">
-      Choose which terminal to use when opening project directories. This will be used as the
-      default when clicking "Open Terminal".
-    </p>
+  <SettingRow
+    label-for="defaultTerminal"
+    label="Default Terminal"
+    description='Choose which terminal to use when opening project directories. This will be used as the default when clicking "Open Terminal".'
+  >
     <div class="flex items-center gap-4">
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
           <Button
+            id="defaultTerminal"
             variant="outline"
             :class="['w-64 justify-start', isDefaultValue ? 'text-muted-foreground' : '']"
           >
@@ -117,9 +118,9 @@ const selectedTerminal = computed(() => {
       </Button>
       <span v-if="isSaving" class="text-muted-foreground text-sm">Saving...</span>
     </div>
-    <p class="text-muted-foreground text-xs">
+    <p class="text-muted-foreground mt-2 text-xs">
       Default: None (Ask each time) • Current:
       {{ selectedTerminal ? selectedTerminal.name : 'None' }}
     </p>
-  </div>
+  </SettingRow>
 </template>
