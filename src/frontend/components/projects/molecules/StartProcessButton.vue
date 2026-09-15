@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ChevronDown, Play, Settings, Square } from 'lucide-vue-next';
+import { ChevronDown, Settings } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import ProcessStateIcon, { type ProcessIconState } from '../../atoms/ProcessStateIcon.vue';
 import { useQueries } from '../../../composables/useQueries';
 import ProcessConfigEditor from '../../process/molecules/ProcessConfigEditor.vue';
 import { Button } from '../../ui/button';
@@ -15,6 +16,16 @@ import { useProcessStatusContext } from '@/composables/useProcessStatusContext';
 interface Props {
   projectId: string;
   isLoading?: boolean;
+  /**
+   * Show the spinning-hexagon state.
+   *
+   * Separate from `isLoading`, which is the page's own load and only disables
+   * the button: spinning on that would animate on page load, which is the
+   * opposite of what the glyph is for. Caller-driven rather than taken from the
+   * start/stop mutations, whose `isPending` clears when the POST returns --
+   * before the process is actually up.
+   */
+  isStarting?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -131,11 +142,11 @@ const buttonVariant = computed(() => {
   return isProcessRunning.value ? 'destructive' : 'success';
 });
 
-const buttonIcon = computed(() => {
-  if (!hasProcesses.value) {
-    return Settings;
+const processIconState = computed<ProcessIconState>(() => {
+  if (props.isStarting) {
+    return 'loading';
   }
-  return isProcessRunning.value ? Square : Play;
+  return isProcessRunning.value ? 'stop' : 'play';
 });
 </script>
 
@@ -149,9 +160,12 @@ const buttonIcon = computed(() => {
         isLoading || startProcessesMutation.isPending.value || stopProcessesMutation.isPending.value
       "
       @click="handleMainButtonClick"
-      class="border-r-primary-foreground/20 rounded-r-none border-r"
+      class="border-r-primary-foreground/20 rounded-r-none border-r px-4"
     >
-      <component :is="buttonIcon" class="mr-2 h-4 w-4" />
+      <!-- The gear is a different affordance, not part of the play/stop/loading
+           cycle, so it stays a plain icon swap. -->
+      <Settings v-if="!hasProcesses" class="mr-2 h-4 w-4" />
+      <ProcessStateIcon v-else :state="processIconState" class="h-5 w-5" />
       {{ buttonLabel }}
     </Button>
 
