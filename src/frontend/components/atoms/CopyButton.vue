@@ -89,11 +89,11 @@ async function handleCopy() {
 /* Entering: the copy icon rotates in, the check overshoots in. `mode="out-in"`
    means the outgoing icon finishes leaving before these run. */
 .icon-swap-enter-active {
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .icon-swap-leave-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 1, 1);
+  transition: all 0.18s cubic-bezier(0.4, 0, 1, 1);
 }
 
 .copy-icon.icon-swap-enter-from {
