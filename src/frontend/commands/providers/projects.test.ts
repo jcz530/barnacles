@@ -345,6 +345,28 @@ describe('opening a project’s tools', () => {
     expect(picker.find(a => a.id.includes('.set-default:'))?.groupLabel).toBe('Set Default');
   });
 
+  it('heads the project’s own verbs as actions rather than as projects', () => {
+    // "Projects" is right at the root, where the rows are projects. One level
+    // in they are things to do to one project, and the breadcrumb has already
+    // named it -- so the heading says what the rows are. The group id stays
+    // 'projects' so they still rank and cap with the rest of the project's rows.
+    const [command] = projectCommands([project()], deps());
+    const rendered = levelDefaultItems(actionsOf(command));
+    const headings = rendered.map(group => group.label);
+
+    expect(headings).toContain('Project Actions');
+    expect(headings).not.toContain('Projects');
+    expect(findAction(command, 'copy-path')?.group).toBe('projects');
+  });
+
+  it('leaves the root list headed by Projects', () => {
+    // The rename is scoped to the level. The shared label constant still names
+    // the root rows, which really are projects.
+    const grouped = defaultCommands(projectCommands([project({ isFavorite: true })], deps()));
+
+    expect(grouped.map(group => group.label)).toContain('Projects');
+  });
+
   it('heads the terminal picker with its own kind of tool', () => {
     const [command] = projectCommands([project()], deps());
     const picker = findAction(command, 'open-terminal')?.actions?.(ctx()) ?? [];
@@ -734,7 +756,7 @@ describe('opening a running url from the project level', () => {
     // array is not what anybody sees: levelDefaultItems re-sorts before render,
     // so an assertion on index order can hold while the rendered list disagrees.
     const rendered = levelDefaultItems(actionsOf(command));
-    const projectRows = rendered.find(group => group.label === 'Projects')?.commands ?? [];
+    const projectRows = rendered.find(group => group.label === 'Project Actions')?.commands ?? [];
     const titles = projectRows.map(row => row.title);
 
     expect(titles.indexOf('Open localhost:5173')).toBeLessThan(titles.indexOf('Open in IDE'));

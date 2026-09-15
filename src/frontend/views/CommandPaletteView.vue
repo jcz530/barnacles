@@ -23,9 +23,17 @@ const dismiss = () => {
  */
 const navigate = async (path: string) => {
   const result = await window.electron.showOrCreateWindow();
+  // Left open on failure: dismissing first would take the palette away and
+  // leave nothing in its place, with no window and nothing said.
   if (!result?.success) return;
-  await window.electron.navigateToProject(path);
+
+  // Dismissed before the navigate, not after it. Hiding the palette drops its
+  // visible-on-all-workspaces flag, and on macOS that transforms the process
+  // type back -- briefly hiding the window and the dock tile. Running it last
+  // landed that flicker on top of the window just brought forward; running it
+  // here lets the navigate's own raise be the final word.
   dismiss();
+  await window.electron.navigateToProject(path);
 };
 
 const onSelect = (command: Command) =>

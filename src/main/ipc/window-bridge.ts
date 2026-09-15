@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import { createMenu } from '../menu';
 import { createAppWindow } from '../main';
-import { getMainWindows } from '../window-utils';
+import { getMainWindows, raiseWindow } from '../window-utils';
 
 /**
  * Resolve once a window's renderer has loaded, so a message sent straight after
@@ -30,13 +30,10 @@ export const setupWindowBridge = (): void => {
     try {
       const mainWindows = getMainWindows();
 
-      // If there's an existing main window, show and focus it
+      // If there's an existing main window, bring it to the front
       if (mainWindows.length > 0) {
         const existingWindow = mainWindows[0];
-        if (!existingWindow.isVisible()) {
-          existingWindow.show();
-        }
-        existingWindow.focus();
+        raiseWindow(existingWindow);
         return { success: true, windowId: existingWindow.id, wasExisting: true };
       }
 
@@ -45,6 +42,11 @@ export const setupWindowBridge = (): void => {
       // and a navigate-to-project sent before then lands with nothing listening.
       const newWindow = await createAppWindow();
       await waitForRenderer(newWindow);
+      // Raised like the existing-window branch above. A new window shows itself
+      // on ready-to-show, but showing is not activating: called from the tray
+      // popup's "Show in App", which has no navigate to raise it afterwards,
+      // that left a window on screen behind whatever app was in front.
+      raiseWindow(newWindow);
       return { success: true, windowId: newWindow.id, wasExisting: false };
     } catch (error) {
       console.error('Failed to show or create window:', error);
@@ -74,10 +76,7 @@ export const setupWindowBridge = (): void => {
       const targetWindow = mainWindows[0] ?? (await createAppWindow());
       await waitForRenderer(targetWindow);
 
-      if (!targetWindow.isVisible()) {
-        targetWindow.show();
-      }
-      targetWindow.focus();
+      raiseWindow(targetWindow);
       // Send navigation command to the renderer
       targetWindow.webContents.send('navigate-to-project', path);
       return { success: true };

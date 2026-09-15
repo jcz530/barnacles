@@ -2,7 +2,7 @@ import { app, BrowserWindow, Menu, MenuItemConstructorOptions, shell } from 'ele
 import { createAppWindow } from './main';
 import { toggleFindOverlay } from './find-overlay-manager';
 import { checkForUpdatesInteractive } from './updater';
-import { getMainWindows, isMainWindow } from './window-utils';
+import { getMainWindows, isMainWindow, raiseWindow } from './window-utils';
 import { toggleCommandPalette } from './command-palette-manager';
 
 const ISSUES_URL = 'https://github.com/jcz530/barnacles/issues';
@@ -31,10 +31,7 @@ const openSettings = async (): Promise<void> => {
     }
   }
 
-  if (!window.isVisible()) {
-    window.show();
-  }
-  window.focus();
+  raiseWindow(window);
   window.webContents.send('navigate-to-project', '/settings');
 };
 

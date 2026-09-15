@@ -289,7 +289,19 @@ const showCommandPalette = async (): Promise<void> => {
 
   // Scoped to the time the palette is up: leaving it on makes the app's other
   // windows follow it onto whatever space you are working in.
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  // skipTransformProcessType because the default is to swap the process type
+  // between UIElementApplication and ForegroundApplication on every call, which
+  // hides the window and the dock tile for a moment each time. Twice per palette
+  // cycle, that round-trip is what dropped Barnacles to the end of Cmd-Tab.
+  //
+  // Electron frames the option as being for a window that is already a
+  // UIElementApplication, which Barnacles is not -- it ships no LSUIElement and
+  // never sets an activation policy. Skipping is still what we want: the app is
+  // a ForegroundApplication throughout, so there is no transform it needs.
+  win.setVisibleOnAllWorkspaces(true, {
+    visibleOnFullScreen: true,
+    skipTransformProcessType: true,
+  });
   positionOnActiveDisplay(win);
   // showInactive rather than show: belt and braces alongside the panel type
   // above, since show() is the call that activates an app and drags its other
@@ -322,7 +334,7 @@ export const hideCommandPalette = (options?: { viaBlur?: boolean }): void => {
     // reopen immediately.
     lastHiddenAt = options?.viaBlur ? Date.now() : 0;
     paletteWindow.hide();
-    paletteWindow.setVisibleOnAllWorkspaces(false);
+    paletteWindow.setVisibleOnAllWorkspaces(false, { skipTransformProcessType: true });
     resetUtilityWindowFlag();
   }
 };
