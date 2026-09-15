@@ -71,7 +71,15 @@ export const raiseWindow = (win: BrowserWindow): void => {
 
   // Only macOS separates "this window has focus" from "this app is frontmost";
   // elsewhere focus() already brought the application forward.
-  if (process.platform === 'darwin') app.focus({ steal: true });
+  if (process.platform !== 'darwin') return;
+
+  // Activating fires `activate`, whose handler raises getMainWindows()[0] when
+  // nothing is visible. That is the wrong window whenever we were asked for a
+  // different one, so the flag that suppresses the handler is held across this
+  // call rather than left to whatever a previous hide's timer had running.
+  setShowingUtilityWindow(true);
+  app.focus({ steal: true });
+  resetUtilityWindowFlag();
 };
 
 // Whether Barnacles is the frontmost application.

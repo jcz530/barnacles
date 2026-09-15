@@ -42,6 +42,11 @@ export const setupWindowBridge = (): void => {
       // and a navigate-to-project sent before then lands with nothing listening.
       const newWindow = await createAppWindow();
       await waitForRenderer(newWindow);
+      // Raised like the existing-window branch above. A new window shows itself
+      // on ready-to-show, but showing is not activating: called from the tray
+      // popup's "Show in App", which has no navigate to raise it afterwards,
+      // that left a window on screen behind whatever app was in front.
+      raiseWindow(newWindow);
       return { success: true, windowId: newWindow.id, wasExisting: false };
     } catch (error) {
       console.error('Failed to show or create window:', error);

@@ -241,12 +241,15 @@ export const statsRoute = (projectId: string): string => `/stats?projectId=${pro
 /**
  * Heading over a project's own verbs, one level in.
  *
- * The group id stays 'projects' so these rank and cap with everything else the
- * project owns; only the heading changes. "Projects" is right at the root,
- * where the rows *are* projects, but over Open in IDE and Copy Path it names
- * where the rows came from rather than what they are -- and the breadcrumb has
- * already said which project we are in. The same reasoning as the "IDEs" and
- * "Terminals" pickers a level further down.
+ * The group id stays 'projects', so these still rank against the project's
+ * other rows; only the heading changes. Note that grouping keys on the label as
+ * well as the id, so they form their own section and cap separately -- which
+ * costs nothing here, since a level lifts the per-group cap entirely.
+ *
+ * "Projects" is right at the root, where the rows *are* projects, but over Open
+ * in IDE and Copy Path it names where the rows came from rather than what they
+ * are -- and the breadcrumb has already said which project we are in. The same
+ * reasoning as the "IDEs" and "Terminals" pickers a level further down.
  */
 const PROJECT_ACTIONS_LABEL = 'Project Actions';
 

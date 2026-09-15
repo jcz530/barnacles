@@ -105,12 +105,39 @@ describe('raiseWindow', () => {
     expect(appFocus).toHaveBeenCalledWith({ steal: true });
   });
 
+  it('suppresses the activate handler while it activates', async () => {
+    // Activating fires `activate`, whose handler raises getMainWindows()[0].
+    // That is the wrong window whenever a different one was asked for, so the
+    // flag has to be up at the moment app.focus runs -- not merely set and
+    // cleared around it.
+    const { raiseWindow, getShowingUtilityWindow } = await load('darwin');
+    let flagDuringFocus = false;
+    appFocus.mockImplementation(() => {
+      flagDuringFocus = getShowingUtilityWindow();
+    });
+
+    await withPlatform('darwin', async () => {
+      raiseWindow(stubWindow() as unknown as Parameters<typeof raiseWindow>[0]);
+    });
+
+    expect(flagDuringFocus).toBe(true);
+  });
+
   it('leaves activation to focus() off macOS', async () => {
     // Elsewhere window focus already carries the application forward, so the
     // extra call would be noise.
     await raiseOn('win32', stubWindow());
 
     expect(appFocus).not.toHaveBeenCalled();
+  });
+
+  it('still activates a window that is already up', async () => {
+    // isVisible() is true for a window another app is covering, and focus()
+    // only orders windows within an app -- so the activation is exactly what
+    // this case needs, not something to skip alongside show().
+    await raiseOn('darwin', stubWindow({ isMinimized: () => false, isVisible: () => true }));
+
+    expect(appFocus).toHaveBeenCalledWith({ steal: true });
   });
 
   it('does not re-show a window that is already visible', async () => {
