@@ -78,7 +78,7 @@ function getInvertedShade(shade: number): number {
  * back off an element that may already be inverted.
  */
 function initializeColors(overrides?: Record<string, string>) {
-  if (!document.documentElement.classList.contains('dark')) {
+  if (!isDarkMode()) {
     const computed = getComputedStyle(document.documentElement);
     for (const [colorName, shades] of Object.entries(colorScales)) {
       for (const shade of shades) {
@@ -99,17 +99,38 @@ function initializeColors(overrides?: Record<string, string>) {
 }
 
 /**
- * Swap shades for dark mode, or restore the originals for light.
+ * Whether dark mode is on, as a plain function so the inversion can be driven
+ * from useTheme too, which holds no isDark ref of its own.
  *
- * Reads the class off <html> rather than an isDark ref, because this also runs
- * from useTheme, which has no ref of its own. The class is the authoritative
- * signal anyway: useColorMode writes it, and main.css's `.dark` block keys off
- * it.
+ * Reads localStorage rather than the `dark` class on <html>. The class is
+ * written by useColorMode in a `flush: 'post'` watcher, so anything reading it
+ * from an ordinary (`flush: 'pre'`) watcher sees the PREVIOUS mode and inverts
+ * one step behind -- light rendering dark colours and vice versa on every
+ * toggle, while a reload looked correct because the class was already settled.
+ *
+ * The stored value is 'light' | 'dark' | 'auto'; 'auto' (and a first run with
+ * nothing stored) resolves against the system preference, the same way
+ * useColorMode resolves it.
  */
+function isDarkMode(): boolean {
+  let stored: string | null = null;
+  try {
+    stored = localStorage.getItem('vueuse-color-scheme');
+  } catch {
+    // Storage can throw (private mode, blocked cookies); fall back to system.
+  }
+
+  if (stored === 'dark') return true;
+  if (stored === 'light') return false;
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+/** Swap shades for dark mode, or restore the originals for light. */
 function applyColorInversion() {
   const root = document.documentElement;
 
-  if (!root.classList.contains('dark')) {
+  if (!isDarkMode()) {
     // Light mode: restore original colors
     for (const [varName, originalValue] of originalValues.entries()) {
       root.style.setProperty(varName, originalValue);

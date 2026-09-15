@@ -181,10 +181,23 @@ describe('the light cache is never read back from an inverted element', () => {
 
   it('only reads the element while light', () => {
     const body = src().slice(src().indexOf('function initializeColors'));
-    const end = body.indexOf('\n}');
-    const fn = body.slice(0, end);
-    expect(fn, 'the getComputedStyle read must be guarded by the dark check').toMatch(
-      /if \(!document\.documentElement\.classList\.contains\('dark'\)\)[\s\S]*getComputedStyle/
+    const fn = body.slice(0, body.indexOf('\n}'));
+    expect(fn, 'the getComputedStyle read must be guarded by the mode check').toMatch(
+      /if \(!isDarkMode\(\)\)[\s\S]*getComputedStyle/
+    );
+  });
+
+  it('resolves dark from storage, not the html class', () => {
+    // useColorMode writes the `dark` class in a flush:'post' watcher. Reading
+    // that class from an ordinary flush:'pre' watcher sees the PREVIOUS mode,
+    // so the inversion lands one toggle behind: light renders dark colours and
+    // vice versa, while a reload looks fine because the class has settled.
+    const fn = src().slice(src().indexOf('function isDarkMode'));
+    const body = fn.slice(0, fn.indexOf('\n}'));
+    expect(body).toMatch(/localStorage\.getItem\('vueuse-color-scheme'\)/);
+    expect(body).toMatch(/prefers-color-scheme: dark/);
+    expect(src(), 'inversion must not key off the html class').not.toMatch(
+      /classList\.contains\('dark'\)/
     );
   });
 
