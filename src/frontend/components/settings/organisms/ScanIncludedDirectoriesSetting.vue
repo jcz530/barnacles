@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
+import { usePersistedSetting, arrayEquals } from '../../../composables/usePersistedSetting';
 import Button from '../../ui/button/Button.vue';
 import FolderAutocompleteInput from '../../molecules/FolderAutocompleteInput.vue';
 import DirectoryTagList from '../molecules/DirectoryTagList.vue';
@@ -14,80 +15,49 @@ const updateSettingMutation = useUpdateSettingMutation();
 const defaultSettingQuery = useDefaultSettingQuery('scanIncludedDirectories', { enabled: true });
 
 const DEFAULT_INCLUDED_DIRECTORIES = ref<string[]>([]);
-const includedDirectories = ref<string[]>([]);
 const newDirectory = ref('');
-const isInitialized = ref(false);
-const hasLoadedFromSettings = ref(false);
 
-// Update default directories when loaded from backend
+const { value: includedDirectories, hasStoredValue } = usePersistedSetting<string[]>(
+  () => settingsQuery.data.value,
+  {
+    read: data => {
+      const stored = data.find(setting => setting.key === 'scanIncludedDirectories');
+      if (stored === undefined) return undefined;
+      try {
+        const parsed = JSON.parse(stored.value);
+        return Array.isArray(parsed) ? parsed : undefined;
+      } catch {
+        // If parsing fails, use default
+        return [...DEFAULT_INCLUDED_DIRECTORIES.value];
+      }
+    },
+    write: value =>
+      updateSettingMutation.mutateAsync({ key: 'scanIncludedDirectories', value, type: 'json' }),
+    initial: [],
+    equals: arrayEquals,
+    // The scan needs at least one root; an empty list would disable it entirely.
+    isValid: value => value.length > 0,
+    onError: error => console.error('Failed to save included directories:', error),
+  }
+);
+
+// Seed from the backend defaults only while no stored value is known.
+// Gated on `hasStoredValue` rather than `hasHydrated`: a payload that carries
+// no row for this setting still counts as hydrated, and seeding must remain
+// possible for it -- otherwise whichever query resolves first decides whether
+// the defaults ever appear. A user who has saved an empty list has a row, so
+// they keep their empty list.
 watch(
   () => defaultSettingQuery.data.value,
   newData => {
     if (newData && Array.isArray(newData)) {
       DEFAULT_INCLUDED_DIRECTORIES.value = newData;
-      // Initialize includedDirectories if not yet loaded from settings
-      if (!hasLoadedFromSettings.value && includedDirectories.value.length === 0) {
+      if (!hasStoredValue.value && includedDirectories.value.length === 0) {
         includedDirectories.value = [...newData];
       }
     }
   },
   { immediate: true }
-);
-
-// Update local state when settings are loaded
-watch(
-  () => settingsQuery.data.value,
-  newData => {
-    if (newData) {
-      const includedDirsSetting = newData.find(s => s.key === 'scanIncludedDirectories');
-      if (includedDirsSetting) {
-        try {
-          const parsed = JSON.parse(includedDirsSetting.value);
-          if (Array.isArray(parsed)) {
-            includedDirectories.value = parsed;
-          }
-        } catch {
-          // If parsing fails, use default
-          includedDirectories.value = [...DEFAULT_INCLUDED_DIRECTORIES.value];
-        }
-      }
-      hasLoadedFromSettings.value = true;
-      isInitialized.value = true;
-    }
-  },
-  { immediate: true }
-);
-
-// Auto-save when value changes (after initialization)
-// Skip the first change which happens when loading from settings
-let isFirstChange = true;
-watch(
-  includedDirectories,
-  async newValue => {
-    // Skip the first change when loading from settings
-    if (isFirstChange && hasLoadedFromSettings.value) {
-      isFirstChange = false;
-      return;
-    }
-
-    if (
-      isInitialized.value &&
-      !updateSettingMutation.isPending.value &&
-      Array.isArray(newValue) &&
-      newValue.length > 0
-    ) {
-      try {
-        await updateSettingMutation.mutateAsync({
-          key: 'scanIncludedDirectories',
-          value: newValue,
-          type: 'json',
-        });
-      } catch (error) {
-        console.error('Failed to save included directories:', error);
-      }
-    }
-  },
-  { deep: true }
 );
 
 const addDirectory = () => {
@@ -116,6 +86,14 @@ const isDefaultValue = computed(() => {
 });
 
 const isSaving = computed(() => updateSettingMutation.isPending.value);
+
+/*
+ * The scan needs at least one root, so `isValid` refuses to persist an empty
+ * list. Without saying so the row would just stop saving: the last tag
+ * disappears, the page still reads "0 directories", and a reload brings the
+ * removed directory back. Say it instead.
+ */
+const isEmpty = computed(() => includedDirectories.value.length === 0);
 </script>
 
 <template>
@@ -132,6 +110,10 @@ const isSaving = computed(() => updateSettingMutation.isPending.value);
       :disabled="isSaving"
       @remove="removeDirectory"
     />
+
+    <p v-if="isEmpty" class="text-danger-500 mt-2 text-xs">
+      Add at least one directory — an empty list is not saved, and the previous one stays in effect.
+    </p>
 
     <!-- Add new directory -->
     <div class="mt-2 flex items-center gap-2">

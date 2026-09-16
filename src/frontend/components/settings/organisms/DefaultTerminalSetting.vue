@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
+import { usePersistedSetting } from '../../../composables/usePersistedSetting';
 import Button from '../../ui/button/Button.vue';
 import SettingRow from '../molecules/SettingRow.vue';
 import {
@@ -17,33 +18,12 @@ const settingsQuery = useSettingsQuery({ enabled: true });
 const updateSettingMutation = useUpdateSettingMutation();
 const terminalsQuery = useDetectedTerminalsQuery();
 
-const defaultTerminalId = ref<string>('');
-const isInitialized = ref(false);
-
-// Update local state when settings are loaded
-watch(
-  () => settingsQuery.data.value,
-  newData => {
-    if (newData) {
-      const defaultTerminalSetting = newData.find(s => s.key === 'defaultTerminal');
-      if (defaultTerminalSetting) {
-        defaultTerminalId.value = defaultTerminalSetting.value;
-      }
-      isInitialized.value = true;
-    }
-  },
-  { immediate: true }
-);
-
-// Auto-save when value changes (after initialization)
-watch(defaultTerminalId, async newValue => {
-  if (isInitialized.value && !updateSettingMutation.isPending.value && newValue) {
-    await updateSettingMutation.mutateAsync({
-      key: 'defaultTerminal',
-      value: newValue,
-      type: 'string',
-    });
-  }
+const { value: defaultTerminalId } = usePersistedSetting<string>(() => settingsQuery.data.value, {
+  read: data => data.find(setting => setting.key === 'defaultTerminal')?.value,
+  // An empty value means "ask each time", which is stored like any other.
+  write: value =>
+    updateSettingMutation.mutateAsync({ key: 'defaultTerminal', value, type: 'string' }),
+  initial: '',
 });
 
 const resetToDefault = () => {

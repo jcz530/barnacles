@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
+import { usePersistedSetting, arrayEquals } from '../../../composables/usePersistedSetting';
 import Button from '../../ui/button/Button.vue';
 import Input from '../../ui/input/Input.vue';
 import { Badge } from '../../ui/badge';
@@ -14,10 +15,7 @@ const updateSettingMutation = useUpdateSettingMutation();
 const defaultSettingQuery = useDefaultSettingQuery('gitEmails', { enabled: true });
 
 const DEFAULT_EMAILS = ref<string[]>([]);
-const emails = ref<string[]>([]);
 const newEmail = ref('');
-const isInitialized = ref(false);
-const hasLoadedFromSettings = ref(false);
 const globalEmail = ref<string>('');
 
 // Fetch global git email on mount
@@ -34,66 +32,43 @@ const fetchGlobalEmail = async () => {
 };
 fetchGlobalEmail();
 
-// Update default emails when loaded from backend
+const { value: emails, hasStoredValue } = usePersistedSetting<string[]>(
+  () => settingsQuery.data.value,
+  {
+    read: data => {
+      const stored = data.find(setting => setting.key === 'gitEmails');
+      if (stored === undefined) return undefined;
+      try {
+        const parsed = JSON.parse(stored.value);
+        return Array.isArray(parsed) ? parsed : undefined;
+      } catch {
+        return [...DEFAULT_EMAILS.value];
+      }
+    },
+    write: value => updateSettingMutation.mutateAsync({ key: 'gitEmails', value, type: 'json' }),
+    initial: [],
+    equals: arrayEquals,
+    onError: error => console.error('Failed to save git emails:', error),
+  }
+);
+
+// Seed from the backend defaults only while no stored value is known.
+// Gated on `hasStoredValue` rather than `hasHydrated`: a payload that carries
+// no row for this setting still counts as hydrated, and seeding must remain
+// possible for it -- otherwise whichever query resolves first decides whether
+// the defaults ever appear. A user who has saved an empty list has a row, so
+// they keep their empty list.
 watch(
   () => defaultSettingQuery.data.value,
   newData => {
     if (newData && Array.isArray(newData)) {
       DEFAULT_EMAILS.value = newData;
-      if (!hasLoadedFromSettings.value && emails.value.length === 0) {
+      if (!hasStoredValue.value && emails.value.length === 0) {
         emails.value = [...newData];
       }
     }
   },
   { immediate: true }
-);
-
-// Update local state when settings are loaded
-watch(
-  () => settingsQuery.data.value,
-  newData => {
-    if (newData) {
-      const emailsSetting = newData.find(s => s.key === 'gitEmails');
-      if (emailsSetting) {
-        try {
-          const parsed = JSON.parse(emailsSetting.value);
-          if (Array.isArray(parsed)) {
-            emails.value = parsed;
-          }
-        } catch {
-          emails.value = [...DEFAULT_EMAILS.value];
-        }
-      }
-      hasLoadedFromSettings.value = true;
-      isInitialized.value = true;
-    }
-  },
-  { immediate: true }
-);
-
-// Auto-save when value changes (after initialization)
-let isFirstChange = true;
-watch(
-  emails,
-  async newValue => {
-    if (isFirstChange && hasLoadedFromSettings.value) {
-      isFirstChange = false;
-      return;
-    }
-
-    if (isInitialized.value && !updateSettingMutation.isPending.value && Array.isArray(newValue)) {
-      try {
-        await updateSettingMutation.mutateAsync({
-          key: 'gitEmails',
-          value: newValue,
-          type: 'json',
-        });
-      } catch (error) {
-        console.error('Failed to save git emails:', error);
-      }
-    }
-  },
-  { deep: true }
 );
 
 const isValidEmail = (email: string): boolean => {

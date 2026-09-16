@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, watch } from 'vue';
 import { SETTING_KEYS } from '@shared/types/api';
 import { useQueries } from '../../../composables/useQueries';
+import { usePersistedSetting } from '../../../composables/usePersistedSetting';
 import {
   useReducedMotion,
   isMotionPreference,
@@ -30,38 +31,29 @@ const OPTIONS: { value: MotionPreference; label: string; hint: string }[] = [
   { value: 'never', label: 'Never reduce', hint: 'Keep animations even if your OS reduces them' },
 ];
 
-const motionPreference = ref<MotionPreference>('system');
-const isInitialized = ref(false);
-
-// Update local state when settings are loaded
-watch(
+const { value: motionPreference } = usePersistedSetting<MotionPreference>(
   () => settingsQuery.data.value,
-  newData => {
-    if (newData) {
-      const stored = newData.find(s => s.key === SETTING_KEYS.REDUCED_MOTION)?.value;
-      if (isMotionPreference(stored)) {
-        motionPreference.value = stored;
-      }
-      isInitialized.value = true;
-    }
-  },
-  { immediate: true }
+  {
+    read: data => {
+      const stored = data.find(setting => setting.key === SETTING_KEYS.REDUCED_MOTION)?.value;
+      return isMotionPreference(stored) ? stored : undefined;
+    },
+    write: value =>
+      updateSettingMutation.mutateAsync({
+        key: SETTING_KEYS.REDUCED_MOTION,
+        value,
+        type: 'string',
+      }),
+    initial: 'system',
+    // Apply the stored preference as soon as it lands: the update mutation does
+    // not invalidate the settings query, so nothing else would tell the rest of
+    // the app about it.
+    onHydrate: setPreference,
+  }
 );
 
-// Auto-save when value changes (after initialization)
-watch(motionPreference, async newValue => {
-  // Apply immediately: the update mutation does not invalidate the settings
-  // query, so nothing else would tell the rest of the app about this.
-  setPreference(newValue);
-
-  if (isInitialized.value && !updateSettingMutation.isPending.value) {
-    await updateSettingMutation.mutateAsync({
-      key: SETTING_KEYS.REDUCED_MOTION,
-      value: newValue,
-      type: 'string',
-    });
-  }
-});
+// Apply a user-made change immediately, without waiting for the write.
+watch(motionPreference, setPreference);
 
 const selected = computed(
   () => OPTIONS.find(option => option.value === motionPreference.value) ?? OPTIONS[0]

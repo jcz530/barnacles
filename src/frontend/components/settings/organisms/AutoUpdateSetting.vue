@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
+import { usePersistedSetting } from '../../../composables/usePersistedSetting';
 import { useUpdater } from '../../../composables/useUpdater';
 import { Button } from '../../ui/button';
 import { Switch } from '../../ui/switch';
@@ -15,42 +16,21 @@ const updateSettingMutation = useUpdateSettingMutation();
 
 const { updateState, isCheckingForUpdates, checkForUpdates } = useUpdater();
 
-const autoUpdate = ref<boolean>(true);
-const isInitialized = ref(false);
-
-// Update local state when settings are loaded
-watch(
-  () => settingsQuery.data.value,
-  newData => {
-    if (newData) {
-      const autoUpdateSetting = newData.find(s => s.key === 'autoUpdate');
-      if (autoUpdateSetting) {
-        // Setting values are stored as strings, convert to boolean
-        autoUpdate.value = String(autoUpdateSetting.value) === 'true';
-      }
-      isInitialized.value = true;
-    }
+const { value: autoUpdate } = usePersistedSetting<boolean>(() => settingsQuery.data.value, {
+  // Setting values are stored as strings, convert to boolean
+  read: data => {
+    const stored = data.find(setting => setting.key === 'autoUpdate');
+    return stored === undefined ? undefined : String(stored.value) === 'true';
   },
-  { immediate: true }
-);
-
-// Auto-save when value changes (after initialization)
-watch(autoUpdate, async newValue => {
-  if (isInitialized.value && !updateSettingMutation.isPending.value) {
-    try {
-      await updateSettingMutation.mutateAsync({
-        key: 'autoUpdate',
-        value: newValue,
-        type: 'boolean',
-      });
-    } catch (error) {
-      toastDanger('Failed to update automatic updates', {
-        description: error instanceof Error ? error.message : 'Unknown error',
-      });
-      // Revert the toggle on error
-      autoUpdate.value = !newValue;
-    }
-  }
+  write: value => updateSettingMutation.mutateAsync({ key: 'autoUpdate', value, type: 'boolean' }),
+  initial: true,
+  onError: (error, value) => {
+    toastDanger('Failed to update automatic updates', {
+      description: error instanceof Error ? error.message : 'Unknown error',
+    });
+    // Revert the toggle on error
+    autoUpdate.value = !value;
+  },
 });
 
 /**
