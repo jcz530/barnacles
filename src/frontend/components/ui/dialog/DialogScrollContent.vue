@@ -11,6 +11,7 @@ import {
   useForwardPropsEmits,
 } from 'reka-ui';
 import { cn } from '@/lib/utils';
+import { useToastAwareDismiss } from '@/composables/useToastAwareDismiss';
 
 const props = defineProps<DialogContentProps & { class?: HTMLAttributes['class'] }>();
 const emits = defineEmits<DialogContentEmits>();
@@ -18,6 +19,27 @@ const emits = defineEmits<DialogContentEmits>();
 const delegatedProps = reactiveOmit(props, 'class');
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
+
+// A click or focus landing on a toast is not a click outside the dialog.
+const { onInteractOutside, isEventFromToast } = useToastAwareDismiss();
+
+/**
+ * This variant scrolls inside its own overlay, so the overlay owns the
+ * scrollbar. A pointerdown on that scrollbar reports coordinates past the
+ * element's client box and would otherwise read as a click outside.
+ */
+function isEventOnScrollbar(event: PointerEvent): boolean {
+  const target = event.target as HTMLElement | null;
+  if (!target) return false;
+  return event.offsetX > target.clientWidth || event.offsetY > target.clientHeight;
+}
+
+function onPointerDownOutside(event: CustomEvent<{ originalEvent: PointerEvent }>): void {
+  const originalEvent = event.detail.originalEvent;
+  if (isEventFromToast(originalEvent) || isEventOnScrollbar(originalEvent)) {
+    event.preventDefault();
+  }
+}
 </script>
 
 <template>
@@ -33,18 +55,8 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
           )
         "
         v-bind="forwarded"
-        @pointer-down-outside="
-          event => {
-            const originalEvent = event.detail.originalEvent;
-            const target = originalEvent.target as HTMLElement;
-            if (
-              originalEvent.offsetX > target.clientWidth ||
-              originalEvent.offsetY > target.clientHeight
-            ) {
-              event.preventDefault();
-            }
-          }
-        "
+        @focus-outside="onInteractOutside"
+        @pointer-down-outside="onPointerDownOutside"
       >
         <slot />
 

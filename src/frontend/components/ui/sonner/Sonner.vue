@@ -31,16 +31,38 @@ const props = defineProps<ToasterProps>();
 
 <style>
 /*
- * Keep the toaster above dialogs for clicks, not just for paint.
+ * Keep the toaster clickable over a modal dialog.
  *
- * Reka's DialogPortal teleports a dialog to the end of `body`, later in
- * document order than this toaster, so on a z-index tie the dialog wins
- * hit-testing and a click on a toast action lands on whatever dialog button
- * sits behind it.
+ * Reka's DismissableLayer sets `body { pointer-events: none }` for as long as a
+ * modal dialog is open, and re-enables pointer events only on the dialog's own
+ * layer and overlay. `pointer-events` inherits, and the toaster is just another
+ * `body` descendant, so without this it paints above the dialog but receives no
+ * clicks or hovers: both fall straight through to whatever dialog button sits
+ * behind the toast.
  *
- * Sonner already sets a high z-index of its own, so this is belt-and-braces
- * against an ancestor stacking context capping it: the value here is the
- * maximum, and it is applied where the toaster is positioned.
+ * Re-declaring `auto` here is the only way out. No DOM move or z-index escapes
+ * an inherited `none` -- an earlier attempt at this bug tried both and failed.
+ *
+ * Covering the `[data-sonner-toaster]` wrapper as well as the toasts is safe
+ * because every toast is `position: absolute` (vue-sonner's own CSS), so that
+ * `<ol>` has no in-flow children and collapses to zero height. It never spans
+ * the dialog, not even under the 600px query where it stretches to full width.
+ * Were a toast ever laid out in flow -- a custom-component toast, say -- the
+ * `<ol>` would gain real height and this would need narrowing to the toasts.
+ *
+ * The library's own `[data-sonner-toast][data-visible='false']` rule is more
+ * specific than this one, so toasts still stop taking clicks once they start
+ * animating out.
+ */
+[data-sonner-toaster],
+[data-sonner-toast] {
+  pointer-events: auto;
+}
+
+/*
+ * Belt-and-braces against an ancestor stacking context capping the toaster;
+ * sonner already sets a high z-index of its own. This is not what makes toasts
+ * clickable over a dialog -- see the pointer-events rule above.
  */
 [data-sonner-toaster] {
   z-index: 2147483647;
