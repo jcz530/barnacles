@@ -19,11 +19,16 @@ const asWarning = (data: unknown) => (data as { warning?: string }).warning;
  * palette hook's registration result is driven per-test.
  */
 const syncCommandPaletteShortcut = vi.fn();
+const setAutoDownload = vi.fn();
 
 vi.mock('../../../../main/main', () => ({
   toggleTrayIcon: vi.fn(),
   toggleCliInstallation: vi.fn(),
   syncCommandPaletteShortcut: () => syncCommandPaletteShortcut(),
+}));
+
+vi.mock('../../../../main/updater', () => ({
+  setAutoDownload: (enabled: boolean) => setAutoDownload(enabled),
 }));
 
 describe('Settings API Integration Tests', () => {
@@ -32,6 +37,7 @@ describe('Settings API Integration Tests', () => {
   beforeEach(async () => {
     syncCommandPaletteShortcut.mockReset();
     syncCommandPaletteShortcut.mockResolvedValue({ success: true });
+    setAutoDownload.mockReset();
 
     await context.setup(async () => {
       const { Hono } = await import('hono');
@@ -41,6 +47,61 @@ describe('Settings API Integration Tests', () => {
       app.onError(errorHandler);
       app.route('/api/settings', settings);
       return app;
+    });
+  });
+
+  describe('automatic updates setting', () => {
+    it('defaults to on', async () => {
+      const response = await get(context.get().app, '/api/settings');
+
+      expect(response.status).toBe(200);
+      const setting = asSettingList(response.data).find(
+        (item: { key: string }) => item.key === SETTING_KEYS.AUTO_UPDATE
+      );
+      expect(setting?.value).toBe('true');
+    });
+
+    it('persists being turned off', async () => {
+      const response = await put(context.get().app, '/api/settings/autoUpdate', {
+        value: false,
+        type: 'boolean',
+      });
+
+      expect(response.status).toBe(200);
+      expect(asSetting(response.data).value).toBe('false');
+
+      const reread = await get(context.get().app, '/api/settings');
+      const setting = asSettingList(reread.data).find(
+        (item: { key: string }) => item.key === SETTING_KEYS.AUTO_UPDATE
+      );
+      expect(setting?.value).toBe('false');
+    });
+
+    it('applies the change to the running updater', async () => {
+      // The preference is only half the job -- it has to reach the autoUpdater
+      // singleton in main, or the toggle would not take effect until relaunch.
+      await put(context.get().app, '/api/settings/autoUpdate', {
+        value: false,
+        type: 'boolean',
+      });
+
+      expect(setAutoDownload).toHaveBeenCalledWith(false);
+
+      await put(context.get().app, '/api/settings/autoUpdate', {
+        value: true,
+        type: 'boolean',
+      });
+
+      expect(setAutoDownload).toHaveBeenLastCalledWith(true);
+    });
+
+    it('does not touch the updater for unrelated settings', async () => {
+      await put(context.get().app, '/api/settings/scanMaxDepth', {
+        value: 4,
+        type: 'number',
+      });
+
+      expect(setAutoDownload).not.toHaveBeenCalled();
     });
   });
 

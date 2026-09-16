@@ -9,30 +9,56 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import RestartToUpdateDialog from './RestartToUpdateDialog.vue';
 import type { UpdateState } from '../../../shared/types/updater';
 
 interface Props {
   updateState: UpdateState;
+  /**
+   * Whether the update was dismissed. Only this toast honours it -- the sidebar
+   * badge keeps showing the update, so "Later" postpones the interruption
+   * without losing track of it.
+   */
+  isDismissed?: boolean;
+  /**
+   * When automatic updates are on, downloading is background work and this
+   * toast stays out of the way until there is something to act on. When they
+   * are off, the user has to be asked before anything is fetched, so the
+   * "available" prompt and its Download button come back.
+   */
+  autoUpdateEnabled?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  isDismissed: false,
+  autoUpdateEnabled: true,
+});
 
 const emit = defineEmits<{
   download: [];
-  install: [];
   dismiss: [];
 }>();
 
+/*
+ * Which states are worth interrupting for.
+ *
+ * 'downloaded' and 'error' always are: one needs a restart, the other needs to
+ * be told. 'available' only matters when automatic updates are off, because
+ * that is the one case where the download will not happen unless the user says
+ * so. 'downloading' never shows -- the sidebar badge carries the progress.
+ */
 const showNotification = computed(() => {
-  return ['available', 'downloading', 'downloaded', 'error'].includes(props.updateState.status);
+  if (props.isDismissed) return false;
+
+  const { status } = props.updateState;
+  if (status === 'downloaded' || status === 'error') return true;
+  return status === 'available' && !props.autoUpdateEnabled;
 });
 
 const title = computed(() => {
   switch (props.updateState.status) {
     case 'available':
       return 'Update Available';
-    case 'downloading':
-      return 'Downloading Update';
     case 'downloaded':
       return 'Update Ready';
     case 'error':
@@ -42,49 +68,36 @@ const title = computed(() => {
   }
 });
 
+/**
+ * Updater errors are raw library text -- file:// URLs, code-signing jargon --
+ * written for a log, not a toast. Lead with something a person can act on and
+ * keep the original underneath for anyone who wants it.
+ */
+const errorDetail = computed(() => props.updateState.error?.message?.trim() ?? '');
+
+/** "A new version" rather than "Version undefined" when the payload lacks one. */
+const versionLabel = computed(() =>
+  props.updateState.updateInfo?.version
+    ? `Version ${props.updateState.updateInfo.version}`
+    : 'A new version'
+);
+
 const description = computed(() => {
   switch (props.updateState.status) {
     case 'available':
-      return `Version ${props.updateState.updateInfo?.version} is available. Would you like to download it?`;
-    case 'downloading':
-      return `Downloading version ${props.updateState.updateInfo?.version}...`;
+      return `${versionLabel.value} is available. Would you like to download it?`;
     case 'downloaded':
-      return `Version ${props.updateState.updateInfo?.version} is ready to install. Restart the app to apply the update.`;
+      return `${versionLabel.value} is ready to install. Restart the app to apply the update.`;
     case 'error':
-      return props.updateState.error?.message || 'An error occurred while checking for updates.';
+      return "Barnacles couldn't install the update. You can try again later.";
     default:
       return '';
   }
 });
 
-const progressPercent = computed(() => {
-  return props.updateState.downloadProgress?.percent ?? 0;
-});
-
-const handlePrimaryAction = () => {
-  if (props.updateState.status === 'available') {
-    emit('download');
-  } else if (props.updateState.status === 'downloaded') {
-    emit('install');
-  }
-};
-
-const primaryActionLabel = computed(() => {
-  if (props.updateState.status === 'available') {
-    return 'Download';
-  } else if (props.updateState.status === 'downloaded') {
-    return 'Restart & Install';
-  }
-  return '';
-});
-
-const showPrimaryAction = computed(() => {
-  return ['available', 'downloaded'].includes(props.updateState.status);
-});
-
-const showDismiss = computed(() => {
-  return ['available', 'error'].includes(props.updateState.status);
-});
+// The restart is handled by RestartToUpdateDialog, which confirms first; this
+// is only the download, which needs no confirmation.
+const showDownloadAction = computed(() => props.updateState.status === 'available');
 
 const cardClass = computed(() => {
   const baseClass = 'fixed right-4 bottom-4 w-96 shadow-lg z-50';
@@ -107,24 +120,36 @@ const cardClass = computed(() => {
     <Card v-if="showNotification" :class="cardClass">
       <CardHeader>
         <CardTitle class="text-lg">{{ title }}</CardTitle>
-        <CardDescription>{{ description }}</CardDescription>
+        <CardDescription class="break-words">{{ description }}</CardDescription>
       </CardHeader>
 
-      <CardContent v-if="updateState.status === 'downloading'" class="pb-4">
-        <div class="h-2.5 w-full rounded-full bg-slate-200">
-          <div
-            class="bg-primary-600 h-2.5 rounded-full transition-all duration-300"
-            :style="{ width: `${progressPercent}%` }"
-          />
-        </div>
-        <p class="mt-2 text-sm text-slate-600">{{ progressPercent.toFixed(1) }}%</p>
+      <CardContent v-if="updateState.status === 'downloaded'" class="pb-4">
+        <p class="text-muted-foreground text-sm">
+          You can keep working — the update applies the next time Barnacles starts.
+        </p>
       </CardContent>
 
-      <CardFooter v-if="showPrimaryAction || showDismiss" class="gap-2">
-        <Button v-if="showPrimaryAction" @click="handlePrimaryAction">
-          {{ primaryActionLabel }}
-        </Button>
-        <Button v-if="showDismiss" variant="outline" @click="emit('dismiss')"> Later </Button>
+      <!-- The raw message, clamped. `break-words` because these carry long
+           unbroken file:// URLs that otherwise run straight out of the card. -->
+      <CardContent v-else-if="updateState.status === 'error' && errorDetail" class="pb-4">
+        <p class="text-muted-foreground line-clamp-3 text-xs break-words" :title="errorDetail">
+          {{ errorDetail }}
+        </p>
+      </CardContent>
+
+      <CardFooter class="gap-2">
+        <!-- The restart quits the app, so it confirms first; the download does
+             not, so it fires directly. -->
+        <RestartToUpdateDialog
+          v-if="updateState.status === 'downloaded'"
+          :version="updateState.updateInfo?.version"
+        >
+          <Button>Restart Now</Button>
+        </RestartToUpdateDialog>
+        <Button v-else-if="showDownloadAction" @click="emit('download')"> Download </Button>
+        <!-- Always offered: every state this toast shows is one the user is
+             allowed to walk away from. -->
+        <Button variant="outline" @click="emit('dismiss')"> Later </Button>
       </CardFooter>
     </Card>
   </Transition>

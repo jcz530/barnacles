@@ -4,7 +4,7 @@ import started from 'electron-squirrel-startup';
 import { startServer } from '../backend/server';
 import { setupIPC } from './ipc';
 import { createMenu } from './menu';
-import { initializeUpdater } from './updater';
+import { initializeUpdater, stopPeriodicUpdateChecks } from './updater';
 import { createWindow } from './window-manager';
 import { createTray, updateTrayMenu, destroyTray } from './tray-manager';
 import { settingsService } from '../backend/services/settings-service';
@@ -194,7 +194,7 @@ const initialize = async (): Promise<void> => {
     trackApplicationActivation();
 
     // Initialize auto-updater
-    initializeUpdater();
+    await initializeUpdater();
 
     // Create the application menu
     createMenu();
@@ -286,10 +286,11 @@ let processCleanupDone = false;
  * is too early -- it can still be cancelled.
  */
 app.on('will-quit', event => {
-  // Ahead of the early-return below so the combo is released on the first pass
+  // Ahead of the early-return below so these are released on the first pass
   // regardless of which path the quit takes.
   unregisterPaletteShortcut();
   destroyCommandPalette();
+  stopPeriodicUpdateChecks();
 
   if (processCleanupDone) {
     return;

@@ -22,6 +22,7 @@ export interface ElectronAPI {
   onUpdateChecking: (_callback: () => void) => () => void;
   onUpdateAvailable: (_callback: (info: UpdateInfo) => void) => () => void;
   onUpdateNotAvailable: (_callback: (info: UpdateInfo) => void) => () => void;
+  onUpdatePending: (_callback: (info: UpdateInfo) => void) => () => void;
   onUpdateDownloadProgress: (_callback: (progress: DownloadProgress) => void) => () => void;
   onUpdateDownloaded: (_callback: (info: UpdateInfo) => void) => () => void;
   onUpdateError: (_callback: (error: UpdateError) => void) => () => void;

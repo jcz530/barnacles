@@ -175,6 +175,7 @@ export interface Setting {
 }
 
 export const SETTING_KEYS = {
+  AUTO_UPDATE: 'autoUpdate',
   COMMAND_PALETTE_SHORTCUT: 'commandPaletteShortcut',
   COMMAND_PALETTE_SHORTCUT_ENABLED: 'commandPaletteShortcutEnabled',
   DEFAULT_IDE: 'defaultIde',

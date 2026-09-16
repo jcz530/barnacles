@@ -278,4 +278,25 @@ describe('SettingsService', () => {
       expect(await settingsService.getValue<number>('scanMaxDepth')).toBe(7);
     });
   });
+  describe('autoUpdate', () => {
+    it('defaults to on', async () => {
+      // Default-on is the whole premise of the feature: nothing is applied
+      // until the user restarts, so the only cost of opting in is bandwidth.
+      expect(await settingsService.getValue<boolean>('autoUpdate')).toBe(true);
+    });
+
+    it('round-trips as a boolean', async () => {
+      await settingsService.setSetting('autoUpdate', false, 'boolean');
+      expect(await settingsService.getValue<boolean>('autoUpdate')).toBe(false);
+
+      await settingsService.setSetting('autoUpdate', true, 'boolean');
+      expect(await settingsService.getValue<boolean>('autoUpdate')).toBe(true);
+    });
+
+    it('is stored as a string, like every other setting', async () => {
+      const setting = await settingsService.setSetting('autoUpdate', false, 'boolean');
+      expect(setting.value).toBe('false');
+      expect(setting.type).toBe('boolean');
+    });
+  });
 });

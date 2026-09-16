@@ -71,7 +71,16 @@ watch(() => appSettingsQuery.data.value, syncFromSettings, { immediate: true });
 const { connect: connectScanWebSocket } = useProjectScanWebSocket();
 
 // Initialize auto-updater
-const { updateState, downloadUpdate, installUpdate, dismissUpdate } = useUpdater();
+const { updateState, isDismissed, downloadUpdate, dismissUpdate } = useUpdater();
+
+// With automatic updates off, the toast has to keep asking before it downloads.
+// Read from the settings query already fetched above rather than a second one.
+const autoUpdateEnabled = computed(() => {
+  const setting = appSettingsQuery.data.value?.find(s => s.key === 'autoUpdate');
+  // Absent until settings load; default to on so a slow query cannot flash a
+  // Download prompt at someone who has automatic updates enabled.
+  return setting ? String(setting.value) === 'true' : true;
+});
 
 // Listen for navigation requests from tray popup (set up immediately, not in onMounted)
 let unsubscribeNav: (() => void) | undefined;
@@ -117,8 +126,9 @@ onUnmounted(() => {
     <div id="app">
       <UpdateNotification
         :update-state="updateState"
+        :is-dismissed="isDismissed"
+        :auto-update-enabled="autoUpdateEnabled"
         @download="downloadUpdate"
-        @install="installUpdate"
         @dismiss="dismissUpdate"
       />
       <CommandPaletteDialog v-if="!isChromelessRoute" v-model:open="isPaletteOpen" />

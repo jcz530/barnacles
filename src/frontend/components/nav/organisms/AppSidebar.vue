@@ -4,6 +4,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/compone
 import { RouteNames } from '@/router';
 import NavMain from '@/components/nav/molecules/NavMain.vue';
 import NavSecondary from '@/components/nav/molecules/NavSecondary.vue';
+import NavUpdate from '@/components/nav/molecules/NavUpdate.vue';
 import NavUser from '@/components/nav/molecules/NavUser.vue';
 import ThemeToggle from '@/components/nav/molecules/ThemeToggle.vue';
 import { useApi } from '@/composables/useApi';
@@ -30,6 +31,15 @@ const { data: currentUser } = useQuery({
       'GET',
       API_ROUTES.USERS_CURRENT
     ),
+});
+
+// With automatic updates off, a found update waits on the user, so the badge
+// offers the download. Reuses the settings query the sidebar already holds.
+const { data: appSettings } = queries.useSettingsQuery({ enabled: true });
+const autoUpdateEnabled = computed(() => {
+  const setting = appSettings.value?.find(s => s.key === 'autoUpdate');
+  // Default to on while settings load, to match the stored default.
+  return setting ? String(setting.value) === 'true' : true;
 });
 
 // Fetch projects and processes for counts
@@ -90,6 +100,7 @@ const data = computed(() => ({
       <ThemeToggle />
     </SidebarContent>
     <SidebarFooter>
+      <NavUpdate :auto-update-enabled="autoUpdateEnabled" />
       <NavUser :user="data.user" />
     </SidebarFooter>
   </Sidebar>

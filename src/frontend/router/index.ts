@@ -224,14 +224,16 @@ const routes: RouteRecordRaw[] = [
         name: RouteNames.UtilityDetail,
         component: () => import('../views/utilities/UtilityDetailWrapper.vue'),
       },
-      {
-        path: '/update-test',
-        name: RouteNames.UpdateTest,
-        component: UpdateTest,
-      },
-      // Dev-only route for design system
+      // Dev-only routes. The update harness writes the real `autoUpdate`
+      // setting and drives the shared updater store, so it has no business in
+      // a shipped build.
       ...(import.meta.env.DEV
         ? [
+            {
+              path: '/update-test',
+              name: RouteNames.UpdateTest,
+              component: UpdateTest,
+            },
             {
               path: '/design-system',
               name: RouteNames.DesignSystem,

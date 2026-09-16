@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { settingsService, InvalidSettingValueError } from '../services/settings-service';
 import { toggleTrayIcon, toggleCliInstallation, syncCommandPaletteShortcut } from '../../main/main';
+import { setAutoDownload } from '../../main/updater';
 import {
   scanDirectoryService,
   ScanDirectoryRejectedError,
@@ -97,6 +98,14 @@ settings.put('/:key', async c => {
     if (key === 'showTrayIcon') {
       const boolValue = value === true || value === 'true' || value === 1;
       await toggleTrayIcon(boolValue);
+    }
+
+    // Applies to the running autoUpdater immediately, so turning this off mid
+    // session stops a download that has not started yet rather than waiting for
+    // the next launch.
+    if (key === 'autoUpdate') {
+      const boolValue = value === true || value === 'true' || value === 1;
+      setAutoDownload(boolValue);
     }
 
     if (key === 'installCliCommand') {
