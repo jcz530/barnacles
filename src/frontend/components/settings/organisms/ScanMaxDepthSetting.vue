@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
+import { usePersistedSetting } from '../../../composables/usePersistedSetting';
 import Button from '../../ui/button/Button.vue';
 import Input from '../../ui/input/Input.vue';
 import SettingRow from '../molecules/SettingRow.vue';
@@ -11,38 +12,6 @@ const settingsQuery = useSettingsQuery({ enabled: true });
 const updateSettingMutation = useUpdateSettingMutation();
 
 const DEFAULT_SCAN_MAX_DEPTH = 3;
-
-const scanMaxDepth = ref(DEFAULT_SCAN_MAX_DEPTH);
-const isInitialized = ref(false);
-
-/**
- * The last value known to be persisted.
- *
- * Not read from the settings query: `useUpdateSettingMutation` deliberately
- * does not invalidate it (that would retrigger this component's auto-save
- * watcher in a loop), so the cache still holds the value fetched on mount.
- * Restoring from it would overwrite a newer saved value and, because the
- * assignment retriggers the watcher, persist the stale one.
- */
-const lastSavedDepth = ref(DEFAULT_SCAN_MAX_DEPTH);
-
-// Update local state when settings are loaded
-watch(
-  () => settingsQuery.data.value,
-  newData => {
-    if (newData) {
-      const maxDepthSetting = newData.find(s => s.key === 'scanMaxDepth');
-      if (maxDepthSetting) {
-        const stored = Number(maxDepthSetting.value);
-        // A pre-fix row can hold "NaN" or "null"; don't seed the field with it.
-        scanMaxDepth.value = Number.isFinite(stored) ? stored : DEFAULT_SCAN_MAX_DEPTH;
-        lastSavedDepth.value = scanMaxDepth.value;
-      }
-      isInitialized.value = true;
-    }
-  },
-  { immediate: true }
-);
 
 const MIN_SCAN_MAX_DEPTH = 1;
 const MAX_SCAN_MAX_DEPTH = 10;
@@ -57,21 +26,22 @@ const MAX_SCAN_MAX_DEPTH = 10;
 const isUsableDepth = (value: number): boolean =>
   Number.isFinite(value) && value >= MIN_SCAN_MAX_DEPTH && value <= MAX_SCAN_MAX_DEPTH;
 
-// Auto-save when value changes (after initialization)
-watch(scanMaxDepth, async newValue => {
-  if (isInitialized.value && !updateSettingMutation.isPending.value) {
-    if (!isUsableDepth(newValue)) {
-      return;
-    }
-
-    await updateSettingMutation.mutateAsync({
-      key: 'scanMaxDepth',
-      value: newValue,
-      type: 'number',
-    });
-    lastSavedDepth.value = newValue;
+const { value: scanMaxDepth, lastPersisted: lastSavedDepth } = usePersistedSetting<number>(
+  () => settingsQuery.data.value,
+  {
+    read: data => {
+      const stored = data.find(setting => setting.key === 'scanMaxDepth');
+      if (stored === undefined) return undefined;
+      const parsed = Number(stored.value);
+      // A pre-fix row can hold "NaN" or "null"; don't seed the field with it.
+      return Number.isFinite(parsed) ? parsed : DEFAULT_SCAN_MAX_DEPTH;
+    },
+    write: value =>
+      updateSettingMutation.mutateAsync({ key: 'scanMaxDepth', value, type: 'number' }),
+    initial: DEFAULT_SCAN_MAX_DEPTH,
+    isValid: isUsableDepth,
   }
-});
+);
 
 /**
  * Restore the saved value when the user leaves an empty or out-of-range field,

@@ -31,7 +31,22 @@ defineProps<{
     to `block: 'start'` lands underneath it; the remaining 16px is breathing room
     above the heading rather than butting it against the chrome.
   -->
-  <section :id="id" class="scroll-mt-14">
+  <section :id="id" class="relative scroll-mt-14">
+    <!--
+      Scroll-spy marker: a zero-height line at the very top of the section.
+      The spy watches this rather than the <section> box, so the sidebar
+      switches when the heading reaches the trigger line instead of when the
+      previous section's last row finally clears it -- a section box spans its
+      whole height, so the old arrangement made the switch depend on how tall
+      the outgoing section was. `aria-hidden` and no size: it is a coordinate,
+      not content.
+    -->
+    <div
+      :data-section-marker="id"
+      class="pointer-events-none absolute inset-x-0 top-0 h-px"
+      aria-hidden="true"
+    ></div>
+
     <div class="border-border border-b pb-3">
       <h2 class="text-lg font-semibold tracking-tight">{{ title }}</h2>
       <p v-if="description" class="text-muted-foreground mt-1 text-sm">{{ description }}</p>

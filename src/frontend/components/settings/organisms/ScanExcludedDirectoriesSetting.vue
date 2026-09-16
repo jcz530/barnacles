@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
+import { usePersistedSetting, arrayEquals } from '../../../composables/usePersistedSetting';
 import Button from '../../ui/button/Button.vue';
 import FolderAutocompleteInput from '../../molecules/FolderAutocompleteInput.vue';
 import DirectoryTagList from '../molecules/DirectoryTagList.vue';
@@ -14,75 +15,47 @@ const updateSettingMutation = useUpdateSettingMutation();
 const defaultSettingQuery = useDefaultSettingQuery('scanExcludedDirectories', { enabled: true });
 
 const DEFAULT_EXCLUDED_DIRECTORIES = ref<string[]>([]);
-const excludedDirectories = ref<string[]>([]);
 const newDirectory = ref('');
-const isInitialized = ref(false);
-const hasLoadedFromSettings = ref(false);
 
-// Update default directories when loaded from backend
+const { value: excludedDirectories, hasStoredValue } = usePersistedSetting<string[]>(
+  () => settingsQuery.data.value,
+  {
+    read: data => {
+      const stored = data.find(setting => setting.key === 'scanExcludedDirectories');
+      if (stored === undefined) return undefined;
+      try {
+        const parsed = JSON.parse(stored.value);
+        return Array.isArray(parsed) ? parsed : undefined;
+      } catch {
+        // If parsing fails, use default
+        return [...DEFAULT_EXCLUDED_DIRECTORIES.value];
+      }
+    },
+    write: value =>
+      updateSettingMutation.mutateAsync({ key: 'scanExcludedDirectories', value, type: 'json' }),
+    initial: [],
+    equals: arrayEquals,
+    onError: error => console.error('Failed to save excluded directories:', error),
+  }
+);
+
+// Seed from the backend defaults only while no stored value is known.
+// Gated on `hasStoredValue` rather than `hasHydrated`: a payload that carries
+// no row for this setting still counts as hydrated, and seeding must remain
+// possible for it -- otherwise whichever query resolves first decides whether
+// the defaults ever appear. A user who has saved an empty list has a row, so
+// they keep their empty list.
 watch(
   () => defaultSettingQuery.data.value,
   newData => {
     if (newData && Array.isArray(newData)) {
       DEFAULT_EXCLUDED_DIRECTORIES.value = newData;
-      // Initialize excludedDirectories if not yet loaded from settings
-      if (!hasLoadedFromSettings.value && excludedDirectories.value.length === 0) {
+      if (!hasStoredValue.value && excludedDirectories.value.length === 0) {
         excludedDirectories.value = [...newData];
       }
     }
   },
   { immediate: true }
-);
-
-// Update local state when settings are loaded
-watch(
-  () => settingsQuery.data.value,
-  newData => {
-    if (newData) {
-      const excludedDirsSetting = newData.find(s => s.key === 'scanExcludedDirectories');
-      if (excludedDirsSetting) {
-        try {
-          const parsed = JSON.parse(excludedDirsSetting.value);
-          if (Array.isArray(parsed)) {
-            excludedDirectories.value = parsed;
-          }
-        } catch {
-          // If parsing fails, use default
-          excludedDirectories.value = [...DEFAULT_EXCLUDED_DIRECTORIES.value];
-        }
-      }
-      hasLoadedFromSettings.value = true;
-      isInitialized.value = true;
-    }
-  },
-  { immediate: true }
-);
-
-// Auto-save when value changes (after initialization)
-// Skip the first change which happens when loading from settings
-let isFirstChange = true;
-watch(
-  excludedDirectories,
-  async newValue => {
-    // Skip the first change when loading from settings
-    if (isFirstChange && hasLoadedFromSettings.value) {
-      isFirstChange = false;
-      return;
-    }
-
-    if (isInitialized.value && !updateSettingMutation.isPending.value && Array.isArray(newValue)) {
-      try {
-        await updateSettingMutation.mutateAsync({
-          key: 'scanExcludedDirectories',
-          value: newValue,
-          type: 'json',
-        });
-      } catch (error) {
-        console.error('Failed to save excluded directories:', error);
-      }
-    }
-  },
-  { deep: true }
 );
 
 const addDirectory = () => {

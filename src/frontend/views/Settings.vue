@@ -70,9 +70,12 @@ const sectionsToRender = computed(() =>
  * rooting it at <main> would watch an element that never scrolls, and the
  * active heading would never change.
  */
-const { activeId, observe, setActive, reset } = useScrollSpy({
+const { activeId, observe, observeEnd, setActive, reset } = useScrollSpy({
   sectionIds: () => sectionsToRender.value.map(section => section.id),
 });
+
+/** Marks the end of the content, so the last section can win at the bottom. */
+const endSentinel = ref<HTMLElement | null>(null);
 
 /*
  * Re-attach the scroll-spy to whatever sections are currently rendered.
@@ -88,9 +91,12 @@ const { activeId, observe, setActive, reset } = useScrollSpy({
 function attachScrollSpy() {
   reset();
   for (const section of sectionsToRender.value) {
-    const el = document.getElementById(section.id);
+    // The marker inside the section, not the section box -- see useScrollSpy.
+    const el = document.querySelector(`[data-section-marker="${section.id}"]`);
     if (el) observe(el, section.id);
   }
+
+  if (endSentinel.value) observeEnd(endSentinel.value);
 }
 
 // `immediate` would run during setup, before there is any DOM to look up.
@@ -185,6 +191,13 @@ onUnmounted(clear);
           </div>
         </SettingsSection>
       </div>
+
+      <!--
+        End-of-content sentinel. A section shorter than the gap below the
+        trigger line can never reach it, so the scroll-spy treats the last
+        section as active once this comes into view.
+      -->
+      <div ref="endSentinel" class="h-px" aria-hidden="true"></div>
 
       <div v-if="isSearching && !hasResults" class="py-16 text-center">
         <p class="text-muted-foreground text-sm">No settings match “{{ query }}”.</p>

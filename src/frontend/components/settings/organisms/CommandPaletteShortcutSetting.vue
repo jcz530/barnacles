@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
+import { usePersistedSetting } from '../../../composables/usePersistedSetting';
 import { Switch } from '../../ui/switch';
 import ShortcutRecorder from '../molecules/ShortcutRecorder.vue';
 import { isRiskyAccelerator } from '@/utils/accelerator';
@@ -12,10 +13,6 @@ const { useSettingsQuery, useUpdateSettingMutation } = useQueries();
 const settingsQuery = useSettingsQuery({ enabled: true });
 const updateSettingMutation = useUpdateSettingMutation();
 
-const enabled = ref(false);
-const accelerator = ref('');
-const isInitialized = ref(false);
-/** Why the OS refused the combo, when it did. */
 const registrationError = ref<string | null>(null);
 
 /**
@@ -29,42 +26,47 @@ const refreshStatus = async () => {
   registrationError.value = enabled.value && !status.registered ? status.error : null;
 };
 
+const { value: enabled } = usePersistedSetting<boolean>(() => settingsQuery.data.value, {
+  read: data => {
+    const stored = data.find(
+      setting => setting.key === SETTING_KEYS.COMMAND_PALETTE_SHORTCUT_ENABLED
+    );
+    return stored === undefined ? undefined : String(stored.value) === 'true';
+  },
+  write: async value => {
+    await updateSettingMutation.mutateAsync({
+      key: SETTING_KEYS.COMMAND_PALETTE_SHORTCUT_ENABLED,
+      value,
+      type: 'boolean',
+    });
+    await refreshStatus();
+  },
+  initial: false,
+});
+
+const { value: accelerator } = usePersistedSetting<string>(() => settingsQuery.data.value, {
+  read: data => {
+    const stored = data.find(setting => setting.key === SETTING_KEYS.COMMAND_PALETTE_SHORTCUT);
+    return stored === undefined ? undefined : String(stored.value);
+  },
+  write: async value => {
+    await updateSettingMutation.mutateAsync({
+      key: SETTING_KEYS.COMMAND_PALETTE_SHORTCUT,
+      value,
+      type: 'string',
+    });
+    await refreshStatus();
+  },
+  initial: '',
+});
+
+// The shortcut may have failed to register back at startup, so reflect the real
+// binding once the stored values are known -- not only after an edit.
 watch(
   () => settingsQuery.data.value,
-  newData => {
-    if (!newData) return;
-
-    const enabledSetting = newData.find(
-      s => s.key === SETTING_KEYS.COMMAND_PALETTE_SHORTCUT_ENABLED
-    );
-    if (enabledSetting) {
-      enabled.value = String(enabledSetting.value) === 'true';
-    }
-
-    const shortcutSetting = newData.find(s => s.key === SETTING_KEYS.COMMAND_PALETTE_SHORTCUT);
-    if (shortcutSetting) {
-      accelerator.value = String(shortcutSetting.value);
-    }
-
-    isInitialized.value = true;
-    void refreshStatus();
-  },
+  () => void refreshStatus(),
   { immediate: true }
 );
-
-const save = async (key: string, value: string | boolean, type: 'string' | 'boolean') => {
-  if (!isInitialized.value) return;
-  await updateSettingMutation.mutateAsync({ key, value, type });
-  await refreshStatus();
-};
-
-watch(enabled, newValue => {
-  void save(SETTING_KEYS.COMMAND_PALETTE_SHORTCUT_ENABLED, newValue, 'boolean');
-});
-
-watch(accelerator, newValue => {
-  void save(SETTING_KEYS.COMMAND_PALETTE_SHORTCUT, newValue, 'string');
-});
 </script>
 
 <template>

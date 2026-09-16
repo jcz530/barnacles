@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { Trash2 } from 'lucide-vue-next';
 import { useQueries } from '../../../composables/useQueries';
+import { usePersistedSetting } from '../../../composables/usePersistedSetting';
 import { Switch } from '../../ui/switch';
 import { Button } from '../../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
@@ -39,10 +40,6 @@ async function clearLog() {
   isConfirmOpen.value = false;
 }
 
-const usageLogging = ref<boolean>(true);
-const retentionDays = ref<string>('90');
-const isInitialized = ref(false);
-
 const RETENTION_OPTIONS = [
   { value: '30', label: '30 days' },
   { value: '60', label: '60 days' },
@@ -51,44 +48,34 @@ const RETENTION_OPTIONS = [
   { value: '365', label: '1 year' },
 ];
 
-watch(
-  () => settingsQuery.data.value,
-  newData => {
-    if (!newData) return;
-
-    const loggingSetting = newData.find(s => s.key === SETTING_KEYS.MCP_USAGE_LOGGING);
-    if (loggingSetting) {
-      usageLogging.value = String(loggingSetting.value) === 'true';
-    }
-
-    const retentionSetting = newData.find(s => s.key === SETTING_KEYS.MCP_USAGE_RETENTION_DAYS);
-    if (retentionSetting) {
-      retentionDays.value = String(retentionSetting.value);
-    }
-
-    isInitialized.value = true;
+const { value: usageLogging } = usePersistedSetting<boolean>(() => settingsQuery.data.value, {
+  read: data => {
+    const stored = data.find(setting => setting.key === SETTING_KEYS.MCP_USAGE_LOGGING);
+    return stored === undefined ? undefined : String(stored.value) === 'true';
   },
-  { immediate: true }
-);
-
-watch(usageLogging, async newValue => {
-  if (isInitialized.value && !updateSettingMutation.isPending.value) {
-    await updateSettingMutation.mutateAsync({
+  write: value =>
+    updateSettingMutation.mutateAsync({
       key: SETTING_KEYS.MCP_USAGE_LOGGING,
-      value: newValue,
+      value,
       type: 'boolean',
-    });
-  }
+    }),
+  initial: true,
 });
 
-watch(retentionDays, async newValue => {
-  if (isInitialized.value && !updateSettingMutation.isPending.value) {
-    await updateSettingMutation.mutateAsync({
+// Held as a string because the Select binds to string option values; it is
+// persisted as a number.
+const { value: retentionDays } = usePersistedSetting<string>(() => settingsQuery.data.value, {
+  read: data => {
+    const stored = data.find(setting => setting.key === SETTING_KEYS.MCP_USAGE_RETENTION_DAYS);
+    return stored === undefined ? undefined : String(stored.value);
+  },
+  write: value =>
+    updateSettingMutation.mutateAsync({
       key: SETTING_KEYS.MCP_USAGE_RETENTION_DAYS,
-      value: Number(newValue),
+      value: Number(value),
       type: 'number',
-    });
-  }
+    }),
+  initial: '90',
 });
 </script>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
 import { useQueries } from '../../../composables/useQueries';
+import { usePersistedSetting } from '../../../composables/usePersistedSetting';
 import { Switch } from '../../ui/switch';
 import SettingRow from '../molecules/SettingRow.vue';
 
@@ -9,34 +9,15 @@ const { useSettingsQuery, useUpdateSettingMutation } = useQueries();
 const settingsQuery = useSettingsQuery({ enabled: true });
 const updateSettingMutation = useUpdateSettingMutation();
 
-const showTrayIcon = ref<boolean>(false);
-const isInitialized = ref(false);
-
-// Update local state when settings are loaded
-watch(
-  () => settingsQuery.data.value,
-  newData => {
-    if (newData) {
-      const trayIconSetting = newData.find(s => s.key === 'showTrayIcon');
-      if (trayIconSetting) {
-        // Setting values are stored as strings, convert to boolean
-        showTrayIcon.value = String(trayIconSetting.value) === 'true';
-      }
-      isInitialized.value = true;
-    }
+const { value: showTrayIcon } = usePersistedSetting<boolean>(() => settingsQuery.data.value, {
+  // Setting values are stored as strings, convert to boolean
+  read: data => {
+    const stored = data.find(setting => setting.key === 'showTrayIcon');
+    return stored === undefined ? undefined : String(stored.value) === 'true';
   },
-  { immediate: true }
-);
-
-// Auto-save when value changes (after initialization)
-watch(showTrayIcon, async newValue => {
-  if (isInitialized.value && !updateSettingMutation.isPending.value) {
-    await updateSettingMutation.mutateAsync({
-      key: 'showTrayIcon',
-      value: newValue,
-      type: 'boolean',
-    });
-  }
+  write: value =>
+    updateSettingMutation.mutateAsync({ key: 'showTrayIcon', value, type: 'boolean' }),
+  initial: false,
 });
 </script>
 
