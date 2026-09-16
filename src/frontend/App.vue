@@ -117,9 +117,12 @@ onUnmounted(() => {
 <template>
   <TooltipProvider :delay-duration="300">
     <!--
-      Outside #app so no stacking context inside the app tree can trap it below
-      a dialog. Dialogs portal to the end of `body`, so the toaster has to be a
-      sibling of that portal to stay clickable above one.
+      Kept at the top of the tree so it paints above the app's own chrome.
+
+      This is still inside the `#app` mount host -- `app.mount('#app')` replaces
+      that element's contents, so everything here renders within it. That means
+      the toaster inherits `body { pointer-events: none }` from an open modal;
+      Sonner.vue re-enables pointer events on the toasts themselves.
     -->
     <Toaster position="bottom-center" :closeButton="true" />
 

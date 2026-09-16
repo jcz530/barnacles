@@ -5,6 +5,7 @@ import { reactiveOmit } from '@vueuse/core';
 import { X } from 'lucide-vue-next';
 import { DialogClose, DialogContent, DialogPortal, useForwardPropsEmits } from 'reka-ui';
 import { cn } from '@/lib/utils';
+import { useToastAwareDismiss } from '@/composables/useToastAwareDismiss';
 import SheetOverlay from './SheetOverlay.vue';
 
 interface SheetContentProps extends DialogContentProps {
@@ -24,6 +25,9 @@ const emits = defineEmits<DialogContentEmits>();
 const delegatedProps = reactiveOmit(props, 'class', 'side');
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits);
+
+// A click or focus landing on a toast is not a click outside the dialog.
+const { onInteractOutside } = useToastAwareDismiss();
 </script>
 
 <template>
@@ -46,6 +50,8 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits);
         )
       "
       v-bind="{ ...forwarded, ...$attrs }"
+      @pointer-down-outside="onInteractOutside"
+      @focus-outside="onInteractOutside"
     >
       <slot />
 
