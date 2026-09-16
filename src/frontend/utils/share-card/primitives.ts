@@ -92,12 +92,6 @@ export function splitHero(model: ShareModel) {
   return { hero: model.stats[0], rest: model.stats.slice(1) };
 }
 
-/** A headline phrase for the card, derived from the period. */
-export function headline(model: ShareModel): string {
-  if (model.granularity === 'week') return 'This week in code';
-  return model.granularity === 'month' ? 'This month in code' : 'This year in code';
-}
-
 /**
  * The brand mark, inlined.
  *
