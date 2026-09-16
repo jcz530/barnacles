@@ -5,6 +5,6 @@ export { snapshotTheme } from './theme';
 export { palette } from './palette';
 export { renderShareCardHtml } from './render';
 export { statCapacity, MAX_STAT_CAPACITY } from './capacity';
-export { DESIGN_META, DESIGNS, resolveDesign } from './types';
-export type { CardTheme, ShareDesign } from './types';
+export { DESIGN_META, DESIGNS, MODE_META, MODES, resolveDesign, resolveMode } from './types';
+export type { CardMode, CardTheme, ShareDesign } from './types';
 export type { CardPalette } from './palette';

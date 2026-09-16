@@ -18,6 +18,29 @@ export interface CardTheme {
 
 export type ShareDesign = 'poster' | 'receipt';
 
+/**
+ * The card's light/dark, independent of the app's.
+ *
+ * The dialog seeds this from the app's own mode the first time, so a user in
+ * dark mode gets a dark card without asking; from then on it is their choice
+ * and stays where they put it.
+ */
+export type CardMode = 'light' | 'dark';
+
+/** The user-facing name for each card mode, for the share dialog. */
+export const MODE_META: Record<CardMode, { label: string }> = {
+  light: { label: 'Light' },
+  dark: { label: 'Dark' },
+};
+
+/** Every mode, in the order the dialog offers them. */
+export const MODES: CardMode[] = ['light', 'dark'];
+
+/** Resolve a stored value to a mode that still exists. */
+export function resolveMode(stored: string | null | undefined, fallback: CardMode): CardMode {
+  return MODES.includes(stored as CardMode) ? (stored as CardMode) : fallback;
+}
+
 /** The user-facing name and icon for each design, used by the share dialog. */
 export const DESIGN_META: Record<ShareDesign, { label: string; icon: Component }> = {
   poster: { label: 'Poster', icon: ImageIcon },

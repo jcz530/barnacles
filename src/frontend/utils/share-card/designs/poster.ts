@@ -2,7 +2,6 @@ import type { ShareModel, ShareSize } from '@shared/share/share-model';
 import { statCapacity } from '../capacity';
 import {
   escapeHtml,
-  headline,
   iconColor,
   renderIcon,
   renderLogo,
@@ -136,13 +135,11 @@ export function renderPoster(model: ShareModel, theme: CardTheme, size: ShareSiz
     font-size: ${Math.round(width * 0.0155)}px; letter-spacing: 0.14em;
     text-transform: uppercase; color: ${p.muted}; font-weight: 700;
   }
-  /* The square has far more slack than the short card, so its headline and
-     hero are centred in it rather than pinned to the top with a hole beneath. */
-  .block { ${square ? `margin-top: ${Math.round(height * 0.11)}px;` : ''} }
-  .headline {
-    margin-top: ${Math.round(pad * (square ? 1.1 : 0.55))}px;
-    font-size: ${Math.round(width * 0.028)}px; color: ${p.muted};
-    font-weight: 400; letter-spacing: -0.01em;
+  /* The square has far more slack than the short card, so its hero is centred
+     in it rather than pinned to the top with a hole beneath. The top margin the
+     headline used to contribute is carried here now that it is gone. */
+  .block {
+    margin-top: ${Math.round(square ? height * 0.11 + pad * 1.1 : pad * 0.55)}px;
   }
   .hero-v {
     font-size: ${Math.round(width * (square ? 0.225 : 0.145))}px; font-weight: 700;
@@ -187,7 +184,6 @@ ${chart}
     <span class="eyebrow">${escapeHtml(model.periodLabel)}</span>
   </div>
   <div class="block">
-    <div class="headline">${escapeHtml(headline(model))}</div>
     <div class="hero-v">${escapeHtml(statDisplay(hero.key, hero.value))}</div>
     <div class="hero-l">${escapeHtml(hero.label)}</div>
   </div>
