@@ -142,7 +142,7 @@ onKeyStroke('g', e => {
 
 <template>
   <div
-    class="bg-background/95 supports-[backdrop-filter]:bg-background/80 flex items-center gap-2 rounded-lg border p-3 shadow-lg backdrop-blur"
+    class="bg-card/95 supports-[backdrop-filter]:bg-card/80 flex items-center gap-2 rounded-lg border p-3 shadow-lg backdrop-blur"
   >
     <Input
       ref="inputRef"
@@ -204,7 +204,7 @@ onKeyStroke('g', e => {
 
 <style>
 /* Transparent background for find overlay window - keeps the BrowserWindow see-through
-   while the component itself renders its own bg-background */
+   while the component itself renders its own card surface */
 body.find-overlay {
   background: transparent !important;
 }

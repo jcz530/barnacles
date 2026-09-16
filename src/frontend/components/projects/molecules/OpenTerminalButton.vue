@@ -111,7 +111,7 @@ const handleMainButtonClick = () => {
       size="sm"
       :disabled="isLoading || openTerminalMutation.isPending.value"
       @click="handleMainButtonClick"
-      class="border-r-muted-foreground/20 rounded-r-none border-r"
+      class="border-r-border rounded-r-none border-r"
     >
       <TerminalIcon class="mr-2 h-4 w-4" />
       {{ preferredTerminal ? `Open ${preferredTerminal.name}` : 'Select Terminal' }}

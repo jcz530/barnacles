@@ -42,7 +42,7 @@ defineProps<{
               <span
                 v-if="item.count"
                 class="ml-auto text-xs opacity-90"
-                :class="[item.isActive ? 'text-slate-100' : '']"
+                :class="[item.isActive ? 'text-sidebar-accent-foreground' : '']"
               >
                 {{ item.count }}
               </span>

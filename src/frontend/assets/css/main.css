@@ -162,8 +162,8 @@ samp {
   --popover-foreground: var(--color-slate-800);
   --primary: var(--color-primary-500);
   --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
+  --secondary: var(--color-secondary-100);
+  --secondary-foreground: var(--color-secondary-900);
   --muted: var(--color-slate-100);
   --muted-foreground: var(--color-slate-300);
   --accent: var(--color-slate-100);
@@ -178,15 +178,29 @@ samp {
   --sidebar-foreground: var(--color-slate-800);
   --sidebar-primary-foreground: var(--color-slate-200);
   --sidebar-accent: var(--color-primary-500);
-  --sidebar-accent-foreground: var(--color-primary-50);
+  --sidebar-accent-foreground: var(--color-slate-50);
   --sidebar-border: var(--color-slate-300);
   --sidebar-ring: var(--color-primary-400);
 }
+/*
+ * Shades here read inverted: the palette swaps each shade for its 1000-minus
+ * counterpart in dark mode, so slate-50 lands on the darkest rung.
+ *
+ * A shadow is a dark smudge, and there is little left to darken on a dark
+ * ground, so cards are lifted by lightness instead: the ground sits below the
+ * card, and the border sits a rung above it so its edge reads as a highlight
+ * rather than a seam. Keep those three on separate rungs -- a border equal to
+ * the card erases every card edge. The shadow stays, but as a supporting cue
+ * rather than the whole effect.
+ */
 .dark {
-  --color-white: var(--color-slate-300);
-  --background: var(--color-slate-300);
+  --color-white: var(--color-slate-100);
+  --background: var(--color-slate-200);
+  --sidebar: var(--color-slate-100);
   /* --foreground: var(--color-slate-50); */
-  --card: var(--color-slate-200);
+  --card: var(--color-slate-300);
+  --border: var(--color-slate-400);
+  --sidebar-accent-foreground: var(--color-slate-900);
 }
 
 @layer base {

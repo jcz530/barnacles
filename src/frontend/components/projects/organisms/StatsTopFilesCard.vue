@@ -44,11 +44,7 @@ const removedWidth = (file: GitStatsTopFile) => `${(file.linesRemoved / maxChang
 
     <CardContent>
       <div v-if="isLoading" class="space-y-3">
-        <div
-          v-for="row in 6"
-          :key="row"
-          class="h-8 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800"
-        />
+        <div v-for="row in 6" :key="row" class="h-8 animate-pulse rounded-md bg-slate-100" />
       </div>
 
       <p v-else-if="!visible.length" class="py-8 text-center text-sm text-slate-500">
@@ -62,22 +58,20 @@ const removedWidth = (file: GitStatsTopFile) => `${(file.linesRemoved / maxChang
                  leading directories truncate instead. -->
             <span class="flex min-w-0 items-baseline text-sm" :title="file.path">
               <span class="truncate text-slate-400">{{ directoryOf(file.path) }}</span>
-              <span class="shrink-0 text-slate-700 dark:text-slate-300">
+              <span class="shrink-0 text-slate-700">
                 {{ fileNameOf(file.path) }}
               </span>
             </span>
             <span class="shrink-0 font-mono text-xs">
-              <span class="text-success-600 dark:text-success-400">+{{ file.linesAdded }}</span>
-              <span class="text-danger-600 dark:text-danger-400 ml-1.5">
-                −{{ file.linesRemoved }}
-              </span>
+              <span class="text-success-600">+{{ file.linesAdded }}</span>
+              <span class="text-danger-600 ml-1.5"> −{{ file.linesRemoved }} </span>
             </span>
           </div>
 
           <div class="mt-1 flex h-1.5 gap-px overflow-hidden rounded-full">
             <div class="bg-success-500" :style="{ width: addedWidth(file) }" />
             <div class="bg-danger-500" :style="{ width: removedWidth(file) }" />
-            <div class="flex-1 bg-slate-100 dark:bg-slate-800" />
+            <div class="flex-1 bg-slate-100" />
           </div>
         </li>
       </ul>

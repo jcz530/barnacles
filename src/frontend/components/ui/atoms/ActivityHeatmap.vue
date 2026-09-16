@@ -116,19 +116,19 @@ const monthLabels = computed(() =>
 const levelClass = (cell: Cell): string => {
   if (cell.date.startsWith('pad-')) return 'invisible';
   // Future days read as not-yet rather than as a quiet day.
-  if (cell.isFuture) return 'bg-slate-50 dark:bg-slate-900';
+  if (cell.isFuture) return 'bg-slate-50';
 
   switch (cell.level) {
     case 1:
-      return 'bg-success-200 dark:bg-success-900';
+      return 'bg-success-200';
     case 2:
-      return 'bg-success-300 dark:bg-success-700';
+      return 'bg-success-300';
     case 3:
-      return 'bg-success-500 dark:bg-success-500';
+      return 'bg-success-500';
     case 4:
-      return 'bg-success-700 dark:bg-success-300';
+      return 'bg-success-700';
     default:
-      return 'bg-slate-100 dark:bg-slate-800';
+      return 'bg-slate-100';
   }
 };
 </script>
@@ -137,11 +137,7 @@ const levelClass = (cell: Cell): string => {
   <div class="w-full min-w-0">
     <div v-if="isLoading" class="flex gap-1">
       <div v-for="week in 6" :key="week" class="flex flex-col gap-1" aria-hidden="true">
-        <div
-          v-for="day in 7"
-          :key="day"
-          class="size-3 animate-pulse rounded-sm bg-slate-100 dark:bg-slate-800"
-        />
+        <div v-for="day in 7" :key="day" class="size-3 animate-pulse rounded-sm bg-slate-100" />
       </div>
     </div>
 
@@ -178,11 +174,11 @@ const levelClass = (cell: Cell): string => {
 
       <div class="mt-3 flex items-center justify-end gap-1 text-[10px] text-slate-400">
         <span class="mr-1">Less</span>
-        <div class="size-3 rounded-sm bg-slate-100 dark:bg-slate-800" />
-        <div class="bg-success-200 dark:bg-success-900 size-3 rounded-sm" />
-        <div class="bg-success-300 dark:bg-success-700 size-3 rounded-sm" />
+        <div class="size-3 rounded-sm bg-slate-100" />
+        <div class="bg-success-200 size-3 rounded-sm" />
+        <div class="bg-success-300 size-3 rounded-sm" />
         <div class="bg-success-500 size-3 rounded-sm" />
-        <div class="bg-success-700 dark:bg-success-300 size-3 rounded-sm" />
+        <div class="bg-success-700 size-3 rounded-sm" />
         <span class="ml-1">More</span>
       </div>
     </div>

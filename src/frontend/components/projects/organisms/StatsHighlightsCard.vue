@@ -71,10 +71,7 @@ const highlights = computed(() => {
           <component :is="item.icon" class="mt-0.5 size-4 shrink-0 text-slate-400" />
           <div class="min-w-0">
             <p class="text-xs text-slate-500">{{ item.label }}</p>
-            <p
-              v-if="isLoading"
-              class="mt-1 h-5 w-16 animate-pulse rounded bg-slate-100 dark:bg-slate-800"
-            />
+            <p v-if="isLoading" class="mt-1 h-5 w-16 animate-pulse rounded bg-slate-100" />
             <template v-else>
               <p class="truncate text-lg font-semibold">{{ item.value }}</p>
               <p class="truncate text-xs text-slate-400">{{ item.detail }}</p>

@@ -194,6 +194,21 @@ This is an Electron application with a Vue.js frontend and Hono API backend that
   `text-slate-900`).
 - **Exception**: brand identity colors (e.g. an IDE's or vendor's official
   color rendered as data, not theme styling) may use raw hex values.
+- **Do not add `dark:` variants.** Dark mode here is runtime palette inversion
+  (`useColorInversion`), not `dark:` utilities: every `--color-<name>-<shade>`
+  is rewritten to its 1000-shade counterpart, so `bg-slate-50` is *already*
+  theme-aware and a `dark:` on top applies a second transformation on an
+  already-inverted value. This holds for the semantic tokens too — `--input`,
+  `--accent`, `--foreground`, `--destructive` are all defined in terms of the
+  themed scales in `main.css`, so they invert with them.
+- **The exception is a property inversion cannot express**, which in practice
+  means opacity. `aria-invalid:ring-destructive/20 dark:...ring-destructive/40`
+  keeps a faint ring legible on a dark ground, and `dark:bg-input/30` on an
+  otherwise `bg-transparent` field adds a fill that has no light-mode value to
+  invert. Both change the UI in a way inversion does not. If you add one, say
+  in a comment why inversion alone is not enough.
+- Setting `.dark` by hand to test bypasses the composable and makes correct
+  components look broken. Use the theme toggle.
 
 ### Libraries and Patterns
 

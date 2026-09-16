@@ -111,15 +111,13 @@ const cardClass = computed(() => {
       </CardHeader>
 
       <CardContent v-if="updateState.status === 'downloading'" class="pb-4">
-        <div class="h-2.5 w-full rounded-full bg-slate-200 dark:bg-slate-700">
+        <div class="h-2.5 w-full rounded-full bg-slate-200">
           <div
             class="bg-primary-600 h-2.5 rounded-full transition-all duration-300"
             :style="{ width: `${progressPercent}%` }"
           />
         </div>
-        <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          {{ progressPercent.toFixed(1) }}%
-        </p>
+        <p class="mt-2 text-sm text-slate-600">{{ progressPercent.toFixed(1) }}%</p>
       </CardContent>
 
       <CardFooter v-if="showPrimaryAction || showDismiss" class="gap-2">

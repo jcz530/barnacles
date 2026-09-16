@@ -137,7 +137,7 @@ const buttonLabel = computed(() => {
 
 const buttonVariant = computed(() => {
   if (!hasProcesses.value) {
-    return 'secondary';
+    return 'outline';
   }
   return isProcessRunning.value ? 'destructive' : 'success';
 });
@@ -160,7 +160,8 @@ const processIconState = computed<ProcessIconState>(() => {
         isLoading || startProcessesMutation.isPending.value || stopProcessesMutation.isPending.value
       "
       @click="handleMainButtonClick"
-      class="border-r-primary-foreground/20 rounded-r-none border-r px-4"
+      class="rounded-r-none border-r px-4"
+      :class="buttonVariant === 'outline' ? 'border-r-border' : 'border-r-slate-50/20'"
     >
       <!-- The gear is a different affordance, not part of the play/stop/loading
            cycle, so it stays a plain icon swap. -->

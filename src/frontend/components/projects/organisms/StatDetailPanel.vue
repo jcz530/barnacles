@@ -213,7 +213,7 @@ const readout = computed(() => {
     </CardHeader>
 
     <CardContent class="space-y-6">
-      <div v-if="isLoading" class="h-40 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />
+      <div v-if="isLoading" class="h-40 animate-pulse rounded-md bg-slate-100" />
 
       <template v-else>
         <!-- Full width, so a year can render every day rather than the weekly
@@ -253,9 +253,7 @@ const readout = computed(() => {
               @mouseleave="hoveredIndex = null"
             >
               <!-- Gridline at the top of the scale. -->
-              <div
-                class="absolute inset-x-0 top-0 border-t border-dashed border-slate-200 dark:border-slate-700"
-              />
+              <div class="absolute inset-x-0 top-0 border-t border-dashed border-slate-200" />
 
               <div
                 v-for="(day, index) in days"
@@ -266,7 +264,7 @@ const readout = computed(() => {
                 <!-- A full-height neutral track with the value filled in from
                      the bottom, matching the stat tiles. -->
                 <div
-                  class="flex h-full w-full items-end rounded-full bg-gradient-to-t from-slate-200/40 to-slate-200/80 dark:from-slate-700/40 dark:to-slate-700/80"
+                  class="flex h-full w-full items-end rounded-full bg-gradient-to-t from-slate-200/40 to-slate-200/80"
                 >
                   <div
                     v-if="day.value > 0"
@@ -320,9 +318,7 @@ const readout = computed(() => {
               <span class="w-28 shrink-0 text-slate-500">
                 {{ dayjs(day.date).format('ddd, MMM D') }}
               </span>
-              <span
-                class="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
-              >
+              <span class="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
                 <span
                   class="bg-primary-500 block h-full rounded-full"
                   :style="{ width: `${(day.value / maxValue) * 100}%` }"

@@ -266,9 +266,7 @@ watch(
               v-for="key in PICKABLE"
               :key="key"
               class="flex items-center gap-2 text-sm"
-              :class="
-                !isSelected(key) && atCap ? 'text-slate-400' : 'text-slate-700 dark:text-slate-300'
-              "
+              :class="!isSelected(key) && atCap ? 'text-slate-400' : 'text-slate-700'"
             >
               <Checkbox
                 :model-value="isSelected(key)"
@@ -278,10 +276,7 @@ watch(
               {{ STAT_LABELS[key] }}
             </label>
           </div>
-          <p
-            v-if="hiddenStats.length"
-            class="text-xs font-medium text-slate-700 dark:text-slate-300"
-          >
+          <p v-if="hiddenStats.length" class="text-xs font-medium text-slate-700">
             {{ DESIGN_META[design].label }} fits {{ capacity }} stats at this size —
             {{ hiddenStats.map(key => STAT_LABELS[key]).join(', ') }} not shown.
           </p>
@@ -292,7 +287,7 @@ watch(
 
         <TabsContent value="text" class="min-h-0 flex-1 space-y-4 overflow-y-auto">
           <pre
-            class="max-h-80 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-xs whitespace-pre text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+            class="max-h-80 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-xs whitespace-pre text-slate-800"
             >{{ summary }}</pre>
 
           <div class="flex items-center gap-2">
