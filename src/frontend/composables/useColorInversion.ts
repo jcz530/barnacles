@@ -37,30 +37,17 @@ import { watch } from 'vue';
 const originalValues = new Map<string, string>();
 
 /**
- * The palettes that invert: exactly the six useTheme generates.
+ * `colorScales` and the shade arithmetic live in ./color-scales, which imports
+ * nothing. The share card needs the same rule to read a themed variable back
+ * correctly, and it must be reachable without pulling this module's `document`
+ * and `window` access into a DOM-less compilation.
  *
- * The stock Tailwind scales (gray, red, blue, amber, ...) are deliberately not
- * here. main.css declares no --color-<stock>-* variable, so Tailwind compiles
- * `text-amber-600` to a literal colour with no var() to override -- writing
- * those variables never changed a pixel. It did, however, leave inverted values
- * on the element for the next read to mistake for originals, which is one of
- * the ways the palette folded in on itself. A utility using a stock palette is
- * simply not theme-aware; the fix for that is to use a theme palette, not to
- * invert a variable nothing reads.
+ * Re-exported as well as imported: callers that already reach for these through
+ * this module keep working, and there is still exactly one declaration site.
  */
-const colorScales = {
-  slate: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  primary: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  secondary: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  tertiary: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  success: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-  danger: [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950],
-};
+import { colorScales, getInvertedShade } from './color-scales';
 
-// Function to get the inverted shade number
-function getInvertedShade(shade: number): number {
-  return 1000 - shade;
-}
+export { colorScales, getInvertedShade, INVERTED_PALETTES } from './color-scales';
 
 /**
  * Cache the light-mode palette, which every inversion is computed from.
@@ -112,7 +99,7 @@ function initializeColors(overrides?: Record<string, string>) {
  * nothing stored) resolves against the system preference, the same way
  * useColorMode resolves it.
  */
-function isDarkMode(): boolean {
+export function isDarkMode(): boolean {
   let stored: string | null = null;
   try {
     stored = localStorage.getItem('vueuse-color-scheme');

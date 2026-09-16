@@ -6,8 +6,10 @@ import {
   Copy,
   Download,
   Image as ImageIcon,
+  Moon,
   RectangleHorizontal,
   Square,
+  Sun,
   Type,
 } from 'lucide-vue-next';
 import type { GitStats, ProjectWithDetails } from '@shared/types/api';
@@ -24,11 +26,16 @@ import { renderShareText, renderShareTextCompact } from '@shared/share/share-tex
 import {
   DESIGN_META,
   DESIGNS,
+  MODE_META,
+  MODES,
   resolveDesign,
+  resolveMode,
   SIZES,
   statCapacity,
+  type CardMode,
   type ShareDesign,
 } from '../../../utils/share-card';
+import { isDarkMode } from '../../../composables/useColorInversion';
 import { useShareCard } from '../../../composables/useShareCard';
 import ShareCardPreview from '../molecules/ShareCardPreview.vue';
 import SegmentedControl from '../../ui/atoms/SegmentedControl.vue';
@@ -61,6 +68,9 @@ const { isBusy, buildHtml, copyImage, saveImage, copyText } = useShareCard();
 const anonymizeProjects = useLocalStorage('share-stats:anonymize', false);
 const size = useLocalStorage<ShareSize>('share-stats:size', 'og');
 const storedDesign = useLocalStorage<string>('share-stats:design', 'poster');
+// Empty until the user picks one: `mode` below seeds from the app's own mode
+// while nothing is stored, so the first share in dark mode is a dark card.
+const storedMode = useLocalStorage<string>('share-stats:mode', '');
 
 /**
  * Normalized on read: these designs were renamed after shipping, so a returning
@@ -72,6 +82,25 @@ const design = computed<ShareDesign>({
     storedDesign.value = value;
   },
 });
+
+/**
+ * The card's light/dark, normalized on read like `design` above.
+ *
+ * Seeded from the app's own mode, so the first share in dark mode produces a
+ * dark card without being asked for one. After that it is an explicit choice
+ * and stays where the user put it — the card carries the app's *colours*, but
+ * its light/dark is theirs to set.
+ */
+const mode = computed<CardMode>({
+  get: () => resolveMode(storedMode.value, isDarkMode() ? 'dark' : 'light'),
+  set: value => {
+    storedMode.value = value;
+  },
+});
+
+const MODE_OPTIONS: Array<{ value: CardMode; label: string; icon: Component }> = MODES.map(
+  value => ({ value, ...MODE_META[value], icon: value === 'dark' ? Moon : Sun })
+);
 
 const template = ref<ShareTemplate>('recap');
 const statKeys = ref<ShareStatKey[]>([...TEMPLATE_STATS.recap]);
@@ -199,7 +228,7 @@ const previewHtml = ref('');
  * `model` referentially identical and the preview stale.
  */
 watch(
-  [model, design, size, open],
+  [model, design, size, mode, open],
   async () => {
     if (!open.value || !model.value) {
       previewHtml.value = '';
@@ -210,7 +239,7 @@ watch(
     // theme: getComputedStyle on an unmounted tree returns empty custom
     // properties, which renders the chart with no colours at all.
     await nextTick();
-    previewHtml.value = buildHtml(model.value, size.value, design.value);
+    previewHtml.value = buildHtml(model.value, size.value, design.value, mode.value);
   },
   { immediate: true }
 );
@@ -241,7 +270,12 @@ watch(
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="image" class="min-h-0 flex-1 space-y-4 overflow-y-auto">
+        <!-- Pulled out to the dialog's own edge: DialogContent carries the p-6,
+             so a scroll container inside it puts the scrollbar 24px in from the
+             modal wall, floating in the middle of the padding. The negative
+             margin moves the scrollable box's edge out; the matching padding
+             keeps the content where it was. -->
+        <TabsContent value="image" class="-mr-6 min-h-0 flex-1 space-y-4 overflow-y-auto pr-6">
           <ShareCardPreview v-if="previewHtml" :html="previewHtml" :size="size" />
 
           <!-- Split in two: what the card looks like on top, what goes on it
@@ -249,7 +283,10 @@ watch(
                on one row wrap at this dialog width. -->
           <div class="flex flex-wrap items-center gap-2">
             <SegmentedControl v-model="design" :options="DESIGN_OPTIONS" />
-            <SegmentedControl v-model="size" :options="SIZE_OPTIONS" class="ml-auto" />
+            <!-- Auto margins on both sides so the mode control centres between
+                 the two anchored groups rather than trailing the design one. -->
+            <SegmentedControl v-model="mode" :options="MODE_OPTIONS" class="mx-auto" />
+            <SegmentedControl v-model="size" :options="SIZE_OPTIONS" />
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
@@ -285,7 +322,7 @@ watch(
           </p>
         </TabsContent>
 
-        <TabsContent value="text" class="min-h-0 flex-1 space-y-4 overflow-y-auto">
+        <TabsContent value="text" class="-mr-6 min-h-0 flex-1 space-y-4 overflow-y-auto pr-6">
           <pre
             class="max-h-80 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-xs whitespace-pre text-slate-800"
             >{{ summary }}</pre>
@@ -311,12 +348,15 @@ watch(
           <Button
             variant="outline"
             :disabled="!model || isBusy"
-            @click="model && saveImage(model, size, design)"
+            @click="model && saveImage(model, size, design, mode)"
           >
             <Download class="size-4" />
             Save PNG…
           </Button>
-          <Button :disabled="!model || isBusy" @click="model && copyImage(model, size, design)">
+          <Button
+            :disabled="!model || isBusy"
+            @click="model && copyImage(model, size, design, mode)"
+          >
             <Copy class="size-4" />
             {{ isBusy ? 'Working…' : 'Copy image' }}
           </Button>

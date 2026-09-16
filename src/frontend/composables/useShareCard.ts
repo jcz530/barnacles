@@ -1,6 +1,12 @@
 import { ref } from 'vue';
 import type { ShareModel, ShareSize } from '@shared/share/share-model';
-import { renderShareCardHtml, SIZES, snapshotTheme, type ShareDesign } from '../utils/share-card';
+import {
+  renderShareCardHtml,
+  SIZES,
+  snapshotTheme,
+  type CardMode,
+  type ShareDesign,
+} from '../utils/share-card';
 import { toastDanger, toastSuccess } from '../components/ui/sonner';
 
 /**
@@ -26,20 +32,29 @@ export function useShareCard() {
    * The exact document that gets rasterized — also used for the preview.
    *
    * The theme is snapshotted here, from the live DOM, so a customized app
-   * produces a customized card.
+   * produces a customized card. `mode` overrides the card's light/dark
+   * independently of the app; omitted, it follows the app. Because the preview
+   * and the PNG are built from this one string, an override cannot reach one
+   * and miss the other.
    */
-  function buildHtml(model: ShareModel, size: ShareSize, design: ShareDesign): string {
-    return renderShareCardHtml(model, snapshotTheme(), size, design);
+  function buildHtml(
+    model: ShareModel,
+    size: ShareSize,
+    design: ShareDesign,
+    mode?: CardMode
+  ): string {
+    return renderShareCardHtml(model, snapshotTheme(mode), size, design);
   }
 
   async function renderPng(
     model: ShareModel,
     size: ShareSize,
-    design: ShareDesign
+    design: ShareDesign,
+    mode?: CardMode
   ): Promise<Uint8Array | null> {
     const { width, height } = SIZES[size];
     const result = await window.electron.shareCard.render({
-      html: buildHtml(model, size, design),
+      html: buildHtml(model, size, design, mode),
       width,
       height,
       outputWidth: width,
@@ -53,11 +68,16 @@ export function useShareCard() {
     return result.data.png;
   }
 
-  async function copyImage(model: ShareModel, size: ShareSize, design: ShareDesign): Promise<void> {
+  async function copyImage(
+    model: ShareModel,
+    size: ShareSize,
+    design: ShareDesign,
+    mode?: CardMode
+  ): Promise<void> {
     if (isBusy.value) return;
     isBusy.value = true;
     try {
-      const png = await renderPng(model, size, design);
+      const png = await renderPng(model, size, design, mode);
       if (!png) return;
 
       const written = await window.electron.clipboard.writeImage(png);
@@ -71,11 +91,16 @@ export function useShareCard() {
     }
   }
 
-  async function saveImage(model: ShareModel, size: ShareSize, design: ShareDesign): Promise<void> {
+  async function saveImage(
+    model: ShareModel,
+    size: ShareSize,
+    design: ShareDesign,
+    mode?: CardMode
+  ): Promise<void> {
     if (isBusy.value) return;
     isBusy.value = true;
     try {
-      const png = await renderPng(model, size, design);
+      const png = await renderPng(model, size, design, mode);
       if (!png) return;
 
       const saved = await window.electron.shareCard.save({

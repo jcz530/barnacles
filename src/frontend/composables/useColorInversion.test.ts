@@ -33,7 +33,10 @@ function themedPalettes(): Set<string> {
 }
 
 function colorScalesBlock(): string {
-  const src = read('src/frontend/composables/useColorInversion.ts');
+  // colorScales and the shade arithmetic live in color-scales.ts, which imports
+  // nothing, so the share card can reuse the rule without dragging this
+  // module's document/window access into a DOM-less compilation.
+  const src = read('src/frontend/composables/color-scales.ts');
   return src.slice(src.indexOf('const colorScales'), src.indexOf('function getInvertedShade'));
 }
 
