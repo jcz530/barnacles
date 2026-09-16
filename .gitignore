@@ -133,3 +133,6 @@ screenshots/out/
 
 # Local-only PR screenshots
 .claude-pr-screenshots/
+
+# Local-only working plans
+docs/plans/

@@ -15,6 +15,7 @@ import ScanIncludedDirectoriesSetting from '../components/settings/organisms/Sca
 import ScanExcludedDirectoriesSetting from '../components/settings/organisms/ScanExcludedDirectoriesSetting.vue';
 import DefaultIDESetting from '../components/settings/organisms/DefaultIDESetting.vue';
 import DefaultTerminalSetting from '../components/settings/organisms/DefaultTerminalSetting.vue';
+import AutoUpdateSetting from '@/components/settings/organisms/AutoUpdateSetting.vue';
 import ShowTrayIconSetting from '../components/settings/organisms/ShowTrayIconSetting.vue';
 import CommandPaletteShortcutSetting from '../components/settings/organisms/CommandPaletteShortcutSetting.vue';
 import ShowDashboardStatsSetting from '../components/settings/organisms/ShowDashboardStatsSetting.vue';
@@ -46,6 +47,7 @@ const SETTING_COMPONENTS: Record<string, Component> = {
   [SETTING_KEYS.SHOW_DASHBOARD_STATS]: ShowDashboardStatsSetting,
   [SETTING_KEYS.REDUCED_MOTION]: ReducedMotionSetting,
   [SETTING_KEYS.SHOW_TRAY_ICON]: ShowTrayIconSetting,
+  [SETTING_KEYS.AUTO_UPDATE]: AutoUpdateSetting,
   [SETTING_KEYS.COMMAND_PALETTE_SHORTCUT]: CommandPaletteShortcutSetting,
   [SETTING_KEYS.GIT_EMAILS]: GitEmailsSetting,
   [SETTING_KEYS.INSTALL_CLI_COMMAND]: InstallCliCommandSetting,

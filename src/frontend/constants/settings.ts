@@ -4,6 +4,7 @@ import {
   Palette,
   Keyboard,
   GitBranch,
+  RefreshCw,
   Wrench,
   type LucideIcon,
 } from 'lucide-vue-next';
@@ -127,6 +128,20 @@ export const SETTINGS_SECTIONS: SettingsSectionDef[] = [
         label: 'Show Tray Icon',
         description: 'Display the Barnacles icon in the system tray for quick access.',
         keywords: ['menu bar', 'status bar', 'menubar', 'system tray'],
+      },
+    ],
+  },
+  {
+    id: 'updates',
+    title: 'Updates',
+    description: 'Control how Barnacles installs new versions',
+    icon: RefreshCw,
+    settings: [
+      {
+        key: SETTING_KEYS.AUTO_UPDATE,
+        label: 'Automatic Updates',
+        description: 'Download new versions in the background automatically.',
+        keywords: ['auto', 'upgrade', 'version', 'release', 'download', 'install', 'restart'],
       },
     ],
   },

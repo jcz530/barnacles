@@ -4,7 +4,12 @@
 export interface UpdateInfo {
   version: string;
   releaseDate?: string;
-  releaseNotes?: string | string[];
+  /**
+   * `readonly` because this crosses the IPC boundary as data to display, and is
+   * never mutated. Without it, a `readonly()` wrapper on the shared update
+   * state no longer satisfies this type.
+   */
+  releaseNotes?: string | readonly string[];
 }
 
 /**
@@ -28,7 +33,15 @@ export interface UpdateError {
  * Update status states
  */
 export type UpdateStatus =
-  'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
+  | 'idle'
+  | 'checking'
+  | 'available'
+  /** Found, but too newly published to download yet. */
+  | 'pending'
+  | 'not-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error';
 
 /**
  * Complete update state
