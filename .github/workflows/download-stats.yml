@@ -1,0 +1,194 @@
+name: Download Stats
+
+on:
+  schedule:
+    # 09:00 UTC daily. GitHub's asset counters are lifetime cumulative totals
+    # with no time dimension of their own, so the only way to get a trend is to
+    # snapshot them on a fixed cadence and diff consecutive rows.
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+# Writes to the download-stats branch only; never touches main.
+permissions:
+  contents: write
+
+# A scheduled run and a manual run landing together would race on the same
+# branch tip and one would fail to push. Queue them instead of cancelling, so
+# no snapshot is silently dropped.
+concurrency:
+  group: download-stats
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    name: Snapshot release asset download counts
+    runs-on: ubuntu-latest
+
+    steps:
+      # Deliberately checks out main rather than the data branch. main always
+      # exists, so this never fails, and it leaves behind a .git with the
+      # credentials actions/checkout persists (http.extraheader) — which is what
+      # makes the push at the end work. Checking out download-stats directly
+      # would fail on the first run, before the branch exists.
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Switch to the stats branch, creating it if absent
+        run: |
+          set -euo pipefail
+
+          if git fetch origin download-stats 2>/dev/null; then
+            git checkout download-stats
+          else
+            # An orphan branch shares no history with main, so these commits
+            # never appear in main's log and never conflict with a feature
+            # branch. Everything checked out from main is cleared so the branch
+            # holds only the data file.
+            echo "download-stats does not exist yet; creating it."
+            git checkout --orphan download-stats
+            git rm -rf --cached . >/dev/null 2>&1 || true
+            find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+            printf 'date\ttag\tasset\tcount\n' > downloads.tsv
+          fi
+
+      - name: Fetch current download counts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TODAY="$(date -u +%F)"
+
+          # Tab-separated, not CSV: awk below splits on a literal delimiter and
+          # is not quote-aware, so a comma inside an asset name would silently
+          # shift every field after it and zero out the count. Tabs cannot
+          # appear in a GitHub asset name.
+          #
+          # Rows are keyed by tag AND name because the name alone is not
+          # unique: latest-mac.yml and latest.yml repeat in every release, and
+          # keying on name alone merges unrelated releases together.
+          gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate \
+            --jq '.[] | .tag_name as $t | .assets[]
+                  | [$t, .name, .download_count] | @tsv' \
+            | sed "s/^/${TODAY}\t/" > today.tsv
+
+          if [ ! -s today.tsv ]; then
+            echo "::error::No release assets returned; refusing to write an empty snapshot."
+            exit 1
+          fi
+
+          echo "Fetched $(wc -l < today.tsv) asset rows."
+
+      - name: Append snapshot and render summary
+        run: |
+          set -euo pipefail
+          TODAY="$(date -u +%F)"
+
+          # Guard against a re-run on the same day writing the date twice.
+          # `|| true` because grep -v exits 1 when it filters out every line,
+          # which pipefail would turn into a dead step.
+          if cut -f1 downloads.tsv | grep -qx "${TODAY}"; then
+            echo "A snapshot for ${TODAY} already exists; replacing it."
+            { grep -v "^${TODAY}	" downloads.tsv || true; } > trimmed.tsv
+            mv trimmed.tsv downloads.tsv
+          fi
+
+          # The previous snapshot date, read before today's rows are appended.
+          # Dates are ISO-8601, so lexical max is also chronological max.
+          # On the very first run the file is header-only, so grep matches
+          # nothing and exits 1 — which pipefail would turn into a dead step.
+          # `|| true` keeps an empty PREV meaning "no prior data" instead.
+          PREV="$( { cut -f1 downloads.tsv | grep -v '^date$' || true; } \
+                  | sort -u | tail -1)"
+
+          cat today.tsv >> downloads.tsv
+
+          # Totals are bucketed the same way for both dates so the delta is
+          # comparing like with like. Installable binaries are the number that
+          # actually means "someone got the app"; .yml manifests are update
+          # polls from already-installed copies and blockmaps are delta-update
+          # chunks, so both are counted separately rather than folded in.
+          bucket() {
+            awk -F'\t' -v want="$1" '
+              $1 != want { next }
+              {
+                name = $3; c = $4 + 0
+                if (name ~ /\.blockmap$/) { blockmap += c; next }
+                if (name ~ /\.yml$/)      { yml += c; next }
+                # electron-builder emits both Barnacles-Setup-X.exe and
+                # Barnacles.Setup.X.exe for one installer. Counting both would
+                # double every Windows install, so the dotted form is skipped.
+                if (name ~ /\.Setup\./)   { next }
+                real += c
+                if (name ~ /\.dmg$/)           dmg += c
+                else if (name ~ /mac\.zip$/)   mzip += c
+                else if (name ~ /\.exe$/)      exe += c
+                else if (name ~ /\.AppImage$/) appimg += c
+                else if (name ~ /\.deb$/)      deb += c
+                else if (name ~ /\.rpm$/)      rpm += c
+              }
+              END {
+                printf "%d %d %d %d %d %d %d %d %d\n",
+                  real, dmg, mzip, exe, appimg, deb, rpm, yml, blockmap
+              }
+            ' downloads.tsv
+          }
+
+          read -r r dmg mzip exe app deb rpm yml bm <<< "$(bucket "$TODAY")"
+
+          if [ -n "$PREV" ] && [ "$PREV" != "$TODAY" ]; then
+            read -r pr pdmg pmzip pexe papp pdeb prpm pyml pbm <<< "$(bucket "$PREV")"
+          else
+            pr=""
+          fi
+
+          # An em dash for "no change" reads faster than +0 in a column of numbers.
+          d() {
+            [ -z "$pr" ] && { printf ''; return; }
+            local delta=$(( $1 - $2 ))
+            if   [ "$delta" -gt 0 ]; then printf ' (+%d)' "$delta"
+            elif [ "$delta" -lt 0 ]; then printf ' (%d)' "$delta"
+            else printf ' (—)'
+            fi
+          }
+
+          {
+            echo "## Barnacles downloads — ${TODAY}"
+            echo
+            if [ -n "$pr" ]; then
+              echo "Compared against \`${PREV}\`."
+            else
+              echo "First snapshot — no prior data to compare against."
+            fi
+            echo
+            echo '```'
+            printf 'Installable binaries   %4d%s\n'  "$r"    "$(d "$r" "${pr:-0}")"
+            printf '  macOS .dmg           %4d%s\n'  "$dmg"  "$(d "$dmg" "${pdmg:-0}")"
+            printf '  macOS -mac.zip       %4d%s\n'  "$mzip" "$(d "$mzip" "${pmzip:-0}")"
+            printf '  Windows .exe         %4d%s\n'  "$exe"  "$(d "$exe" "${pexe:-0}")"
+            printf '  Linux .AppImage      %4d%s\n'  "$app"  "$(d "$app" "${papp:-0}")"
+            printf '  Linux .deb           %4d%s\n'  "$deb"  "$(d "$deb" "${pdeb:-0}")"
+            printf '  Linux .rpm           %4d%s\n'  "$rpm"  "$(d "$rpm" "${prpm:-0}")"
+            echo
+            printf 'Update checks (.yml)   %4d%s\n'  "$yml"  "$(d "$yml" "${pyml:-0}")"
+            printf 'Blockmaps              %4d%s\n'  "$bm"   "$(d "$bm" "${pbm:-0}")"
+            echo '```'
+            echo
+            echo "_Counters are lifetime cumulative and include bots, retries and CI, so treat them as an upper bound._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit the snapshot
+        run: |
+          set -euo pipefail
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          rm -f today.tsv
+          git add downloads.tsv
+          if git diff --staged --quiet; then
+            echo "Counts unchanged; nothing to commit."
+            exit 0
+          fi
+          git commit -m "Record download counts for $(date -u +%F)"
+          git push origin download-stats
