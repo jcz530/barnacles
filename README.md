@@ -191,6 +191,10 @@ Contributions are welcome! If you'd like to help improve Barnacles:
 2. Look at open issues or suggest new features
 3. Submit a pull request
 
+## License
+
+Barnacles is open source under the [MIT License](LICENSE).
+
 ## Author
 
 Created by [Joe Czubiak](https://joeczubiak.com)
